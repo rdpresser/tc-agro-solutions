@@ -6,16 +6,16 @@ import { initProtectedPage } from './common.js';
 import { getProperties, createProperty, updateProperty, deleteProperty } from './api.js';
 import { $, $$, showToast, showConfirm, formatDate } from './utils.js';
 
-// Check auth and setup page
-if (!initProtectedPage()) {
-  throw new Error('Not authenticated');
-}
-
 // ============================================
 // PAGE INITIALIZATION
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Check auth and setup page (must be inside DOMContentLoaded for sidebar elements)
+  if (!initProtectedPage()) {
+    return;
+  }
+  
   await loadProperties();
   setupEventListeners();
 });

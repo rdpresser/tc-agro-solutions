@@ -34,9 +34,30 @@ export function getToken() {
   return sessionStorage.getItem(APP_CONFIG.tokenKey);
 }
 
+/**
+ * Clear authentication session
+ * Removes JWT token and user data from sessionStorage
+ * 
+ * This ensures complete logout by:
+ * - Removing JWT token (agro_token)
+ * - Removing user info (agro_user)
+ * 
+ * To clear additional session data, add:
+ * sessionStorage.removeItem('your_custom_key');
+ * 
+ * Or to clear everything:
+ * sessionStorage.clear();
+ */
 export function clearToken() {
   sessionStorage.removeItem(APP_CONFIG.tokenKey);
   sessionStorage.removeItem(APP_CONFIG.userKey);
+  
+  // Optional: Clear all session storage
+  // sessionStorage.clear();
+  
+  // Optional: Clear specific app data
+  // sessionStorage.removeItem('dashboard_cache');
+  // sessionStorage.removeItem('user_preferences');
 }
 
 export function setUser(user) {

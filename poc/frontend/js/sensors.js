@@ -6,16 +6,16 @@ import { initProtectedPage } from './common.js';
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
 import { $, $$, showToast, formatRelativeTime } from './utils.js';
 
-// Check auth and setup page
-if (!initProtectedPage()) {
-  throw new Error('Not authenticated');
-}
-
 // ============================================
 // PAGE INITIALIZATION
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Check auth and setup page (must be inside DOMContentLoaded for sidebar elements)
+  if (!initProtectedPage()) {
+    return;
+  }
+  
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();

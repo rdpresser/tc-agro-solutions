@@ -3,6 +3,7 @@
  */
 
 import { checkAuth, handleLogout, requireAuth } from './auth.js';
+import { initProtectedPage } from './common.js';
 import { 
   getDashboardStats, 
   getLatestReadings, 
@@ -26,18 +27,18 @@ import {
   debounce
 } from './utils.js';
 
-// Check authentication - redirect to login if not authenticated
-if (!requireAuth()) {
-  // requireAuth redirects to login, stop execution
-  throw new Error('Not authenticated');
-}
-
 // ============================================
 // PAGE INITIALIZATION
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  setupLogoutButton();
+  // Initialize protected page (sidebar, logout, auth check)
+  if (!initProtectedPage()) {
+    // Redirect to login handled by initProtectedPage
+    return;
+  }
+  
+  // Load dashboard data
   await loadDashboardData();
   setupRealTimeUpdates();
 });
@@ -47,20 +48,6 @@ window.addEventListener('beforeunload', () => {
   stopSignalRConnection();
   destroyAllCharts();
 });
-
-// ============================================
-// LOGOUT SETUP
-// ============================================
-
-function setupLogoutButton() {
-  const logoutBtn = $('#logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleLogout();
-    });
-  }
-}
 
 // ============================================
 // DATA LOADING
@@ -296,6 +283,19 @@ function updateMetricCard(metric, value) {
     el.classList.add('pulse');
     setTimeout(() => el.classList.remove('pulse'), 500);
   }
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+// Initialize protected page (sidebar, logout, auth check)
+if (!initProtectedPage()) {
+  // Redirect to login handled by initProtectedPage
+} else {
+  // Load dashboard data and setup real-time updates
+  loadDashboardData();
+  setupRealTimeUpdates();
 }
 
 // ============================================

@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Show loading state
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Entrando...';
+      submitBtn.classList.add('btn-loading');
+      submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
     }
     
     if (errorMessage) {
@@ -60,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset button
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Entrar';
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.innerHTML = '🔐 Sign In';
       }
     }
   });

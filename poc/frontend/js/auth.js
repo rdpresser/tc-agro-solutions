@@ -87,10 +87,27 @@ export async function handleLogin(email, password) {
 // LOGOUT HANDLER
 // ============================================
 
+/**
+ * Handles user logout:
+ * - Clears session storage (token + user data)
+ * - Shows logout notification
+ * - Redirects to login page
+ */
 export function handleLogout() {
+  // Clear all session data
   clearToken();
+  
+  // Optional: Clear any other app-specific session data
+  // sessionStorage.removeItem('app_preferences');
+  // sessionStorage.removeItem('cached_data');
+  
+  // Show feedback
   showToast('You have been logged out', 'info');
-  window.location.href = 'index.html';
+  
+  // Redirect to login
+  setTimeout(() => {
+    window.location.href = '/index.html';
+  }, 500);
 }
 
 // ============================================
