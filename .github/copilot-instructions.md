@@ -8,6 +8,8 @@
 **Team:** 4 backend developers  
 **Architecture:** Microservices on Azure Kubernetes Service (AKS)
 
+**Hackathon Requirements:** Producer authentication, property/plot registration with crop type, JWT-protected sensor ingestion API, historical charts, plot status badges from alert rules, simple alert engine (e.g., soil moisture <30% for 24h), dashboard with alerts, evidence of K8s + APM (metrics/traces/logs), CI/CD pipeline with green checks, ≤15 min demo video.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -68,10 +70,10 @@ tc-agro-solutions/              # Parent repository (this repo)
 ### System Services
 
 1. **Agro.Identity.Api** - Authentication and authorization (JWT)
-2. **Agro.Farm.Api** - Management of properties, plots, and sensors
-3. **Agro.Sensor.Ingest.Api** - Ingestion of sensor data
-4. **Agro.Analytics.Worker** - Event processing, rules, and alerts
-5. **Agro.Dashboard.Api** - Optimized queries for dashboards (read-only)
+2. **Agro.Farm.Api** - Management of properties, plots (with crop_type), and sensors
+3. **Agro.Sensor.Ingest.Api** - JWT-protected sensor data ingestion
+4. **Agro.Analytics.Worker** - Event processing, rules, and alerts (e.g., soil moisture <30% for 24h)
+5. **Agro.Dashboard.Api** - Optimized queries with plot status badges (read-only)
 
 ### Inter-Service Communication
 - **Synchronous:** HTTP/REST with JWT authentication
@@ -920,16 +922,15 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 - **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
 
 ### Project Documentation
-- **Git Submodules Setup:** [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md)
-- **Quick Start Guide:** [QUICK_START_SUBMODULES.md](../QUICK_START_SUBMODULES.md)
-- **New Service Template:** [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md)
-- **Solution Structure:** [SOLUTION_STRUCTURE_GUIDE.md](../SOLUTION_STRUCTURE_GUIDE.md)
-- **Local Setup:** [docs/development/local-setup.md](../docs/development/local-setup.md)
-- **.gitignore Strategy:** [docs/development/GITIGNORE_WITH_SUBMODULES.md](../docs/development/GITIGNORE_WITH_SUBMODULES.md)
-- **Architecture Decisions:** [docs/adr/](../docs/adr/)
-- **C4 Diagrams:** [docs/architecture/](../docs/architecture/)
-- **Terraform Infrastructure:** [docs/architecture/infrastructure-terraform.md](../docs/architecture/infrastructure-terraform.md)
-- **Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md)
+- **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](../docs/REQUIREMENTS_MAPPING.md) - Hackathon spec → roadmap traceability
+- **Technical Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md) - Complete strategy, phases, deliverables
+- **Git Submodules Setup:** [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md) - In-depth workflow
+- **Quick Start Guide:** [QUICK_START_SUBMODULES.md](../QUICK_START_SUBMODULES.md) - 5-minute setup
+- **New Service Template:** [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md) - Service creation checklist
+- **Local Setup:** [docs/development/local-setup.md](../docs/development/local-setup.md) - Docker Compose environment
+- **Architecture Decisions:** [docs/adr/](../docs/adr/) - 7 ADRs (001-007)
+- **C4 Diagrams:** [docs/architecture/](../docs/architecture/) - Context + Container
+- **Terraform Infrastructure:** [docs/architecture/infrastructure-terraform.md](../docs/architecture/infrastructure-terraform.md) - IaC + delivery evidence
 
 ### Key ADRs
 - [ADR-001: Microservices Architecture](../docs/adr/ADR-001-microservices.md)

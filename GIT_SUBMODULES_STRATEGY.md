@@ -629,3 +629,255 @@ kubectl apply -f kubernetes/
 > **Date:** January 9, 2026  
 > **Status:** Ready for implementation  
 > **Next Steps:** Create separate repositories on GitHub and add as submodules
+---
+
+## 📁 .gitignore Strategy with Submodules
+
+### Core Concept
+
+**Each Git repository has its own `.gitignore` INDEPENDENT.**
+
+```
+tc-agro-solutions/                  ← Parent repo
+├── .gitignore                      ← Ignores parent-level items
+├── services/
+│   └── agro-farm-service/          ← Submodule (Git repository)
+│       └── .gitignore              ← Ignores farm SERVICE items
+├── common/
+│   └── agro-shared-library/        ← Submodule (Git repository)
+│       └── .gitignore              ← Ignores shared library items
+└── infrastructure/
+    └── .gitignore                  ← Ignores infrastructure items
+```
+
+**Result:** Multiple `.gitignore` files, working **independently**.
+
+### Parent Repository `.gitignore`
+
+Controls what is ignored at the **parent level** (tc-agro-solutions/.gitignore):
+
+```bash
+# Build outputs (parent level)
+build/
+dist/
+*.out
+
+# Terraform state
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Infrastructure
+.kube/
+kubeconfig
+
+# Environment
+.env.deployment
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+```
+
+**⚠️ IMPORTANT:** Do NOT include submodule directories (like `bin/`, `obj/`) because:
+- Each submodule has its own `.gitignore`
+- Ignoring in parent creates confusion
+- Leaves full control to each repository
+
+### Submodule `.gitignore` Template
+
+For .NET services (services/agro-farm-service/.gitignore):
+
+```bash
+# .NET / C#
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+.vs/
+.vscode/
+*.user
+packages/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+appsettings.Secrets.json
+secrets.json
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.nupkg
+*.snupkg
+```
+
+### How It Works
+
+#### Example 1: Building a Service
+
+```bash
+cd tc-agro-solutions/services/agro-farm-service
+dotnet build
+
+# Creates:
+# - bin/  ← Ignored by services/agro-farm-service/.gitignore
+# - obj/  ← Ignored by services/agro-farm-service/.gitignore
+
+# Git status in farm service:
+git status
+# Output: nothing to commit, working tree clean
+
+# Git status in parent:
+cd ../..
+git status
+# Output: nothing to commit, working tree clean
+```
+
+#### Example 2: Code Changes in Submodule
+
+```bash
+cd services/agro-farm-service
+# Edit code
+vim src/Features/Properties/CreatePropertyHandler.cs
+
+# Git status in service:
+git status
+# Output: modified: src/Features/Properties/CreatePropertyHandler.cs
+
+# Git status in parent:
+cd ../..
+git status
+# Output: modified: services/agro-farm-service (modified content)
+```
+
+#### Example 3: Environment Files
+
+```bash
+cd services/agro-farm-service
+echo "DB_PASSWORD=secret123" > .env
+
+# Git status in service:
+git status
+# Output: nothing to commit (.env is ignored)
+
+# Git status in parent:
+cd ../..
+git status
+# Output: nothing to commit
+```
+
+### Common Workflow
+
+#### Setup (First Time)
+```bash
+git clone --recurse-submodules https://github.com/org/tc-agro-solutions.git
+cd tc-agro-solutions
+
+# Verify .gitignore files exist
+ls -la .gitignore
+ls -la services/agro-farm-service/.gitignore
+ls -la common/agro-shared-library/.gitignore
+```
+
+#### Development Routine
+```bash
+# Build service (generates bin/, obj/ — ignored)
+cd services/agro-farm-service
+dotnet build
+
+# Status check (clean, no artifacts)
+git status  # ✅ clean
+
+# Edit code
+# ... work on features ...
+
+# Commit (only code, no bin/, obj/, .env)
+git add .
+git commit -m "feat: add plot validation"
+git push origin feature/plot-validation
+
+# Back to parent
+cd ../..
+git status  # shows farm service was updated
+
+# Update parent to latest farm version
+git add services/agro-farm-service
+git commit -m "chore: update farm service"
+git push
+```
+
+#### Verify Everything is Correct
+```bash
+# Ensure .gitignore is being tracked
+git status .gitignore  # should be tracked
+
+# See what's being tracked in a submodule
+cd services/agro-farm-service
+git ls-files  # lists ALL tracked files
+
+# Confirm bin/, obj/ are NOT in the list
+git ls-files | grep bin  # should return nothing
+```
+
+### Troubleshooting
+
+#### Issue: Accidentally Committed Build Artifacts
+
+**Solution:**
+```bash
+cd services/agro-farm-service
+
+# Add to .gitignore
+echo "bin/" >> .gitignore
+echo "obj/" >> .gitignore
+
+# Remove from Git (but keep locally)
+git rm -r --cached bin/ obj/
+
+# Commit
+git commit -m "chore: ignore build artifacts"
+```
+
+#### Issue: .gitignore Not Working
+
+**Solution:**
+```bash
+# Clear Git cache and re-add everything
+git rm --cached -r .
+git add -A
+git commit -m "chore: reset git tracking"
+```
+
+### Best Practices Summary
+
+| What | Parent `.gitignore` | Submodule `.gitignore` |
+|------|---------------------|------------------------|
+| **Controls** | What is ignored in parent repo | What is ignored in submodule repo |
+| **Affects** | `git status` in parent | `git status` in submodule |
+| **Should Ignore** | Infrastructure files, parent-level build outputs | Service-specific artifacts (bin/, obj/, .env) |
+| **Should NOT Ignore** | Submodule artifacts | Parent-level files |
+
+### References
+
+- [Git .gitignore Documentation](https://git-scm.com/docs/gitignore)
+- [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
+- [GitHub .gitignore Templates](https://github.com/github/gitignore)

@@ -70,24 +70,27 @@ common/
 
 ## 🏗️ Key Documentation
 
-### Quick References
-- **[⚡ Quick Start - Submodules (5 min)](QUICK_START_SUBMODULES.md)** - Clone and run in 5 minutes
+### For Developers (First Time)
+- **[⚡ Quick Start (5 min)](QUICK_START_SUBMODULES.md)** - Clone and run immediately
+- **[🐳 Local Development Setup](docs/development/local-setup.md)** - Docker Compose guide
+- **[🤖 Copilot Instructions](.github/copilot-instructions.md)** - Coding standards
+
+### For Architects / Tech Leads
+- **[🗺️ Technical Roadmap](README_ROADMAP.md)** - Complete strategy, phases, deliverables
+- **[✅ Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)** - Hackathon spec → roadmap traceability
+- **[📋 Architectural Decision Records (ADRs)](docs/adr/)** - All decisions (001-007)
+- **[📊 C4 Diagrams](docs/architecture/)** - System context + container diagrams
+
+### For DevOps / Infrastructure
+- **[🏗️ Terraform Infrastructure Guide](docs/architecture/infrastructure-terraform.md)** - IaC implementation
+- **[⚙️ AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** - Performance + cost optimization
+- **[📖 Node Pool Quick Reference](terraform/AKS_NODE_POOLS_REFERENCE.md)** - Ready-to-use HCL
+
+### For Adding New Services
+- **[📝 New Microservice Template](NEW_MICROSERVICE_TEMPLATE.md)** - Step-by-step checklist
+
+### For Git Submodules
 - **[🔗 Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)** - Complete setup & workflow guide
-
-### Architecture & Decisions
-- [Technical Roadmap](README_ROADMAP.md) - Complete strategy & timeline
-- [C4 Context Diagram](docs/architecture/c4-context.md) - System context
-- [C4 Container Diagram](docs/architecture/c4-container.md) - Component structure
-- [Architectural Decision Records](docs/adr/) - All decisions (ADR-001 to ADR-007)
-
-### Infrastructure
-- [Terraform Infrastructure Guide](docs/architecture/infrastructure-terraform.md) - IaC implementation
-- [AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md) - Performance & cost optimization
-- [Node Pool Quick Reference](terraform/AKS_NODE_POOLS_REFERENCE.md) - Ready-to-use HCL
-
-### Development
-- [Local Development Setup](docs/development/local-setup.md) - Docker Compose guide
-- [Copilot Instructions](https://github.com/your-org/tc-agro-solutions/blob/main/.github/copilot-instructions.md) - Coding standards
 
 ---
 
