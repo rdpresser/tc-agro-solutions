@@ -1,662 +1,373 @@
 /**
  * TC Agro Solutions - API Module
- * Handles all HTTP requests to backend services
- * 
- * AUTHENTICATION NOTE:
- * ============================================================================
- * All protected API calls include the JWT token in the Authorization header.
- * The backend MUST validate this token on every request using [Authorize].
- * 
- * If the token is invalid or expired, the backend returns 401 Unauthorized.
- * The frontend handles this by redirecting to the login page.
- * ============================================================================
- * 
- * USAGE:
- * ============================================================================
- * Currently all API calls are COMMENTED OUT for demo purposes.
- * Mock data is used instead to demonstrate the UI.
- * 
- * To enable real API calls:
- * 1. Ensure backend is running
- * 2. Update API_BASE_URL to match backend
- * 3. Uncomment the fetch() calls in each function
- * 4. Remove mock data returns
- * ============================================================================
+ * HTTP client with axios and SignalR integration
  */
 
-// =============================================================================
-// Configuration
-// =============================================================================
+import axios from 'axios';
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { APP_CONFIG, getToken, clearToken, showToast } from './utils.js';
 
-const API_BASE_URL = '/api';  // Change to actual backend URL
+// ============================================
+// AXIOS INSTANCE WITH INTERCEPTORS
+// ============================================
 
-/**
- * Default headers for API requests
- */
-function getHeaders() {
-  const token = getToken();
+export const api = axios.create({
+  baseURL: APP_CONFIG.apiBaseUrl,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Request interceptor - Add JWT token to all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor - Handle 401 unauthorized
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearToken();
+      window.location.href = 'index.html';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ============================================
+// DASHBOARD API
+// ============================================
+
+export async function getDashboardStats() {
+  // MOCK DATA (for demo)
   return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    properties: 4,
+    plots: 5,
+    sensors: 12,
+    alerts: 3
   };
+  
+  /* REAL API (uncomment when backend ready)
+  const { data } = await api.get('/dashboard/stats');
+  return data;
+  */
 }
 
-/**
- * Handle API response
- * @param {Response} response - Fetch response
- * @returns {Promise<any>} Parsed response data
- */
-async function handleResponse(response) {
-  if (response.status === 401) {
-    // Unauthorized - redirect to login
-    clearToken();
-    window.location.href = 'index.html';
-    throw new Error('Session expired. Please login again.');
-  }
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP error ${response.status}`);
-  }
-  
-  // Handle empty responses (204 No Content)
-  if (response.status === 204) {
-    return null;
-  }
-  
-  return response.json();
-}
-
-// =============================================================================
-// Dashboard API
-// =============================================================================
-
-/**
- * Get dashboard statistics
- * @returns {Promise<object>} Dashboard data
- */
-async function getDashboardStats() {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  return {
-    totalProperties: 12,
-    totalPlots: 47,
-    activeSensors: 156,
-    pendingAlerts: 3,
-    recentReadings: [
-      { sensorId: 'S001', plotName: 'North Field', temperature: 28.5, humidity: 65.2, soilMoisture: 42.1, timestamp: new Date().toISOString() },
-      { sensorId: 'S002', plotName: 'South Valley', temperature: 27.8, humidity: 68.5, soilMoisture: 38.7, timestamp: new Date().toISOString() },
-      { sensorId: 'S003', plotName: 'East Ridge', temperature: 29.1, humidity: 62.3, soilMoisture: 45.2, timestamp: new Date().toISOString() },
-    ],
-  };
-  // =========================================================================
-  
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
-}
-
-/**
- * Get latest sensor readings
- * @param {number} limit - Number of readings to fetch
- * @returns {Promise<array>} Latest readings
- */
-async function getLatestReadings(limit = 10) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getLatestReadings(limit = 5) {
+  // MOCK DATA (for demo)
   return [
-    { id: 1, sensorId: 'S001', plotName: 'North Field', temperature: 28.5, humidity: 65.2, soilMoisture: 42.1, timestamp: new Date().toISOString() },
-    { id: 2, sensorId: 'S002', plotName: 'South Valley', temperature: 27.8, humidity: 68.5, soilMoisture: 38.7, timestamp: new Date().toISOString() },
-    { id: 3, sensorId: 'S003', plotName: 'East Ridge', temperature: 29.1, humidity: 62.3, soilMoisture: 45.2, timestamp: new Date().toISOString() },
-    { id: 4, sensorId: 'S004', plotName: 'West Grove', temperature: 26.9, humidity: 71.0, soilMoisture: 51.3, timestamp: new Date().toISOString() },
-    { id: 5, sensorId: 'S005', plotName: 'Central Plain', temperature: 28.2, humidity: 64.8, soilMoisture: 39.5, timestamp: new Date().toISOString() },
+    { sensorId: 'SENSOR-001', plotName: 'North Field', temperature: 28.5, humidity: 65, soilMoisture: 42, timestamp: new Date().toISOString() },
+    { sensorId: 'SENSOR-002', plotName: 'South Valley', temperature: 27.8, humidity: 68, soilMoisture: 45, timestamp: new Date(Date.now() - 300000).toISOString() },
+    { sensorId: 'SENSOR-003', plotName: 'East Ridge', temperature: 36.2, humidity: 38, soilMoisture: 22, timestamp: new Date(Date.now() - 900000).toISOString() },
+    { sensorId: 'SENSOR-004', plotName: 'West Grove', temperature: 29.1, humidity: 62, soilMoisture: 48, timestamp: new Date(Date.now() - 600000).toISOString() },
+    { sensorId: 'SENSOR-006', plotName: 'Central Plain', temperature: 30.4, humidity: 55, soilMoisture: 38, timestamp: new Date(Date.now() - 600000).toISOString() }
   ];
-  // =========================================================================
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/dashboard/latest?limit=${limit}`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API (uncomment when backend ready)
+  const { data } = await api.get('/dashboard/latest', { params: { limit } });
+  return data;
+  */
 }
 
-// =============================================================================
-// Properties API
-// =============================================================================
+export async function getHistoricalData(sensorId, days = 7) {
+  // MOCK DATA - Generate 7 days of hourly readings
+  const data = [];
+  const now = Date.now();
+  
+  for (let d = days; d >= 0; d--) {
+    for (let h = 0; h < 24; h += 4) { // Every 4 hours
+      const timestamp = new Date(now - (d * 24 + h) * 3600000);
+      data.push({
+        timestamp: timestamp.toISOString(),
+        temperature: 25 + Math.random() * 10,
+        humidity: 50 + Math.random() * 30,
+        soilMoisture: 30 + Math.random() * 40
+      });
+    }
+  }
+  
+  return data;
+  
+  /* REAL API (uncomment when backend ready)
+  const { data } = await api.get(`/sensors/${sensorId}/readings`, { params: { days } });
+  return data;
+  */
+}
 
-/**
- * Get all properties
- * @returns {Promise<array>} List of properties
- */
-async function getProperties() {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+// ============================================
+// PROPERTIES API
+// ============================================
+
+export async function getProperties() {
+  // MOCK DATA
   return [
-    { id: '1', name: 'Green Valley Farm', location: 'São Paulo, SP', areaHectares: 450.5, plotCount: 8, status: 'active', createdAt: '2024-06-15' },
-    { id: '2', name: 'Sunrise Ranch', location: 'Minas Gerais, MG', areaHectares: 280.0, plotCount: 5, status: 'active', createdAt: '2024-08-20' },
-    { id: '3', name: 'Highland Estate', location: 'Goiás, GO', areaHectares: 620.8, plotCount: 12, status: 'active', createdAt: '2024-03-10' },
-    { id: '4', name: 'River Bend Farm', location: 'Paraná, PR', areaHectares: 185.2, plotCount: 4, status: 'inactive', createdAt: '2024-11-05' },
+    { id: 'prop-001', name: 'Green Valley Farm', location: 'São Paulo, SP', areaHectares: 350.5, status: 'active', plotsCount: 2 },
+    { id: 'prop-002', name: 'Sunrise Ranch', location: 'Minas Gerais, MG', areaHectares: 180.0, status: 'active', plotsCount: 2 },
+    { id: 'prop-003', name: 'Highland Estate', location: 'Goiás, GO', areaHectares: 250.0, status: 'active', plotsCount: 1 },
+    { id: 'prop-004', name: 'River Bend Farm', location: 'Paraná, PR', areaHectares: 120.0, status: 'inactive', plotsCount: 0 }
   ];
-  // =========================================================================
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/properties`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.get('/properties');
+  return data;
+  */
 }
 
-/**
- * Get property by ID
- * @param {string} id - Property ID
- * @returns {Promise<object>} Property data
- */
-async function getProperty(id) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getProperty(id) {
   const properties = await getProperties();
-  return properties.find(p => p.id === id) || null;
-  // =========================================================================
+  return properties.find(p => p.id === id);
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/properties/${id}`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.get(`/properties/${id}`);
+  return data;
+  */
 }
 
-/**
- * Create new property
- * @param {object} data - Property data
- * @returns {Promise<object>} Created property
- */
-async function createProperty(data) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Creating property:', data);
-  return { id: Date.now().toString(), ...data, createdAt: new Date().toISOString() };
-  // =========================================================================
+export async function createProperty(propertyData) {
+  // MOCK - Return created property
+  return { id: `prop-${Date.now()}`, ...propertyData };
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/properties`, {
-   *   method: 'POST',
-   *   headers: getHeaders(),
-   *   body: JSON.stringify(data),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.post('/properties', propertyData);
+  return data;
+  */
 }
 
-/**
- * Update property
- * @param {string} id - Property ID
- * @param {object} data - Updated data
- * @returns {Promise<object>} Updated property
- */
-async function updateProperty(id, data) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Updating property:', id, data);
-  return { id, ...data, updatedAt: new Date().toISOString() };
-  // =========================================================================
+export async function updateProperty(id, propertyData) {
+  // MOCK
+  return { id, ...propertyData };
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/properties/${id}`, {
-   *   method: 'PUT',
-   *   headers: getHeaders(),
-   *   body: JSON.stringify(data),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.put(`/properties/${id}`, propertyData);
+  return data;
+  */
 }
 
-/**
- * Delete property
- * @param {string} id - Property ID
- * @returns {Promise<void>}
- */
-async function deleteProperty(id) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Deleting property:', id);
+export async function deleteProperty(id) {
+  // MOCK
   return true;
-  // =========================================================================
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/properties/${id}`, {
-   *   method: 'DELETE',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  await api.delete(`/properties/${id}`);
+  return true;
+  */
 }
 
-// =============================================================================
-// Plots API
-// =============================================================================
+// ============================================
+// PLOTS API
+// ============================================
 
-/**
- * Get all plots
- * @param {string} propertyId - Optional property filter
- * @returns {Promise<array>} List of plots
- */
-async function getPlots(propertyId = null) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getPlots(propertyId = null) {
+  // MOCK DATA
   const plots = [
-    { id: '1', name: 'North Field', propertyId: '1', propertyName: 'Green Valley Farm', cropType: 'Soybean', areaHectares: 85.5, status: 'active', sensorCount: 4 },
-    { id: '2', name: 'South Valley', propertyId: '1', propertyName: 'Green Valley Farm', cropType: 'Corn', areaHectares: 120.0, status: 'active', sensorCount: 6 },
-    { id: '3', name: 'East Ridge', propertyId: '2', propertyName: 'Sunrise Ranch', cropType: 'Coffee', areaHectares: 45.2, status: 'warning', sensorCount: 3 },
-    { id: '4', name: 'West Grove', propertyId: '2', propertyName: 'Sunrise Ranch', cropType: 'Sugarcane', areaHectares: 95.8, status: 'active', sensorCount: 5 },
-    { id: '5', name: 'Central Plain', propertyId: '3', propertyName: 'Highland Estate', cropType: 'Cotton', areaHectares: 200.0, status: 'alert', sensorCount: 8 },
+    { id: 'plot-001', propertyId: 'prop-001', propertyName: 'Green Valley Farm', name: 'North Field', cropType: 'soybean', areaHectares: 85.5, status: 'healthy', sensorsCount: 4 },
+    { id: 'plot-002', propertyId: 'prop-001', propertyName: 'Green Valley Farm', name: 'South Valley', cropType: 'corn', areaHectares: 120.0, status: 'healthy', sensorsCount: 6 },
+    { id: 'plot-003', propertyId: 'prop-002', propertyName: 'Sunrise Ranch', name: 'East Ridge', cropType: 'coffee', areaHectares: 45.2, status: 'warning', sensorsCount: 3 },
+    { id: 'plot-004', propertyId: 'prop-002', propertyName: 'Sunrise Ranch', name: 'West Grove', cropType: 'sugarcane', areaHectares: 95.8, status: 'healthy', sensorsCount: 5 },
+    { id: 'plot-005', propertyId: 'prop-003', propertyName: 'Highland Estate', name: 'Central Plain', cropType: 'cotton', areaHectares: 200.0, status: 'alert', sensorsCount: 8 }
   ];
   
-  if (propertyId) {
-    return plots.filter(p => p.propertyId === propertyId);
-  }
-  return plots;
-  // =========================================================================
+  return propertyId ? plots.filter(p => p.propertyId === propertyId) : plots;
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const url = propertyId 
-   *   ? `${API_BASE_URL}/properties/${propertyId}/plots`
-   *   : `${API_BASE_URL}/plots`;
-   * 
-   * const response = await fetch(url, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.get('/plots', { params: { propertyId } });
+  return data;
+  */
 }
 
-/**
- * Get plot by ID
- * @param {string} id - Plot ID
- * @returns {Promise<object>} Plot data
- */
-async function getPlot(id) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getPlot(id) {
   const plots = await getPlots();
-  return plots.find(p => p.id === id) || null;
-  // =========================================================================
+  return plots.find(p => p.id === id);
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/plots/${id}`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.get(`/plots/${id}`);
+  return data;
+  */
 }
 
-/**
- * Create new plot
- * @param {object} data - Plot data
- * @returns {Promise<object>} Created plot
- */
-async function createPlot(data) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Creating plot:', data);
-  return { id: Date.now().toString(), ...data, createdAt: new Date().toISOString() };
-  // =========================================================================
+export async function createPlot(plotData) {
+  return { id: `plot-${Date.now()}`, ...plotData };
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/plots`, {
-   *   method: 'POST',
-   *   headers: getHeaders(),
-   *   body: JSON.stringify(data),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.post('/plots', plotData);
+  return data;
+  */
 }
 
-/**
- * Update plot
- * @param {string} id - Plot ID
- * @param {object} data - Updated data
- * @returns {Promise<object>} Updated plot
- */
-async function updatePlot(id, data) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Updating plot:', id, data);
-  return { id, ...data, updatedAt: new Date().toISOString() };
-  // =========================================================================
+export async function updatePlot(id, plotData) {
+  return { id, ...plotData };
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/plots/${id}`, {
-   *   method: 'PUT',
-   *   headers: getHeaders(),
-   *   body: JSON.stringify(data),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.put(`/plots/${id}`, plotData);
+  return data;
+  */
 }
 
-/**
- * Delete plot
- * @param {string} id - Plot ID
- * @returns {Promise<void>}
- */
-async function deletePlot(id) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Deleting plot:', id);
+export async function deletePlot(id) {
   return true;
-  // =========================================================================
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/plots/${id}`, {
-   *   method: 'DELETE',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  await api.delete(`/plots/${id}`);
+  return true;
+  */
 }
 
-// =============================================================================
-// Sensors API
-// =============================================================================
+// ============================================
+// SENSORS API
+// ============================================
 
-/**
- * Get all sensors
- * @param {string} plotId - Optional plot filter
- * @returns {Promise<array>} List of sensors
- */
-async function getSensors(plotId = null) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getSensors(plotId = null) {
+  // MOCK DATA
   const sensors = [
-    { id: 'S001', plotId: '1', plotName: 'North Field', type: 'Multi-Sensor', status: 'online', lastReading: { temperature: 28.5, humidity: 65.2, soilMoisture: 42.1 }, lastUpdate: new Date().toISOString() },
-    { id: 'S002', plotId: '2', plotName: 'South Valley', type: 'Multi-Sensor', status: 'online', lastReading: { temperature: 27.8, humidity: 68.5, soilMoisture: 38.7 }, lastUpdate: new Date().toISOString() },
-    { id: 'S003', plotId: '3', plotName: 'East Ridge', type: 'Temperature', status: 'warning', lastReading: { temperature: 29.1, humidity: 62.3, soilMoisture: 28.2 }, lastUpdate: new Date().toISOString() },
-    { id: 'S004', plotId: '4', plotName: 'West Grove', type: 'Humidity', status: 'online', lastReading: { temperature: 26.9, humidity: 71.0, soilMoisture: 51.3 }, lastUpdate: new Date().toISOString() },
-    { id: 'S005', plotId: '5', plotName: 'Central Plain', type: 'Multi-Sensor', status: 'offline', lastReading: { temperature: 0, humidity: 0, soilMoisture: 0 }, lastUpdate: '2026-01-08T10:30:00Z' },
+    { id: 'SENSOR-001', plotId: 'plot-001', plotName: 'North Field', status: 'online', battery: 85, lastReading: new Date().toISOString(), temperature: 28.5, humidity: 65, soilMoisture: 42 },
+    { id: 'SENSOR-002', plotId: 'plot-002', plotName: 'South Valley', status: 'online', battery: 72, lastReading: new Date().toISOString(), temperature: 27.8, humidity: 68, soilMoisture: 45 },
+    { id: 'SENSOR-003', plotId: 'plot-003', plotName: 'East Ridge', status: 'warning', battery: 60, lastReading: new Date(Date.now() - 900000).toISOString(), temperature: 36.2, humidity: 38, soilMoisture: 22 },
+    { id: 'SENSOR-004', plotId: 'plot-004', plotName: 'West Grove', status: 'online', battery: 90, lastReading: new Date().toISOString(), temperature: 29.1, humidity: 62, soilMoisture: 48 },
+    { id: 'SENSOR-005', plotId: 'plot-005', plotName: 'Central Plain', status: 'offline', battery: 45, lastReading: new Date(Date.now() - 7200000).toISOString(), temperature: null, humidity: null, soilMoisture: null },
+    { id: 'SENSOR-006', plotId: 'plot-005', plotName: 'Central Plain', status: 'warning', battery: 15, lastReading: new Date(Date.now() - 600000).toISOString(), temperature: 30.4, humidity: 55, soilMoisture: 38 }
   ];
   
-  if (plotId) {
-    return sensors.filter(s => s.plotId === plotId);
-  }
-  return sensors;
-  // =========================================================================
+  return plotId ? sensors.filter(s => s.plotId === plotId) : sensors;
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const url = plotId 
-   *   ? `${API_BASE_URL}/plots/${plotId}/sensors`
-   *   : `${API_BASE_URL}/sensors`;
-   * 
-   * const response = await fetch(url, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  /* REAL API
+  const { data } = await api.get('/sensors', { params: { plotId } });
+  return data;
+  */
 }
 
-// =============================================================================
-// Alerts API
-// =============================================================================
+// ============================================
+// ALERTS API
+// ============================================
 
-/**
- * Get all alerts
- * @param {string} status - Optional status filter (pending, resolved, all)
- * @returns {Promise<array>} List of alerts
- */
-async function getAlerts(status = 'all') {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
+export async function getAlerts(status = null) {
+  // MOCK DATA
   const alerts = [
-    { id: '1', plotId: '5', plotName: 'Central Plain', sensorId: 'S005', type: 'offline', severity: 'critical', message: 'Sensor offline for more than 24 hours', status: 'pending', createdAt: '2026-01-08T10:30:00Z' },
-    { id: '2', plotId: '3', plotName: 'East Ridge', sensorId: 'S003', type: 'low_moisture', severity: 'warning', message: 'Soil moisture below 30% for 24 hours', status: 'pending', createdAt: '2026-01-09T08:15:00Z' },
-    { id: '3', plotId: '1', plotName: 'North Field', sensorId: 'S001', type: 'high_temp', severity: 'info', message: 'Temperature above 30°C detected', status: 'resolved', createdAt: '2026-01-08T14:20:00Z', resolvedAt: '2026-01-08T16:45:00Z' },
+    { id: 'alert-001', severity: 'critical', title: 'Sensor Offline - SENSOR-005', message: 'Sensor at Central Plain has not responded for over 2 hours.', plotId: 'plot-005', plotName: 'Central Plain', sensorId: 'SENSOR-005', status: 'pending', createdAt: new Date(Date.now() - 600000).toISOString() },
+    { id: 'alert-002', severity: 'critical', title: 'Low Soil Moisture - Extended Period', message: 'Soil moisture at East Ridge has been below 30% for over 24 hours.', plotId: 'plot-003', plotName: 'East Ridge', sensorId: 'SENSOR-003', status: 'pending', createdAt: new Date(Date.now() - 1500000).toISOString() },
+    { id: 'alert-003', severity: 'warning', title: 'Low Battery - SENSOR-006', message: 'Sensor at Central Plain has battery level at 15%.', plotId: 'plot-005', plotName: 'Central Plain', sensorId: 'SENSOR-006', status: 'pending', createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: 'alert-004', severity: 'warning', title: 'High Temperature Alert', message: 'Temperature at North Field exceeded 35°C threshold.', plotId: 'plot-001', plotName: 'North Field', sensorId: 'SENSOR-001', status: 'resolved', createdAt: new Date(Date.now() - 7200000).toISOString(), resolvedAt: new Date(Date.now() - 3600000).toISOString() }
   ];
   
-  if (status !== 'all') {
-    return alerts.filter(a => a.status === status);
+  return status ? alerts.filter(a => a.status === status) : alerts;
+  
+  /* REAL API
+  const { data } = await api.get('/alerts', { params: { status } });
+  return data;
+  */
+}
+
+export async function resolveAlert(alertId) {
+  return true;
+  
+  /* REAL API
+  await api.post(`/alerts/${alertId}/resolve`);
+  return true;
+  */
+}
+
+// ============================================
+// SIGNALR REAL-TIME CONNECTION
+// ============================================
+
+let signalRConnection = null;
+
+export async function initSignalRConnection(handlers = {}) {
+  // Use mock if SignalR is disabled
+  if (!APP_CONFIG.signalREnabled) {
+    return initMockSignalR(handlers);
   }
-  return alerts;
-  // =========================================================================
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/alerts?status=${status}`, {
-   *   method: 'GET',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
+  try {
+    signalRConnection = new HubConnectionBuilder()
+      .withUrl(`${APP_CONFIG.apiBaseUrl.replace('/api', '')}/sensorHub`, {
+        accessTokenFactory: () => getToken()
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+    
+    // Register event handlers
+    if (handlers.onSensorReading) {
+      signalRConnection.on('SensorReading', handlers.onSensorReading);
+    }
+    
+    if (handlers.onAlert) {
+      signalRConnection.on('NewAlert', handlers.onAlert);
+    }
+    
+    if (handlers.onSensorStatus) {
+      signalRConnection.on('SensorStatusChanged', handlers.onSensorStatus);
+    }
+    
+    // Connection state handlers
+    signalRConnection.onreconnecting(() => {
+      console.log('SignalR: Reconnecting...');
+      handlers.onConnectionChange?.('reconnecting');
+    });
+    
+    signalRConnection.onreconnected(() => {
+      console.log('SignalR: Reconnected');
+      handlers.onConnectionChange?.('connected');
+      showToast('Real-time connection restored', 'success');
+    });
+    
+    signalRConnection.onclose(() => {
+      console.log('SignalR: Disconnected');
+      handlers.onConnectionChange?.('disconnected');
+    });
+    
+    // Start connection
+    await signalRConnection.start();
+    console.log('SignalR: Connected');
+    handlers.onConnectionChange?.('connected');
+    
+    return signalRConnection;
+    
+  } catch (error) {
+    console.error('SignalR connection failed:', error);
+    // Fallback to mock
+    return initMockSignalR(handlers);
+  }
 }
 
-/**
- * Resolve an alert
- * @param {string} id - Alert ID
- * @returns {Promise<object>} Updated alert
- */
-async function resolveAlert(id) {
-  // =========================================================================
-  // MOCK DATA (remove when backend is ready)
-  // =========================================================================
-  console.log('Resolving alert:', id);
-  return { id, status: 'resolved', resolvedAt: new Date().toISOString() };
-  // =========================================================================
+// Mock SignalR for demo purposes
+function initMockSignalR(handlers = {}) {
+  console.log('Using mock SignalR (demo mode)');
   
-  /* =========================================================================
-   * REAL API CALL (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * const response = await fetch(`${API_BASE_URL}/alerts/${id}/resolve`, {
-   *   method: 'POST',
-   *   headers: getHeaders(),
-   * });
-   * return handleResponse(response);
-   * 
-   * =========================================================================
-   */
-}
-
-// =============================================================================
-// SignalR Real-Time Connection
-// =============================================================================
-
-/**
- * Initialize SignalR connection for real-time updates
- * @param {function} onReading - Callback for new sensor readings
- * @param {function} onAlert - Callback for new alerts
- * @returns {object} SignalR connection object
- */
-function initSignalRConnection(onReading, onAlert) {
-  // =========================================================================
-  // MOCK SIGNALR (simulates real-time updates for demo)
-  // =========================================================================
-  console.log('SignalR: Using mock connection for demo');
+  // Simulate sensor readings every 5 seconds
+  const mockInterval = setInterval(() => {
+    if (handlers.onSensorReading) {
+      const mockReading = {
+        sensorId: `SENSOR-00${Math.floor(Math.random() * 4) + 1}`,
+        temperature: 25 + Math.random() * 12,
+        humidity: 40 + Math.random() * 40,
+        soilMoisture: 25 + Math.random() * 50,
+        timestamp: new Date().toISOString()
+      };
+      handlers.onSensorReading(mockReading);
+    }
+  }, 5000);
   
-  // Simulate periodic updates
-  const mockConnection = {
-    start: () => {
-      console.log('SignalR: Mock connection started');
-      
-      // Simulate sensor readings every 5 seconds
-      setInterval(() => {
-        if (onReading) {
-          const mockReading = {
-            sensorId: `S00${Math.floor(Math.random() * 5) + 1}`,
-            plotName: ['North Field', 'South Valley', 'East Ridge', 'West Grove', 'Central Plain'][Math.floor(Math.random() * 5)],
-            temperature: 25 + Math.random() * 10,
-            humidity: 50 + Math.random() * 30,
-            soilMoisture: 30 + Math.random() * 30,
-            timestamp: new Date().toISOString(),
-          };
-          onReading(mockReading);
-        }
-      }, 5000);
-      
-      return Promise.resolve();
-    },
-    stop: () => {
-      console.log('SignalR: Mock connection stopped');
-      return Promise.resolve();
-    },
+  // Return mock connection object
+  return {
+    stop: () => clearInterval(mockInterval),
     state: 'Connected',
+    isMock: true
   };
-  
-  return mockConnection;
-  // =========================================================================
-  
-  /* =========================================================================
-   * REAL SIGNALR (uncomment when backend is ready)
-   * =========================================================================
-   * 
-   * // Include SignalR script in HTML:
-   * // <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
-   * 
-   * const connection = new signalR.HubConnectionBuilder()
-   *   .withUrl('/hubs/telemetry', {
-   *     accessTokenFactory: () => getToken(),
-   *   })
-   *   .withAutomaticReconnect()
-   *   .configureLogging(signalR.LogLevel.Information)
-   *   .build();
-   * 
-   * // Subscribe to sensor readings
-   * connection.on('SensorReadingReceived', (reading) => {
-   *   console.log('SignalR: New reading', reading);
-   *   if (onReading) onReading(reading);
-   * });
-   * 
-   * // Subscribe to alerts
-   * connection.on('AlertGenerated', (alert) => {
-   *   console.log('SignalR: New alert', alert);
-   *   if (onAlert) onAlert(alert);
-   * });
-   * 
-   * // Handle connection events
-   * connection.onreconnecting(() => {
-   *   console.log('SignalR: Reconnecting...');
-   * });
-   * 
-   * connection.onreconnected(() => {
-   *   console.log('SignalR: Reconnected');
-   * });
-   * 
-   * connection.onclose(() => {
-   *   console.log('SignalR: Disconnected');
-   * });
-   * 
-   * return connection;
-   * 
-   * =========================================================================
-   */
 }
 
-// =============================================================================
-// Export for module usage (if needed)
-// =============================================================================
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    API_BASE_URL,
-    getHeaders,
-    getDashboardStats,
-    getLatestReadings,
-    getProperties, getProperty, createProperty, updateProperty, deleteProperty,
-    getPlots, getPlot, createPlot, updatePlot, deletePlot,
-    getSensors,
-    getAlerts, resolveAlert,
-    initSignalRConnection,
-  };
+export function stopSignalRConnection() {
+  if (signalRConnection) {
+    signalRConnection.stop();
+    signalRConnection = null;
+  }
 }

@@ -1,0 +1,24 @@
+{
+  "name": "tc-agro-dashboard",
+  "version": "1.0.0",
+  "description": "TC Agro Solutions - Dashboard POC",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.0",
+    "axios": "^1.6.0",
+    "chart.js": "^4.4.0",
+    "dayjs": "^1.11.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Edge versions"
+  ]
+}

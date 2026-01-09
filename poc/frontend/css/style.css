@@ -698,11 +698,30 @@ p {
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
+  border: 2px dashed var(--color-border);
+  gap: 8px;
 }
 
 .chart-placeholder-icon {
   font-size: 3rem;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.chart-placeholder p {
+  margin: 0;
+  font-weight: 500;
+  color: var(--color-text-light);
+}
+
+.chart-placeholder p:first-of-type {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
 /* --------------------------------------------------------------------------

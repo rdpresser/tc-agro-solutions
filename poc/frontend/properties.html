@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="TC Agro Solutions - Properties Management">
   <title>Properties | TC Agro Solutions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="app-container">
@@ -97,7 +97,7 @@
         <div class="card" style="margin-bottom: 24px;">
           <div class="form-row">
             <div class="form-group" style="margin-bottom: 0;">
-              <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search properties...">
+              <input type="text" id="search-properties" class="form-control" placeholder="🔍 Search properties...">
             </div>
             <div class="form-group" style="margin-bottom: 0;">
               <select id="statusFilter" class="form-control form-select">
@@ -123,63 +123,10 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="propertiesTable">
-              <!-- Mock Data Rows -->
+            <tbody id="properties-tbody">
+              <!-- Data loaded via JavaScript -->
               <tr>
-                <td>
-                  <strong>Green Valley Farm</strong>
-                </td>
-                <td>São Paulo, SP</td>
-                <td>450.5 ha</td>
-                <td>8 plots</td>
-                <td><span class="badge badge-success">Active</span></td>
-                <td>Jun 15, 2024</td>
-                <td class="table-actions">
-                  <a href="properties-form.html?id=1" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
-                  <button onclick="handleDelete('1', 'Green Valley Farm')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Sunrise Ranch</strong>
-                </td>
-                <td>Minas Gerais, MG</td>
-                <td>280.0 ha</td>
-                <td>5 plots</td>
-                <td><span class="badge badge-success">Active</span></td>
-                <td>Aug 20, 2024</td>
-                <td class="table-actions">
-                  <a href="properties-form.html?id=2" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
-                  <button onclick="handleDelete('2', 'Sunrise Ranch')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Highland Estate</strong>
-                </td>
-                <td>Goiás, GO</td>
-                <td>620.8 ha</td>
-                <td>12 plots</td>
-                <td><span class="badge badge-success">Active</span></td>
-                <td>Mar 10, 2024</td>
-                <td class="table-actions">
-                  <a href="properties-form.html?id=3" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
-                  <button onclick="handleDelete('3', 'Highland Estate')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>River Bend Farm</strong>
-                </td>
-                <td>Paraná, PR</td>
-                <td>185.2 ha</td>
-                <td>4 plots</td>
-                <td><span class="badge badge-warning">Inactive</span></td>
-                <td>Nov 5, 2024</td>
-                <td class="table-actions">
-                  <a href="properties-form.html?id=4" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
-                  <button onclick="handleDelete('4', 'River Bend Farm')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
-                </td>
+                <td colspan="7" class="text-center">Loading...</td>
               </tr>
             </tbody>
           </table>
@@ -196,41 +143,7 @@
     </main>
   </div>
   
-  <!-- Scripts -->
-  <script src="js/utils.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Page Init
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!requireAuth()) return;
-      
-      // Optional: Load real data when backend is ready
-      // await loadProperties();
-    });
-    
-    // Delete Handler
-    function handleDelete(id, name) {
-      if (window.confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
-        // Mock delete - uncomment when backend is ready
-        // await deleteProperty(id);
-        showToast(`Property "${name}" deleted successfully`, 'success');
-        
-        // Reload page or remove row
-        location.reload();
-      }
-    }
-    
-    // Search Filter
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const rows = document.querySelectorAll('#propertiesTable tr');
-      
-      rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(search) ? '' : 'none';
-      });
-    });
-  </script>
+  <!-- Scripts (ES Module) -->
+  <script type="module" src="/js/properties.js"></script>
 </body>
 </html>

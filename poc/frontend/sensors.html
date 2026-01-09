@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Sensors Monitoring">
+  <meta name="description" content="TC Agro Solutions - Sensor Monitoring">
   <title>Sensors | TC Agro Solutions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="app-container">
@@ -404,71 +404,7 @@
     }
   </style>
   
-  <!-- Scripts -->
-  <script src="js/utils.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Page Init
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!requireAuth()) return;
-      
-      // Initialize SignalR mock updates
-      initSignalRConnection();
-      
-      // Update sync time
-      setInterval(() => {
-        document.getElementById('lastSync').textContent = 'Just now';
-      }, 5000);
-    });
-    
-    // Refresh sensors
-    function refreshSensors() {
-      showToast('Refreshing sensor data...', 'info');
-      
-      // Simulate refresh delay
-      setTimeout(() => {
-        showToast('Sensor data updated', 'success');
-        document.getElementById('lastSync').textContent = 'Just now';
-      }, 1000);
-      
-      /* ============================================
-       * REAL API CALL (uncomment when backend ready)
-       * ============================================
-      try {
-        const sensors = await getSensors();
-        renderSensors(sensors);
-        showToast('Sensor data updated', 'success');
-      } catch (error) {
-        showToast('Failed to refresh sensors', 'error');
-      }
-       */
-    }
-    
-    // Filter by status
-    document.getElementById('statusFilter')?.addEventListener('change', (e) => {
-      const status = e.target.value;
-      const cards = document.querySelectorAll('.sensor-card');
-      
-      cards.forEach(card => {
-        if (!status || card.dataset.status === status) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
-    
-    // Search filter
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const cards = document.querySelectorAll('.sensor-card');
-      
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(search) ? '' : 'none';
-      });
-    });
-  </script>
+  <!-- Scripts (ES Module) -->
+  <script type="module" src="/js/sensors.js"></script>
 </body>
 </html>

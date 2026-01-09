@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Plots Management">
+  <meta name="description" content="TC Agro Solutions - Plot Management">
   <title>Plots | TC Agro Solutions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="app-container">
@@ -223,34 +223,7 @@
     </main>
   </div>
   
-  <!-- Scripts -->
-  <script src="js/utils.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Page Init
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!requireAuth()) return;
-    });
-    
-    // Delete Handler
-    function handleDelete(id, name) {
-      if (window.confirm(`Are you sure you want to delete plot "${name}"?\n\nThis will also remove associated sensors.`)) {
-        showToast(`Plot "${name}" deleted successfully`, 'success');
-        location.reload();
-      }
-    }
-    
-    // Search Filter
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const rows = document.querySelectorAll('#plotsTable tr');
-      
-      rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(search) ? '' : 'none';
-      });
-    });
-  </script>
+  <!-- Scripts (ES Module) -->
+  <script type="module" src="/js/plots.js"></script>
 </body>
 </html>

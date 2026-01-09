@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="TC Agro Solutions - Property Form">
   <title>Property | TC Agro Solutions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="app-container">
@@ -212,98 +212,7 @@
     </main>
   </div>
   
-  <!-- Scripts -->
-  <script src="js/utils.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Page Init
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!requireAuth()) return;
-      
-      // Check if editing existing property
-      const id = getQueryParam('id');
-      if (id) {
-        await loadProperty(id);
-      }
-    });
-    
-    // Load Property for Edit
-    async function loadProperty(id) {
-      try {
-        const property = await getProperty(id);
-        if (!property) {
-          showToast('Property not found', 'danger');
-          window.location.href = 'properties.html';
-          return;
-        }
-        
-        // Update page title
-        $('pageTitle').textContent = 'Edit Property';
-        $('formTitle').textContent = 'Edit Property';
-        $('breadcrumbTitle').textContent = property.name;
-        $('submitBtn').innerHTML = '💾 Update Property';
-        
-        // Populate form
-        $('propertyId').value = property.id;
-        $('name').value = property.name || '';
-        $('location').value = property.location || '';
-        $('areaHectares').value = property.areaHectares || '';
-        $('status').value = property.status || 'active';
-        
-      } catch (error) {
-        console.error('Failed to load property:', error);
-        showToast('Failed to load property', 'danger');
-      }
-    }
-    
-    // Form Submit Handler
-    document.getElementById('propertyForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const id = $('propertyId').value;
-      const data = {
-        name: $('name').value,
-        location: $('location').value,
-        areaHectares: parseFloat($('areaHectares').value),
-        latitude: $('latitude').value ? parseFloat($('latitude').value) : null,
-        longitude: $('longitude').value ? parseFloat($('longitude').value) : null,
-        status: $('status').value,
-        notes: $('notes').value,
-      };
-      
-      // Validate
-      if (!data.name || !data.location || !data.areaHectares) {
-        showToast('Please fill in all required fields', 'warning');
-        return;
-      }
-      
-      try {
-        $('submitBtn').disabled = true;
-        $('submitBtn').innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Saving...';
-        
-        if (id) {
-          // Update existing
-          await updateProperty(id, data);
-          showToast('Property updated successfully', 'success');
-        } else {
-          // Create new
-          await createProperty(data);
-          showToast('Property created successfully', 'success');
-        }
-        
-        // Redirect to list
-        setTimeout(() => {
-          window.location.href = 'properties.html';
-        }, 1000);
-        
-      } catch (error) {
-        console.error('Failed to save property:', error);
-        showToast('Failed to save property', 'danger');
-        $('submitBtn').disabled = false;
-        $('submitBtn').innerHTML = '💾 Save Property';
-      }
-    });
-  </script>
+  <!-- Scripts (ES Module) -->
+  <script type="module" src="/js/properties-form.js"></script>
 </body>
 </html>

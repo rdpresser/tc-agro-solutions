@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="TC Agro Solutions - Alerts Management">
   <title>Alerts | TC Agro Solutions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="app-container">
@@ -477,88 +477,7 @@
     }
   </style>
   
-  <!-- Scripts -->
-  <script src="js/utils.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script>
-    // Page Init
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!requireAuth()) return;
-      
-      // Tab switching
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-      });
-    });
-    
-    // Tab Switching
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tab);
-      });
-      
-      document.getElementById('pendingAlerts').style.display = 
-        (tab === 'pending' || tab === 'all') ? 'flex' : 'none';
-      document.getElementById('resolvedAlerts').style.display = 
-        (tab === 'resolved' || tab === 'all') ? 'flex' : 'none';
-    }
-    
-    // Resolve Alert
-    function resolveAlert(alertId) {
-      if (window.confirm('Mark this alert as resolved?')) {
-        showToast('Alert resolved successfully', 'success');
-        
-        // In real app, call API then refresh
-        setTimeout(() => location.reload(), 1000);
-        
-        /* ============================================
-         * REAL API CALL (uncomment when backend ready)
-         * ============================================
-        try {
-          await resolveAlert(alertId);
-          showToast('Alert resolved', 'success');
-          loadAlerts();
-        } catch (error) {
-          showToast('Failed to resolve alert', 'error');
-        }
-         */
-      }
-    }
-    
-    // Snooze Alert
-    function snoozeAlert(alertId) {
-      showToast('Alert snoozed for 1 hour', 'info');
-    }
-    
-    // View Sensor
-    function viewSensor(sensorId) {
-      window.location.href = 'sensors.html?highlight=' + sensorId;
-    }
-    
-    // View Plot
-    function viewPlot(plotId) {
-      window.location.href = 'plots-form.html?id=' + plotId;
-    }
-    
-    // Trigger Irrigation
-    function triggerIrrigation(plotId) {
-      if (window.confirm('Trigger irrigation for this plot?')) {
-        showToast('Irrigation command sent', 'success');
-      }
-    }
-    
-    // Schedule Visit
-    function scheduleVisit(sensorId) {
-      showToast('Visit scheduled (demo)', 'info');
-    }
-    
-    // Mark All Read
-    function markAllRead() {
-      if (window.confirm('Mark all alerts as read?')) {
-        showToast('All alerts marked as read', 'success');
-      }
-    }
-  </script>
+  <!-- Scripts (ES Module) -->
+  <script type="module" src="/js/alerts.js"></script>
 </body>
 </html>

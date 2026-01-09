@@ -1,7 +1,7 @@
 # 🌾 TC Agro Solutions - Frontend POC
 
 **Purpose:** Demonstrate the dashboard UI for agricultural monitoring without requiring Azure/AppInsights access  
-**Technology:** Pure HTML5 / CSS3 / JavaScript (no frameworks)  
+**Technology:** Vite + ES Modules + axios + Chart.js + dayjs + SignalR  
 **Date:** January 2026
 
 ---
@@ -12,8 +12,11 @@ This Proof of Concept (POC) provides a fully functional frontend UI that:
 - ✅ Demonstrates login → dashboard → CRUD flows
 - ✅ Uses mock data for immediate demonstration
 - ✅ Prepares AJAX calls for backend integration (commented)
-- ✅ Simulates SignalR real-time updates
+- ✅ Real-time updates with SignalR (mock fallback)
+- ✅ Interactive charts with Chart.js
 - ✅ Works offline (no backend required for demo)
+- ✅ Hot reload development with Vite
+- ✅ English (en-US) localization
 
 ---
 
@@ -22,7 +25,7 @@ This Proof of Concept (POC) provides a fully functional frontend UI that:
 ```
 poc/frontend/
 ├── index.html              # Login page (entry point)
-├── dashboard.html          # Main dashboard with stats & real-time metrics
+├── dashboard.html          # Main dashboard with stats & charts
 ├── properties.html         # Properties list
 ├── properties-form.html    # Property create/edit form
 ├── plots.html              # Plots list
@@ -32,9 +35,22 @@ poc/frontend/
 ├── css/
 │   └── style.css           # Unified agro-themed styles
 ├── js/
-│   ├── utils.js            # Common utilities (DOM, formatting, validation)
+│   ├── utils.js            # Common utilities (DOM, formatting, dayjs)
 │   ├── auth.js             # Authentication logic
-│   └── api.js              # API client with mock data
+│   ├── api.js              # axios client + SignalR + mock data
+│   ├── charts.js           # Chart.js wrapper functions
+│   ├── common.js           # Shared page initialization
+│   ├── index.js            # Login page entry point
+│   ├── dashboard.js        # Dashboard with real-time + charts
+│   ├── properties.js       # Properties page script
+│   ├── properties-form.js  # Property form script
+│   ├── plots.js            # Plots page script
+│   ├── plots-form.js       # Plot form script
+│   ├── sensors.js          # Sensors page script
+│   └── alerts.js           # Alerts page script
+├── package.json            # npm dependencies
+├── vite.config.js          # Vite configuration
+├── .gitignore              # node_modules, dist exclusions
 └── README.md               # This file
 ```
 
@@ -42,24 +58,26 @@ poc/frontend/
 
 ## 🚀 Quick Start
 
-### Option 1: Open Directly in Browser
+### Development Mode (Recommended)
 ```bash
-# Simply open index.html in your browser
-# No server required for demo mode
+cd poc/frontend
 
-# Or use VS Code Live Server extension
-# Right-click index.html → "Open with Live Server"
+# Install dependencies (first time only)
+npm install
+
+# Start development server with hot reload
+npm run dev
+
+# Opens automatically at http://localhost:3000
 ```
 
-### Option 2: Serve with Local Server
+### Production Build
 ```bash
-# Using Python
-cd poc/frontend
-python -m http.server 8000
-# Open http://localhost:8000
+# Build for production
+npm run build
 
-# Using Node.js (npx)
-npx serve poc/frontend -p 8000
+# Preview production build
+npm run preview
 ```
 
 ### Demo Credentials
@@ -361,12 +379,20 @@ POST /alerts/{id}/resolve
 
 ## 📦 Dependencies
 
-**None!** This POC uses:
-- Pure HTML5
-- Vanilla JavaScript (ES6+)
-- CSS3 (Custom Properties, Flexbox, Grid)
-- No npm packages
-- No build step required
+This POC uses npm-managed libraries:
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| vite | ^5.4.21 | Dev server + bundler |
+| axios | ^1.6.x | HTTP client |
+| chart.js | ^4.4.x | Interactive charts |
+| dayjs | ^1.11.x | Date formatting |
+| @microsoft/signalr | ^8.x | Real-time updates |
+
+### Install
+```bash
+npm install
+```
 
 ---
 
@@ -375,8 +401,7 @@ POST /alerts/{id}/resolve
 1. **No real authentication:** Frontend security is simulated
 2. **Mock data only:** All data is hardcoded in JavaScript
 3. **No data persistence:** Refreshing page resets state
-4. **Chart placeholders:** No real charting library included
-5. **SignalR simulated:** Uses setInterval, not real WebSocket
+4. **SignalR mocked:** Uses setInterval fallback until backend ready
 
 ---
 
@@ -393,12 +418,11 @@ POST /alerts/{id}/resolve
 
 1. **Backend Integration:** Uncomment AJAX calls when APIs are ready
 2. **Real SignalR:** Replace mock with actual SignalR hub
-3. **Charts:** Add Chart.js or similar for historical data
-4. **Form Validation:** Add client-side validation library
-5. **Error Handling:** Improve error states and messages
+3. **Form Validation:** Add client-side validation library
+4. **Error Handling:** Improve error states and messages
 
 ---
 
-> **POC Version:** 1.0  
+> **POC Version:** 2.0 (Vite + ES Modules)  
 > **Created:** January 2026  
 > **Purpose:** Hackathon 8NETT demonstration without Azure dependencies
