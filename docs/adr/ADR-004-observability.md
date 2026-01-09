@@ -7,7 +7,7 @@
 Phase 5 requires technical visibility (logs, metrics, traces) and business visibility (alert dashboards, performance).
 
 ## Decision
-Use Application Insights as the telemetry center, Log Analytics for centralized analysis, and Azure Monitor Workbooks for technical dashboards. Business dashboards via Dashboard.Api with Redis cache.
+Use Application Insights as the telemetry center, Log Analytics for centralized analysis, and Azure Monitor Workbooks for technical dashboards. Business dashboards via Dashboard.Api with Redis cache, exposing plot status badges derived from alert rules (e.g., soil moisture below 30% for 24h → "Dry Alert").
 
 ## Justification
 - Native integration with Azure and .NET
@@ -21,3 +21,4 @@ Use Application Insights as the telemetry center, Log Analytics for centralized 
 - Cost proportional to telemetry volume
 - Need for instrumentation in all services
 - Optional Power BI for more sophisticated reports
+- Base alert rules must be defined and fed into both Dashboard.Api and Workbooks to keep plot status views consistent.

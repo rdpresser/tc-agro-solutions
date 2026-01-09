@@ -21,3 +21,12 @@ Use PostgreSQL as the main database with Azure PostgreSQL Flexible Server, persi
 - Greater operational simplicity
 - Time series queries will use raw SQL (KQL in reports)
 - Better performance in historical reads
+
+## Domain Model Summary (Mandatory Attributes)
+
+**Plot** stores crop_type per producer:
+- `Id` (PK)
+- `PropertyId` (FK)
+- `Name`
+- `CropType` (mandatory: informing the culture planted in each plot)
+- `AreaHectares`

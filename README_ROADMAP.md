@@ -473,6 +473,7 @@ Response:
 ✅ If miss, query DB
 ✅ Update cache
 ✅ Return JSON
+✅ Compute plot status badge from alert rules (e.g., soil moisture < 30% for 24h ⇒ "Dry Alert")
 ```
 
 #### 3.4 Aggregated Queries
@@ -655,6 +656,7 @@ public class Sensor
 - FastEndpoints
 - EF Core + TimescaleDB
 - Azure Service Bus (publisher)
+- JWT-protected ingestion endpoints
 - Input validation
 
 #### Main Endpoint
@@ -688,6 +690,7 @@ Response: 202 Accepted with processed count
 ```
 
 #### Flow
+0. Enforce JWT on all ingestion endpoints
 1. Validate input (schema, limits)
 2. Persist to sensor_readings (TimescaleDB hypertable)
 3. Publish event to Service Bus
@@ -960,6 +963,8 @@ jobs:
             identity=agro-identity:${{ github.sha }}
 ```
 
+**Local deploy note (hackathon requirement):** if the deploy target is local, the CI pipeline must at minimum run unit tests, build container images, and push them to a registry (e.g., Docker Hub); green checks are required even without cloud deploy.
+
 ### 11.3 GitOps (ArgoCD)
 
 ```yaml
@@ -1026,6 +1031,18 @@ spec:
 
 ---
 
+## ✅ Mandatory Deliverables (Hackathon 8NETT)
+
+- Architecture: diagram of the MVP and written rationale for decisions.
+- Infrastructure proof: app running (cloud or local) with evidence of Kubernetes objects and APM traces/metrics/logs plus monitoring/alerts dashboard.
+- CI/CD: pipeline run showing green checks; for local deploy, include unit tests, image build, and push to a registry.
+- MVP demo scope: producer authentication, property/plot registration, authenticated sensor ingestion API, dashboard with historical data, plot status badges, and alert visibility.
+- Video: demo up to 15 minutes covering architecture, infra evidence, CI/CD, and MVP.
+- Repositories: accessible source code links (preferably public for evaluation).
+- Delivery report (PDF/TXT): group name, participants + Discord usernames, documentation link, repository links, demo video link.
+
+---
+
 ## 🎯 13. Next Steps and Recommendations
 
 1. ✅ **Start with Phase 0-1:** Infra setup and code structure
@@ -1073,6 +1090,11 @@ The project documentation is organized as follows:
 - **Architecture:** [C4 Diagrams](docs/architecture/c4-context.md) | [ADRs](docs/adr/)
 - **Infrastructure:** [Terraform Guide](docs/architecture/infrastructure-terraform.md)
 - **Deployment:** [Deployment Guide](docs/architecture/deployment.md)
+
+### Documentation consolidation
+- Treat this roadmap as the single high-level source; keep ADRs for decisions only.
+- Merge submodule guidance into a single entry point (GIT_SUBMODULES_STRATEGY.md referencing QUICK_START_SUBMODULES.md) and retire redundant summaries when practical (e.g., SOLUTION_STRUCTURE_GUIDE.md).
+- Prefer linking to authoritative guides instead of duplicating content in new Markdown files.
 
 ---
 

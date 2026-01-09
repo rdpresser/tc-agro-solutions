@@ -15,6 +15,10 @@ TC Agro Solutions uses Terraform to provision and manage Azure infrastructure in
 
 **Key Decision:** No multi-environment Terraform setup. Development happens locally with Docker Compose, and Terraform only manages Azure (production).
 
+## Delivery Evidence (Hackathon 8NETT)
+
+- Capture proof of Kubernetes objects (namespaces, deployments, services) and APM telemetry (metrics, traces, logs) as part of the delivery package. Screenshots or exported dashboards should accompany the deployment notes.
+
 ---
 
 ## Terraform Structure
