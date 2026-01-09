@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TC Agro Solutions - Dashboard">
+  <title>Dashboard | TC Agro Solutions</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">🌾</span>
+        <span class="sidebar-brand">TC Agro</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <!-- Main Navigation -->
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <a href="dashboard.html" class="nav-item active">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a href="properties.html" class="nav-item">
+            <span class="nav-icon">🏘️</span>
+            <span class="nav-text">Properties</span>
+          </a>
+          <a href="plots.html" class="nav-item">
+            <span class="nav-icon">🌱</span>
+            <span class="nav-text">Plots</span>
+          </a>
+        </div>
+        
+        <!-- Monitoring -->
+        <div class="nav-section">
+          <div class="nav-section-title">Monitoring</div>
+          <a href="sensors.html" class="nav-item">
+            <span class="nav-icon">📡</span>
+            <span class="nav-text">Sensors</span>
+          </a>
+          <a href="alerts.html" class="nav-item">
+            <span class="nav-icon">🔔</span>
+            <span class="nav-text">Alerts</span>
+          </a>
+        </div>
+        
+        <!-- Account -->
+        <div class="nav-section">
+          <div class="nav-section-title">Account</div>
+          <a href="#" class="nav-item" data-action="logout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-text">Logout</span>
+          </a>
+        </div>
+      </nav>
+    </aside>
+    
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuToggle" class="menu-toggle">☰</button>
+          <h1 class="page-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="user-menu">
+            <div class="user-avatar">👤</div>
+            <span id="userDisplay" class="user-name">User</span>
+          </div>
+        </div>
+      </header>
+      
+      <!-- Content Area -->
+      <div class="content">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <!-- Properties Card -->
+          <div class="stat-card">
+            <div class="stat-icon green">🏘️</div>
+            <div class="stat-content">
+              <div class="stat-value" id="statProperties">12</div>
+              <div class="stat-label">Properties</div>
+              <div class="stat-change positive">↑ 2 this month</div>
+            </div>
+          </div>
+          
+          <!-- Plots Card -->
+          <div class="stat-card">
+            <div class="stat-icon brown">🌱</div>
+            <div class="stat-content">
+              <div class="stat-value" id="statPlots">47</div>
+              <div class="stat-label">Active Plots</div>
+              <div class="stat-change positive">↑ 5 this month</div>
+            </div>
+          </div>
+          
+          <!-- Sensors Card -->
+          <div class="stat-card">
+            <div class="stat-icon info">📡</div>
+            <div class="stat-content">
+              <div class="stat-value" id="statSensors">156</div>
+              <div class="stat-label">Active Sensors</div>
+              <div class="stat-change">98% online</div>
+            </div>
+          </div>
+          
+          <!-- Alerts Card -->
+          <div class="stat-card">
+            <div class="stat-icon warning">🔔</div>
+            <div class="stat-content">
+              <div class="stat-value" id="statAlerts">3</div>
+              <div class="stat-label">Pending Alerts</div>
+              <div class="stat-change negative">↑ 1 new</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="grid grid-2" style="margin-bottom: 24px;">
+          <!-- Sensor Readings Chart -->
+          <div class="chart-container">
+            <div class="card-header">
+              <h3 class="card-title">📈 Sensor Readings (7 days)</h3>
+            </div>
+            <div class="chart-placeholder">
+              <div class="chart-placeholder-icon">📊</div>
+              <p>Chart will display when connected to backend</p>
+              <p class="text-muted" style="font-size: 0.85rem;">Shows temperature, humidity, soil moisture trends</p>
+            </div>
+          </div>
+          
+          <!-- Alerts Distribution -->
+          <div class="chart-container">
+            <div class="card-header">
+              <h3 class="card-title">🥧 Alerts by Type</h3>
+            </div>
+            <div class="chart-placeholder">
+              <div class="chart-placeholder-icon">📉</div>
+              <p>Chart will display when connected to backend</p>
+              <p class="text-muted" style="font-size: 0.85rem;">Distribution of alert types</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Real-time Metrics -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <h3 class="card-title">⚡ Real-time Sensor Data</h3>
+            <span id="signalrStatus" class="badge badge-success">● Live</span>
+          </div>
+          <div class="grid grid-4" id="metricsGrid">
+            <!-- Temperature -->
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">🌡️ Temperature</span>
+              </div>
+              <div class="metric-value" id="metricTemp">28.5<span class="metric-unit">°C</span></div>
+              <div class="metric-footer">
+                <span class="metric-trend up">↑ 1.2°C</span>
+                <span>vs yesterday</span>
+              </div>
+            </div>
+            
+            <!-- Humidity -->
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">💧 Humidity</span>
+              </div>
+              <div class="metric-value" id="metricHumidity">65.2<span class="metric-unit">%</span></div>
+              <div class="metric-footer">
+                <span class="metric-trend down">↓ 3.5%</span>
+                <span>vs yesterday</span>
+              </div>
+            </div>
+            
+            <!-- Soil Moisture -->
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">🌿 Soil Moisture</span>
+              </div>
+              <div class="metric-value" id="metricSoil">42.1<span class="metric-unit">%</span></div>
+              <div class="metric-footer">
+                <span class="metric-trend">● Optimal</span>
+              </div>
+            </div>
+            
+            <!-- Rainfall -->
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">🌧️ Rainfall</span>
+              </div>
+              <div class="metric-value" id="metricRain">0.0<span class="metric-unit">mm</span></div>
+              <div class="metric-footer">
+                <span>Today</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Recent Readings Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📋 Latest Sensor Readings</h3>
+            <a href="sensors.html" class="btn btn-outline btn-sm">View All →</a>
+          </div>
+          <div class="table-container" style="box-shadow: none;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Sensor</th>
+                  <th>Plot</th>
+                  <th>Temperature</th>
+                  <th>Humidity</th>
+                  <th>Soil Moisture</th>
+                  <th>Last Update</th>
+                </tr>
+              </thead>
+              <tbody id="readingsTable">
+                <tr>
+                  <td><span class="badge badge-info">S001</span></td>
+                  <td>North Field</td>
+                  <td>28.5°C</td>
+                  <td>65.2%</td>
+                  <td>42.1%</td>
+                  <td>Just now</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-info">S002</span></td>
+                  <td>South Valley</td>
+                  <td>27.8°C</td>
+                  <td>68.5%</td>
+                  <td>38.7%</td>
+                  <td>2 min ago</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-warning">S003</span></td>
+                  <td>East Ridge</td>
+                  <td>29.1°C</td>
+                  <td>62.3%</td>
+                  <td class="text-warning">28.2%</td>
+                  <td>5 min ago</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-info">S004</span></td>
+                  <td>West Grove</td>
+                  <td>26.9°C</td>
+                  <td>71.0%</td>
+                  <td>51.3%</td>
+                  <td>3 min ago</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-danger">S005</span></td>
+                  <td>Central Plain</td>
+                  <td colspan="3" class="text-danger">⚠️ Sensor offline</td>
+                  <td>24h ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Pending Alerts -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-header">
+            <h3 class="card-title">⚠️ Pending Alerts</h3>
+            <a href="alerts.html" class="btn btn-outline btn-sm">View All →</a>
+          </div>
+          <div id="alertsList">
+            <!-- Alert Item 1 -->
+            <div class="alert alert-danger">
+              <span class="alert-icon">🚨</span>
+              <div class="alert-content">
+                <div class="alert-title">Sensor Offline - Central Plain</div>
+                <p class="text-muted" style="margin: 0;">Sensor S005 has been offline for more than 24 hours.</p>
+                <p class="text-muted" style="margin: 4px 0 0; font-size: 0.8rem;">Jan 8, 2026 at 10:30 AM</p>
+              </div>
+            </div>
+            
+            <!-- Alert Item 2 -->
+            <div class="alert alert-warning">
+              <span class="alert-icon">💧</span>
+              <div class="alert-content">
+                <div class="alert-title">Low Soil Moisture - East Ridge</div>
+                <p class="text-muted" style="margin: 0;">Soil moisture below 30% for 24 hours. Consider irrigation.</p>
+                <p class="text-muted" style="margin: 4px 0 0; font-size: 0.8rem;">Jan 9, 2026 at 8:15 AM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // =======================================================================
+    // Page Initialization
+    // =======================================================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check authentication
+      if (!requireAuth()) return;
+      
+      // Load dashboard data
+      await loadDashboardData();
+      
+      // Initialize real-time connection (mock for demo)
+      initRealTimeUpdates();
+    });
+    
+    // =======================================================================
+    // Load Dashboard Data
+    // =======================================================================
+    async function loadDashboardData() {
+      try {
+        // Fetch dashboard stats
+        const stats = await getDashboardStats();
+        
+        // Update stat cards
+        if (stats) {
+          $('statProperties').textContent = stats.totalProperties || 0;
+          $('statPlots').textContent = stats.totalPlots || 0;
+          $('statSensors').textContent = stats.activeSensors || 0;
+          $('statAlerts').textContent = stats.pendingAlerts || 0;
+        }
+        
+        // Load recent readings
+        const readings = await getLatestReadings(5);
+        if (readings && readings.length > 0) {
+          // Update table (already has mock data in HTML)
+          console.log('Loaded readings:', readings);
+        }
+        
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+        showToast('Failed to load dashboard data', 'danger');
+      }
+    }
+    
+    // =======================================================================
+    // Real-Time Updates (SignalR Mock)
+    // =======================================================================
+    function initRealTimeUpdates() {
+      const connection = initSignalRConnection(
+        // On new sensor reading
+        (reading) => {
+          console.log('New reading:', reading);
+          
+          // Update metric cards with animation
+          updateMetricWithAnimation('metricTemp', reading.temperature.toFixed(1));
+          updateMetricWithAnimation('metricHumidity', reading.humidity.toFixed(1));
+          updateMetricWithAnimation('metricSoil', reading.soilMoisture.toFixed(1));
+        },
+        // On new alert
+        (alert) => {
+          console.log('New alert:', alert);
+          showToast(`New alert: ${alert.message}`, 'warning');
+        }
+      );
+      
+      // Start connection
+      connection.start()
+        .then(() => {
+          console.log('Real-time connection established');
+          $('signalrStatus').innerHTML = '● Live';
+          $('signalrStatus').className = 'badge badge-success';
+        })
+        .catch(err => {
+          console.error('Connection failed:', err);
+          $('signalrStatus').innerHTML = '● Offline';
+          $('signalrStatus').className = 'badge badge-danger';
+        });
+    }
+    
+    // =======================================================================
+    // UI Helpers
+    // =======================================================================
+    function updateMetricWithAnimation(elementId, value) {
+      const element = $(elementId);
+      if (!element) return;
+      
+      // Get unit from existing content
+      const unitElement = element.querySelector('.metric-unit');
+      const unit = unitElement ? unitElement.outerHTML : '';
+      
+      // Update value with animation
+      element.style.transform = 'scale(1.1)';
+      element.innerHTML = value + unit;
+      
+      setTimeout(() => {
+        element.style.transform = 'scale(1)';
+      }, 200);
+    }
+  </script>
+</body>
+</html>

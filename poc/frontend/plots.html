@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TC Agro Solutions - Plots Management">
+  <title>Plots | TC Agro Solutions</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">🌾</span>
+        <span class="sidebar-brand">TC Agro</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <a href="dashboard.html" class="nav-item">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a href="properties.html" class="nav-item">
+            <span class="nav-icon">🏘️</span>
+            <span class="nav-text">Properties</span>
+          </a>
+          <a href="plots.html" class="nav-item active">
+            <span class="nav-icon">🌱</span>
+            <span class="nav-text">Plots</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Monitoring</div>
+          <a href="sensors.html" class="nav-item">
+            <span class="nav-icon">📡</span>
+            <span class="nav-text">Sensors</span>
+          </a>
+          <a href="alerts.html" class="nav-item">
+            <span class="nav-icon">🔔</span>
+            <span class="nav-text">Alerts</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Account</div>
+          <a href="#" class="nav-item" data-action="logout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-text">Logout</span>
+          </a>
+        </div>
+      </nav>
+    </aside>
+    
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuToggle" class="menu-toggle">☰</button>
+          <h1 class="page-title">Plots</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="user-menu">
+            <div class="user-avatar">👤</div>
+            <span id="userDisplay" class="user-name">User</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="content">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="page-header-title">
+            <span class="page-header-icon">🌱</span>
+            <div>
+              <div class="breadcrumb">
+                <a href="dashboard.html">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span>Plots</span>
+              </div>
+              <h2 style="margin: 0;">Plot Management</h2>
+            </div>
+          </div>
+          <div class="page-header-actions">
+            <a href="plots-form.html" class="btn btn-primary">
+              ➕ Add Plot
+            </a>
+          </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
+              <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search plots...">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <select id="propertyFilter" class="form-control form-select">
+                <option value="">All Properties</option>
+                <option value="1">Green Valley Farm</option>
+                <option value="2">Sunrise Ranch</option>
+                <option value="3">Highland Estate</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <select id="cropFilter" class="form-control form-select">
+                <option value="">All Crops</option>
+                <option value="soybean">Soybean</option>
+                <option value="corn">Corn</option>
+                <option value="coffee">Coffee</option>
+                <option value="sugarcane">Sugarcane</option>
+                <option value="cotton">Cotton</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Status Legend -->
+        <div class="d-flex gap-2" style="margin-bottom: 16px; flex-wrap: wrap;">
+          <span class="badge badge-success">● Healthy</span>
+          <span class="badge badge-warning">● Needs Attention</span>
+          <span class="badge badge-danger">● Alert Active</span>
+        </div>
+        
+        <!-- Plots Table -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Plot Name</th>
+                <th>Property</th>
+                <th>Crop Type</th>
+                <th>Area (ha)</th>
+                <th>Sensors</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="plotsTable">
+              <!-- Mock Data Rows -->
+              <tr>
+                <td><strong>North Field</strong></td>
+                <td>Green Valley Farm</td>
+                <td><span class="badge badge-primary">🌿 Soybean</span></td>
+                <td>85.5 ha</td>
+                <td>4 sensors</td>
+                <td><span class="badge badge-success">Healthy</span></td>
+                <td class="table-actions">
+                  <a href="plots-form.html?id=1" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('1', 'North Field')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>South Valley</strong></td>
+                <td>Green Valley Farm</td>
+                <td><span class="badge badge-primary">🌽 Corn</span></td>
+                <td>120.0 ha</td>
+                <td>6 sensors</td>
+                <td><span class="badge badge-success">Healthy</span></td>
+                <td class="table-actions">
+                  <a href="plots-form.html?id=2" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('2', 'South Valley')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>East Ridge</strong></td>
+                <td>Sunrise Ranch</td>
+                <td><span class="badge badge-primary">☕ Coffee</span></td>
+                <td>45.2 ha</td>
+                <td>3 sensors</td>
+                <td><span class="badge badge-warning">⚠️ Low Moisture</span></td>
+                <td class="table-actions">
+                  <a href="plots-form.html?id=3" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('3', 'East Ridge')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>West Grove</strong></td>
+                <td>Sunrise Ranch</td>
+                <td><span class="badge badge-primary">🎋 Sugarcane</span></td>
+                <td>95.8 ha</td>
+                <td>5 sensors</td>
+                <td><span class="badge badge-success">Healthy</span></td>
+                <td class="table-actions">
+                  <a href="plots-form.html?id=4" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('4', 'West Grove')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Central Plain</strong></td>
+                <td>Highland Estate</td>
+                <td><span class="badge badge-primary">🌸 Cotton</span></td>
+                <td>200.0 ha</td>
+                <td>8 sensors</td>
+                <td><span class="badge badge-danger">🚨 Sensor Offline</span></td>
+                <td class="table-actions">
+                  <a href="plots-form.html?id=5" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('5', 'Central Plain')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Summary -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px;">
+            <span class="text-muted">Showing 5 of 5 plots</span>
+            <div class="d-flex gap-2" style="flex-wrap: wrap;">
+              <span class="badge badge-success">3 Healthy</span>
+              <span class="badge badge-warning">1 Warning</span>
+              <span class="badge badge-danger">1 Alert</span>
+            </div>
+            <span class="text-muted">Total Area: 546.5 ha</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // Page Init
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!requireAuth()) return;
+    });
+    
+    // Delete Handler
+    function handleDelete(id, name) {
+      if (window.confirm(`Are you sure you want to delete plot "${name}"?\n\nThis will also remove associated sensors.`)) {
+        showToast(`Plot "${name}" deleted successfully`, 'success');
+        location.reload();
+      }
+    }
+    
+    // Search Filter
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('#plotsTable tr');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

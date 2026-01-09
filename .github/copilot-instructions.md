@@ -912,6 +912,88 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 
 ---
 
+## �️ Frontend POC (Demo Dashboard)
+
+### Overview
+A pure HTML/CSS/JavaScript frontend for demonstrating the dashboard UI without requiring Azure/backend dependencies.
+
+**Location:** `poc/frontend/`  
+**Documentation:** [poc/frontend/README.md](../poc/frontend/README.md)
+
+### Structure
+```
+poc/frontend/
+├── index.html              # Login page (entry point)
+├── dashboard.html          # Main dashboard with stats & metrics
+├── properties.html         # Properties list
+├── properties-form.html    # Property CRUD form
+├── plots.html              # Plots list
+├── plots-form.html         # Plot CRUD form
+├── sensors.html            # Sensor monitoring grid
+├── alerts.html             # Alert management
+├── css/style.css           # Agro-themed styles
+├── js/
+│   ├── utils.js            # Common utilities
+│   ├── auth.js             # Authentication (mock + prepared real)
+│   └── api.js              # API client with mock data
+└── README.md               # Integration guide
+```
+
+### Key Patterns
+
+#### Token Management (sessionStorage)
+```javascript
+// Token is stored in sessionStorage (clears on browser close)
+sessionStorage.setItem('agro_token', token);
+sessionStorage.getItem('agro_token');
+sessionStorage.removeItem('agro_token');
+```
+
+#### Mock Data Pattern
+```javascript
+// All API functions return mock data for demo
+// Real AJAX calls are commented and ready to uncomment
+
+// MOCK (active):
+return Promise.resolve({ properties: 4, plots: 5 });
+
+/* REAL API (uncomment when backend ready):
+const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+  headers: getHeaders()  // Includes Bearer token
+});
+return handleResponse(response);
+*/
+```
+
+#### Security Model
+```
+⚠️ CRITICAL: Frontend security is for UX only!
+
+Frontend → Controls UI navigation (sessionStorage check)
+Backend  → MUST validate JWT on EVERY request ([Authorize] attribute)
+
+The frontend CANNOT enforce security. Backend MUST validate all tokens.
+```
+
+### Running the POC
+```bash
+# Option 1: Open directly in browser
+# Just open poc/frontend/index.html
+
+# Option 2: Use VS Code Live Server
+# Right-click index.html → "Open with Live Server"
+
+# Option 3: Python server
+cd poc/frontend && python -m http.server 8000
+```
+
+### Design System
+- **Primary Color:** #2D5016 (Dark Green)
+- **Icons:** Unicode emoji (🌾🏘️📊📡🔔)
+- **Responsive:** Mobile-first with breakpoints at 768px/1024px
+
+---
+
 ## 📚 References and Documentation
 
 ### Technology Stack
@@ -922,6 +1004,7 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 - **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
 
 ### Project Documentation
+- **Frontend POC:** [poc/frontend/README.md](../poc/frontend/README.md) - Dashboard demo guide
 - **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](../docs/REQUIREMENTS_MAPPING.md) - Hackathon spec → roadmap traceability
 - **Technical Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md) - Complete strategy, phases, deliverables
 - **Git Submodules Setup:** [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md) - In-depth workflow
@@ -943,6 +1026,6 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 
 ---
 
-> **Last update:** January 9, 2026  
-> **Version:** 1.2  
+> **Last update:** January 2026  
+> **Version:** 1.3  
 > Use these instructions to guide code generation in the TC Agro Solutions project.

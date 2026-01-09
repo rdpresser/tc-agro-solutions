@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TC Agro Solutions - Properties Management">
+  <title>Properties | TC Agro Solutions</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">🌾</span>
+        <span class="sidebar-brand">TC Agro</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <a href="dashboard.html" class="nav-item">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a href="properties.html" class="nav-item active">
+            <span class="nav-icon">🏘️</span>
+            <span class="nav-text">Properties</span>
+          </a>
+          <a href="plots.html" class="nav-item">
+            <span class="nav-icon">🌱</span>
+            <span class="nav-text">Plots</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Monitoring</div>
+          <a href="sensors.html" class="nav-item">
+            <span class="nav-icon">📡</span>
+            <span class="nav-text">Sensors</span>
+          </a>
+          <a href="alerts.html" class="nav-item">
+            <span class="nav-icon">🔔</span>
+            <span class="nav-text">Alerts</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Account</div>
+          <a href="#" class="nav-item" data-action="logout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-text">Logout</span>
+          </a>
+        </div>
+      </nav>
+    </aside>
+    
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuToggle" class="menu-toggle">☰</button>
+          <h1 class="page-title">Properties</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="user-menu">
+            <div class="user-avatar">👤</div>
+            <span id="userDisplay" class="user-name">User</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="content">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="page-header-title">
+            <span class="page-header-icon">🏘️</span>
+            <div>
+              <div class="breadcrumb">
+                <a href="dashboard.html">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span>Properties</span>
+              </div>
+              <h2 style="margin: 0;">Property Management</h2>
+            </div>
+          </div>
+          <div class="page-header-actions">
+            <a href="properties-form.html" class="btn btn-primary">
+              ➕ Add Property
+            </a>
+          </div>
+        </div>
+        
+        <!-- Filters (Optional) -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
+              <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search properties...">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <select id="statusFilter" class="form-control form-select">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Properties Table -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Property Name</th>
+                <th>Location</th>
+                <th>Area (ha)</th>
+                <th>Plots</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="propertiesTable">
+              <!-- Mock Data Rows -->
+              <tr>
+                <td>
+                  <strong>Green Valley Farm</strong>
+                </td>
+                <td>São Paulo, SP</td>
+                <td>450.5 ha</td>
+                <td>8 plots</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td>Jun 15, 2024</td>
+                <td class="table-actions">
+                  <a href="properties-form.html?id=1" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('1', 'Green Valley Farm')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Sunrise Ranch</strong>
+                </td>
+                <td>Minas Gerais, MG</td>
+                <td>280.0 ha</td>
+                <td>5 plots</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td>Aug 20, 2024</td>
+                <td class="table-actions">
+                  <a href="properties-form.html?id=2" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('2', 'Sunrise Ranch')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Highland Estate</strong>
+                </td>
+                <td>Goiás, GO</td>
+                <td>620.8 ha</td>
+                <td>12 plots</td>
+                <td><span class="badge badge-success">Active</span></td>
+                <td>Mar 10, 2024</td>
+                <td class="table-actions">
+                  <a href="properties-form.html?id=3" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('3', 'Highland Estate')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>River Bend Farm</strong>
+                </td>
+                <td>Paraná, PR</td>
+                <td>185.2 ha</td>
+                <td>4 plots</td>
+                <td><span class="badge badge-warning">Inactive</span></td>
+                <td>Nov 5, 2024</td>
+                <td class="table-actions">
+                  <a href="properties-form.html?id=4" class="btn btn-outline btn-sm btn-icon" title="Edit">✏️</a>
+                  <button onclick="handleDelete('4', 'River Bend Farm')" class="btn btn-danger btn-sm btn-icon" title="Delete">🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Summary -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="d-flex justify-between align-center">
+            <span class="text-muted">Showing 4 of 4 properties</span>
+            <span class="text-muted">Total Area: 1,536.5 ha</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // Page Init
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!requireAuth()) return;
+      
+      // Optional: Load real data when backend is ready
+      // await loadProperties();
+    });
+    
+    // Delete Handler
+    function handleDelete(id, name) {
+      if (window.confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
+        // Mock delete - uncomment when backend is ready
+        // await deleteProperty(id);
+        showToast(`Property "${name}" deleted successfully`, 'success');
+        
+        // Reload page or remove row
+        location.reload();
+      }
+    }
+    
+    // Search Filter
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('#propertiesTable tr');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
