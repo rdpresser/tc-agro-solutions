@@ -5,6 +5,7 @@
 
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
+
 import { toast } from './i18n.js';
 import { APP_CONFIG, getToken, clearToken } from './utils.js';
 
@@ -660,7 +661,7 @@ export async function initSignalRConnection(handlers = {}) {
     handlers.onConnectionChange?.('connected');
 
     return signalRConnection;
-  } catch (error) {
+  } catch {
     toast('realtime.mock_fallback', 'warning');
     // Fallback to mock
     return initMockSignalR(handlers);

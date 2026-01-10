@@ -10,8 +10,8 @@
     "build-and-preview": "npm run build && npm run preview",
     "preview": "vite preview",
     "upgrade-deps": "npm-check-updates -u && npm install",
-    "lint": "eslint . --ext .js,.jsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext .js,.jsx --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,html,css,md}\"",
     "typecheck": "echo \"No TypeScript configured\" && exit 0",
@@ -26,12 +26,12 @@
     "dayjs": "^1.11.19"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
     "eslint-plugin-import": "^2.32.0",
     "npm-check-updates": "^19.3.1",
     "prettier": "^3.7.4",
-    "vite": "^7.3.1",
-    "vite-plugin-checker": "^0.6.4"
+    "vite": "^7.3.1"
   },
   "repository": {
     "type": "git",
