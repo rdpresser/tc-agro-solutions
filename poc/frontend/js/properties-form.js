@@ -166,8 +166,6 @@ function setupFormHandler() {
           toast('validation.property.required_fields', 'warning');
         }
       }
-      // Let the browser display the custom (English) message
-      el.reportValidity();
     },
     true
   );

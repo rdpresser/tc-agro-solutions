@@ -94,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.setCustomValidity(t('validation.auth.email_invalid'));
         toast('validation.auth.email_invalid', 'warning');
       }
-      el.reportValidity();
     },
     true
   );

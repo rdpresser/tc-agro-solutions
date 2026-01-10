@@ -279,32 +279,34 @@ function handleSubmit(e) {
 }
 
 // Also show English toasts when native validation triggers
-document.addEventListener(
-  'invalid',
-  (e) => {
-    const el = e.target;
-    const id = el.id;
-    if (el.validity.valueMissing) {
-      if (id === 'propertyId') {
-        el.setCustomValidity(t('validation.plot.property_required'));
-        toast('validation.plot.property_required', 'warning');
-      } else if (id === 'name') {
-        el.setCustomValidity(t('validation.plot.name_required'));
-        toast('validation.plot.name_required', 'warning');
-      } else if (id === 'cropType') {
-        el.setCustomValidity(t('validation.plot.crop_required'));
-        toast('validation.plot.crop_required', 'warning');
-      } else {
-        el.setCustomValidity(t('validation.property.required_fields'));
-        toast('validation.property.required_fields', 'warning');
+const plotsForm = document.getElementById('plotForm');
+if (plotsForm) {
+  plotsForm.addEventListener(
+    'invalid',
+    (e) => {
+      const el = e.target;
+      const id = el.id;
+      if (el.validity.valueMissing) {
+        if (id === 'propertyId') {
+          el.setCustomValidity(t('validation.plot.property_required'));
+          toast('validation.plot.property_required', 'warning');
+        } else if (id === 'name') {
+          el.setCustomValidity(t('validation.plot.name_required'));
+          toast('validation.plot.name_required', 'warning');
+        } else if (id === 'cropType') {
+          el.setCustomValidity(t('validation.plot.crop_required'));
+          toast('validation.plot.crop_required', 'warning');
+        } else {
+          el.setCustomValidity(t('validation.property.required_fields'));
+          toast('validation.property.required_fields', 'warning');
+        }
       }
-    }
-    el.reportValidity();
-  },
-  true
-);
+    },
+    true
+  );
 
-// Clear custom messages on input
-document.addEventListener('input', (e) => {
-  e.target.setCustomValidity('');
-});
+  // Clear custom messages on input
+  plotsForm.addEventListener('input', (e) => {
+    e.target.setCustomValidity('');
+  });
+}
