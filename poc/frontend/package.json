@@ -4,28 +4,55 @@
   "description": "TC Agro Solutions - Dashboard POC",
   "type": "module",
   "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
     "dev": "vite",
-    "build": "vite build",
+    "build": "node --no-deprecation -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
+    "build-and-preview": "npm run build && npm run preview",
     "preview": "vite preview",
+    "upgrade-deps": "npm-check-updates -u && npm install",
     "lint": "eslint . --ext .js,.jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,html,css,md}\"",
-    "typecheck": "echo \"No TypeScript configured\" && exit 0"
+    "typecheck": "echo \"No TypeScript configured\" && exit 0",
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "test:watch": "echo \"No tests configured yet\" && exit 0",
+    "test:coverage": "echo \"No tests configured yet\" && exit 0"
   },
   "dependencies": {
-    "@microsoft/signalr": "^8.0.0",
-    "axios": "^1.6.0",
-    "chart.js": "^4.4.0",
-    "dayjs": "^1.11.0"
+    "@microsoft/signalr": "^10.0.0",
+    "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
+    "dayjs": "^1.11.19"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
+    "npm-check-updates": "^19.3.1",
     "prettier": "^3.7.4",
-    "vite": "^5.4.21",
+    "vite": "^7.3.1",
     "vite-plugin-checker": "^0.6.4"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rdpresser/tc-agro-solutions.git"
+  },
+  "keywords": [
+    "agriculture",
+    "iot",
+    "sensors",
+    "dashboard",
+    "monitoring",
+    "agro",
+    "hackathon",
+    "8nett"
+  ],
+  "author": "TC Agro Solutions Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rdpresser/tc-agro-solutions/issues"
+  },
+  "homepage": "https://github.com/rdpresser/tc-agro-solutions#readme",
   "browserslist": [
     "last 2 Chrome versions",
     "last 2 Edge versions"

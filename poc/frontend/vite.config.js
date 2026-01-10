@@ -10,7 +10,7 @@ export default defineConfig({
     // ESLint checker - shows errors in dev server and build
     checker({
       eslint: {
-        lintCommand: 'eslint . --ext .js,.jsx',
+        lintCommand: 'eslint "js/**/*.js" --max-warnings=0',
         dev: {
           logLevel: ['error', 'warning']
         }
@@ -50,10 +50,20 @@ export default defineConfig({
       output: {
         // Code splitting for better caching
         manualChunks: {
-          vendor: ['axios', '@microsoft/signalr'],
-          charts: ['chart.js'],
+          vendor: ['axios', '@microsoft/signalr', 'chart.js'],
           utils: ['dayjs']
         }
+      },
+      // Suppress warnings
+      onwarn(warning, warn) {
+        // Ignore SignalR PURE comment warnings
+        if (
+          warning.code === 'SOURCEMAP_ERROR' ||
+          (warning.code === 'PLUGIN_WARNING' && warning.message.includes('PURE'))
+        ) {
+          return;
+        }
+        warn(warning);
       }
     },
 
