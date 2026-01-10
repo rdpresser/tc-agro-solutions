@@ -37,24 +37,24 @@ export function getToken() {
 /**
  * Clear authentication session
  * Removes JWT token and user data from sessionStorage
- * 
+ *
  * This ensures complete logout by:
  * - Removing JWT token (agro_token)
  * - Removing user info (agro_user)
- * 
+ *
  * To clear additional session data, add:
  * sessionStorage.removeItem('your_custom_key');
- * 
+ *
  * Or to clear everything:
  * sessionStorage.clear();
  */
 export function clearToken() {
   sessionStorage.removeItem(APP_CONFIG.tokenKey);
   sessionStorage.removeItem(APP_CONFIG.userKey);
-  
+
   // Optional: Clear all session storage
   // sessionStorage.clear();
-  
+
   // Optional: Clear specific app data
   // sessionStorage.removeItem('dashboard_cache');
   // sessionStorage.removeItem('user_preferences');
@@ -82,17 +82,17 @@ export function requireAuth() {
     window.location.href = 'index.html';
     return false;
   }
-  
+
   // Update user display if element exists
   const userDisplay = document.getElementById('userDisplay');
   if (userDisplay) {
     const user = getUser();
     userDisplay.textContent = user?.name || user?.email || 'User';
   }
-  
+
   // Initialize sidebar
   initSidebar();
-  
+
   return true;
 }
 
@@ -140,12 +140,106 @@ export function toggle(element, visible) {
   if (element) element.style.display = visible ? '' : 'none';
 }
 
+/**
+ * Get element by ID (short syntax)
+ * @param {string} id - Element ID (without #)
+ * @returns {HTMLElement|null}
+ */
+export function $id(id) {
+  return document.getElementById(id);
+}
+
+/**
+ * Execute callback when DOM is ready
+ * @param {Function} callback - Function to execute
+ */
+export function onReady(callback) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', callback);
+  } else {
+    callback();
+  }
+}
+
+/**
+ * Toggle CSS class on element
+ * @param {HTMLElement|string} element - Element or selector
+ * @param {string} className - Class name to toggle
+ * @param {boolean} [force] - Force add (true) or remove (false)
+ */
+export function toggleClass(element, className, force) {
+  if (typeof element === 'string') element = $(element);
+  if (element) {
+    if (force !== undefined) {
+      element.classList.toggle(className, force);
+    } else {
+      element.classList.toggle(className);
+    }
+  }
+}
+
+/**
+ * Get all form field values as an object
+ * Handles input[type=text], textarea, select, input[type=checkbox], input[type=radio]
+ * @param {HTMLFormElement|string} form - Form element or selector
+ * @returns {Object} Form values keyed by field name
+ */
+export function getFormData(form) {
+  if (typeof form === 'string') form = $(form);
+  if (!form) return {};
+
+  const formData = new FormData(form);
+  const data = {};
+
+  for (const [key, value] of formData.entries()) {
+    // Handle multiple values (checkboxes with same name)
+    if (data[key]) {
+      if (Array.isArray(data[key])) {
+        data[key].push(value);
+      } else {
+        data[key] = [data[key], value];
+      }
+    } else {
+      data[key] = value;
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Set form field values from an object
+ * @param {HTMLFormElement|string} form - Form element or selector
+ * @param {Object} data - Data object keyed by field name
+ */
+export function setFormData(form, data) {
+  if (typeof form === 'string') form = $(form);
+  if (!form || !data) return;
+
+  Object.entries(data).forEach(([key, value]) => {
+    const field = form.elements[key];
+    if (!field) return;
+
+    // Handle different field types
+    if (field.type === 'checkbox') {
+      field.checked = !!value;
+    } else if (field.type === 'radio') {
+      const radio = form.querySelector(`input[name="${key}"][value="${value}"]`);
+      if (radio) radio.checked = true;
+    } else if (field.tagName === 'SELECT') {
+      field.value = value;
+    } else {
+      field.value = value ?? '';
+    }
+  });
+}
+
 // ============================================
 // FORMATTING HELPERS (using dayjs)
 // ============================================
 
 export function formatNumber(num, decimals = 0) {
-  if (num == null) return '--';
+  if (num === null || num === undefined) return '--';
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
@@ -153,7 +247,7 @@ export function formatNumber(num, decimals = 0) {
 }
 
 export function formatCurrency(num) {
-  if (num == null) return '--';
+  if (num === null || num === undefined) return '--';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
@@ -176,17 +270,17 @@ export function formatRelativeTime(date) {
 }
 
 export function formatArea(hectares) {
-  if (hectares == null) return '--';
+  if (hectares === null || hectares === undefined) return '--';
   return `${formatNumber(hectares, 1)} ha`;
 }
 
 export function formatTemperature(celsius) {
-  if (celsius == null) return '--';
+  if (celsius === null || celsius === undefined) return '--';
   return `${formatNumber(celsius, 1)}°C`;
 }
 
 export function formatPercentage(value) {
-  if (value == null) return '--';
+  if (value === null || value === undefined) return '--';
   return `${formatNumber(value, 0)}%`;
 }
 
@@ -247,28 +341,28 @@ export function showToast(message, type = 'info', duration = 3000) {
     toastContainer.className = 'toast-container';
     document.body.appendChild(toastContainer);
   }
-  
+
   const icons = {
     success: '✅',
     error: '❌',
     warning: '⚠️',
     info: 'ℹ️'
   };
-  
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
     <span class="toast-icon">${icons[type] || icons.info}</span>
     <span class="toast-message">${message}</span>
   `;
-  
+
   toastContainer.appendChild(toast);
-  
+
   // Trigger animation
   requestAnimationFrame(() => {
     toast.classList.add('toast-show');
   });
-  
+
   // Auto remove
   setTimeout(() => {
     toast.classList.remove('toast-show');
@@ -277,7 +371,7 @@ export function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-export async function confirm(message, title = 'Confirm') {
+export function confirm(message, title = 'Confirm') {
   return window.confirm(`${title}\n\n${message}`);
 }
 
@@ -288,7 +382,7 @@ export async function confirm(message, title = 'Confirm') {
 export function renderTable(containerId, columns, data, rowRenderer) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
+
   if (!data || data.length === 0) {
     container.innerHTML = `
       <tr>
@@ -299,7 +393,7 @@ export function renderTable(containerId, columns, data, rowRenderer) {
     `;
     return;
   }
-  
+
   container.innerHTML = data.map(rowRenderer).join('');
 }
 
@@ -330,23 +424,23 @@ export function initSidebar() {
   const menuToggle = document.getElementById('menuToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  
+
   if (menuToggle && sidebar) {
     menuToggle.addEventListener('click', () => {
       sidebar.classList.toggle('sidebar-open');
       overlay?.classList.toggle('active');
     });
   }
-  
+
   if (overlay) {
     overlay.addEventListener('click', () => {
       sidebar?.classList.remove('sidebar-open');
       overlay.classList.remove('active');
     });
   }
-  
+
   // Logout handler
-  document.querySelectorAll('[data-action="logout"]').forEach(el => {
+  document.querySelectorAll('[data-action="logout"]').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
       if (window.confirm('Are you sure you want to logout?')) {
@@ -375,7 +469,7 @@ export function throttle(fn, limit = 100) {
     if (!inThrottle) {
       fn(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 }

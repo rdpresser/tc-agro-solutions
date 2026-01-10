@@ -3,10 +3,9 @@
  * Entry point script for plot create/edit
  */
 
-import { $, showToast, getQueryParam } from './utils.js';
 import { requireAuth } from './auth.js';
-import { getPlot, createPlot, updatePlot, getSensors } from './api.js';
 import { initProtectedPage } from './common.js';
+import { $id, showToast, getQueryParam } from './utils.js';
 
 // ============================================
 // Page State
@@ -17,11 +16,11 @@ const isEditMode = !!editId;
 
 // Mock data for edit mode (until backend is ready)
 const mockPlots = {
-  '1': { 
-    id: '1', 
-    propertyId: 'prop-001', 
-    name: 'North Field', 
-    areaHectares: 85.5, 
+  1: {
+    id: '1',
+    propertyId: 'prop-001',
+    name: 'North Field',
+    areaHectares: 85.5,
     cropType: 'soybean',
     plantingDate: '2025-10-15',
     expectedHarvest: '2026-03-15',
@@ -32,11 +31,11 @@ const mockPlots = {
     status: 'active',
     notes: 'High-yield soybean variety. Requires moisture monitoring.'
   },
-  '2': { 
-    id: '2', 
-    propertyId: 'prop-001', 
-    name: 'South Valley', 
-    areaHectares: 120.0, 
+  2: {
+    id: '2',
+    propertyId: 'prop-001',
+    name: 'South Valley',
+    areaHectares: 120.0,
     cropType: 'corn',
     plantingDate: '2025-11-01',
     expectedHarvest: '2026-04-20',
@@ -47,11 +46,11 @@ const mockPlots = {
     status: 'active',
     notes: ''
   },
-  '3': { 
-    id: '3', 
-    propertyId: 'prop-002', 
-    name: 'East Slope', 
-    areaHectares: 45.2, 
+  3: {
+    id: '3',
+    propertyId: 'prop-002',
+    name: 'East Slope',
+    areaHectares: 45.2,
     cropType: 'coffee',
     plantingDate: '2023-06-01',
     expectedHarvest: '2026-06-01',
@@ -62,11 +61,11 @@ const mockPlots = {
     status: 'active',
     notes: 'Specialty coffee. Shaded area.'
   },
-  '4': { 
-    id: '4', 
-    propertyId: 'prop-002', 
-    name: 'West Woods', 
-    areaHectares: 95.8, 
+  4: {
+    id: '4',
+    propertyId: 'prop-002',
+    name: 'West Woods',
+    areaHectares: 95.8,
     cropType: 'sugarcane',
     plantingDate: '2025-09-01',
     expectedHarvest: '2026-08-01',
@@ -77,11 +76,11 @@ const mockPlots = {
     status: 'active',
     notes: ''
   },
-  '5': { 
-    id: '5', 
-    propertyId: 'prop-003', 
-    name: 'Central Plain', 
-    areaHectares: 200.0, 
+  5: {
+    id: '5',
+    propertyId: 'prop-003',
+    name: 'Central Plain',
+    areaHectares: 200.0,
     cropType: 'cotton',
     plantingDate: '2025-12-01',
     expectedHarvest: '2026-05-15',
@@ -98,17 +97,17 @@ const mockPlots = {
 // Page Initialization
 // ============================================
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   // Verify authentication
   if (!requireAuth()) return;
-  
+
   // Initialize protected page (sidebar, user display)
   initProtectedPage();
-  
+
   if (isEditMode) {
     setupEditMode();
   }
-  
+
   // Setup form handler
   setupFormHandler();
 });
@@ -118,16 +117,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 
 function setupEditMode() {
-  const pageTitle = document.getElementById('pageTitle');
-  const formTitle = document.getElementById('formTitle');
-  const breadcrumbCurrent = document.getElementById('breadcrumbCurrent');
-  const sensorsSection = document.getElementById('sensorsSection');
-  
+  const pageTitle = $id('pageTitle');
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+  const sensorsSection = $id('sensorsSection');
+
   if (pageTitle) pageTitle.textContent = 'Edit Plot';
   if (formTitle) formTitle.textContent = 'Edit Plot';
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
   if (sensorsSection) sensorsSection.style.display = 'block';
-  
+
   // Load plot data (mock)
   const plot = mockPlots[editId];
   if (plot) {
@@ -137,7 +136,7 @@ function setupEditMode() {
     showToast('Plot not found', 'error');
     window.location.href = 'plots.html';
   }
-  
+
   /* ============================================
    * REAL API CALL (uncomment when backend ready)
    * ============================================
@@ -172,9 +171,9 @@ function populateForm(plot) {
     status: plot.status || 'active',
     notes: plot.notes || ''
   };
-  
+
   Object.entries(fields).forEach(([id, value]) => {
-    const element = document.getElementById(id);
+    const element = $id(id);
     if (element) element.value = value;
   });
 }
@@ -189,11 +188,13 @@ function loadSensors() {
     { id: 'S002', type: 'Soil Moisture', status: 'online', lastReading: '5 min ago' },
     { id: 'S003', type: 'Rain Gauge', status: 'warning', lastReading: '1 hour ago' }
   ];
-  
-  const sensorsList = document.getElementById('sensorsList');
+
+  const sensorsList = $id('sensorsList');
   if (!sensorsList) return;
-  
-  const html = mockSensors.map(s => `
+
+  const html = mockSensors
+    .map(
+      (s) => `
     <div class="d-flex justify-between align-center" style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
       <div>
         <strong>📡 ${s.id}</strong> - ${s.type}
@@ -201,8 +202,10 @@ function loadSensors() {
       </div>
       <span class="badge badge-${s.status === 'online' ? 'success' : 'warning'}">${s.status}</span>
     </div>
-  `).join('');
-  
+  `
+    )
+    .join('');
+
   sensorsList.innerHTML = html || '<p class="text-muted">No sensors assigned to this plot.</p>';
 }
 
@@ -211,30 +214,30 @@ function loadSensors() {
 // ============================================
 
 function setupFormHandler() {
-  const form = document.getElementById('plotForm');
+  const form = $id('plotForm');
   if (!form) return;
-  
+
   form.addEventListener('submit', handleSubmit);
 }
 
-async function handleSubmit(e) {
+function handleSubmit(e) {
   e.preventDefault();
-  
+
   const formData = {
-    propertyId: document.getElementById('propertyId')?.value,
-    name: document.getElementById('name')?.value,
-    areaHectares: parseFloat(document.getElementById('areaHectares')?.value) || 0,
-    cropType: document.getElementById('cropType')?.value,
-    plantingDate: document.getElementById('plantingDate')?.value || null,
-    expectedHarvest: document.getElementById('expectedHarvest')?.value || null,
-    irrigationType: document.getElementById('irrigationType')?.value || null,
-    minSoilMoisture: parseInt(document.getElementById('minSoilMoisture')?.value) || 30,
-    maxTemperature: parseInt(document.getElementById('maxTemperature')?.value) || 35,
-    minHumidity: parseInt(document.getElementById('minHumidity')?.value) || 40,
-    status: document.getElementById('status')?.value || 'active',
-    notes: document.getElementById('notes')?.value || ''
+    propertyId: $id('propertyId')?.value,
+    name: $id('name')?.value,
+    areaHectares: parseFloat($id('areaHectares')?.value) || 0,
+    cropType: $id('cropType')?.value,
+    plantingDate: $id('plantingDate')?.value || null,
+    expectedHarvest: $id('expectedHarvest')?.value || null,
+    irrigationType: $id('irrigationType')?.value || null,
+    minSoilMoisture: parseInt($id('minSoilMoisture')?.value) || 30,
+    maxTemperature: parseInt($id('maxTemperature')?.value) || 35,
+    minHumidity: parseInt($id('minHumidity')?.value) || 40,
+    status: $id('status')?.value || 'active',
+    notes: $id('notes')?.value || ''
   };
-  
+
   // Validation
   if (!formData.propertyId) {
     showToast('Please select a property', 'error');
@@ -248,17 +251,14 @@ async function handleSubmit(e) {
     showToast('Crop type is required', 'error');
     return;
   }
-  
+
   // Mock save
-  showToast(
-    isEditMode ? 'Plot updated successfully!' : 'Plot created successfully!',
-    'success'
-  );
-  
+  showToast(isEditMode ? 'Plot updated successfully!' : 'Plot created successfully!', 'success');
+
   setTimeout(() => {
     window.location.href = 'plots.html';
   }, 1500);
-  
+
   /* ============================================
    * REAL API CALL (uncomment when backend ready)
    * ============================================

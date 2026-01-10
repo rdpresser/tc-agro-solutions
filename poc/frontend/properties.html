@@ -1,149 +1,152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Properties Management">
-  <title>Properties | TC Agro Solutions</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🌾</span>
-        <span class="sidebar-brand">TC Agro</span>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          <a href="dashboard.html" class="nav-item">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-          <a href="properties.html" class="nav-item active">
-            <span class="nav-icon">🏘️</span>
-            <span class="nav-text">Properties</span>
-          </a>
-          <a href="plots.html" class="nav-item">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-text">Plots</span>
-          </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Properties Management" />
+    <title>Properties | TC Agro Solutions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
         </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Monitoring</div>
-          <a href="sensors.html" class="nav-item">
-            <span class="nav-icon">📡</span>
-            <span class="nav-text">Sensors</span>
-          </a>
-          <a href="alerts.html" class="nav-item">
-            <span class="nav-icon">🔔</span>
-            <span class="nav-text">Alerts</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Account</div>
-          <a href="#" class="nav-item" data-action="logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-text">Logout</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-    
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
-          <h1 class="page-title">Properties</h1>
-        </div>
-        <div class="topbar-right">
-          <div class="user-menu">
-            <div class="user-avatar">👤</div>
-            <span id="userDisplay" class="user-name">User</span>
-          </div>
-        </div>
-      </header>
-      
-      <div class="content">
-        <!-- Page Header -->
-        <div class="page-header">
-          <div class="page-header-title">
-            <span class="page-header-icon">🏘️</span>
-            <div>
-              <div class="breadcrumb">
-                <a href="dashboard.html">Dashboard</a>
-                <span class="breadcrumb-separator">/</span>
-                <span>Properties</span>
-              </div>
-              <h2 style="margin: 0;">Property Management</h2>
-            </div>
-          </div>
-          <div class="page-header-actions">
-            <a href="properties-form.html" class="btn btn-primary">
-              ➕ Add Property
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item active">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
             </a>
           </div>
-        </div>
-        
-        <!-- Filters (Optional) -->
-        <div class="card" style="margin-bottom: 24px;">
-          <div class="form-row">
-            <div class="form-group" style="margin-bottom: 0;">
-              <input type="text" id="search-properties" class="form-control" placeholder="🔍 Search properties...">
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Properties</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <select id="statusFilter" class="form-control form-select">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">🏘️</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span>Properties</span>
+                </div>
+                <h2 style="margin: 0">Property Management</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <a href="properties-form.html" class="btn btn-primary"> ➕ Add Property </a>
+            </div>
+          </div>
+
+          <!-- Filters (Optional) -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0">
+                <input
+                  type="text"
+                  id="search-properties"
+                  class="form-control"
+                  placeholder="🔍 Search properties..."
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <select id="statusFilter" class="form-control form-select">
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Properties Table -->
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Property Name</th>
+                  <th>Location</th>
+                  <th>Area (ha)</th>
+                  <th>Plots</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="properties-tbody">
+                <!-- Data loaded via JavaScript -->
+                <tr>
+                  <td colspan="7" class="text-center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Summary -->
+          <div class="card" style="margin-top: 24px">
+            <div class="d-flex justify-between align-center">
+              <span class="text-muted">Showing 4 of 4 properties</span>
+              <span class="text-muted">Total Area: 1,536.5 ha</span>
             </div>
           </div>
         </div>
-        
-        <!-- Properties Table -->
-        <div class="table-container">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Property Name</th>
-                <th>Location</th>
-                <th>Area (ha)</th>
-                <th>Plots</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="properties-tbody">
-              <!-- Data loaded via JavaScript -->
-              <tr>
-                <td colspan="7" class="text-center">Loading...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Summary -->
-        <div class="card" style="margin-top: 24px;">
-          <div class="d-flex justify-between align-center">
-            <span class="text-muted">Showing 4 of 4 properties</span>
-            <span class="text-muted">Total Area: 1,536.5 ha</span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Scripts (ES Module) -->
-  <script type="module" src="/js/properties.js"></script>
-</body>
+      </main>
+    </div>
+
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="/js/properties.js"></script>
+  </body>
 </html>

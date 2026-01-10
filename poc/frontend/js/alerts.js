@@ -2,8 +2,8 @@
  * TC Agro Solutions - Alerts Page Entry Point
  */
 
-import { initProtectedPage } from './common.js';
 import { getAlerts, resolveAlert } from './api.js';
+import { initProtectedPage } from './common.js';
 import { $, $$, showToast, showConfirm, formatDate, formatRelativeTime } from './utils.js';
 
 // ============================================
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
     return;
   }
-  
+
   await loadAlerts(currentFilter);
   setupEventListeners();
 });
@@ -29,9 +29,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAlerts(status = null) {
   const container = $('#alerts-container');
   if (!container) return;
-  
+
   container.innerHTML = '<div class="loading">Loading alerts...</div>';
-  
+
   try {
     const alerts = await getAlerts(status);
     renderAlerts(alerts);
@@ -46,7 +46,7 @@ async function loadAlerts(status = null) {
 function renderAlerts(alerts) {
   const container = $('#alerts-container');
   if (!container) return;
-  
+
   if (!alerts.length) {
     container.innerHTML = `
       <div class="empty-state">
@@ -56,8 +56,10 @@ function renderAlerts(alerts) {
     `;
     return;
   }
-  
-  container.innerHTML = alerts.map(alert => `
+
+  container.innerHTML = alerts
+    .map(
+      (alert) => `
     <div class="alert-card ${alert.severity}" data-alert-id="${alert.id}">
       <div class="alert-header">
         <span class="alert-severity ${alert.severity}">
@@ -77,31 +79,37 @@ function renderAlerts(alerts) {
       </div>
       
       <div class="alert-actions">
-        ${alert.status === 'pending' ? `
+        ${
+          alert.status === 'pending'
+            ? `
           <button class="btn btn-success btn-sm" data-action="resolve" data-id="${alert.id}">
             ✅ Resolver
           </button>
-        ` : `
+        `
+            : `
           <span class="resolved-info">
             Resolvido em ${formatDate(alert.resolvedAt)}
           </span>
-        `}
+        `
+        }
         <button class="btn btn-outline btn-sm" data-action="details" data-id="${alert.id}">
           📋 Detalhes
         </button>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 function updateTabCounts(alerts) {
   // This would update badge counts on tabs if needed
-  const pendingCount = alerts.filter(a => a.status === 'pending').length;
-  const resolvedCount = alerts.filter(a => a.status === 'resolved').length;
-  
+  const pendingCount = alerts.filter((a) => a.status === 'pending').length;
+  const resolvedCount = alerts.filter((a) => a.status === 'resolved').length;
+
   const pendingTab = $('[data-tab="pending"] .count');
   const resolvedTab = $('[data-tab="resolved"] .count');
-  
+
   if (pendingTab) pendingTab.textContent = pendingCount;
   if (resolvedTab) resolvedTab.textContent = resolvedCount;
 }
@@ -135,19 +143,19 @@ function formatSeverity(severity) {
 function setupEventListeners() {
   // Tab switching
   const tabs = $$('[data-tab]');
-  tabs.forEach(tab => {
+  tabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       // Update active state
-      tabs.forEach(t => t.classList.remove('active'));
+      tabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
-      
+
       // Load filtered alerts
       currentFilter = tab.dataset.tab;
       const status = currentFilter === 'all' ? null : currentFilter;
       loadAlerts(status);
     });
   });
-  
+
   // Alert actions (event delegation)
   const container = $('#alerts-container');
   container?.addEventListener('click', async (e) => {
@@ -156,20 +164,20 @@ function setupEventListeners() {
       await handleResolve(resolveBtn.dataset.id);
       return;
     }
-    
+
     const detailsBtn = e.target.closest('[data-action="details"]');
     if (detailsBtn) {
       handleDetails(detailsBtn.dataset.id);
     }
   });
-  
+
   // Search filter
   const searchInput = $('#search-alerts');
   searchInput?.addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase();
     const cards = $$('.alert-card');
-    
-    cards.forEach(card => {
+
+    cards.forEach((card) => {
       const text = card.textContent.toLowerCase();
       card.style.display = text.includes(query) ? '' : 'none';
     });
@@ -178,12 +186,12 @@ function setupEventListeners() {
 
 async function handleResolve(alertId) {
   const confirmed = await showConfirm('Marcar este alerta como resolvido?');
-  
+
   if (confirmed) {
     try {
       await resolveAlert(alertId);
       showToast('Alert resolved successfully', 'success');
-      
+
       // Remove card with animation
       const card = $(`[data-alert-id="${alertId}"]`);
       if (card) {
@@ -191,7 +199,7 @@ async function handleResolve(alertId) {
         card.style.transform = 'translateX(100%)';
         setTimeout(() => card.remove(), 300);
       }
-      
+
       // Reload to update counts
       setTimeout(() => loadAlerts(currentFilter === 'all' ? null : currentFilter), 500);
     } catch (error) {
@@ -203,7 +211,7 @@ async function handleResolve(alertId) {
 
 function handleDetails(alertId) {
   // Could open a modal with full details
-  showToast('Detalhes do alerta: ' + alertId, 'info');
+  showToast(`Detalhes do alerta: ${alertId}`, 'info');
 }
 
 // Export for debugging

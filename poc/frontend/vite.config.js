@@ -1,18 +1,38 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import checker from 'vite-plugin-checker';
 
 export default defineConfig({
-  // Servidor de desenvolvimento
+  // Plugins
+  plugins: [
+    // ESLint checker - shows errors in dev server and build
+    checker({
+      eslint: {
+        lintCommand: 'eslint . --ext .js,.jsx',
+        dev: {
+          logLevel: ['error', 'warning']
+        }
+      }
+    })
+  ],
+
+  // Development server
   server: {
     port: 3000,
-    open: true, // Abre browser automaticamente
-    cors: true
+    open: true,
+    cors: true,
+    // Hot Module Replacement
+    hmr: {
+      overlay: true // Show errors in browser overlay
+    }
   },
 
   // Production build
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: false, // Disable in production for security
+
     // Multi-page app: each HTML is an entry point
     rollupOptions: {
       input: {
@@ -24,17 +44,57 @@ export default defineConfig({
         plotsForm: resolve(__dirname, 'plots-form.html'),
         sensors: resolve(__dirname, 'sensors.html'),
         alerts: resolve(__dirname, 'alerts.html')
+      },
+      output: {
+        // Code splitting for better caching
+        manualChunks: {
+          vendor: ['axios', '@microsoft/signalr'],
+          charts: ['chart.js'],
+          utils: ['dayjs']
+        }
       }
     },
+
     // Modern target (latest Edge/Chrome versions)
     target: 'esnext',
-    minify: 'esbuild'
+    minify: 'esbuild',
+
+    // Esbuild minification options
+    esbuild: {
+      drop: ['console', 'debugger'], // Remove console.log in production
+      legalComments: 'none'
+    },
+
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000,
+
+    // Asset handling
+    assetsInlineLimit: 4096 // Inline assets < 4kb as base64
   },
 
-  // Resolve aliases para imports mais limpos
+  // Dependency optimization
+  optimizeDeps: {
+    include: [
+      'axios',
+      '@microsoft/signalr',
+      'chart.js',
+      'dayjs',
+      'dayjs/plugin/relativeTime',
+      'dayjs/locale/en'
+    ]
+  },
+
+  // Resolve aliases
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'js')
+      '@': resolve(__dirname, 'js'),
+      '@css': resolve(__dirname, 'css')
     }
+  },
+
+  // Preview server (for testing production build)
+  preview: {
+    port: 3001,
+    open: true
   }
 });

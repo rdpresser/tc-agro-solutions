@@ -1,218 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Property Form">
-  <title>Property | TC Agro Solutions</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🌾</span>
-        <span class="sidebar-brand">TC Agro</span>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          <a href="dashboard.html" class="nav-item">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-          <a href="properties.html" class="nav-item active">
-            <span class="nav-icon">🏘️</span>
-            <span class="nav-text">Properties</span>
-          </a>
-          <a href="plots.html" class="nav-item">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-text">Plots</span>
-          </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Property Form" />
+    <title>Property | TC Agro Solutions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
         </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Monitoring</div>
-          <a href="sensors.html" class="nav-item">
-            <span class="nav-icon">📡</span>
-            <span class="nav-text">Sensors</span>
-          </a>
-          <a href="alerts.html" class="nav-item">
-            <span class="nav-icon">🔔</span>
-            <span class="nav-text">Alerts</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Account</div>
-          <a href="#" class="nav-item" data-action="logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-text">Logout</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-    
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
-          <h1 class="page-title" id="pageTitle">Add Property</h1>
-        </div>
-        <div class="topbar-right">
-          <div class="user-menu">
-            <div class="user-avatar">👤</div>
-            <span id="userDisplay" class="user-name">User</span>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item active">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
           </div>
-        </div>
-      </header>
-      
-      <div class="content">
-        <!-- Page Header -->
-        <div class="page-header">
-          <div class="page-header-title">
-            <span class="page-header-icon">🏘️</span>
-            <div>
-              <div class="breadcrumb">
-                <a href="dashboard.html">Dashboard</a>
-                <span class="breadcrumb-separator">/</span>
-                <a href="properties.html">Properties</a>
-                <span class="breadcrumb-separator">/</span>
-                <span id="breadcrumbTitle">Add New</span>
-              </div>
-              <h2 style="margin: 0;" id="formTitle">Add New Property</h2>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title" id="pageTitle">Add Property</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
-        </div>
-        
-        <!-- Form Card -->
-        <div class="card">
-          <form id="propertyForm">
-            <!-- Hidden ID for edit mode -->
-            <input type="hidden" id="propertyId" value="">
-            
-            <!-- Basic Information -->
-            <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-              📝 Basic Information
-            </h3>
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label for="name" class="form-label required">Property Name</label>
-                <input 
-                  type="text" 
-                  id="name" 
-                  class="form-control" 
-                  placeholder="e.g., Green Valley Farm"
-                  required
-                >
-                <span class="form-text">A unique name for this property</span>
-              </div>
-              
-              <div class="form-group">
-                <label for="areaHectares" class="form-label required">Area (hectares)</label>
-                <input 
-                  type="number" 
-                  id="areaHectares" 
-                  class="form-control" 
-                  placeholder="e.g., 450.5"
-                  step="0.01"
-                  min="0"
-                  required
-                >
-                <span class="form-text">Total property area in hectares</span>
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">🏘️</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <a href="properties.html">Properties</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span id="breadcrumbTitle">Add New</span>
+                </div>
+                <h2 style="margin: 0" id="formTitle">Add New Property</h2>
               </div>
             </div>
-            
-            <!-- Location -->
-            <h3 style="margin: 32px 0 20px; display: flex; align-items: center; gap: 8px;">
-              📍 Location
-            </h3>
-            
-            <div class="form-group">
-              <label for="location" class="form-label required">Full Address / Location</label>
-              <input 
-                type="text" 
-                id="location" 
-                class="form-control" 
-                placeholder="e.g., São Paulo, SP, Brazil"
-                required
+          </div>
+
+          <!-- Form Card -->
+          <div class="card">
+            <form id="propertyForm">
+              <!-- Hidden ID for edit mode -->
+              <input type="hidden" id="propertyId" value="" />
+
+              <!-- Basic Information -->
+              <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px">
+                📝 Basic Information
+              </h3>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="name" class="form-label required">Property Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    class="form-control"
+                    placeholder="e.g., Green Valley Farm"
+                    required
+                  />
+                  <span class="form-text">A unique name for this property</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="areaHectares" class="form-label required">Area (hectares)</label>
+                  <input
+                    type="number"
+                    id="areaHectares"
+                    class="form-control"
+                    placeholder="e.g., 450.5"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  <span class="form-text">Total property area in hectares</span>
+                </div>
+              </div>
+
+              <!-- Location -->
+              <h3 style="margin: 32px 0 20px; display: flex; align-items: center; gap: 8px">
+                📍 Location
+              </h3>
+
+              <div class="form-group">
+                <label for="location" class="form-label required">Full Address / Location</label>
+                <input
+                  type="text"
+                  id="location"
+                  class="form-control"
+                  placeholder="e.g., São Paulo, SP, Brazil"
+                  required
+                />
+                <span class="form-text">City, state, or full address</span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="latitude" class="form-label">Latitude</label>
+                  <input
+                    type="number"
+                    id="latitude"
+                    class="form-control"
+                    placeholder="e.g., -23.5505"
+                    step="0.0001"
+                  />
+                  <span class="form-text">Optional GPS coordinate</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="longitude" class="form-label">Longitude</label>
+                  <input
+                    type="number"
+                    id="longitude"
+                    class="form-control"
+                    placeholder="e.g., -46.6333"
+                    step="0.0001"
+                  />
+                  <span class="form-text">Optional GPS coordinate</span>
+                </div>
+              </div>
+
+              <!-- Status -->
+              <h3 style="margin: 32px 0 20px; display: flex; align-items: center; gap: 8px">
+                ⚙️ Settings
+              </h3>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="status" class="form-label">Status</label>
+                  <select id="status" class="form-control form-select">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="notes" class="form-label">Notes</label>
+                  <input
+                    type="text"
+                    id="notes"
+                    class="form-control"
+                    placeholder="Optional notes..."
+                  />
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div
+                style="
+                  margin-top: 32px;
+                  padding-top: 24px;
+                  border-top: 1px solid var(--color-border);
+                  display: flex;
+                  gap: 12px;
+                  flex-wrap: wrap;
+                "
               >
-              <span class="form-text">City, state, or full address</span>
-            </div>
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label for="latitude" class="form-label">Latitude</label>
-                <input 
-                  type="number" 
-                  id="latitude" 
-                  class="form-control" 
-                  placeholder="e.g., -23.5505"
-                  step="0.0001"
-                >
-                <span class="form-text">Optional GPS coordinate</span>
+                <button type="submit" id="submitBtn" class="btn btn-primary">
+                  💾 Save Property
+                </button>
+                <a href="properties.html" class="btn btn-outline"> ← Cancel </a>
               </div>
-              
-              <div class="form-group">
-                <label for="longitude" class="form-label">Longitude</label>
-                <input 
-                  type="number" 
-                  id="longitude" 
-                  class="form-control" 
-                  placeholder="e.g., -46.6333"
-                  step="0.0001"
-                >
-                <span class="form-text">Optional GPS coordinate</span>
-              </div>
-            </div>
-            
-            <!-- Status -->
-            <h3 style="margin: 32px 0 20px; display: flex; align-items: center; gap: 8px;">
-              ⚙️ Settings
-            </h3>
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label for="status" class="form-label">Status</label>
-                <select id="status" class="form-control form-select">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              
-              <div class="form-group">
-                <label for="notes" class="form-label">Notes</label>
-                <input 
-                  type="text" 
-                  id="notes" 
-                  class="form-control" 
-                  placeholder="Optional notes..."
-                >
-              </div>
-            </div>
-            
-            <!-- Form Actions -->
-            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--color-border); display: flex; gap: 12px; flex-wrap: wrap;">
-              <button type="submit" id="submitBtn" class="btn btn-primary">
-                💾 Save Property
-              </button>
-              <a href="properties.html" class="btn btn-outline">
-                ← Cancel
-              </a>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Scripts (ES Module) -->
-  <script type="module" src="/js/properties-form.js"></script>
-</body>
+      </main>
+    </div>
+
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="/js/properties-form.js"></script>
+  </body>
 </html>

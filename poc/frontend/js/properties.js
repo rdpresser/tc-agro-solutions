@@ -2,9 +2,9 @@
  * TC Agro Solutions - Properties Page Entry Point
  */
 
+import { getProperties, deleteProperty } from './api.js';
 import { initProtectedPage } from './common.js';
-import { getProperties, createProperty, updateProperty, deleteProperty } from './api.js';
-import { $, $$, showToast, showConfirm, formatDate } from './utils.js';
+import { $, $$, showToast, showConfirm } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
     return;
   }
-  
+
   await loadProperties();
   setupEventListeners();
 });
@@ -27,15 +27,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadProperties() {
   const tbody = $('#properties-tbody');
   if (!tbody) return;
-  
+
   tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-  
+
   try {
     const properties = await getProperties();
     renderPropertiesTable(properties);
   } catch (error) {
     console.error('Error loading properties:', error);
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading properties</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center text-danger">Error loading properties</td></tr>';
     showToast('Error loading properties', 'error');
   }
 }
@@ -43,13 +44,16 @@ async function loadProperties() {
 function renderPropertiesTable(properties) {
   const tbody = $('#properties-tbody');
   if (!tbody) return;
-  
+
   if (!properties.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No properties found</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center text-muted">No properties found</td></tr>';
     return;
   }
-  
-  tbody.innerHTML = properties.map(prop => `
+
+  tbody.innerHTML = properties
+    .map(
+      (prop) => `
     <tr data-id="${prop.id}">
       <td><strong>${prop.name}</strong></td>
       <td>${prop.location}</td>
@@ -65,7 +69,9 @@ function renderPropertiesTable(properties) {
         <button class="btn btn-sm btn-danger" data-action="delete" data-id="${prop.id}">🗑️</button>
       </td>
     </tr>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 // ============================================
@@ -78,13 +84,13 @@ function setupEventListeners() {
   searchInput?.addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase();
     const rows = $$('#properties-tbody tr');
-    
-    rows.forEach(row => {
+
+    rows.forEach((row) => {
       const text = row.textContent.toLowerCase();
       row.style.display = text.includes(query) ? '' : 'none';
     });
   });
-  
+
   // Delete button handler (event delegation)
   const tbody = $('#properties-tbody');
   tbody?.addEventListener('click', async (e) => {
@@ -98,7 +104,7 @@ function setupEventListeners() {
 
 async function handleDelete(id) {
   const confirmed = await showConfirm('Are you sure you want to delete this property?');
-  
+
   if (confirmed) {
     try {
       await deleteProperty(id);

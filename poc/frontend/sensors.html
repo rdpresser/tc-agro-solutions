@@ -1,410 +1,458 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Sensor Monitoring">
-  <title>Sensors | TC Agro Solutions</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🌾</span>
-        <span class="sidebar-brand">TC Agro</span>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          <a href="dashboard.html" class="nav-item">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-          <a href="properties.html" class="nav-item">
-            <span class="nav-icon">🏘️</span>
-            <span class="nav-text">Properties</span>
-          </a>
-          <a href="plots.html" class="nav-item">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-text">Plots</span>
-          </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Sensor Monitoring" />
+    <title>Sensors | TC Agro Solutions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
         </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Monitoring</div>
-          <a href="sensors.html" class="nav-item active">
-            <span class="nav-icon">📡</span>
-            <span class="nav-text">Sensors</span>
-          </a>
-          <a href="alerts.html" class="nav-item">
-            <span class="nav-icon">🔔</span>
-            <span class="nav-text">Alerts</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Account</div>
-          <a href="#" class="nav-item" data-action="logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-text">Logout</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-    
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
-          <h1 class="page-title">Sensors</h1>
-        </div>
-        <div class="topbar-right">
-          <div class="user-menu">
-            <div class="user-avatar">👤</div>
-            <span id="userDisplay" class="user-name">User</span>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item active">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Sensors</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">📡</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span>Sensors</span>
+                </div>
+                <h2 style="margin: 0">Sensor Monitoring</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <button class="btn btn-outline" onclick="refreshSensors()">🔄 Refresh</button>
+            </div>
+          </div>
+
+          <!-- Status Summary Cards -->
+          <div class="stats-grid" style="margin-bottom: 24px">
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%)"
+              >
+                📡
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">12</span>
+                <span class="stat-label">Total Sensors</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #28a745 0%, #48c774 100%)"
+              >
+                ✅
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">9</span>
+                <span class="stat-label">Online</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #ffc107 0%, #ffdd57 100%)"
+              >
+                ⚠️
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">2</span>
+                <span class="stat-label">Warning</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #dc3545 0%, #f14668 100%)"
+              >
+                ❌
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">1</span>
+                <span class="stat-label">Offline</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="form-control"
+                  placeholder="🔍 Search sensors..."
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <select id="statusFilter" class="form-control form-select">
+                  <option value="">All Status</option>
+                  <option value="online">🟢 Online</option>
+                  <option value="warning">🟡 Warning</option>
+                  <option value="offline">🔴 Offline</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <select id="typeFilter" class="form-control form-select">
+                  <option value="">All Types</option>
+                  <option value="temperature">🌡️ Temperature</option>
+                  <option value="humidity">💧 Humidity</option>
+                  <option value="soil">🌱 Soil Moisture</option>
+                  <option value="rain">🌧️ Rainfall</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sensors Grid -->
+          <div class="sensor-grid" id="sensorGrid">
+            <!-- Sensor Card 1 -->
+            <div class="card sensor-card" data-status="online">
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-success">🟢 Online</span>
+                <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-001</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                North Field • Green Valley Farm
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value">28.5°C</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value">65%</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌱 Soil Moisture</span>
+                  <span class="sensor-reading-value">42%</span>
+                </div>
+              </div>
+              <div style="margin-top: 16px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+              </div>
+            </div>
+
+            <!-- Sensor Card 2 -->
+            <div class="card sensor-card" data-status="online">
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-success">🟢 Online</span>
+                <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-002</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                South Valley • Green Valley Farm
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value">27.8°C</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value">68%</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌱 Soil Moisture</span>
+                  <span class="sensor-reading-value">45%</span>
+                </div>
+              </div>
+              <div style="margin-top: 16px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+              </div>
+            </div>
+
+            <!-- Sensor Card 3 - Warning -->
+            <div
+              class="card sensor-card"
+              data-status="warning"
+              style="border-left: 4px solid #ffc107"
+            >
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-warning">⚠️ Warning</span>
+                <span class="text-muted" style="font-size: 0.85em">15 min ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-003</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                East Ridge • Sunrise Ranch
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value" style="color: #e67e22">36.2°C</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value">38%</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌱 Soil Moisture</span>
+                  <span class="sensor-reading-value" style="color: #dc3545">22%</span>
+                </div>
+              </div>
+              <div
+                class="alert alert-warning"
+                style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em"
+              >
+                ⚠️ Soil moisture below threshold (30%)
+              </div>
+              <div style="margin-top: 12px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+              </div>
+            </div>
+
+            <!-- Sensor Card 4 -->
+            <div class="card sensor-card" data-status="online">
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-success">🟢 Online</span>
+                <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-004</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                West Grove • Sunrise Ranch
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value">29.1°C</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value">62%</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌱 Soil Moisture</span>
+                  <span class="sensor-reading-value">48%</span>
+                </div>
+              </div>
+              <div style="margin-top: 16px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+              </div>
+            </div>
+
+            <!-- Sensor Card 5 - Offline -->
+            <div
+              class="card sensor-card"
+              data-status="offline"
+              style="border-left: 4px solid #dc3545; opacity: 0.8"
+            >
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-danger">🔴 Offline</span>
+                <span class="text-muted" style="font-size: 0.85em">2 hours ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-005</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                Central Plain • Highland Estate
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value text-muted">--</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value text-muted">--</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌱 Soil Moisture</span>
+                  <span class="sensor-reading-value text-muted">--</span>
+                </div>
+              </div>
+              <div
+                class="alert alert-danger"
+                style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em"
+              >
+                🚨 Sensor not responding. Check connection.
+              </div>
+              <div style="margin-top: 12px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+                <button class="btn btn-danger btn-sm">🔧 Diagnose</button>
+              </div>
+            </div>
+
+            <!-- Sensor Card 6 - Warning (Battery Low) -->
+            <div
+              class="card sensor-card"
+              data-status="warning"
+              style="border-left: 4px solid #ffc107"
+            >
+              <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+                <span class="badge badge-warning">⚠️ Low Battery</span>
+                <span class="text-muted" style="font-size: 0.85em">10 min ago</span>
+              </div>
+              <h3 style="margin: 0 0 4px 0">📡 SENSOR-006</h3>
+              <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em">
+                Central Plain • Highland Estate
+              </p>
+              <div class="sensor-readings">
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🌡️ Temperature</span>
+                  <span class="sensor-reading-value">30.4°C</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">💧 Humidity</span>
+                  <span class="sensor-reading-value">55%</span>
+                </div>
+                <div class="sensor-reading">
+                  <span class="sensor-reading-label">🔋 Battery</span>
+                  <span class="sensor-reading-value" style="color: #e67e22">15%</span>
+                </div>
+              </div>
+              <div
+                class="alert alert-warning"
+                style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em"
+              >
+                🔋 Battery critically low. Replace soon.
+              </div>
+              <div style="margin-top: 12px">
+                <button class="btn btn-outline btn-sm">📊 View History</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SignalR Status -->
+          <div class="card" style="margin-top: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
+              <div class="d-flex align-center gap-2">
+                <span id="signalrStatus" class="badge badge-success">🟢 Live Updates Active</span>
+                <span class="text-muted" style="font-size: 0.85em"
+                  >Readings update every 5 seconds</span
+                >
+              </div>
+              <span class="text-muted" style="font-size: 0.85em">
+                Last sync: <span id="lastSync">Just now</span>
+              </span>
+            </div>
           </div>
         </div>
-      </header>
-      
-      <div class="content">
-        <!-- Page Header -->
-        <div class="page-header">
-          <div class="page-header-title">
-            <span class="page-header-icon">📡</span>
-            <div>
-              <div class="breadcrumb">
-                <a href="dashboard.html">Dashboard</a>
-                <span class="breadcrumb-separator">/</span>
-                <span>Sensors</span>
-              </div>
-              <h2 style="margin: 0;">Sensor Monitoring</h2>
-            </div>
-          </div>
-          <div class="page-header-actions">
-            <button class="btn btn-outline" onclick="refreshSensors()">
-              🔄 Refresh
-            </button>
-          </div>
-        </div>
-        
-        <!-- Status Summary Cards -->
-        <div class="stats-grid" style="margin-bottom: 24px;">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #2D5016 0%, #4A7C2C 100%);">📡</div>
-            <div class="stat-info">
-              <span class="stat-value">12</span>
-              <span class="stat-label">Total Sensors</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #28a745 0%, #48c774 100%);">✅</div>
-            <div class="stat-info">
-              <span class="stat-value">9</span>
-              <span class="stat-label">Online</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ffdd57 100%);">⚠️</div>
-            <div class="stat-info">
-              <span class="stat-value">2</span>
-              <span class="stat-label">Warning</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545 0%, #f14668 100%);">❌</div>
-            <div class="stat-info">
-              <span class="stat-value">1</span>
-              <span class="stat-label">Offline</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Filters -->
-        <div class="card" style="margin-bottom: 24px;">
-          <div class="form-row">
-            <div class="form-group" style="margin-bottom: 0;">
-              <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search sensors...">
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <select id="statusFilter" class="form-control form-select">
-                <option value="">All Status</option>
-                <option value="online">🟢 Online</option>
-                <option value="warning">🟡 Warning</option>
-                <option value="offline">🔴 Offline</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <select id="typeFilter" class="form-control form-select">
-                <option value="">All Types</option>
-                <option value="temperature">🌡️ Temperature</option>
-                <option value="humidity">💧 Humidity</option>
-                <option value="soil">🌱 Soil Moisture</option>
-                <option value="rain">🌧️ Rainfall</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Sensors Grid -->
-        <div class="sensor-grid" id="sensorGrid">
-          <!-- Sensor Card 1 -->
-          <div class="card sensor-card" data-status="online">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-success">🟢 Online</span>
-              <span class="text-muted" style="font-size: 0.85em;">5 min ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-001</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              North Field • Green Valley Farm
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value">28.5°C</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value">65%</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌱 Soil Moisture</span>
-                <span class="sensor-reading-value">42%</span>
-              </div>
-            </div>
-            <div style="margin-top: 16px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-            </div>
-          </div>
-          
-          <!-- Sensor Card 2 -->
-          <div class="card sensor-card" data-status="online">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-success">🟢 Online</span>
-              <span class="text-muted" style="font-size: 0.85em;">5 min ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-002</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              South Valley • Green Valley Farm
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value">27.8°C</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value">68%</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌱 Soil Moisture</span>
-                <span class="sensor-reading-value">45%</span>
-              </div>
-            </div>
-            <div style="margin-top: 16px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-            </div>
-          </div>
-          
-          <!-- Sensor Card 3 - Warning -->
-          <div class="card sensor-card" data-status="warning" style="border-left: 4px solid #ffc107;">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-warning">⚠️ Warning</span>
-              <span class="text-muted" style="font-size: 0.85em;">15 min ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-003</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              East Ridge • Sunrise Ranch
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value" style="color: #e67e22;">36.2°C</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value">38%</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌱 Soil Moisture</span>
-                <span class="sensor-reading-value" style="color: #dc3545;">22%</span>
-              </div>
-            </div>
-            <div class="alert alert-warning" style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em;">
-              ⚠️ Soil moisture below threshold (30%)
-            </div>
-            <div style="margin-top: 12px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-            </div>
-          </div>
-          
-          <!-- Sensor Card 4 -->
-          <div class="card sensor-card" data-status="online">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-success">🟢 Online</span>
-              <span class="text-muted" style="font-size: 0.85em;">5 min ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-004</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              West Grove • Sunrise Ranch
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value">29.1°C</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value">62%</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌱 Soil Moisture</span>
-                <span class="sensor-reading-value">48%</span>
-              </div>
-            </div>
-            <div style="margin-top: 16px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-            </div>
-          </div>
-          
-          <!-- Sensor Card 5 - Offline -->
-          <div class="card sensor-card" data-status="offline" style="border-left: 4px solid #dc3545; opacity: 0.8;">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-danger">🔴 Offline</span>
-              <span class="text-muted" style="font-size: 0.85em;">2 hours ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-005</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              Central Plain • Highland Estate
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value text-muted">--</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value text-muted">--</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌱 Soil Moisture</span>
-                <span class="sensor-reading-value text-muted">--</span>
-              </div>
-            </div>
-            <div class="alert alert-danger" style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em;">
-              🚨 Sensor not responding. Check connection.
-            </div>
-            <div style="margin-top: 12px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-              <button class="btn btn-danger btn-sm">🔧 Diagnose</button>
-            </div>
-          </div>
-          
-          <!-- Sensor Card 6 - Warning (Battery Low) -->
-          <div class="card sensor-card" data-status="warning" style="border-left: 4px solid #ffc107;">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 12px;">
-              <span class="badge badge-warning">⚠️ Low Battery</span>
-              <span class="text-muted" style="font-size: 0.85em;">10 min ago</span>
-            </div>
-            <h3 style="margin: 0 0 4px 0;">📡 SENSOR-006</h3>
-            <p class="text-muted" style="margin: 0 0 16px 0; font-size: 0.9em;">
-              Central Plain • Highland Estate
-            </p>
-            <div class="sensor-readings">
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🌡️ Temperature</span>
-                <span class="sensor-reading-value">30.4°C</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">💧 Humidity</span>
-                <span class="sensor-reading-value">55%</span>
-              </div>
-              <div class="sensor-reading">
-                <span class="sensor-reading-label">🔋 Battery</span>
-                <span class="sensor-reading-value" style="color: #e67e22;">15%</span>
-              </div>
-            </div>
-            <div class="alert alert-warning" style="margin-top: 12px; padding: 8px 12px; font-size: 0.85em;">
-              🔋 Battery critically low. Replace soon.
-            </div>
-            <div style="margin-top: 12px;">
-              <button class="btn btn-outline btn-sm">📊 View History</button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- SignalR Status -->
-        <div class="card" style="margin-top: 24px;">
-          <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px;">
-            <div class="d-flex align-center gap-2">
-              <span id="signalrStatus" class="badge badge-success">🟢 Live Updates Active</span>
-              <span class="text-muted" style="font-size: 0.85em;">Readings update every 5 seconds</span>
-            </div>
-            <span class="text-muted" style="font-size: 0.85em;">
-              Last sync: <span id="lastSync">Just now</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <style>
-    /* Additional Sensor-specific Styles */
-    .sensor-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 24px;
-    }
-    
-    .sensor-card {
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .sensor-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    }
-    
-    .sensor-readings {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .sensor-reading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-    
-    .sensor-reading-label {
-      color: #666;
-      font-size: 0.9em;
-    }
-    
-    .sensor-reading-value {
-      font-weight: 600;
-      font-size: 1.1em;
-      font-family: 'Consolas', 'Monaco', monospace;
-    }
-    
-    @media (max-width: 768px) {
+      </main>
+    </div>
+
+    <style>
+      /* Additional Sensor-specific Styles */
       .sensor-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
       }
-    }
-  </style>
-  
-  <!-- Scripts (ES Module) -->
-  <script type="module" src="/js/sensors.js"></script>
-</body>
+
+      .sensor-card {
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .sensor-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      .sensor-readings {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sensor-reading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .sensor-reading-label {
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .sensor-reading-value {
+        font-weight: 600;
+        font-size: 1.1em;
+        font-family: 'Consolas', 'Monaco', monospace;
+      }
+
+      @media (max-width: 768px) {
+        .sensor-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="/js/sensors.js"></script>
+  </body>
 </html>

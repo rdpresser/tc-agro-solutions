@@ -1,83 +1,59 @@
 /**
  * TC Agro Solutions - Sidebar Module
- * Simple, standalone sidebar toggle functionality
+ * ES Module for sidebar toggle functionality
  */
 
-// Self-executing function to avoid any module/import issues
-(function() {
-  'use strict';
+import { $id, $, toggleClass } from './utils.js';
 
-  // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSidebar);
-  } else {
-    initSidebar();
+/**
+ * Initialize sidebar toggle behavior
+ * Handles both mobile slide-in/out and desktop collapse/expand
+ */
+export function initSidebar() {
+  const sidebar = $id('sidebar');
+  const menuToggle = $id('menuToggle');
+  const overlay = $id('sidebarOverlay');
+
+  if (!menuToggle || !sidebar) {
+    return;
   }
 
-  function initSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const menuToggle = document.getElementById('menuToggle');
-    const overlay = document.getElementById('sidebarOverlay');
+  // Remove any existing listeners by cloning
+  const newMenuToggle = menuToggle.cloneNode(true);
+  menuToggle.parentNode.replaceChild(newMenuToggle, menuToggle);
 
-    console.log('[Sidebar Module] Initializing...', {
-      sidebar: !!sidebar,
-      menuToggle: !!menuToggle,
-      overlay: !!overlay
-    });
+  // Add click handler
+  newMenuToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-    if (!menuToggle || !sidebar) {
-      console.error('[Sidebar Module] Required elements not found!');
-      return;
-    }
+    if (window.innerWidth <= 768) {
+      // Mobile: slide in/out
+      toggleClass(sidebar, 'open');
+      if (overlay) toggleClass(overlay, 'open');
+    } else {
+      // Desktop: collapse/expand
+      const willCollapse = !sidebar.classList.contains('collapsed');
 
-    // Remove any existing listeners by cloning
-    const newMenuToggle = menuToggle.cloneNode(true);
-    menuToggle.parentNode.replaceChild(newMenuToggle, menuToggle);
-
-    // Add click handler
-    newMenuToggle.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log('[Sidebar] Toggle clicked');
-      
-      if (window.innerWidth <= 768) {
-        // Mobile: slide in/out
-        sidebar.classList.toggle('open');
-        if (overlay) overlay.classList.toggle('open');
-        console.log('[Sidebar] Mobile - open:', sidebar.classList.contains('open'));
+      if (willCollapse) {
+        sidebar.classList.add('collapsed');
+        sidebar.style.width = '60px';
+        const main = $('.main-content');
+        if (main) main.style.marginLeft = '60px';
       } else {
-        // Desktop: collapse/expand
-        const willCollapse = !sidebar.classList.contains('collapsed');
-        
-        if (willCollapse) {
-          sidebar.classList.add('collapsed');
-          sidebar.style.width = '60px';
-          const main = document.querySelector('.main-content');
-          if (main) main.style.marginLeft = '60px';
-        } else {
-          sidebar.classList.remove('collapsed');
-          sidebar.style.width = '';
-          const main = document.querySelector('.main-content');
-          if (main) main.style.marginLeft = '';
-        }
-        
-        console.log('[Sidebar] Desktop - collapsed:', sidebar.classList.contains('collapsed'));
-        console.log('[Sidebar] Style width:', sidebar.style.width);
+        sidebar.classList.remove('collapsed');
+        sidebar.style.width = '';
+        const main = $('.main-content');
+        if (main) main.style.marginLeft = '';
       }
-    });
-
-    // Overlay click (mobile)
-    if (overlay) {
-      overlay.addEventListener('click', function() {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-      });
     }
+  });
 
-    console.log('[Sidebar Module] Initialized successfully');
+  // Overlay click (mobile)
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+    });
   }
-
-  // Export for use in other modules if needed
-  window.initSidebar = initSidebar;
-})();
+}

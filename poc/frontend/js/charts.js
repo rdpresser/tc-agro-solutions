@@ -89,16 +89,16 @@ const chartInstances = new Map();
 export function createReadingsChart(canvasId, data = []) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
-  
+
   // Destroy existing chart if any
   destroyChart(canvasId);
-  
+
   // Process data for chart
-  const labels = data.map(d => {
+  const labels = data.map((d) => {
     const date = new Date(d.timestamp);
     return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
   });
-  
+
   const chart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -106,7 +106,9 @@ export function createReadingsChart(canvasId, data = []) {
       datasets: [
         {
           label: 'Temperatura (°C)',
-          data: data.length ? data.map(d => d.temperature?.toFixed(1)) : [28, 27, 29, 31, 30, 28, 27],
+          data: data.length
+            ? data.map((d) => d.temperature?.toFixed(1))
+            : [28, 27, 29, 31, 30, 28, 27],
           borderColor: COLORS.temperature,
           backgroundColor: `${COLORS.temperature}20`,
           borderWidth: 2,
@@ -117,7 +119,9 @@ export function createReadingsChart(canvasId, data = []) {
         },
         {
           label: 'Umidade (%)',
-          data: data.length ? data.map(d => d.humidity?.toFixed(1)) : [65, 68, 62, 58, 55, 60, 63],
+          data: data.length
+            ? data.map((d) => d.humidity?.toFixed(1))
+            : [65, 68, 62, 58, 55, 60, 63],
           borderColor: COLORS.humidity,
           backgroundColor: `${COLORS.humidity}20`,
           borderWidth: 2,
@@ -128,7 +132,9 @@ export function createReadingsChart(canvasId, data = []) {
         },
         {
           label: 'Umidade Solo (%)',
-          data: data.length ? data.map(d => d.soilMoisture?.toFixed(1)) : [42, 40, 38, 45, 48, 46, 44],
+          data: data.length
+            ? data.map((d) => d.soilMoisture?.toFixed(1))
+            : [42, 40, 38, 45, 48, 46, 44],
           borderColor: COLORS.soilMoisture,
           backgroundColor: `${COLORS.soilMoisture}20`,
           borderWidth: 2,
@@ -163,7 +169,7 @@ export function createReadingsChart(canvasId, data = []) {
       }
     }
   });
-  
+
   chartInstances.set(canvasId, chart);
   return chart;
 }
@@ -176,26 +182,28 @@ export function createReadingsChart(canvasId, data = []) {
 export function createAlertDistributionChart(canvasId, data = {}) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
-  
+
   destroyChart(canvasId);
-  
+
   const chartData = {
     critical: data.critical ?? 2,
     warning: data.warning ?? 3,
     info: data.info ?? 1
   };
-  
+
   const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels: ['Critical', 'Warning', 'Info'],
-      datasets: [{
-        data: [chartData.critical, chartData.warning, chartData.info],
-        backgroundColor: [COLORS.critical, COLORS.warning, COLORS.info],
-        borderColor: '#fff',
-        borderWidth: 2,
-        hoverOffset: 8
-      }]
+      datasets: [
+        {
+          data: [chartData.critical, chartData.warning, chartData.info],
+          backgroundColor: [COLORS.critical, COLORS.warning, COLORS.info],
+          borderColor: '#fff',
+          borderWidth: 2,
+          hoverOffset: 8
+        }
+      ]
     },
     options: {
       ...commonOptions,
@@ -211,7 +219,7 @@ export function createAlertDistributionChart(canvasId, data = {}) {
       }
     }
   });
-  
+
   chartInstances.set(canvasId, chart);
   return chart;
 }
@@ -224,26 +232,28 @@ export function createAlertDistributionChart(canvasId, data = {}) {
 export function createSensorStatusChart(canvasId, data = {}) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
-  
+
   destroyChart(canvasId);
-  
+
   const chartData = {
     online: data.online ?? 8,
     warning: data.warning ?? 3,
     offline: data.offline ?? 1
   };
-  
+
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['Online', 'Warning', 'Offline'],
-      datasets: [{
-        label: 'Sensores',
-        data: [chartData.online, chartData.warning, chartData.offline],
-        backgroundColor: [COLORS.soilMoisture, COLORS.warning, COLORS.critical],
-        borderRadius: 8,
-        barThickness: 40
-      }]
+      datasets: [
+        {
+          label: 'Sensores',
+          data: [chartData.online, chartData.warning, chartData.offline],
+          backgroundColor: [COLORS.soilMoisture, COLORS.warning, COLORS.critical],
+          borderRadius: 8,
+          barThickness: 40
+        }
+      ]
     },
     options: {
       ...commonOptions,
@@ -270,7 +280,7 @@ export function createSensorStatusChart(canvasId, data = {}) {
       }
     }
   });
-  
+
   chartInstances.set(canvasId, chart);
   return chart;
 }
@@ -285,19 +295,21 @@ export function createSensorStatusChart(canvasId, data = {}) {
 export function createGaugeChart(canvasId, value = 0, max = 100, color = COLORS.primary) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
-  
+
   destroyChart(canvasId);
-  
+
   const remaining = max - value;
-  
+
   const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      datasets: [{
-        data: [value, remaining],
-        backgroundColor: [color, '#f0f0f0'],
-        borderWidth: 0
-      }]
+      datasets: [
+        {
+          data: [value, remaining],
+          backgroundColor: [color, '#f0f0f0'],
+          borderWidth: 0
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -311,7 +323,7 @@ export function createGaugeChart(canvasId, value = 0, max = 100, color = COLORS.
       }
     }
   });
-  
+
   chartInstances.set(canvasId, chart);
   return chart;
 }
@@ -324,21 +336,17 @@ export function createGaugeChart(canvasId, value = 0, max = 100, color = COLORS.
 export function createPropertyOverviewChart(canvasId, properties = []) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
-  
+
   destroyChart(canvasId);
-  
-  const labels = properties.length 
-    ? properties.map(p => p.name.substring(0, 15))
+
+  const labels = properties.length
+    ? properties.map((p) => p.name.substring(0, 15))
     : ['Green Valley', 'Sunrise Ranch', 'Highland Estate'];
-    
-  const plotsData = properties.length
-    ? properties.map(p => p.plotsCount)
-    : [2, 2, 1];
-    
-  const areaData = properties.length
-    ? properties.map(p => p.areaHectares)
-    : [350, 180, 250];
-  
+
+  const plotsData = properties.length ? properties.map((p) => p.plotsCount) : [2, 2, 1];
+
+  const areaData = properties.length ? properties.map((p) => p.areaHectares) : [350, 180, 250];
+
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -384,7 +392,7 @@ export function createPropertyOverviewChart(canvasId, properties = []) {
       }
     }
   });
-  
+
   chartInstances.set(canvasId, chart);
   return chart;
 }
@@ -401,7 +409,7 @@ export function createPropertyOverviewChart(canvasId, properties = []) {
 export function updateChartData(canvasId, newData) {
   const chart = chartInstances.get(canvasId);
   if (!chart) return;
-  
+
   if (Array.isArray(newData)) {
     // Update datasets
     chart.data.datasets.forEach((dataset, index) => {
@@ -413,7 +421,7 @@ export function updateChartData(canvasId, newData) {
     // Update first dataset with values
     chart.data.datasets[0].data = Object.values(newData);
   }
-  
+
   chart.update('none'); // Update without animation for real-time
 }
 
@@ -427,23 +435,23 @@ export function updateChartData(canvasId, newData) {
 export function addDataPoint(canvasId, label, values, maxPoints = 20) {
   const chart = chartInstances.get(canvasId);
   if (!chart) return;
-  
+
   // Add new label
   chart.data.labels.push(label);
-  
+
   // Add new data to each dataset
   values.forEach((value, index) => {
     if (chart.data.datasets[index]) {
       chart.data.datasets[index].data.push(value);
     }
   });
-  
+
   // Remove oldest data if exceeding maxPoints
   if (chart.data.labels.length > maxPoints) {
     chart.data.labels.shift();
-    chart.data.datasets.forEach(dataset => dataset.data.shift());
+    chart.data.datasets.forEach((dataset) => dataset.data.shift());
   }
-  
+
   chart.update('none');
 }
 
@@ -467,7 +475,7 @@ export function destroyChart(canvasId) {
  * Destroys all chart instances
  */
 export function destroyAllCharts() {
-  chartInstances.forEach(chart => chart.destroy());
+  chartInstances.forEach((chart) => chart.destroy());
   chartInstances.clear();
 }
 
@@ -484,7 +492,7 @@ export function getChart(canvasId) {
  * Resizes all charts (call on window resize)
  */
 export function resizeAllCharts() {
-  chartInstances.forEach(chart => chart.resize());
+  chartInstances.forEach((chart) => chart.resize());
 }
 
 // Export colors for use in other modules

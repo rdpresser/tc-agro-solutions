@@ -17,15 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = $('#password');
   const submitBtn = loginForm?.querySelector('button[type="submit"]');
   const errorMessage = $('.error-message');
-  
+
   if (!loginForm) return;
-  
+
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const email = emailInput?.value?.trim();
     const password = passwordInput?.value;
-    
+
     // Basic validation
     if (!email || !password) {
       if (errorMessage) {
@@ -34,30 +34,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    
+
     // Show loading state
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.classList.add('btn-loading');
       submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
     }
-    
+
     if (errorMessage) {
       errorMessage.style.display = 'none';
     }
-    
+
     try {
       await handleLogin(email, password);
       showToast('Login successful!', 'success');
       redirectToDashboard();
     } catch (error) {
       console.error('Login error:', error);
-      
+
       if (errorMessage) {
         errorMessage.textContent = error.message || 'Invalid email or password.';
         errorMessage.style.display = 'block';
       }
-      
+
       // Reset button
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -66,9 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  
+
   // Clear error on input
-  [emailInput, passwordInput].forEach(input => {
+  [emailInput, passwordInput].forEach((input) => {
     input?.addEventListener('input', () => {
       if (errorMessage) {
         errorMessage.style.display = 'none';

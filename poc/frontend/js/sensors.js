@@ -2,8 +2,8 @@
  * TC Agro Solutions - Sensors Page Entry Point
  */
 
-import { initProtectedPage } from './common.js';
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
+import { initProtectedPage } from './common.js';
 import { $, $$, showToast, formatRelativeTime } from './utils.js';
 
 // ============================================
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
     return;
   }
-  
+
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
@@ -33,9 +33,9 @@ window.addEventListener('beforeunload', () => {
 async function loadSensors() {
   const grid = $('#sensors-grid');
   if (!grid) return;
-  
+
   grid.innerHTML = '<div class="loading">Loading sensors...</div>';
-  
+
   try {
     const sensors = await getSensors();
     renderSensorsGrid(sensors);
@@ -49,13 +49,15 @@ async function loadSensors() {
 function renderSensorsGrid(sensors) {
   const grid = $('#sensors-grid');
   if (!grid) return;
-  
+
   if (!sensors.length) {
     grid.innerHTML = '<div class="empty">Nenhum sensor cadastrado</div>';
     return;
   }
-  
-  grid.innerHTML = sensors.map(sensor => `
+
+  grid.innerHTML = sensors
+    .map(
+      (sensor) => `
     <div class="sensor-card ${sensor.status}" data-sensor-id="${sensor.id}">
       <div class="sensor-header">
         <span class="sensor-id">${sensor.id}</span>
@@ -70,19 +72,19 @@ function renderSensorsGrid(sensors) {
         <div class="reading">
           <span class="reading-label">🌡️ Temp</span>
           <span class="reading-value" data-metric="temperature">
-            ${sensor.temperature != null ? sensor.temperature.toFixed(1) + '°C' : '--'}
+            ${sensor.temperature !== null ? `${sensor.temperature.toFixed(1)}°C` : '--'}
           </span>
         </div>
         <div class="reading">
           <span class="reading-label">💧 Umid</span>
           <span class="reading-value" data-metric="humidity">
-            ${sensor.humidity != null ? sensor.humidity.toFixed(0) + '%' : '--'}
+            ${sensor.humidity !== null ? `${sensor.humidity.toFixed(0)}%` : '--'}
           </span>
         </div>
         <div class="reading">
           <span class="reading-label">🌿 Solo</span>
           <span class="reading-value" data-metric="soilMoisture">
-            ${sensor.soilMoisture != null ? sensor.soilMoisture.toFixed(0) + '%' : '--'}
+            ${sensor.soilMoisture !== null ? `${sensor.soilMoisture.toFixed(0)}%` : '--'}
           </span>
         </div>
       </div>
@@ -96,7 +98,9 @@ function renderSensorsGrid(sensors) {
         </span>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 // ============================================
@@ -144,26 +148,26 @@ function setupRealTimeUpdates() {
 function updateSensorCard(sensorId, reading) {
   const card = $(`[data-sensor-id="${sensorId}"]`);
   if (!card) return;
-  
+
   // Update readings with animation
   const metrics = ['temperature', 'humidity', 'soilMoisture'];
-  
-  metrics.forEach(metric => {
+
+  metrics.forEach((metric) => {
     const el = card.querySelector(`[data-metric="${metric}"]`);
-    if (el && reading[metric] != null) {
+    if (el && reading[metric] !== null) {
       el.classList.add('pulse');
-      
-      let value = reading[metric];
+
+      const value = reading[metric];
       if (metric === 'temperature') {
-        el.textContent = value.toFixed(1) + '°C';
+        el.textContent = `${value.toFixed(1)}°C`;
       } else {
-        el.textContent = value.toFixed(0) + '%';
+        el.textContent = `${value.toFixed(0)}%`;
       }
-      
+
       setTimeout(() => el.classList.remove('pulse'), 500);
     }
   });
-  
+
   // Update last update time
   const timeEl = card.querySelector('.last-update');
   if (timeEl) {
@@ -182,27 +186,27 @@ function setupEventListeners() {
   refreshBtn?.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '⟳ Updating...';
-    
+
     await loadSensors();
-    
+
     refreshBtn.disabled = false;
     refreshBtn.textContent = '⟳ Refresh';
     showToast('Sensors updated', 'success');
   });
-  
+
   // Status filter
   const filterBtns = $$('[data-filter-status]');
-  filterBtns.forEach(btn => {
+  filterBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       // Update active state
-      filterBtns.forEach(b => b.classList.remove('active'));
+      filterBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      
+
       // Filter cards
       const status = btn.dataset.filterStatus;
       const cards = $$('.sensor-card');
-      
-      cards.forEach(card => {
+
+      cards.forEach((card) => {
         if (status === 'all' || card.classList.contains(status)) {
           card.style.display = '';
         } else {

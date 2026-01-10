@@ -9,6 +9,7 @@
 ## 📋 Overview
 
 This Proof of Concept (POC) provides a fully functional frontend UI that:
+
 - ✅ Demonstrates login → dashboard → CRUD flows
 - ✅ Uses mock data for immediate demonstration
 - ✅ Prepares AJAX calls for backend integration (commented)
@@ -34,31 +35,37 @@ poc/frontend/
 ├── alerts.html             # Alert management
 ├── css/
 │   └── style.css           # Unified agro-themed styles
-├── js/
-│   ├── utils.js            # Common utilities (DOM, formatting, dayjs)
-│   ├── auth.js             # Authentication logic
-│   ├── api.js              # axios client + SignalR + mock data
-│   ├── charts.js           # Chart.js wrapper functions
-│   ├── common.js           # Shared page initialization
-│   ├── index.js            # Login page entry point
-│   ├── dashboard.js        # Dashboard with real-time + charts
-│   ├── properties.js       # Properties page script
-│   ├── properties-form.js  # Property form script
-│   ├── plots.js            # Plots page script
-│   ├── plots-form.js       # Plot form script
-│   ├── sensors.js          # Sensors page script
-│   └── alerts.js           # Alerts page script
+├── js/                     # All ES Modules
+│   ├── utils.js            # Common utilities (DOM helpers, formatting, dayjs)
+│   ├── auth.js             # Authentication logic (ES Module)
+│   ├── api.js              # axios client + retry + SignalR + mock data (ES Module)
+│   ├── charts.js           # Chart.js wrapper functions (ES Module)
+│   ├── common.js           # Shared page initialization + sidebar (ES Module)
+│   ├── sidebar.js          # Sidebar toggle logic (ES Module)
+│   ├── index.js            # Login page entry point (ES Module)
+│   ├── dashboard.js        # Dashboard with real-time + charts (ES Module)
+│   ├── properties.js       # Properties page script (ES Module)
+│   ├── properties-form.js  # Property form script (ES Module)
+│   ├── plots.js            # Plots page script (ES Module)
+│   ├── plots-form.js       # Plot form script (ES Module)
+│   ├── sensors.js          # Sensors page script (ES Module)
+│   └── alerts.js           # Alerts page script (ES Module)
 ├── package.json            # npm dependencies
 ├── vite.config.js          # Vite configuration
 ├── .gitignore              # node_modules, dist exclusions
-└── README.md               # This file
+├── README.md               # This file
+├── HELPERS_QUICK_REFERENCE.md  # DOM & API helpers guide
+└── MODERNIZATION_SUMMARY.md    # Implementation details
 ```
+
+**Note:** All JavaScript files are ES Modules using `import`/`export` syntax.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Development Mode (Recommended)
+
 ```bash
 cd poc/frontend
 
@@ -72,6 +79,7 @@ npm run dev
 ```
 
 ### Production Build
+
 ```bash
 # Build for production
 npm run build
@@ -81,6 +89,7 @@ npm run preview
 ```
 
 ### Demo Credentials
+
 - **Email:** admin@agro.com (or any valid email format)
 - **Password:** any (mock authentication)
 
@@ -110,11 +119,13 @@ npm run preview
 ```
 
 ### Token Storage
+
 - **Storage:** `sessionStorage` (clears when browser closes)
 - **Key:** `agro_token`
 - **Format:** JWT Bearer token
 
 ### Authentication Flow
+
 ```
 1. User enters credentials on index.html
 2. Frontend calls POST /auth/login (mock in POC)
@@ -126,10 +137,11 @@ npm run preview
 ```
 
 ### How to Check Token
+
 ```javascript
 // In browser console:
-sessionStorage.getItem('agro_token')   // View current token
-sessionStorage.removeItem('agro_token') // Force logout
+sessionStorage.getItem('agro_token'); // View current token
+sessionStorage.removeItem('agro_token'); // Force logout
 ```
 
 ---
@@ -141,12 +153,14 @@ sessionStorage.removeItem('agro_token') // Force logout
 All API calls are prepared in `js/api.js` with mock data. To enable real backend calls:
 
 1. **Set the API base URL:**
+
 ```javascript
 // In js/api.js, line 1:
 const API_BASE_URL = 'https://your-api.azurewebsites.net/api';
 ```
 
 2. **Uncomment the real fetch calls:**
+
 ```javascript
 // Each function has this pattern:
 
@@ -195,11 +209,13 @@ return handleResponse(response);
 The POC simulates SignalR with `setInterval`. For real SignalR:
 
 1. Include SignalR client library:
+
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 ```
 
 2. Update `js/api.js`:
+
 ```javascript
 // Replace mock connection with real SignalR:
 const connection = new signalR.HubConnectionBuilder()
@@ -223,17 +239,19 @@ await connection.start();
 ## 🎨 Design System
 
 ### Color Palette (Agro Theme)
+
 ```css
---color-primary: #2D5016;        /* Dark Green - headers, buttons */
---color-primary-light: #4A7C2C;  /* Light Green - hover states */
---color-secondary: #6B4423;      /* Soil Brown - accents */
---color-background: #F5F5F0;     /* Light Earth - page background */
---color-surface: #FFFFFF;        /* White - cards */
---color-text: #333333;           /* Dark Gray - body text */
---color-text-muted: #666666;     /* Medium Gray - secondary text */
+--color-primary: #2d5016; /* Dark Green - headers, buttons */
+--color-primary-light: #4a7c2c; /* Light Green - hover states */
+--color-secondary: #6b4423; /* Soil Brown - accents */
+--color-background: #f5f5f0; /* Light Earth - page background */
+--color-surface: #ffffff; /* White - cards */
+--color-text: #333333; /* Dark Gray - body text */
+--color-text-muted: #666666; /* Medium Gray - secondary text */
 ```
 
 ### Icons (Unicode Emoji)
+
 ```
 🌾 Brand/Logo       📊 Dashboard       🏘️ Properties
 🌱 Plots            📡 Sensors         🔔 Alerts
@@ -243,10 +261,15 @@ await connection.start();
 ```
 
 ### Responsive Breakpoints
+
 ```css
 /* Mobile First Approach */
-@media (min-width: 768px)  { /* Tablet */ }
-@media (min-width: 1024px) { /* Desktop */ }
+@media (min-width: 768px) {
+  /* Tablet */
+}
+@media (min-width: 1024px) {
+  /* Desktop */
+}
 ```
 
 ---
@@ -254,12 +277,14 @@ await connection.start();
 ## 📱 Pages Overview
 
 ### 1. Login (index.html)
+
 - Email/password form
 - Error message display
 - Loading state
 - Redirects if already authenticated
 
 ### 2. Dashboard (dashboard.html)
+
 - 4 stat cards (Properties, Plots, Sensors, Alerts)
 - Chart placeholders (7-day readings, alert distribution)
 - Real-time metrics grid (Temperature, Humidity, Soil, Rainfall)
@@ -268,12 +293,14 @@ await connection.start();
 - SignalR mock for live updates
 
 ### 3. Properties (properties.html + properties-form.html)
+
 - List with search/filter
 - CRUD operations
 - Location settings
 - Status management
 
 ### 4. Plots (plots.html + plots-form.html)
+
 - List with property/crop filters
 - **Crop type is mandatory** (hackathon requirement)
 - Alert threshold configuration
@@ -281,6 +308,7 @@ await connection.start();
 - Associated sensors display
 
 ### 5. Sensors (sensors.html)
+
 - Grid view with status cards
 - Online/Warning/Offline states
 - Real-time readings display
@@ -288,6 +316,7 @@ await connection.start();
 - Refresh functionality
 
 ### 6. Alerts (alerts.html)
+
 - Tabbed view (Pending/Resolved/All)
 - Severity levels (Critical/Warning/Info)
 - Resolution actions
@@ -298,6 +327,7 @@ await connection.start();
 ## 🧪 Testing the POC
 
 ### Functional Tests
+
 1. **Login Flow:** Open index.html → Enter any email → Click Login → Should redirect to dashboard
 2. **Logout Flow:** Click Logout in sidebar → Should return to login
 3. **Navigation:** Click each sidebar item → Should show correct page
@@ -305,6 +335,7 @@ await connection.start();
 5. **Responsive:** Resize browser → Sidebar should collapse on mobile
 
 ### Browser Console Tests
+
 ```javascript
 // Check authentication state
 console.log('Token:', sessionStorage.getItem('agro_token'));
@@ -312,11 +343,11 @@ console.log('User:', sessionStorage.getItem('agro_user'));
 
 // Test logout
 clearToken();
-location.reload();  // Should redirect to login
+location.reload(); // Should redirect to login
 
 // Test protected page access
 sessionStorage.removeItem('agro_token');
-window.location.href = 'dashboard.html';  // Should redirect to login
+window.location.href = 'dashboard.html'; // Should redirect to login
 ```
 
 ---
@@ -326,6 +357,7 @@ window.location.href = 'dashboard.html';  // Should redirect to login
 The frontend expects these backend endpoints:
 
 ### Authentication
+
 ```
 POST /auth/login
   Request:  { email, password }
@@ -337,6 +369,7 @@ POST /auth/refresh
 ```
 
 ### Dashboard
+
 ```
 GET /dashboard/stats
   Response: { properties, plots, sensors, alerts }
@@ -346,6 +379,7 @@ GET /dashboard/latest?limit=5
 ```
 
 ### Properties
+
 ```
 GET    /properties
 POST   /properties
@@ -355,6 +389,7 @@ DELETE /properties/{id}
 ```
 
 ### Plots
+
 ```
 GET    /plots?propertyId={id}
 POST   /plots
@@ -364,12 +399,14 @@ DELETE /plots/{id}
 ```
 
 ### Sensors
+
 ```
 GET /sensors?plotId={id}
 GET /sensors/{id}/readings?days=7
 ```
 
 ### Alerts
+
 ```
 GET  /alerts?status=pending
 POST /alerts/{id}/resolve
@@ -377,21 +414,130 @@ POST /alerts/{id}/resolve
 
 ---
 
+## 🏗️ ES Module Architecture
+
+All JavaScript files are **ES Modules** with a clean import/export structure:
+
+### Module Dependencies Flow
+
+```
+utils.js (base utilities)
+  ↓
+auth.js, api.js, charts.js, sidebar.js
+  ↓
+common.js (combines auth + sidebar + utils)
+  ↓
+Page modules: dashboard.js, properties.js, plots.js, sensors.js, alerts.js
+```
+
+### Core Modules
+
+**`utils.js`** - Base utilities (no dependencies)
+
+- DOM helpers: `$()`, `$$()`, `$id()`, `toggleClass()`, `getFormData()`, `setFormData()`
+- Formatting: `formatDate()`, `formatNumber()`, `formatCurrency()`
+- Validation: `isValidEmail()`, `isRequired()`, `isMinLength()`
+- UI feedback: `showToast()`, `showLoading()`, `hideLoading()`
+
+**`auth.js`** - Authentication (imports from utils)
+
+- `handleLogin()`, `handleLogout()`, `requireAuth()`, `getTokenInfo()`
+
+**`api.js`** - HTTP client (imports from utils + axios)
+
+- Axios instance with retry logic and error normalization
+- Mock data for all endpoints
+- SignalR connection management
+
+**`sidebar.js`** - Sidebar toggle (imports from utils)
+
+- `initSidebar()` - Desktop collapse/expand + mobile slide-in/out
+
+**`common.js`** - Page initialization (imports auth, utils, sidebar)
+
+- `initProtectedPage()` - Combines auth check, sidebar, logout, user display
+
+### Page Modules (all import from common + api)
+
+- `index.js` - Login page
+- `dashboard.js` - Main dashboard
+- `properties.js`, `properties-form.js` - Properties CRUD
+- `plots.js`, `plots-form.js` - Plots CRUD
+- `sensors.js` - Sensor monitoring
+- `alerts.js` - Alert management
+
+### HTML Module Loading
+
+All HTML files use `<script type="module">`:
+
+```html
+<script type="module" src="/js/dashboard.js"></script>
+```
+
+### Benefits
+
+- ✅ No global scope pollution
+- ✅ Explicit dependencies
+- ✅ Tree-shaking support (Vite)
+- ✅ Modern browser native support
+- ✅ Clean import/export syntax
+
+---
+
 ## 📦 Dependencies
 
 This POC uses npm-managed libraries:
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| vite | ^5.4.21 | Dev server + bundler |
-| axios | ^1.6.x | HTTP client |
-| chart.js | ^4.4.x | Interactive charts |
-| dayjs | ^1.11.x | Date formatting |
-| @microsoft/signalr | ^8.x | Real-time updates |
+| Package            | Version | Purpose                           |
+| ------------------ | ------- | --------------------------------- |
+| vite               | ^5.4.21 | Dev server + bundler + ES modules |
+| axios              | ^1.6.x  | HTTP client with interceptors     |
+| chart.js           | ^4.4.x  | Interactive charts                |
+| dayjs              | ^1.11.x | Date formatting                   |
+| @microsoft/signalr | ^8.x    | Real-time updates                 |
 
 ### Install
+
 ```bash
 npm install
+```
+
+---
+
+## 🧰 DOM & API Helpers
+
+The codebase provides modern helpers for cleaner code. See detailed documentation:
+
+- **[HELPERS_QUICK_REFERENCE.md](./HELPERS_QUICK_REFERENCE.md)** - Quick reference guide for all helpers
+- **[MODERNIZATION_SUMMARY.md](./MODERNIZATION_SUMMARY.md)** - Complete implementation details
+
+### Quick Examples
+
+**DOM Access:**
+
+```javascript
+import { $id } from './utils.js';
+const form = $id('myForm'); // Clean alternative to document.getElementById()
+```
+
+**Form Helpers:**
+
+```javascript
+import { getFormData, setFormData } from './utils.js';
+const data = getFormData('#propertyForm'); // Extract all fields as object
+setFormData('#propertyForm', property); // Populate form from object
+```
+
+**Error Handling:**
+
+```javascript
+import { normalizeError } from './api.js';
+try {
+  await api.post('/properties', data);
+} catch (error) {
+  const { message } = normalizeError(error);
+  showToast(message, 'error');
+}
 ```
 
 ---
@@ -407,6 +553,13 @@ npm install
 
 ## 📚 Related Documentation
 
+### Frontend Documentation (this folder)
+
+- **[HELPERS_QUICK_REFERENCE.md](./HELPERS_QUICK_REFERENCE.md)** - DOM & API helper functions
+- **[MODERNIZATION_SUMMARY.md](./MODERNIZATION_SUMMARY.md)** - ES Module refactoring details
+
+### Project Documentation (parent folders)
+
 - [Technical Roadmap](../../README_ROADMAP.md)
 - [Local Development Setup](../../docs/development/local-setup.md)
 - [API Conventions](../../docs/adr/) (ADRs)
@@ -418,8 +571,7 @@ npm install
 
 1. **Backend Integration:** Uncomment AJAX calls when APIs are ready
 2. **Real SignalR:** Replace mock with actual SignalR hub
-3. **Form Validation:** Add client-side validation library
-4. **Error Handling:** Improve error states and messages
+3. **Testing:** See testing guide below
 
 ---
 

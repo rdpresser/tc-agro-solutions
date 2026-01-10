@@ -3,10 +3,10 @@
  * Entry point script for property create/edit
  */
 
-import { $, showToast, getQueryParam } from './utils.js';
-import { requireAuth } from './auth.js';
 import { getProperty, createProperty, updateProperty } from './api.js';
+import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
+import { $id, showToast, getQueryParam } from './utils.js';
 
 // ============================================
 // Page Initialization
@@ -15,16 +15,16 @@ import { initProtectedPage } from './common.js';
 document.addEventListener('DOMContentLoaded', async () => {
   // Verify authentication
   if (!requireAuth()) return;
-  
+
   // Initialize protected page (sidebar, user display)
   initProtectedPage();
-  
+
   // Check if editing existing property
   const id = getQueryParam('id');
   if (id) {
     await loadProperty(id);
   }
-  
+
   // Setup form handler
   setupFormHandler();
 });
@@ -41,21 +41,20 @@ async function loadProperty(id) {
       window.location.href = 'properties.html';
       return;
     }
-    
+
     // Update page titles
-    const pageTitle = document.getElementById('pageTitle');
-    const formTitle = document.getElementById('formTitle');
-    const breadcrumbTitle = document.getElementById('breadcrumbTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    
+    const pageTitle = $id('pageTitle');
+    const formTitle = $id('formTitle');
+    const breadcrumbTitle = $id('breadcrumbTitle');
+    const submitBtn = $id('submitBtn');
+
     if (pageTitle) pageTitle.textContent = 'Edit Property';
     if (formTitle) formTitle.textContent = 'Edit Property';
     if (breadcrumbTitle) breadcrumbTitle.textContent = property.name;
     if (submitBtn) submitBtn.innerHTML = '💾 Update Property';
-    
+
     // Populate form
     populateForm(property);
-    
   } catch (error) {
     console.error('Failed to load property:', error);
     showToast('Failed to load property', 'danger');
@@ -77,9 +76,9 @@ function populateForm(property) {
     status: property.status || 'active',
     notes: property.notes || ''
   };
-  
+
   Object.entries(fields).forEach(([id, value]) => {
-    const element = document.getElementById(id);
+    const element = $id(id);
     if (element) element.value = value;
   });
 }
@@ -89,41 +88,38 @@ function populateForm(property) {
 // ============================================
 
 function setupFormHandler() {
-  const form = document.getElementById('propertyForm');
+  const form = $id('propertyForm');
   if (!form) return;
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const id = document.getElementById('propertyId')?.value;
-    const submitBtn = document.getElementById('submitBtn');
-    
+
+    const id = $id('propertyId')?.value;
+    const submitBtn = $id('submitBtn');
+
     const data = {
-      name: document.getElementById('name')?.value,
-      location: document.getElementById('location')?.value,
-      areaHectares: parseFloat(document.getElementById('areaHectares')?.value) || 0,
-      latitude: document.getElementById('latitude')?.value 
-        ? parseFloat(document.getElementById('latitude').value) 
-        : null,
-      longitude: document.getElementById('longitude')?.value 
-        ? parseFloat(document.getElementById('longitude').value) 
-        : null,
-      status: document.getElementById('status')?.value || 'active',
-      notes: document.getElementById('notes')?.value || ''
+      name: $id('name')?.value,
+      location: $id('location')?.value,
+      areaHectares: parseFloat($id('areaHectares')?.value) || 0,
+      latitude: $id('latitude')?.value ? parseFloat($id('latitude').value) : null,
+      longitude: $id('longitude')?.value ? parseFloat($id('longitude').value) : null,
+      status: $id('status')?.value || 'active',
+      notes: $id('notes')?.value || ''
     };
-    
+
     // Validation
     if (!data.name || !data.location || !data.areaHectares) {
       showToast('Please fill in all required fields', 'warning');
       return;
     }
-    
+
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Salvando...';
+        submitBtn.innerHTML =
+          '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Salvando...';
       }
-      
+
       if (id) {
         // Update existing
         await updateProperty(id, data);
@@ -133,16 +129,15 @@ function setupFormHandler() {
         await createProperty(data);
         showToast('Property created successfully', 'success');
       }
-      
+
       // Redirect to list
       setTimeout(() => {
         window.location.href = 'properties.html';
       }, 1000);
-      
     } catch (error) {
       console.error('Failed to save property:', error);
       showToast('Failed to save property', 'danger');
-      
+
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '💾 Save Property';

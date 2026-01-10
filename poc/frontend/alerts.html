@@ -1,483 +1,517 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Alerts Management">
-  <title>Alerts | TC Agro Solutions</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🌾</span>
-        <span class="sidebar-brand">TC Agro</span>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          <a href="dashboard.html" class="nav-item">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-          <a href="properties.html" class="nav-item">
-            <span class="nav-icon">🏘️</span>
-            <span class="nav-text">Properties</span>
-          </a>
-          <a href="plots.html" class="nav-item">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-text">Plots</span>
-          </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Alerts Management" />
+    <title>Alerts | TC Agro Solutions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
         </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Monitoring</div>
-          <a href="sensors.html" class="nav-item">
-            <span class="nav-icon">📡</span>
-            <span class="nav-text">Sensors</span>
-          </a>
-          <a href="alerts.html" class="nav-item active">
-            <span class="nav-icon">🔔</span>
-            <span class="nav-text">Alerts</span>
-            <span class="badge badge-danger" style="margin-left: auto;">3</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Account</div>
-          <a href="#" class="nav-item" data-action="logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-text">Logout</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-    
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
-          <h1 class="page-title">Alerts</h1>
-        </div>
-        <div class="topbar-right">
-          <div class="user-menu">
-            <div class="user-avatar">👤</div>
-            <span id="userDisplay" class="user-name">User</span>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
           </div>
-        </div>
-      </header>
-      
-      <div class="content">
-        <!-- Page Header -->
-        <div class="page-header">
-          <div class="page-header-title">
-            <span class="page-header-icon">🔔</span>
-            <div>
-              <div class="breadcrumb">
-                <a href="dashboard.html">Dashboard</a>
-                <span class="breadcrumb-separator">/</span>
-                <span>Alerts</span>
-              </div>
-              <h2 style="margin: 0;">Alert Management</h2>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item active">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+              <span class="badge badge-danger" style="margin-left: auto">3</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Alerts</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
-          <div class="page-header-actions">
-            <button class="btn btn-outline" onclick="markAllRead()">
-              ✓ Mark All Read
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">🔔</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span>Alerts</span>
+                </div>
+                <h2 style="margin: 0">Alert Management</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <button class="btn btn-outline" onclick="markAllRead()">✓ Mark All Read</button>
+            </div>
+          </div>
+
+          <!-- Alert Stats -->
+          <div class="stats-grid" style="margin-bottom: 24px">
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #dc3545 0%, #f14668 100%)"
+              >
+                🚨
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">2</span>
+                <span class="stat-label">Critical</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #ffc107 0%, #ffdd57 100%)"
+              >
+                ⚠️
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">1</span>
+                <span class="stat-label">Warning</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #17a2b8 0%, #3498db 100%)"
+              >
+                ℹ️
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">0</span>
+                <span class="stat-label">Info</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div
+                class="stat-icon"
+                style="background: linear-gradient(135deg, #28a745 0%, #48c774 100%)"
+              >
+                ✅
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">15</span>
+                <span class="stat-label">Resolved Today</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs" style="margin-bottom: 24px">
+            <button class="tab-btn active" data-tab="pending">
+              Pending <span class="badge badge-danger" style="margin-left: 8px">3</span>
             </button>
+            <button class="tab-btn" data-tab="resolved">Resolved</button>
+            <button class="tab-btn" data-tab="all">All Alerts</button>
+          </div>
+
+          <!-- Pending Alerts -->
+          <div id="pendingAlerts" class="alert-list">
+            <!-- Critical Alert 1 -->
+            <div class="alert-item critical">
+              <div class="alert-item-icon">🚨</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-danger">Critical</span>
+                  <span class="alert-item-time">10 minutes ago</span>
+                </div>
+                <h4 class="alert-item-title">Sensor Offline - SENSOR-005</h4>
+                <p class="alert-item-description">
+                  Sensor at <strong>Central Plain</strong> (Highland Estate) has not responded for
+                  over 2 hours. Last reading: 30.4°C / 55% humidity.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 Central Plain</span>
+                  <span>🏘️ Highland Estate</span>
+                  <span>📡 SENSOR-005</span>
+                </div>
+                <div class="alert-item-actions">
+                  <button class="btn btn-success btn-sm" onclick="resolveAlert('1')">
+                    ✓ Resolve
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-005')">
+                    📡 View Sensor
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="snoozeAlert('1')">
+                    ⏰ Snooze 1h
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Critical Alert 2 -->
+            <div class="alert-item critical">
+              <div class="alert-item-icon">🚨</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-danger">Critical</span>
+                  <span class="alert-item-time">25 minutes ago</span>
+                </div>
+                <h4 class="alert-item-title">Low Soil Moisture - Extended Period</h4>
+                <p class="alert-item-description">
+                  Soil moisture at <strong>East Ridge</strong> (Sunrise Ranch) has been below 30%
+                  for over 24 hours. Current reading: 22%. Coffee crops may be at risk.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 East Ridge</span>
+                  <span>🏘️ Sunrise Ranch</span>
+                  <span>🌱 Coffee</span>
+                  <span>💧 22% (Threshold: 30%)</span>
+                </div>
+                <div class="alert-item-actions">
+                  <button class="btn btn-success btn-sm" onclick="resolveAlert('2')">
+                    ✓ Resolve
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="viewPlot('3')">
+                    🌱 View Plot
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="triggerIrrigation('3')">
+                    💧 Trigger Irrigation
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Warning Alert -->
+            <div class="alert-item warning">
+              <div class="alert-item-icon">⚠️</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-warning">Warning</span>
+                  <span class="alert-item-time">1 hour ago</span>
+                </div>
+                <h4 class="alert-item-title">Low Battery - SENSOR-006</h4>
+                <p class="alert-item-description">
+                  Sensor at <strong>Central Plain</strong> (Highland Estate) has battery level at
+                  15%. Replace battery within 24-48 hours to avoid data loss.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 Central Plain</span>
+                  <span>🏘️ Highland Estate</span>
+                  <span>🔋 15%</span>
+                </div>
+                <div class="alert-item-actions">
+                  <button class="btn btn-success btn-sm" onclick="resolveAlert('3')">
+                    ✓ Resolve
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-006')">
+                    📡 View Sensor
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="scheduleVisit('SENSOR-006')">
+                    📅 Schedule Visit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resolved Alerts (hidden by default) -->
+          <div id="resolvedAlerts" class="alert-list" style="display: none">
+            <div class="alert-item resolved">
+              <div class="alert-item-icon">✅</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-success">Resolved</span>
+                  <span class="alert-item-time">Today at 09:15 AM</span>
+                </div>
+                <h4 class="alert-item-title">High Temperature Alert</h4>
+                <p class="alert-item-description">
+                  Temperature at North Field exceeded 35°C threshold. Resolved automatically when
+                  temperature dropped.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 North Field</span>
+                  <span>🏘️ Green Valley Farm</span>
+                  <span>Resolved by: System</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert-item resolved">
+              <div class="alert-item-icon">✅</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-success">Resolved</span>
+                  <span class="alert-item-time">Today at 08:30 AM</span>
+                </div>
+                <h4 class="alert-item-title">Connection Lost - SENSOR-003</h4>
+                <p class="alert-item-description">
+                  Sensor temporarily lost connection. Reconnected after 15 minutes.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 East Ridge</span>
+                  <span>🏘️ Sunrise Ranch</span>
+                  <span>Resolved by: Auto-reconnect</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert-item resolved">
+              <div class="alert-item-icon">✅</div>
+              <div class="alert-item-content">
+                <div class="alert-item-header">
+                  <span class="badge badge-success">Resolved</span>
+                  <span class="alert-item-time">Yesterday at 04:45 PM</span>
+                </div>
+                <h4 class="alert-item-title">Low Humidity Warning</h4>
+                <p class="alert-item-description">
+                  Humidity dropped below 40% in South Valley. Irrigation was triggered.
+                </p>
+                <div class="alert-item-meta">
+                  <span>📍 South Valley</span>
+                  <span>🏘️ Green Valley Farm</span>
+                  <span>Resolved by: admin@agro.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert Rules Info -->
+          <div class="card" style="margin-top: 24px">
+            <h3 style="margin-bottom: 16px">📋 Active Alert Rules</h3>
+            <p class="text-muted" style="margin-bottom: 16px">
+              Alerts are generated based on the following default thresholds. Custom thresholds can
+              be set per plot.
+            </p>
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Condition</th>
+                    <th>Severity</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>🌱 Soil Moisture</td>
+                    <td>&lt; 30%</td>
+                    <td><span class="badge badge-warning">Warning</span></td>
+                    <td>Immediate</td>
+                  </tr>
+                  <tr>
+                    <td>🌱 Soil Moisture</td>
+                    <td>&lt; 30% for 24h</td>
+                    <td><span class="badge badge-danger">Critical</span></td>
+                    <td>24 hours</td>
+                  </tr>
+                  <tr>
+                    <td>🌡️ Temperature</td>
+                    <td>&gt; 35°C</td>
+                    <td><span class="badge badge-warning">Warning</span></td>
+                    <td>Immediate</td>
+                  </tr>
+                  <tr>
+                    <td>💧 Humidity</td>
+                    <td>&lt; 40%</td>
+                    <td><span class="badge badge-warning">Warning</span></td>
+                    <td>Immediate</td>
+                  </tr>
+                  <tr>
+                    <td>📡 Sensor Status</td>
+                    <td>Offline</td>
+                    <td><span class="badge badge-danger">Critical</span></td>
+                    <td>&gt; 1 hour</td>
+                  </tr>
+                  <tr>
+                    <td>🔋 Battery Level</td>
+                    <td>&lt; 20%</td>
+                    <td><span class="badge badge-warning">Warning</span></td>
+                    <td>Immediate</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        
-        <!-- Alert Stats -->
-        <div class="stats-grid" style="margin-bottom: 24px;">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545 0%, #f14668 100%);">🚨</div>
-            <div class="stat-info">
-              <span class="stat-value">2</span>
-              <span class="stat-label">Critical</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ffdd57 100%);">⚠️</div>
-            <div class="stat-info">
-              <span class="stat-value">1</span>
-              <span class="stat-label">Warning</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #17a2b8 0%, #3498db 100%);">ℹ️</div>
-            <div class="stat-info">
-              <span class="stat-value">0</span>
-              <span class="stat-label">Info</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #28a745 0%, #48c774 100%);">✅</div>
-            <div class="stat-info">
-              <span class="stat-value">15</span>
-              <span class="stat-label">Resolved Today</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Tabs -->
-        <div class="tabs" style="margin-bottom: 24px;">
-          <button class="tab-btn active" data-tab="pending">
-            Pending <span class="badge badge-danger" style="margin-left: 8px;">3</span>
-          </button>
-          <button class="tab-btn" data-tab="resolved">
-            Resolved
-          </button>
-          <button class="tab-btn" data-tab="all">
-            All Alerts
-          </button>
-        </div>
-        
-        <!-- Pending Alerts -->
-        <div id="pendingAlerts" class="alert-list">
-          <!-- Critical Alert 1 -->
-          <div class="alert-item critical">
-            <div class="alert-item-icon">🚨</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-danger">Critical</span>
-                <span class="alert-item-time">10 minutes ago</span>
-              </div>
-              <h4 class="alert-item-title">Sensor Offline - SENSOR-005</h4>
-              <p class="alert-item-description">
-                Sensor at <strong>Central Plain</strong> (Highland Estate) has not responded for over 2 hours. 
-                Last reading: 30.4°C / 55% humidity.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 Central Plain</span>
-                <span>🏘️ Highland Estate</span>
-                <span>📡 SENSOR-005</span>
-              </div>
-              <div class="alert-item-actions">
-                <button class="btn btn-success btn-sm" onclick="resolveAlert('1')">✓ Resolve</button>
-                <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-005')">📡 View Sensor</button>
-                <button class="btn btn-outline btn-sm" onclick="snoozeAlert('1')">⏰ Snooze 1h</button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Critical Alert 2 -->
-          <div class="alert-item critical">
-            <div class="alert-item-icon">🚨</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-danger">Critical</span>
-                <span class="alert-item-time">25 minutes ago</span>
-              </div>
-              <h4 class="alert-item-title">Low Soil Moisture - Extended Period</h4>
-              <p class="alert-item-description">
-                Soil moisture at <strong>East Ridge</strong> (Sunrise Ranch) has been below 30% for over 24 hours.
-                Current reading: 22%. Coffee crops may be at risk.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 East Ridge</span>
-                <span>🏘️ Sunrise Ranch</span>
-                <span>🌱 Coffee</span>
-                <span>💧 22% (Threshold: 30%)</span>
-              </div>
-              <div class="alert-item-actions">
-                <button class="btn btn-success btn-sm" onclick="resolveAlert('2')">✓ Resolve</button>
-                <button class="btn btn-outline btn-sm" onclick="viewPlot('3')">🌱 View Plot</button>
-                <button class="btn btn-outline btn-sm" onclick="triggerIrrigation('3')">💧 Trigger Irrigation</button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Warning Alert -->
-          <div class="alert-item warning">
-            <div class="alert-item-icon">⚠️</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-warning">Warning</span>
-                <span class="alert-item-time">1 hour ago</span>
-              </div>
-              <h4 class="alert-item-title">Low Battery - SENSOR-006</h4>
-              <p class="alert-item-description">
-                Sensor at <strong>Central Plain</strong> (Highland Estate) has battery level at 15%.
-                Replace battery within 24-48 hours to avoid data loss.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 Central Plain</span>
-                <span>🏘️ Highland Estate</span>
-                <span>🔋 15%</span>
-              </div>
-              <div class="alert-item-actions">
-                <button class="btn btn-success btn-sm" onclick="resolveAlert('3')">✓ Resolve</button>
-                <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-006')">📡 View Sensor</button>
-                <button class="btn btn-outline btn-sm" onclick="scheduleVisit('SENSOR-006')">📅 Schedule Visit</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Resolved Alerts (hidden by default) -->
-        <div id="resolvedAlerts" class="alert-list" style="display: none;">
-          <div class="alert-item resolved">
-            <div class="alert-item-icon">✅</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-success">Resolved</span>
-                <span class="alert-item-time">Today at 09:15 AM</span>
-              </div>
-              <h4 class="alert-item-title">High Temperature Alert</h4>
-              <p class="alert-item-description">
-                Temperature at North Field exceeded 35°C threshold. Resolved automatically when temperature dropped.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 North Field</span>
-                <span>🏘️ Green Valley Farm</span>
-                <span>Resolved by: System</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="alert-item resolved">
-            <div class="alert-item-icon">✅</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-success">Resolved</span>
-                <span class="alert-item-time">Today at 08:30 AM</span>
-              </div>
-              <h4 class="alert-item-title">Connection Lost - SENSOR-003</h4>
-              <p class="alert-item-description">
-                Sensor temporarily lost connection. Reconnected after 15 minutes.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 East Ridge</span>
-                <span>🏘️ Sunrise Ranch</span>
-                <span>Resolved by: Auto-reconnect</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="alert-item resolved">
-            <div class="alert-item-icon">✅</div>
-            <div class="alert-item-content">
-              <div class="alert-item-header">
-                <span class="badge badge-success">Resolved</span>
-                <span class="alert-item-time">Yesterday at 04:45 PM</span>
-              </div>
-              <h4 class="alert-item-title">Low Humidity Warning</h4>
-              <p class="alert-item-description">
-                Humidity dropped below 40% in South Valley. Irrigation was triggered.
-              </p>
-              <div class="alert-item-meta">
-                <span>📍 South Valley</span>
-                <span>🏘️ Green Valley Farm</span>
-                <span>Resolved by: admin@agro.com</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Alert Rules Info -->
-        <div class="card" style="margin-top: 24px;">
-          <h3 style="margin-bottom: 16px;">📋 Active Alert Rules</h3>
-          <p class="text-muted" style="margin-bottom: 16px;">
-            Alerts are generated based on the following default thresholds. Custom thresholds can be set per plot.
-          </p>
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Condition</th>
-                  <th>Severity</th>
-                  <th>Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>🌱 Soil Moisture</td>
-                  <td>&lt; 30%</td>
-                  <td><span class="badge badge-warning">Warning</span></td>
-                  <td>Immediate</td>
-                </tr>
-                <tr>
-                  <td>🌱 Soil Moisture</td>
-                  <td>&lt; 30% for 24h</td>
-                  <td><span class="badge badge-danger">Critical</span></td>
-                  <td>24 hours</td>
-                </tr>
-                <tr>
-                  <td>🌡️ Temperature</td>
-                  <td>&gt; 35°C</td>
-                  <td><span class="badge badge-warning">Warning</span></td>
-                  <td>Immediate</td>
-                </tr>
-                <tr>
-                  <td>💧 Humidity</td>
-                  <td>&lt; 40%</td>
-                  <td><span class="badge badge-warning">Warning</span></td>
-                  <td>Immediate</td>
-                </tr>
-                <tr>
-                  <td>📡 Sensor Status</td>
-                  <td>Offline</td>
-                  <td><span class="badge badge-danger">Critical</span></td>
-                  <td>&gt; 1 hour</td>
-                </tr>
-                <tr>
-                  <td>🔋 Battery Level</td>
-                  <td>&lt; 20%</td>
-                  <td><span class="badge badge-warning">Warning</span></td>
-                  <td>Immediate</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <style>
-    /* Tab styles */
-    .tabs {
-      display: flex;
-      gap: 8px;
-      border-bottom: 2px solid #e0e0e0;
-      padding-bottom: 0;
-    }
-    
-    .tab-btn {
-      padding: 12px 24px;
-      border: none;
-      background: none;
-      font-size: 1em;
-      cursor: pointer;
-      color: #666;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.2s ease;
-    }
-    
-    .tab-btn:hover {
-      color: #2D5016;
-    }
-    
-    .tab-btn.active {
-      color: #2D5016;
-      font-weight: 600;
-      border-bottom-color: #2D5016;
-    }
-    
-    /* Alert list styles */
-    .alert-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .alert-item {
-      display: flex;
-      gap: 16px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      border-left: 4px solid #ddd;
-    }
-    
-    .alert-item.critical {
-      border-left-color: #dc3545;
-      background: linear-gradient(90deg, #fff5f5 0%, white 10%);
-    }
-    
-    .alert-item.warning {
-      border-left-color: #ffc107;
-      background: linear-gradient(90deg, #fffbeb 0%, white 10%);
-    }
-    
-    .alert-item.info {
-      border-left-color: #17a2b8;
-      background: linear-gradient(90deg, #f0f9ff 0%, white 10%);
-    }
-    
-    .alert-item.resolved {
-      border-left-color: #28a745;
-      opacity: 0.8;
-    }
-    
-    .alert-item-icon {
-      font-size: 2em;
-      flex-shrink: 0;
-    }
-    
-    .alert-item-content {
-      flex: 1;
-    }
-    
-    .alert-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    
-    .alert-item-time {
-      color: #999;
-      font-size: 0.85em;
-    }
-    
-    .alert-item-title {
-      margin: 0 0 8px 0;
-      font-size: 1.1em;
-    }
-    
-    .alert-item-description {
-      color: #666;
-      margin: 0 0 12px 0;
-      line-height: 1.5;
-    }
-    
-    .alert-item-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 16px;
-      font-size: 0.9em;
-      color: #888;
-    }
-    
-    .alert-item-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    
-    @media (max-width: 768px) {
-      .alert-item {
-        flex-direction: column;
-      }
-      
-      .alert-item-icon {
-        font-size: 1.5em;
-      }
-      
+      </main>
+    </div>
+
+    <style>
+      /* Tab styles */
       .tabs {
-        flex-wrap: wrap;
+        display: flex;
+        gap: 8px;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 0;
       }
-      
+
       .tab-btn {
-        flex: 1;
-        text-align: center;
+        padding: 12px 24px;
+        border: none;
+        background: none;
+        font-size: 1em;
+        cursor: pointer;
+        color: #666;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s ease;
       }
-    }
-  </style>
-  
-  <!-- Scripts (ES Module) -->
-  <script type="module" src="/js/alerts.js"></script>
-</body>
+
+      .tab-btn:hover {
+        color: #2d5016;
+      }
+
+      .tab-btn.active {
+        color: #2d5016;
+        font-weight: 600;
+        border-bottom-color: #2d5016;
+      }
+
+      /* Alert list styles */
+      .alert-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .alert-item {
+        display: flex;
+        gap: 16px;
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-left: 4px solid #ddd;
+      }
+
+      .alert-item.critical {
+        border-left-color: #dc3545;
+        background: linear-gradient(90deg, #fff5f5 0%, white 10%);
+      }
+
+      .alert-item.warning {
+        border-left-color: #ffc107;
+        background: linear-gradient(90deg, #fffbeb 0%, white 10%);
+      }
+
+      .alert-item.info {
+        border-left-color: #17a2b8;
+        background: linear-gradient(90deg, #f0f9ff 0%, white 10%);
+      }
+
+      .alert-item.resolved {
+        border-left-color: #28a745;
+        opacity: 0.8;
+      }
+
+      .alert-item-icon {
+        font-size: 2em;
+        flex-shrink: 0;
+      }
+
+      .alert-item-content {
+        flex: 1;
+      }
+
+      .alert-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .alert-item-time {
+        color: #999;
+        font-size: 0.85em;
+      }
+
+      .alert-item-title {
+        margin: 0 0 8px 0;
+        font-size: 1.1em;
+      }
+
+      .alert-item-description {
+        color: #666;
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+      }
+
+      .alert-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 0.9em;
+        color: #888;
+      }
+
+      .alert-item-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      @media (max-width: 768px) {
+        .alert-item {
+          flex-direction: column;
+        }
+
+        .alert-item-icon {
+          font-size: 1.5em;
+        }
+
+        .tabs {
+          flex-wrap: wrap;
+        }
+
+        .tab-btn {
+          flex: 1;
+          text-align: center;
+        }
+      }
+    </style>
+
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="/js/alerts.js"></script>
+  </body>
 </html>

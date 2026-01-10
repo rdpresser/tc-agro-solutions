@@ -2,8 +2,8 @@
  * TC Agro Solutions - Plots Page Entry Point
  */
 
-import { initProtectedPage } from './common.js';
 import { getPlots, getProperties, deletePlot } from './api.js';
+import { initProtectedPage } from './common.js';
 import { $, $$, showToast, showConfirm } from './utils.js';
 
 // ============================================
@@ -15,11 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
     return;
   }
-  
-  await Promise.all([
-    loadPlots(),
-    loadPropertyFilter()
-  ]);
+
+  await Promise.all([loadPlots(), loadPropertyFilter()]);
   setupEventListeners();
 });
 
@@ -30,15 +27,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadPlots(propertyId = null) {
   const tbody = $('#plots-tbody');
   if (!tbody) return;
-  
+
   tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
-  
+
   try {
     const plots = await getPlots(propertyId);
     renderPlotsTable(plots);
   } catch (error) {
     console.error('Error loading plots:', error);
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading plots</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center text-danger">Error loading plots</td></tr>';
     showToast('Error loading plots', 'error');
   }
 }
@@ -46,11 +44,12 @@ async function loadPlots(propertyId = null) {
 async function loadPropertyFilter() {
   const select = $('#filter-property');
   if (!select) return;
-  
+
   try {
     const properties = await getProperties();
-    select.innerHTML = '<option value="">All Properties</option>' +
-      properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    select.innerHTML = `<option value="">All Properties</option>${properties
+      .map((p) => `<option value="${p.id}">${p.name}</option>`)
+      .join('')}`;
   } catch (error) {
     console.error('Error loading properties for filter:', error);
   }
@@ -59,13 +58,15 @@ async function loadPropertyFilter() {
 function renderPlotsTable(plots) {
   const tbody = $('#plots-tbody');
   if (!tbody) return;
-  
+
   if (!plots.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No plots found</td></tr>';
     return;
   }
-  
-  tbody.innerHTML = plots.map(plot => `
+
+  tbody.innerHTML = plots
+    .map(
+      (plot) => `
     <tr data-id="${plot.id}">
       <td><strong>${plot.name}</strong></td>
       <td>${plot.propertyName}</td>
@@ -84,7 +85,9 @@ function renderPlotsTable(plots) {
         <button class="btn btn-sm btn-danger" data-action="delete" data-id="${plot.id}">🗑️</button>
       </td>
     </tr>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 // ============================================
@@ -145,19 +148,19 @@ function setupEventListeners() {
     const propertyId = e.target.value || null;
     loadPlots(propertyId);
   });
-  
+
   // Search filter
   const searchInput = $('#search-plots');
   searchInput?.addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase();
     const rows = $$('#plots-tbody tr');
-    
-    rows.forEach(row => {
+
+    rows.forEach((row) => {
       const text = row.textContent.toLowerCase();
       row.style.display = text.includes(query) ? '' : 'none';
     });
   });
-  
+
   // Delete button handler (event delegation)
   const tbody = $('#plots-tbody');
   tbody?.addEventListener('click', async (e) => {
@@ -171,7 +174,7 @@ function setupEventListeners() {
 
 async function handleDelete(id) {
   const confirmed = await showConfirm('Are you sure you want to delete this plot?');
-  
+
   if (confirmed) {
     try {
       await deletePlot(id);

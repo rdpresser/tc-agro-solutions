@@ -1,7 +1,7 @@
 /**
  * TC Agro Solutions - Authentication Module
  * Handles login, logout, and token management
- * 
+ *
  * ⚠️ SECURITY WARNING:
  * This frontend authentication is for UX flow control ONLY.
  * The backend MUST validate JWT tokens on every request.
@@ -9,8 +9,16 @@
  * NEVER trust frontend-only security.
  */
 
-import { setToken, setUser, clearToken, getToken, isValidEmail, showToast, showLoading, hideLoading } from './utils.js';
-import { api } from './api.js';
+import {
+  setToken,
+  setUser,
+  clearToken,
+  getToken,
+  isValidEmail,
+  showToast,
+  showLoading,
+  hideLoading
+} from './utils.js';
 
 // ============================================
 // LOGIN HANDLER
@@ -21,38 +29,42 @@ export async function handleLogin(email, password) {
   if (!email || !isValidEmail(email)) {
     throw new Error('Please enter a valid email address');
   }
-  
+
   if (!password || password.length < 1) {
     throw new Error('Please enter your password');
   }
-  
+
   showLoading('Signing in...');
-  
+
   try {
     // ============================================
     // MOCK AUTHENTICATION (for demo)
     // Remove this block when backend is ready
     // ============================================
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-    
+    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate network delay
+
     const mockResponse = {
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJhZG1pbkBhZ3JvLmNvbSIsIm5hbWUiOiJBZG1pbiBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.demo-signature',
+      token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJhZG1pbkBhZ3JvLmNvbSIsIm5hbWUiOiJBZG1pbiBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.demo-signature',
       user: {
         id: 'user-001',
         email: email,
-        name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        name: email
+          .split('@')[0]
+          .replace(/[._]/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase())
       }
     };
-    
+
     // Store token and user info
     setToken(mockResponse.token);
     setUser(mockResponse.user);
-    
+
     hideLoading();
     showToast(`Welcome, ${mockResponse.user.name}!`, 'success');
-    
+
     return mockResponse;
-    
+
     // ============================================
     // REAL API CALL (uncomment when backend ready)
     // ============================================
@@ -67,10 +79,9 @@ export async function handleLogin(email, password) {
     
     return response.data;
     */
-    
   } catch (error) {
     hideLoading();
-    
+
     // Handle specific error types
     if (error.response?.status === 401) {
       throw new Error('Invalid email or password');
@@ -78,7 +89,7 @@ export async function handleLogin(email, password) {
     if (error.response?.status === 429) {
       throw new Error('Too many attempts. Please wait a moment.');
     }
-    
+
     throw error;
   }
 }
@@ -96,14 +107,14 @@ export async function handleLogin(email, password) {
 export function handleLogout() {
   // Clear all session data
   clearToken();
-  
+
   // Optional: Clear any other app-specific session data
   // sessionStorage.removeItem('app_preferences');
   // sessionStorage.removeItem('cached_data');
-  
+
   // Show feedback
   showToast('You have been logged out', 'info');
-  
+
   // Redirect to login
   setTimeout(() => {
     window.location.href = '/index.html';
@@ -114,18 +125,18 @@ export function handleLogout() {
 // TOKEN REFRESH
 // ============================================
 
-export async function refreshToken() {
+export function refreshToken() {
   const currentToken = getToken();
-  
+
   if (!currentToken) {
     throw new Error('No token to refresh');
   }
-  
+
   // ============================================
   // MOCK REFRESH (for demo)
   // ============================================
   return currentToken;
-  
+
   // ============================================
   // REAL API CALL (uncomment when backend ready)
   // ============================================
@@ -148,16 +159,16 @@ export async function refreshToken() {
 
 export function checkAuth() {
   const token = getToken();
-  
+
   if (!token) {
     return false;
   }
-  
+
   // Optional: Check token expiration
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const exp = payload.exp;
-    
+
     if (exp && Date.now() >= exp * 1000) {
       clearToken();
       return false;
@@ -165,7 +176,7 @@ export function checkAuth() {
   } catch {
     // Invalid token format, but let backend validate
   }
-  
+
   return true;
 }
 
@@ -175,9 +186,9 @@ export function checkAuth() {
 
 export function getTokenInfo() {
   const token = getToken();
-  
+
   if (!token) return null;
-  
+
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return {

@@ -2,30 +2,15 @@
  * TC Agro Solutions - Dashboard Page Entry Point
  */
 
-import { checkAuth, handleLogout, requireAuth } from './auth.js';
-import { initProtectedPage } from './common.js';
-import { 
-  getDashboardStats, 
-  getLatestReadings, 
+import {
+  getDashboardStats,
+  getLatestReadings,
   getAlerts,
-  getHistoricalData,
   initSignalRConnection,
   stopSignalRConnection
 } from './api.js';
-import { 
-  createReadingsChart, 
-  createAlertDistributionChart,
-  addDataPoint,
-  destroyAllCharts
-} from './charts.js';
-import { 
-  $, 
-  $$, 
-  formatDate, 
-  formatRelativeTime,
-  showToast,
-  debounce
-} from './utils.js';
+import { initProtectedPage } from './common.js';
+import { $, formatDate, formatRelativeTime, showToast, debounce } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -37,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Redirect to login handled by initProtectedPage
     return;
   }
-  
+
   // Load dashboard data
   await loadDashboardData();
   setupRealTimeUpdates();
@@ -46,7 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   stopSignalRConnection();
-  destroyAllCharts();
+  // Charts cleanup disabled (not currently used)
+  // destroyAllCharts();
 });
 
 // ============================================
@@ -56,20 +42,17 @@ window.addEventListener('beforeunload', () => {
 async function loadDashboardData() {
   try {
     // Load all data in parallel
-    const [stats, readings, alerts, historicalData] = await Promise.all([
+    const [stats, readings, alerts] = await Promise.all([
       getDashboardStats(),
       getLatestReadings(5),
-      getAlerts('pending'),
-      getHistoricalData('SENSOR-001', 7)
+      getAlerts('pending')
+      // Historical data disabled - not currently used
+      // getHistoricalData('SENSOR-001', 7)
     ]);
-    
+
     updateStatCards(stats);
     updateReadingsTable(readings);
     updateAlertsSection(alerts);
-    
-    // Charts disabled - using placeholders instead
-    // initializeCharts(historicalData, alerts);
-    
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     showToast('Error loading dashboard data', 'error');
@@ -87,7 +70,7 @@ function updateStatCards(stats) {
     sensors: $('#stat-sensors'),
     alerts: $('#stat-alerts')
   };
-  
+
   Object.entries(statElements).forEach(([key, el]) => {
     if (el && stats[key] !== undefined) {
       el.textContent = stats[key];
@@ -102,8 +85,10 @@ function updateStatCards(stats) {
 function updateReadingsTable(readings) {
   const tbody = $('#readings-tbody');
   if (!tbody) return;
-  
-  tbody.innerHTML = readings.map(reading => `
+
+  tbody.innerHTML = readings
+    .map(
+      (reading) => `
     <tr>
       <td><strong>${reading.sensorId}</strong></td>
       <td>${reading.plotName}</td>
@@ -112,7 +97,9 @@ function updateReadingsTable(readings) {
       <td class="${getSoilMoistureClass(reading.soilMoisture)}">${reading.soilMoisture?.toFixed(0) ?? '-'}%</td>
       <td title="${formatDate(reading.timestamp)}">${formatRelativeTime(reading.timestamp)}</td>
     </tr>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 function getTemperatureClass(temp) {
@@ -142,13 +129,16 @@ function getSoilMoistureClass(moisture) {
 function updateAlertsSection(alerts) {
   const container = $('#pending-alerts');
   if (!container) return;
-  
+
   if (!alerts.length) {
     container.innerHTML = '<p class="no-data">Nenhum alerta pendente</p>';
     return;
   }
-  
-  container.innerHTML = alerts.slice(0, 5).map(alert => `
+
+  container.innerHTML = alerts
+    .slice(0, 5)
+    .map(
+      (alert) => `
     <div class="alert-item alert-${alert.severity}">
       <div class="alert-header">
         <span class="alert-badge badge-${alert.severity}">
@@ -165,7 +155,9 @@ function updateAlertsSection(alerts) {
         <span>📡 ${alert.sensorId}</span>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 }
 
 function getSeverityIcon(severity) {
@@ -176,23 +168,6 @@ function getSeverityIcon(severity) {
 function getSeverityLabel(severity) {
   const labels = { critical: 'Critical', warning: 'Warning', info: 'Info' };
   return labels[severity] || severity;
-}
-
-// ============================================
-// CHARTS
-// ============================================
-
-function initializeCharts(historicalData, alerts) {
-  // 7-day readings chart
-  createReadingsChart('readings-chart', historicalData);
-  
-  // Alert distribution chart
-  const alertCounts = {
-    critical: alerts.filter(a => a.severity === 'critical').length,
-    warning: alerts.filter(a => a.severity === 'warning').length,
-    info: alerts.filter(a => a.severity === 'info').length
-  };
-  createAlertDistributionChart('alerts-chart', alertCounts);
 }
 
 // ============================================
@@ -212,18 +187,18 @@ const handleSensorReading = debounce((reading) => {
   updateMetricCard('temperature', reading.temperature);
   updateMetricCard('humidity', reading.humidity);
   updateMetricCard('soil-moisture', reading.soilMoisture);
-  
-  // Add to chart
-  const timeLabel = new Date().toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
-  addDataPoint('readings-chart', timeLabel, [
-    reading.temperature,
-    reading.humidity,
-    reading.soilMoisture
-  ]);
-  
+
+  // Chart updates disabled (not currently used)
+  // const timeLabel = new Date().toLocaleTimeString('en-US', {
+  //   hour: '2-digit',
+  //   minute: '2-digit'
+  // });
+  // addDataPoint('readings-chart', timeLabel, [
+  //   reading.temperature,
+  //   reading.humidity,
+  //   reading.soilMoisture
+  // ]);
+
   // Update readings table (prepend new reading)
   const tbody = $('#readings-tbody');
   if (tbody && tbody.firstChild) {
@@ -238,12 +213,12 @@ const handleSensorReading = debounce((reading) => {
     `;
     row.style.backgroundColor = '#e8f5e9';
     tbody.insertBefore(row, tbody.firstChild);
-    
+
     // Remove highlight after animation
     setTimeout(() => {
       row.style.backgroundColor = '';
     }, 2000);
-    
+
     // Keep only 10 rows
     while (tbody.children.length > 10) {
       tbody.removeChild(tbody.lastChild);
@@ -253,10 +228,10 @@ const handleSensorReading = debounce((reading) => {
 
 function handleNewAlert(alert) {
   showToast(`New alert: ${alert.title}`, alert.severity === 'critical' ? 'error' : 'warning');
-  
+
   // Reload alerts section
   getAlerts('pending').then(updateAlertsSection);
-  
+
   // Update alert count
   const alertStat = $('#stat-alerts');
   if (alertStat) {
@@ -269,16 +244,20 @@ function handleConnectionChange(state) {
   const indicator = $('#connection-status');
   if (indicator) {
     indicator.className = `connection-indicator ${state}`;
-    indicator.title = state === 'connected' ? 'Conectado' : 
-                      state === 'reconnecting' ? 'Reconectando...' : 'Desconectado';
+    indicator.title =
+      state === 'connected'
+        ? 'Conectado'
+        : state === 'reconnecting'
+          ? 'Reconectando...'
+          : 'Desconectado';
   }
 }
 
 function updateMetricCard(metric, value) {
   const el = $(`#metric-${metric}`);
-  if (el && value != null) {
+  if (el && value !== null) {
     el.textContent = value.toFixed(1);
-    
+
     // Add pulse animation
     el.classList.add('pulse');
     setTimeout(() => el.classList.remove('pulse'), 500);

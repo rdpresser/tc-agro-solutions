@@ -1,243 +1,258 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TC Agro Solutions - Dashboard">
-  <title>Dashboard | TC Agro Solutions</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🌾</span>
-        <span class="sidebar-brand">TC Agro</span>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <!-- Main Navigation -->
-        <div class="nav-section">
-          <div class="nav-section-title">Main</div>
-          <a href="dashboard.html" class="nav-item active">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-          <a href="properties.html" class="nav-item">
-            <span class="nav-icon">🏘️</span>
-            <span class="nav-text">Properties</span>
-          </a>
-          <a href="plots.html" class="nav-item">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-text">Plots</span>
-          </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Dashboard" />
+    <title>Dashboard | TC Agro Solutions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
         </div>
-        
-        <!-- Monitoring -->
-        <div class="nav-section">
-          <div class="nav-section-title">Monitoring</div>
-          <a href="sensors.html" class="nav-item">
-            <span class="nav-icon">📡</span>
-            <span class="nav-text">Sensors</span>
-          </a>
-          <a href="alerts.html" class="nav-item">
-            <span class="nav-icon">🔔</span>
-            <span class="nav-text">Alerts</span>
-          </a>
-        </div>
-        
-        <!-- Account -->
-        <div class="nav-section">
-          <div class="nav-section-title">Account</div>
-          <a href="#" class="nav-item" data-action="logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-text">Logout</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-    
-    <!-- Sidebar Overlay (Mobile) -->
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Top Bar -->
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
-          <h1 class="page-title">Dashboard</h1>
-        </div>
-        <div class="topbar-right">
-          <div class="user-menu">
-            <div class="user-avatar">👤</div>
-            <span id="userDisplay" class="user-name">User</span>
+
+        <nav class="sidebar-nav">
+          <!-- Main Navigation -->
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item active">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
           </div>
-        </div>
-      </header>
-      
-      <!-- Content Area -->
-      <div class="content">
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-          <!-- Properties Card -->
-          <div class="stat-card">
-            <div class="stat-icon green">🏘️</div>
-            <div class="stat-content">
-              <div class="stat-value" id="stat-properties">-</div>
-              <div class="stat-label">Properties</div>
+
+          <!-- Monitoring -->
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <!-- Account -->
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Sidebar Overlay (Mobile) -->
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Dashboard</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
-          
-          <!-- Plots Card -->
-          <div class="stat-card">
-            <div class="stat-icon brown">🌱</div>
-            <div class="stat-content">
-              <div class="stat-value" id="stat-plots">-</div>
-              <div class="stat-label">Active Plots</div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content">
+          <!-- Stats Grid -->
+          <div class="stats-grid">
+            <!-- Properties Card -->
+            <div class="stat-card">
+              <div class="stat-icon green">🏘️</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-properties">-</div>
+                <div class="stat-label">Properties</div>
+              </div>
+            </div>
+
+            <!-- Plots Card -->
+            <div class="stat-card">
+              <div class="stat-icon brown">🌱</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-plots">-</div>
+                <div class="stat-label">Active Plots</div>
+              </div>
+            </div>
+
+            <!-- Sensors Card -->
+            <div class="stat-card">
+              <div class="stat-icon info">📡</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-sensors">-</div>
+                <div class="stat-label">Active Sensors</div>
+              </div>
+            </div>
+
+            <!-- Alerts Card -->
+            <div class="stat-card">
+              <div class="stat-icon warning">🔔</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-alerts">-</div>
+                <div class="stat-label">Pending Alerts</div>
+              </div>
             </div>
           </div>
-          
-          <!-- Sensors Card -->
-          <div class="stat-card">
-            <div class="stat-icon info">📡</div>
-            <div class="stat-content">
-              <div class="stat-value" id="stat-sensors">-</div>
-              <div class="stat-label">Active Sensors</div>
+
+          <!-- Charts Row -->
+          <div class="grid grid-2" style="margin-bottom: 24px">
+            <!-- Sensor Readings Chart -->
+            <div class="chart-container">
+              <div class="card-header">
+                <h3 class="card-title">📈 Sensor Readings (7 days)</h3>
+              </div>
+              <div
+                id="readings-chart-container"
+                class="chart-wrapper"
+                style="height: 300px; padding: 16px"
+              >
+                <div class="chart-placeholder">
+                  <div class="chart-placeholder-icon">📊</div>
+                  <p>Chart will display when connected to backend</p>
+                  <p class="text-muted" style="font-size: 0.85rem">
+                    Shows temperature, humidity, soil moisture trends
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerts Distribution -->
+            <div class="chart-container">
+              <div class="card-header">
+                <h3 class="card-title">🥧 Alerts by Type</h3>
+              </div>
+              <div
+                id="alerts-chart-container"
+                class="chart-wrapper"
+                style="height: 300px; padding: 16px"
+              >
+                <div class="chart-placeholder">
+                  <div class="chart-placeholder-icon">📈</div>
+                  <p>Chart will display when connected to backend</p>
+                  <p class="text-muted" style="font-size: 0.85rem">Distribution of alert types</p>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <!-- Alerts Card -->
-          <div class="stat-card">
-            <div class="stat-icon warning">🔔</div>
-            <div class="stat-content">
-              <div class="stat-value" id="stat-alerts">-</div>
-              <div class="stat-label">Pending Alerts</div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Charts Row -->
-        <div class="grid grid-2" style="margin-bottom: 24px;">
-          <!-- Sensor Readings Chart -->
-          <div class="chart-container">
+
+          <!-- Real-time Metrics -->
+          <div class="card" style="margin-bottom: 24px">
             <div class="card-header">
-              <h3 class="card-title">📈 Sensor Readings (7 days)</h3>
+              <h3 class="card-title">⚡ Dados em Tempo Real</h3>
+              <span id="connection-status" class="badge badge-success">● Ao Vivo</span>
             </div>
-            <div id="readings-chart-container" class="chart-wrapper" style="height: 300px; padding: 16px;">
-              <div class="chart-placeholder">
-                <div class="chart-placeholder-icon">📊</div>
-                <p>Chart will display when connected to backend</p>
-                <p class="text-muted" style="font-size: 0.85rem;">Shows temperature, humidity, soil moisture trends</p>
+            <div class="grid grid-4" id="metricsGrid">
+              <!-- Temperature -->
+              <div class="metric-card">
+                <div class="metric-header">
+                  <span class="metric-title">🌡️ Temperatura</span>
+                </div>
+                <div class="metric-value">
+                  <span id="metric-temperature">--</span><span class="metric-unit">°C</span>
+                </div>
+              </div>
+
+              <!-- Humidity -->
+              <div class="metric-card">
+                <div class="metric-header">
+                  <span class="metric-title">💧 Umidade</span>
+                </div>
+                <div class="metric-value">
+                  <span id="metric-humidity">--</span><span class="metric-unit">%</span>
+                </div>
+              </div>
+
+              <!-- Soil Moisture -->
+              <div class="metric-card">
+                <div class="metric-header">
+                  <span class="metric-title">🌿 Umidade Solo</span>
+                </div>
+                <div class="metric-value">
+                  <span id="metric-soil-moisture">--</span><span class="metric-unit">%</span>
+                </div>
+              </div>
+
+              <!-- Rainfall -->
+              <div class="metric-card">
+                <div class="metric-header">
+                  <span class="metric-title">🌧️ Rainfall</span>
+                </div>
+                <div class="metric-value">
+                  <span id="metric-rainfall">0.0</span><span class="metric-unit">mm</span>
+                </div>
               </div>
             </div>
           </div>
-          
-          <!-- Alerts Distribution -->
-          <div class="chart-container">
+
+          <!-- Recent Readings Table -->
+          <div class="card">
             <div class="card-header">
-              <h3 class="card-title">🥧 Alerts by Type</h3>
+              <h3 class="card-title">📋 Latest Readings</h3>
+              <a href="sensors.html" class="btn btn-outline btn-sm">Ver Todos →</a>
             </div>
-            <div id="alerts-chart-container" class="chart-wrapper" style="height: 300px; padding: 16px;">
-              <div class="chart-placeholder">
-                <div class="chart-placeholder-icon">📈</div>
-                <p>Chart will display when connected to backend</p>
-                <p class="text-muted" style="font-size: 0.85rem;">Distribution of alert types</p>
-              </div>
+            <div class="table-container" style="box-shadow: none">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Sensor</th>
+                    <th>Plot</th>
+                    <th>Temperatura</th>
+                    <th>Umidade</th>
+                    <th>Umid. Solo</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="readings-tbody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-        
-        <!-- Real-time Metrics -->
-        <div class="card" style="margin-bottom: 24px;">
-          <div class="card-header">
-            <h3 class="card-title">⚡ Dados em Tempo Real</h3>
-            <span id="connection-status" class="badge badge-success">● Ao Vivo</span>
-          </div>
-          <div class="grid grid-4" id="metricsGrid">
-            <!-- Temperature -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-title">🌡️ Temperatura</span>
-              </div>
-              <div class="metric-value"><span id="metric-temperature">--</span><span class="metric-unit">°C</span></div>
+
+          <!-- Pending Alerts -->
+          <div class="card" style="margin-top: 24px">
+            <div class="card-header">
+              <h3 class="card-title">⚠️ Pending Alerts</h3>
+              <a href="alerts.html" class="btn btn-outline btn-sm">Ver Todos →</a>
             </div>
-            
-            <!-- Humidity -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-title">💧 Umidade</span>
-              </div>
-              <div class="metric-value"><span id="metric-humidity">--</span><span class="metric-unit">%</span></div>
-            </div>
-            
-            <!-- Soil Moisture -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-title">🌿 Umidade Solo</span>
-              </div>
-              <div class="metric-value"><span id="metric-soil-moisture">--</span><span class="metric-unit">%</span></div>
-            </div>
-            
-            <!-- Rainfall -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-title">🌧️ Rainfall</span>
-              </div>
-              <div class="metric-value"><span id="metric-rainfall">0.0</span><span class="metric-unit">mm</span></div>
+            <div id="pending-alerts">
+              <p class="text-center text-muted" style="padding: 20px">Loading alerts...</p>
             </div>
           </div>
         </div>
-        
-        <!-- Recent Readings Table -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">📋 Latest Readings</h3>
-            <a href="sensors.html" class="btn btn-outline btn-sm">Ver Todos →</a>
-          </div>
-          <div class="table-container" style="box-shadow: none;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Sensor</th>
-                  <th>Plot</th>
-                  <th>Temperatura</th>
-                  <th>Umidade</th>
-                  <th>Umid. Solo</th>
-                  <th>Updated</th>
-                </tr>
-              </thead>
-              <tbody id="readings-tbody">
-                <tr>
-                  <td colspan="6" class="text-center text-muted">Loading...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
-        <!-- Pending Alerts -->
-        <div class="card" style="margin-top: 24px;">
-          <div class="card-header">
-            <h3 class="card-title">⚠️ Pending Alerts</h3>
-            <a href="alerts.html" class="btn btn-outline btn-sm">Ver Todos →</a>
-          </div>
-          <div id="pending-alerts">
-            <p class="text-center text-muted" style="padding: 20px;">Loading alerts...</p>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Logout Button (hidden, accessed via nav) -->
-  <button id="logout-btn" style="display: none;"></button>
-  
-  <!-- Sidebar Script (standalone, no module) -->
-  <script src="/js/sidebar.js"></script>
-  
-  <!-- Main Script (ES Module) -->
-  <script type="module" src="/js/dashboard.js"></script>
-</body>
+      </main>
+    </div>
+
+    <!-- Logout Button (hidden, accessed via nav) -->
+    <button id="logout-btn" style="display: none"></button>
+
+    <!-- Main Script (ES Module) -->
+    <script type="module" src="/js/dashboard.js"></script>
+  </body>
 </html>

@@ -1,10 +1,10 @@
 /**
  * TC Agro Solutions - Common Page Script
- * Handles authentication check, logout, and user display
- * Note: Sidebar is handled by sidebar.js (standalone script)
+ * Handles authentication check, sidebar, logout, and user display
  */
 
 import { handleLogout, requireAuth, getTokenInfo } from './auth.js';
+import { initSidebar } from './sidebar.js';
 import { $ } from './utils.js';
 
 // Check authentication for protected pages
@@ -12,24 +12,23 @@ export function initProtectedPage() {
   if (!requireAuth()) {
     return false;
   }
-  
-  // Setup common UI elements (sidebar is handled by sidebar.js)
+
+  // Setup common UI elements
+  initSidebar();
   setupLogout();
   setupUserDisplay();
   updateActiveNavItem();
-  
+
   return true;
 }
 
 // Setup logout handlers
 function setupLogout() {
   const logoutLinks = document.querySelectorAll('[data-action="logout"]');
-  console.log('[Common] Logout links found:', logoutLinks.length);
-  
-  logoutLinks.forEach(link => {
+
+  logoutLinks.forEach((link) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      console.log('[Common] Logout triggered');
       handleLogout();
     });
   });
@@ -38,7 +37,7 @@ function setupLogout() {
 // Highlight current page in navigation
 function updateActiveNavItem() {
   const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
-  document.querySelectorAll('.nav-item').forEach(item => {
+  document.querySelectorAll('.nav-item').forEach((item) => {
     const href = item.getAttribute('href');
     if (href && currentPage.includes(href.replace('.html', ''))) {
       item.classList.add('active');
@@ -50,7 +49,7 @@ function updateActiveNavItem() {
 function setupUserDisplay() {
   const userDisplay = $('#userDisplay');
   const userInfo = getTokenInfo();
-  
+
   if (userDisplay && userInfo?.name) {
     userDisplay.textContent = userInfo.name;
   }
