@@ -1,0 +1,61 @@
+# ==============================================================================
+# Docker Ignore File for TC Agro Solutions Frontend POC
+# ==============================================================================
+# Excludes unnecessary files from Docker build context for faster builds
+# ==============================================================================
+
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output (will be generated in container)
+dist/
+build/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Environment files (should use ConfigMaps/Secrets in K8s)
+.env
+.env.local
+.env.*.local
+
+# Testing files
+coverage/
+.nyc_output/
+
+# Documentation
+*.md
+CLEANUP_REPORT.md
+HELPERS_QUICK_REFERENCE.md
+LINTING_CONFIG.md
+TESTING.md
+VSCODE_FORMAT_TROUBLESHOOTING.md
+README.md
+
+# Linting and formatting configs (not needed in runtime)
+.eslintrc*
+.prettierrc*
+.prettierignore
+eslint.config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
