@@ -3,6 +3,8 @@ import { resolve } from 'path';
 import checker from 'vite-plugin-checker';
 
 export default defineConfig({
+  // Ensure assets work from any base path (e.g., CDN, reverse proxy, AKS ingress)
+  base: './',
   // Plugins
   plugins: [
     // ESLint checker - shows errors in dev server and build
