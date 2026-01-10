@@ -51,7 +51,7 @@ function renderAlerts(alerts) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">✅</div>
-        <p>Nenhum alerta ${currentFilter === 'pending' ? 'pendente' : currentFilter === 'resolved' ? 'resolvido' : ''}</p>
+        <p>No alerts ${currentFilter === 'pending' ? 'pending' : currentFilter === 'resolved' ? 'resolved' : 'available'}</p>
       </div>
     `;
     return;
@@ -83,17 +83,17 @@ function renderAlerts(alerts) {
           alert.status === 'pending'
             ? `
           <button class="btn btn-success btn-sm" data-action="resolve" data-id="${alert.id}">
-            ✅ Resolver
+            ✅ Resolve
           </button>
         `
             : `
           <span class="resolved-info">
-            Resolvido em ${formatDate(alert.resolvedAt)}
+            Resolved on ${formatDate(alert.resolvedAt)}
           </span>
         `
         }
         <button class="btn btn-outline btn-sm" data-action="details" data-id="${alert.id}">
-          📋 Detalhes
+          📋 Details
         </button>
       </div>
     </div>
@@ -185,7 +185,7 @@ function setupEventListeners() {
 }
 
 async function handleResolve(alertId) {
-  const confirmed = await showConfirm('Marcar este alerta como resolvido?');
+  const confirmed = await showConfirm('Mark this alert as resolved?');
 
   if (confirmed) {
     try {
@@ -211,7 +211,7 @@ async function handleResolve(alertId) {
 
 function handleDetails(alertId) {
   // Could open a modal with full details
-  showToast(`Detalhes do alerta: ${alertId}`, 'info');
+  showToast(`Alert details: ${alertId}`, 'info');
 }
 
 // Export for debugging

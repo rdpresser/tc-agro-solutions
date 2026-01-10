@@ -40,167 +40,207 @@
 
 **Por quê?** VS Code precisa reiniciar para aplicar novas configurações de workspace.
 
-**Teste após reload:**
+# 🔧 VS Code - Troubleshooting Format On Save
 
-1. Abra qualquer arquivo `.js`
-2. Adicione espaços extras: `function  test(   ) {    }`
-3. Salve (`Ctrl+S`)
-4. Se formatar automaticamente = ✅ **RESOLVIDO!**
+**Date:** January 2026  
+**Issue:** `Ctrl+S` is not formatting automatically with Prettier
 
 ---
 
-### Passo 2: Verificar Barra de Status
+## ✅ Current Configuration (Correct)
 
-**Localização:** Canto inferior direito do VS Code
+### File: `.vscode/settings.json`
 
-**O que procurar:**
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
+```
 
-- ✅ **Deve mostrar:** `Prettier` (pequeno ícone ou texto)
-- ❌ **Se mostrar:** `undefined` ou nada = Prettier não está ativo
+### Installed Extensions
 
-**Como ativar:**
-
-1. Clique na barra de status onde aparece o formatador
-2. Selecione `"Configure Default Formatter"`
-3. Escolha `"Prettier - Code formatter"`
-
----
-
-### Passo 3: Testar Formatação Manual
-
-**Atalho:** `Shift+Alt+F` (Windows) ou `Shift+Option+F` (Mac)
-
-**Teste:**
-
-1. Abra `js/utils.js`
-2. Desformate uma linha: `function    test(   x  ,  y   ){}`
-3. Pressione `Shift+Alt+F`
-
-**Resultados possíveis:**
-
-- ✅ **Formatou:** Prettier funciona! Problema está só no `formatOnSave`
-- ❌ **Pediu para escolher formatador:** Selecione `Prettier - Code formatter`
-- ❌ **Erro:** Veja Passo 5 (Output Logs)
+- ✅ `dbaeumer.vscode-eslint` (ESLint)
+- ✅ `esbenp.prettier-vscode` (Prettier)
 
 ---
 
-### Passo 4: Verificar Settings Globais
+## 🔧 Fix in 5 Steps
 
-**Atalho:** `Ctrl+,` (abre Settings)
+### Step 1: Reload VS Code (MOST IMPORTANT)
 
-**Verificar:**
+**Shortcut:** `Ctrl+Shift+P` → type `"Reload Window"` → `Enter`
 
-1. Na busca, digite: `format on save`
-2. Deve estar **MARCADO** ✓
-3. Na busca, digite: `default formatter`
-4. Deve mostrar: `Prettier - Code formatter`
+**Why?** VS Code needs a reload to apply new workspace settings.
 
-**Se não estiver marcado:**
+**Test after reload:**
 
-- Marque `Editor: Format On Save` ✓
-- Selecione `Prettier` como default formatter
-
-**Nota:** Settings globais (User) podem sobrescrever settings do workspace!
+1. Open any `.js` file
+2. Add extra spaces: `function  test(   ) {    }`
+3. Save (`Ctrl+S`)
+4. If it auto-formats = ✅ **FIXED!**
 
 ---
 
-### Passo 5: Verificar Logs de Erro
+### Step 2: Check Status Bar
 
-**Atalho:** `Ctrl+Shift+U` (abre Output panel)
+**Location:** Bottom-right of VS Code
 
-**Passos:**
+**What to see:**
 
-1. No dropdown superior, selecione `"Prettier"`
-2. Abra um arquivo `.js`
-3. Faça uma mudança e salve (`Ctrl+S`)
-4. Observe os logs
+- ✅ Should display `Prettier` (icon or text)
+- ❌ If it shows `undefined` or nothing = Prettier is not active
 
-**Possíveis mensagens:**
+**How to activate:**
 
-- ✅ `"Formatting completed"` = Funcionando!
-- ❌ `"No parser found"` = Problema de configuração
-- ❌ `"Cannot format"` = Arquivo pode estar em `.prettierignore`
+1. Click the status bar formatter name
+2. Select `"Configure Default Formatter"`
+3. Choose `"Prettier - Code formatter"`
 
 ---
 
-## 🧪 Teste Rápido (30 segundos)
+### Step 3: Test Manual Formatting
+
+**Shortcut:** `Shift+Alt+F` (Windows) or `Shift+Option+F` (Mac)
+
+**Test:**
+
+1. Open `js/utils.js`
+2. Break formatting: `function    test(   x  ,  y   ){}`
+3. Press `Shift+Alt+F`
+
+**Possible results:**
+
+- ✅ Formatted: Prettier works; issue is only formatOnSave
+- ❌ Prompt to choose formatter: select `Prettier - Code formatter`
+- ❌ Error: see Step 5 (Output Logs)
+
+---
+
+### Step 4: Check User Settings
+
+**Shortcut:** `Ctrl+,` (opens Settings)
+
+**Verify:**
+
+1. Search: `format on save` → should be **ENABLED** ✓
+2. Search: `default formatter` → should show `Prettier - Code formatter`
+
+**If not enabled:**
+
+- Enable `Editor: Format On Save` ✓
+- Select `Prettier` as default formatter
+
+**Note:** User-level settings can override the workspace settings.
+
+---
+
+### Step 5: Check Output Logs
+
+**Shortcut:** `Ctrl+Shift+U` (Output panel)
+
+**Steps:**
+
+1. In the dropdown, select `"Prettier"`
+2. Open a `.js` file
+3. Make a change and save (`Ctrl+S`)
+4. Watch the logs
+
+**Common messages:**
+
+- ✅ `"Formatting completed"` = Working
+- ❌ `"No parser found"` = Configuration issue
+- ❌ `"Cannot format"` = File may be in `.prettierignore`
+
+---
+
+## 🧪 30-Second Quick Test
 
 ```bash
-# 1. Feche completamente o VS Code (File → Exit)
+# 1. Close VS Code completely (File → Exit)
 
-# 2. Reabra VS Code (importante reiniciar!)
+# 2. Reopen VS Code (reload is important)
 
-# 3. Abra o workspace:
-#    File → Open Folder → Selecione: C:\Projects\tc-agro-solutions\poc\frontend
+# 3. Open the workspace:
+#    File → Open Folder → Select: C:\Projects\tc-agro-solutions\poc\frontend
 
-# 4. Abra: js/utils.js
+# 4. Open: js/utils.js
 
-# 5. Adicione espaços extras em qualquer função:
+# 5. Add extra spaces in any function:
 function    test(   x  ,  y   ){   return x+y;   }
 
-# 6. Salve (Ctrl+S)
+# 6. Save (Ctrl+S)
 
-# 7. Resultado esperado:
+# 7. Expected result:
 function test(x, y) {
   return x + y;
 }
 ```
 
-**Se formatou:** ✅ **FUNCIONANDO!**  
-**Se não formatou:** Continue troubleshooting abaixo.
+**If it formatted:** ✅ **WORKING!**  
+**If not:** continue below.
 
 ---
 
-## 🔍 Troubleshooting Avançado
+## 🔍 Advanced Troubleshooting
 
-### Problema: Prettier não aparece na barra de status
+### Issue: Prettier not showing in status bar
 
-**Solução:**
+**Fix:**
 
 1. `Ctrl+Shift+P` → `"Format Document With..."`
-2. Selecione `"Configure Default Formatter..."`
-3. Escolha `"Prettier - Code formatter"`
-4. Tente salvar novamente
+2. Select `"Configure Default Formatter..."`
+3. Choose `"Prettier - Code formatter"`
+4. Save again
 
-### Problema: "There is no formatter for 'javascript' files installed"
+### Issue: "There is no formatter for 'javascript' files installed"
 
-**Solução:**
+**Fix:**
 
-1. Verifique que a extensão Prettier está habilitada:
+1. Ensure the Prettier extension is enabled:
    - `Ctrl+Shift+X` (Extensions)
-   - Busque `"Prettier"`
-   - Deve mostrar `"Disable"` (significa está habilitada)
-2. Se mostrar `"Enable"`, clique para habilitar
-3. Recarregue VS Code
+   - Search `"Prettier"`
+   - It should show `"Disable"` (meaning it is enabled)
+2. If it shows `"Enable"`, click to enable
+3. Reload VS Code
 
-### Problema: Formatação funciona manualmente (Shift+Alt+F) mas não no save
+### Issue: Manual format works, but save does not
 
-**Solução:**
+**Fix:**
 
-1. Verifique conflito com outras extensões de formatação
-2. Desabilite temporariamente outras extensões de formatação (ex: Beautify, JS-CSS-HTML Formatter)
-3. Verifique se tem configuração global que desabilita format on save:
+1. Check for conflicts with other formatter extensions
+2. Temporarily disable other formatters (e.g., Beautify, JS-CSS-HTML Formatter)
+3. Ensure no global setting disables format on save:
    ```json
-   // User settings.json (REMOVER se existir)
-   "editor.formatOnSave": false  // ← REMOVER ESTA LINHA
+   // User settings.json (REMOVE if present)
+   "editor.formatOnSave": false
    ```
 
-### Problema: Formata alguns arquivos mas não outros
+### Issue: Some files format, others do not
 
-**Solução:**
+**Fix:**
 
-1. Verifique `.prettierignore`:
+1. Check `.prettierignore`:
    ```
-   # Certifique que js/ não está ignorado
+   # Make sure js/ is NOT ignored
    node_modules/
    dist/
    build/
    .vscode/
-   # js/ deve NÃO estar aqui!
+   # js/ should NOT be here!
    ```
-2. Verifique language-specific settings:
+2. Verify language-specific settings:
    ```json
-   // .vscode/settings.json - Já está correto!
+   // .vscode/settings.json (already correct)
    "[javascript]": {
      "editor.defaultFormatter": "esbenp.prettier-vscode"
    }
@@ -208,42 +248,42 @@ function test(x, y) {
 
 ---
 
-## 📋 Checklist Final
+## 📋 Final Checklist
 
-Antes de pedir ajuda, verifique:
+Before asking for help, confirm:
 
-- [ ] Recarreguei VS Code (`Ctrl+Shift+P` → `"Reload Window"`)
-- [ ] Prettier aparece na barra de status (canto inferior direito)
-- [ ] Formatação manual funciona (`Shift+Alt+F`)
-- [ ] `editor.formatOnSave` está marcado ✓ em Settings (`Ctrl+,`)
-- [ ] Prettier está selecionado como default formatter
-- [ ] Extensão Prettier está habilitada (não desabilitada)
-- [ ] Abri o VS Code como workspace (não arquivo individual)
-- [ ] Não há erros no Output → Prettier
+- [ ] Reloaded VS Code (`Ctrl+Shift+P` → `"Reload Window"`)
+- [ ] Prettier shows in the status bar (bottom right)
+- [ ] Manual format works (`Shift+Alt+F`)
+- [ ] `editor.formatOnSave` is enabled in Settings (`Ctrl+,`)
+- [ ] Prettier is the default formatter
+- [ ] Prettier extension is enabled (not disabled)
+- [ ] Workspace is opened (not a single file)
+- [ ] No errors in Output → Prettier
 
 ---
 
-## 🎯 Comando Rápido de Validação
+## 🎯 Quick Validation Command
 
-Execute no terminal para validar configuração:
+Run in the terminal to validate setup:
 
 ```powershell
 cd C:\Projects\tc-agro-solutions\poc\frontend
 
-# Verificar extensões instaladas
+# Check installed extensions
 code --list-extensions | Select-String -Pattern "eslint|prettier"
 
-# Verificar arquivo de configuração existe
+# Verify settings file exists
 Test-Path .vscode/settings.json
 
-# Ler configuração (deve mostrar formatOnSave: true)
+# Read settings (should show formatOnSave: true)
 Get-Content .vscode/settings.json | Select-String -Pattern "formatOnSave"
 ```
 
-**Output esperado:**
+**Expected output:**
 
 ```
-dbaeumer.vscode-eslint
+   }
 esbenp.prettier-vscode
 True
   "editor.formatOnSave": true,
@@ -251,59 +291,19 @@ True
 
 ---
 
-## ✅ Quando Está Funcionando
+## ✅ Signs It Is Working
 
-Você saberá que está funcionando quando:
+You know it is working when:
 
-1. Salvar arquivo `.js` = código se formata automaticamente
-2. Espaços extras são removidos
-3. Indentação é corrigida
-4. Vírgulas são adicionadas/removidas conforme `.prettierrc.json`
-5. Output → Prettier mostra: `"Formatting completed"`
-
----
-
-## 📞 Ainda Não Funciona?
-
-Se seguiu todos os passos e ainda não funciona:
-
-1. **Desinstale e reinstale Prettier:**
-   - `Ctrl+Shift+X`
-   - Busque `"Prettier"`
-   - Clique `"Uninstall"`
-   - Reinicie VS Code
-   - Reinstale Prettier
-   - Recarregue VS Code
-
-2. **Verifique versão do VS Code:**
-   - `Help` → `About`
-   - Versão deve ser >= 1.80
-   - Se muito antiga, atualize
-
-3. **Teste em arquivo novo:**
-   - Crie `test.js` na raiz do projeto
-   - Adicione: `function    test(   ){}`
-   - Salve (`Ctrl+S`)
-   - Se formatar = problema é com arquivo específico
-
-4. **Última opção - Reset completo:**
-
-   ```powershell
-   # Backup settings atuais
-   Copy-Item .vscode/settings.json .vscode/settings.backup.json
-
-   # Delete e recrie
-   Remove-Item .vscode/settings.json
-
-   # Crie novamente com config mínima
-   @"
-   {
-     "editor.formatOnSave": true,
-     "editor.defaultFormatter": "esbenp.prettier-vscode"
-   }
+1. Saving a `.js` file auto-formats the code
+2. Extra spaces are removed
+3. Indentation is corrected
    "@ | Out-File .vscode/settings.json -Encoding UTF8
 
    # Recarregue VS Code
+
+   ```
+
    ```
 
 ---

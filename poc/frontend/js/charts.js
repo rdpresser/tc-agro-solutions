@@ -105,7 +105,7 @@ export function createReadingsChart(canvasId, data = []) {
       labels: labels.length ? labels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       datasets: [
         {
-          label: 'Temperatura (°C)',
+          label: 'Temperature (°C)',
           data: data.length
             ? data.map((d) => d.temperature?.toFixed(1))
             : [28, 27, 29, 31, 30, 28, 27],
@@ -118,7 +118,7 @@ export function createReadingsChart(canvasId, data = []) {
           pointHoverRadius: 6
         },
         {
-          label: 'Umidade (%)',
+          label: 'Humidity (%)',
           data: data.length
             ? data.map((d) => d.humidity?.toFixed(1))
             : [65, 68, 62, 58, 55, 60, 63],
@@ -131,7 +131,7 @@ export function createReadingsChart(canvasId, data = []) {
           pointHoverRadius: 6
         },
         {
-          label: 'Umidade Solo (%)',
+          label: 'Soil Moisture (%)',
           data: data.length
             ? data.map((d) => d.soilMoisture?.toFixed(1))
             : [42, 40, 38, 45, 48, 46, 44],

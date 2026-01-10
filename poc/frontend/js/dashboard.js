@@ -131,7 +131,7 @@ function updateAlertsSection(alerts) {
   if (!container) return;
 
   if (!alerts.length) {
-    container.innerHTML = '<p class="no-data">Nenhum alerta pendente</p>';
+    container.innerHTML = '<p class="no-data">No pending alerts</p>';
     return;
   }
 
