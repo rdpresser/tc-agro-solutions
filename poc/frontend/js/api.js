@@ -5,7 +5,8 @@
 
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
-import { APP_CONFIG, getToken, clearToken, showToast } from './utils.js';
+import { toast } from './i18n.js';
+import { APP_CONFIG, getToken, clearToken } from './utils.js';
 
 // ============================================
 // AXIOS INSTANCE WITH INTERCEPTORS
@@ -647,7 +648,7 @@ export async function initSignalRConnection(handlers = {}) {
 
     signalRConnection.onreconnected(() => {
       handlers.onConnectionChange?.('connected');
-      showToast('Real-time connection restored', 'success');
+      toast('realtime.restored', 'success');
     });
 
     signalRConnection.onclose(() => {
@@ -660,7 +661,7 @@ export async function initSignalRConnection(handlers = {}) {
 
     return signalRConnection;
   } catch (error) {
-    showToast('Real-time connection unavailable, using mock data', 'warning');
+    toast('realtime.mock_fallback', 'warning');
     // Fallback to mock
     return initMockSignalR(handlers);
   }

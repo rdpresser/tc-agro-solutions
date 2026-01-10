@@ -5,7 +5,8 @@
 
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
-import { $id, showToast, getQueryParam } from './utils.js';
+import { toast, t } from './i18n.js';
+import { $id, getQueryParam } from './utils.js';
 
 // ============================================
 // Page State
@@ -133,7 +134,7 @@ function setupEditMode() {
     populateForm(plot);
     loadSensors();
   } else {
-    showToast('Plot not found', 'error');
+    toast('plot.not_found', 'error');
     window.location.href = 'plots.html';
   }
 
@@ -240,20 +241,20 @@ function handleSubmit(e) {
 
   // Validation
   if (!formData.propertyId) {
-    showToast('Please select a property', 'error');
+    toast('validation.plot.property_required', 'error');
     return;
   }
   if (!formData.name) {
-    showToast('Please enter plot name', 'error');
+    toast('validation.plot.name_required', 'error');
     return;
   }
   if (!formData.cropType) {
-    showToast('Crop type is required', 'error');
+    toast('validation.plot.crop_required', 'error');
     return;
   }
 
   // Mock save
-  showToast(isEditMode ? 'Plot updated successfully!' : 'Plot created successfully!', 'success');
+  toast(isEditMode ? 'plot.updated_success' : 'plot.created_success', 'success');
 
   setTimeout(() => {
     window.location.href = 'plots.html';
@@ -276,3 +277,34 @@ function handleSubmit(e) {
   }
    */
 }
+
+// Also show English toasts when native validation triggers
+document.addEventListener(
+  'invalid',
+  (e) => {
+    const el = e.target;
+    const id = el.id;
+    if (el.validity.valueMissing) {
+      if (id === 'propertyId') {
+        el.setCustomValidity(t('validation.plot.property_required'));
+        toast('validation.plot.property_required', 'warning');
+      } else if (id === 'name') {
+        el.setCustomValidity(t('validation.plot.name_required'));
+        toast('validation.plot.name_required', 'warning');
+      } else if (id === 'cropType') {
+        el.setCustomValidity(t('validation.plot.crop_required'));
+        toast('validation.plot.crop_required', 'warning');
+      } else {
+        el.setCustomValidity(t('validation.property.required_fields'));
+        toast('validation.property.required_fields', 'warning');
+      }
+    }
+    el.reportValidity();
+  },
+  true
+);
+
+// Clear custom messages on input
+document.addEventListener('input', (e) => {
+  e.target.setCustomValidity('');
+});

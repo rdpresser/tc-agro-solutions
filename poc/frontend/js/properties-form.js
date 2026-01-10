@@ -6,7 +6,8 @@
 import { getProperty, createProperty, updateProperty } from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
-import { $id, showToast, getQueryParam } from './utils.js';
+import { toast, t } from './i18n.js';
+import { $id, getQueryParam } from './utils.js';
 
 // ============================================
 // Page Initialization
@@ -37,7 +38,7 @@ async function loadProperty(id) {
   try {
     const property = await getProperty(id);
     if (!property) {
-      showToast('Property not found', 'danger');
+      toast('property.not_found', 'danger');
       window.location.href = 'properties.html';
       return;
     }
@@ -57,7 +58,7 @@ async function loadProperty(id) {
     populateForm(property);
   } catch (error) {
     console.error('Failed to load property:', error);
-    showToast('Failed to load property', 'danger');
+    toast('property.load_failed', 'danger');
   }
 }
 
@@ -109,25 +110,24 @@ function setupFormHandler() {
 
     // Validation
     if (!data.name || !data.location || !data.areaHectares) {
-      showToast('Please fill in all required fields', 'warning');
+      toast('validation.property.required_fields', 'warning');
       return;
     }
 
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML =
-          '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Salvando...';
+        submitBtn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('app.saving')}`;
       }
 
       if (id) {
         // Update existing
         await updateProperty(id, data);
-        showToast('Property updated successfully', 'success');
+        toast('property.updated_success', 'success');
       } else {
         // Create new
         await createProperty(data);
-        showToast('Property created successfully', 'success');
+        toast('property.created_success', 'success');
       }
 
       // Redirect to list
@@ -136,12 +136,44 @@ function setupFormHandler() {
       }, 1000);
     } catch (error) {
       console.error('Failed to save property:', error);
-      showToast('Failed to save property', 'danger');
+      toast('property.save_failed', 'danger');
 
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '💾 Save Property';
       }
     }
+  });
+
+  // Show English messages and override browser built-in validation text
+  form.addEventListener(
+    'invalid',
+    (e) => {
+      const el = e.target;
+      const fieldId = el.id;
+      if (el.validity.valueMissing) {
+        if (fieldId === 'name') {
+          el.setCustomValidity(t('validation.property.name_required'));
+          toast('validation.property.name_required', 'warning');
+        } else if (fieldId === 'location') {
+          el.setCustomValidity(t('validation.property.location_required'));
+          toast('validation.property.location_required', 'warning');
+        } else if (fieldId === 'areaHectares') {
+          el.setCustomValidity(t('validation.property.area_required'));
+          toast('validation.property.area_required', 'warning');
+        } else {
+          el.setCustomValidity(t('validation.property.required_fields'));
+          toast('validation.property.required_fields', 'warning');
+        }
+      }
+      // Let the browser display the custom (English) message
+      el.reportValidity();
+    },
+    true
+  );
+
+  // Clear custom validity when user edits input
+  form.addEventListener('input', (e) => {
+    e.target.setCustomValidity('');
   });
 }

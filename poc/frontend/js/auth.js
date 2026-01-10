@@ -9,13 +9,13 @@
  * NEVER trust frontend-only security.
  */
 
+import { toast, t } from './i18n.js';
 import {
   setToken,
   setUser,
   clearToken,
   getToken,
   isValidEmail,
-  showToast,
   showLoading,
   hideLoading
 } from './utils.js';
@@ -34,7 +34,7 @@ export async function handleLogin(email, password) {
     throw new Error('Please enter your password');
   }
 
-  showLoading('Signing in...');
+  showLoading(t('auth.signing_in'));
 
   try {
     // ============================================
@@ -61,7 +61,7 @@ export async function handleLogin(email, password) {
     setUser(mockResponse.user);
 
     hideLoading();
-    showToast(`Welcome, ${mockResponse.user.name}!`, 'success');
+    toast('auth.welcome', 'success', { name: mockResponse.user.name });
 
     return mockResponse;
 
@@ -75,7 +75,7 @@ export async function handleLogin(email, password) {
     setUser(response.data.user);
     
     hideLoading();
-    showToast(`Welcome, ${response.data.user.name}!`, 'success');
+    toast('auth.welcome', 'success', { name: response.data.user.name });
     
     return response.data;
     */
@@ -113,7 +113,7 @@ export function handleLogout() {
   // sessionStorage.removeItem('cached_data');
 
   // Show feedback
-  showToast('You have been logged out', 'info');
+  toast('auth.logged_out', 'info');
 
   // Redirect to login
   setTimeout(() => {

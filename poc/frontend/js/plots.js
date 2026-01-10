@@ -4,7 +4,8 @@
 
 import { getPlots, getProperties, deletePlot } from './api.js';
 import { initProtectedPage } from './common.js';
-import { $, $$, showToast, showConfirm } from './utils.js';
+import { toast } from './i18n.js';
+import { $, $$, showConfirm } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -37,7 +38,7 @@ async function loadPlots(propertyId = null) {
     console.error('Error loading plots:', error);
     tbody.innerHTML =
       '<tr><td colspan="7" class="text-center text-danger">Error loading plots</td></tr>';
-    showToast('Error loading plots', 'error');
+    toast('plots.load_failed', 'error');
   }
 }
 
@@ -178,11 +179,11 @@ async function handleDelete(id) {
   if (confirmed) {
     try {
       await deletePlot(id);
-      showToast('Plot deleted successfully', 'success');
+      toast('plots.delete_success', 'success');
       await loadPlots();
     } catch (error) {
       console.error('Error deleting plot:', error);
-      showToast('Error deleting plot', 'error');
+      toast('plots.delete_failed', 'error');
     }
   }
 }

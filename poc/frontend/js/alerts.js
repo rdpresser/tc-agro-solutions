@@ -4,7 +4,8 @@
 
 import { getAlerts, resolveAlert } from './api.js';
 import { initProtectedPage } from './common.js';
-import { $, $$, showToast, showConfirm, formatDate, formatRelativeTime } from './utils.js';
+import { toast } from './i18n.js';
+import { $, $$, showConfirm, formatDate, formatRelativeTime } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -39,7 +40,7 @@ async function loadAlerts(status = null) {
   } catch (error) {
     console.error('Error loading alerts:', error);
     container.innerHTML = '<div class="error">Error loading alerts</div>';
-    showToast('Error loading alerts', 'error');
+    toast('alerts.load_failed', 'error');
   }
 }
 
@@ -190,7 +191,7 @@ async function handleResolve(alertId) {
   if (confirmed) {
     try {
       await resolveAlert(alertId);
-      showToast('Alert resolved successfully', 'success');
+      toast('alerts.resolve_success', 'success');
 
       // Remove card with animation
       const card = $(`[data-alert-id="${alertId}"]`);
@@ -204,14 +205,14 @@ async function handleResolve(alertId) {
       setTimeout(() => loadAlerts(currentFilter === 'all' ? null : currentFilter), 500);
     } catch (error) {
       console.error('Error resolving alert:', error);
-      showToast('Error resolving alert', 'error');
+      toast('alerts.resolve_failed', 'error');
     }
   }
 }
 
 function handleDetails(alertId) {
   // Could open a modal with full details
-  showToast(`Alert details: ${alertId}`, 'info');
+  toast('alerts.details', 'info', { id: alertId });
 }
 
 // Export for debugging

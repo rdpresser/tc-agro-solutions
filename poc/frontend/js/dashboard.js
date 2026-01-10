@@ -10,7 +10,8 @@ import {
   stopSignalRConnection
 } from './api.js';
 import { initProtectedPage } from './common.js';
-import { $, formatDate, formatRelativeTime, showToast, debounce } from './utils.js';
+import { toast, t } from './i18n.js';
+import { $, formatDate, formatRelativeTime, debounce } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -55,7 +56,7 @@ async function loadDashboardData() {
     updateAlertsSection(alerts);
   } catch (error) {
     console.error('Error loading dashboard data:', error);
-    showToast('Error loading dashboard data', 'error');
+    toast('dashboard.load_failed', 'error');
   }
 }
 
@@ -209,7 +210,7 @@ const handleSensorReading = debounce((reading) => {
       <td>${reading.temperature?.toFixed(1)}°C</td>
       <td>${reading.humidity?.toFixed(0)}%</td>
       <td>${reading.soilMoisture?.toFixed(0)}%</td>
-      <td>agora</td>
+      <td>now</td>
     `;
     row.style.backgroundColor = '#e8f5e9';
     tbody.insertBefore(row, tbody.firstChild);
@@ -227,7 +228,7 @@ const handleSensorReading = debounce((reading) => {
 }, 500);
 
 function handleNewAlert(alert) {
-  showToast(`New alert: ${alert.title}`, alert.severity === 'critical' ? 'error' : 'warning');
+  toast('alerts.new', alert.severity === 'critical' ? 'error' : 'warning', { title: alert.title });
 
   // Reload alerts section
   getAlerts('pending').then(updateAlertsSection);
@@ -246,10 +247,10 @@ function handleConnectionChange(state) {
     indicator.className = `connection-indicator ${state}`;
     indicator.title =
       state === 'connected'
-        ? 'Conectado'
+        ? t('connection.connected')
         : state === 'reconnecting'
-          ? 'Reconectando...'
-          : 'Desconectado';
+          ? t('connection.reconnecting')
+          : t('connection.disconnected');
   }
 }
 

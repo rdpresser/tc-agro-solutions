@@ -4,7 +4,8 @@
 
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
 import { initProtectedPage } from './common.js';
-import { $, $$, showToast, formatRelativeTime } from './utils.js';
+import { toast, t } from './i18n.js';
+import { $, $$, formatRelativeTime } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -41,8 +42,8 @@ async function loadSensors() {
     renderSensorsGrid(sensors);
   } catch (error) {
     console.error('Error loading sensors:', error);
-    grid.innerHTML = '<div class="error">Error loading sensors</div>';
-    showToast('Error loading sensors', 'error');
+    grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
+    toast('sensors.load_failed', 'error');
   }
 }
 
@@ -51,7 +52,7 @@ function renderSensorsGrid(sensors) {
   if (!grid) return;
 
   if (!sensors.length) {
-    grid.innerHTML = '<div class="empty">Nenhum sensor cadastrado</div>';
+    grid.innerHTML = '<div class="empty">No sensors registered</div>';
     return;
   }
 
@@ -76,13 +77,13 @@ function renderSensorsGrid(sensors) {
           </span>
         </div>
         <div class="reading">
-          <span class="reading-label">💧 Umid</span>
+          <span class="reading-label">💧 Humidity</span>
           <span class="reading-value" data-metric="humidity">
             ${sensor.humidity !== null ? `${sensor.humidity.toFixed(0)}%` : '--'}
           </span>
         </div>
         <div class="reading">
-          <span class="reading-label">🌿 Solo</span>
+          <span class="reading-label">🌿 Soil</span>
           <span class="reading-value" data-metric="soilMoisture">
             ${sensor.soilMoisture !== null ? `${sensor.soilMoisture.toFixed(0)}%` : '--'}
           </span>
@@ -171,7 +172,7 @@ function updateSensorCard(sensorId, reading) {
   // Update last update time
   const timeEl = card.querySelector('.last-update');
   if (timeEl) {
-    timeEl.textContent = 'agora';
+    timeEl.textContent = 'now';
     timeEl.title = new Date().toISOString();
   }
 }
@@ -191,7 +192,7 @@ function setupEventListeners() {
 
     refreshBtn.disabled = false;
     refreshBtn.textContent = '⟳ Refresh';
-    showToast('Sensors updated', 'success');
+    toast('sensors.updated', 'success');
   });
 
   // Status filter

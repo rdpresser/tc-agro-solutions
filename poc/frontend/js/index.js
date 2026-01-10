@@ -3,7 +3,8 @@
  */
 
 import { handleLogin, isAuthenticated, redirectToDashboard } from './auth.js';
-import { showToast, $ } from './utils.js';
+import { toast, t } from './i18n.js';
+import { $ } from './utils.js';
 
 // If already authenticated, redirect to dashboard
 if (isAuthenticated()) {
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Basic validation
     if (!email || !password) {
       if (errorMessage) {
-        errorMessage.textContent = 'Please fill in all fields.';
+        errorMessage.textContent = t('validation.auth.fill_fields');
         errorMessage.style.display = 'block';
       }
       return;
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.classList.add('btn-loading');
-      submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+      submitBtn.innerHTML = `<span class="spinner"></span> ${t('auth.signing_in')}`;
     }
 
     if (errorMessage) {
@@ -48,13 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       await handleLogin(email, password);
-      showToast('Login successful!', 'success');
+      toast('auth.login_success', 'success');
       redirectToDashboard();
     } catch (error) {
       console.error('Login error:', error);
 
       if (errorMessage) {
-        errorMessage.textContent = error.message || 'Invalid email or password.';
+        errorMessage.textContent = error.message || t('auth.invalid_credentials');
         errorMessage.style.display = 'block';
       }
 
@@ -74,5 +75,32 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.style.display = 'none';
       }
     });
+  });
+
+  // Override native validation messages to English and show toast
+  loginForm.addEventListener(
+    'invalid',
+    (e) => {
+      const el = e.target;
+      if (el.validity.valueMissing) {
+        if (el.id === 'password') {
+          el.setCustomValidity(t('validation.auth.password_required'));
+          toast('validation.auth.password_required', 'warning');
+        } else {
+          el.setCustomValidity(t('validation.auth.fill_fields'));
+          toast('validation.auth.fill_fields', 'warning');
+        }
+      } else if (el.validity.typeMismatch && el.type === 'email') {
+        el.setCustomValidity(t('validation.auth.email_invalid'));
+        toast('validation.auth.email_invalid', 'warning');
+      }
+      el.reportValidity();
+    },
+    true
+  );
+
+  // Clear custom validity on input
+  loginForm.addEventListener('input', (e) => {
+    e.target.setCustomValidity('');
   });
 });

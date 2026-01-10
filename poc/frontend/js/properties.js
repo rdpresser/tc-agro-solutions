@@ -4,7 +4,8 @@
 
 import { getProperties, deleteProperty } from './api.js';
 import { initProtectedPage } from './common.js';
-import { $, $$, showToast, showConfirm } from './utils.js';
+import { toast } from './i18n.js';
+import { $, $$, showConfirm } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -37,7 +38,7 @@ async function loadProperties() {
     console.error('Error loading properties:', error);
     tbody.innerHTML =
       '<tr><td colspan="6" class="text-center text-danger">Error loading properties</td></tr>';
-    showToast('Error loading properties', 'error');
+    toast('properties.load_failed', 'error');
   }
 }
 
@@ -108,11 +109,11 @@ async function handleDelete(id) {
   if (confirmed) {
     try {
       await deleteProperty(id);
-      showToast('Property deleted successfully', 'success');
+      toast('properties.delete_success', 'success');
       await loadProperties();
     } catch (error) {
       console.error('Error deleting property:', error);
-      showToast('Error deleting property', 'error');
+      toast('properties.delete_failed', 'error');
     }
   }
 }
