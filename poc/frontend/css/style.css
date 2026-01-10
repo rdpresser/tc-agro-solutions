@@ -473,6 +473,20 @@ p {
   margin-top: 4px;
 }
 
+.stat-subtext {
+  font-size: 0.75rem;
+  color: #8bc34a;
+  font-weight: 600;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-subtext-alert {
+  color: var(--color-danger);
+}
+
 .stat-change {
   font-size: 0.85rem;
   margin-top: 4px;
