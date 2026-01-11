@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="TC Agro Solutions - Agricultural monitoring platform" />
     <title>Login | TC Agro Solutions</title>
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" type="image/svg+xml" href="./src/public/favicon.svg" />
+    <link rel="stylesheet" href="./src/assets/styles/style.css" />
   </head>
   <body>
     <!-- Login Container -->
@@ -21,10 +22,7 @@
         <!-- Login Form -->
         <form id="login-form">
           <!-- Error Message -->
-          <div class="error-message alert alert-danger" style="display: none">
-            <span class="alert-icon">❌</span>
-            <span>Invalid credentials. Try again.</span>
-          </div>
+          <div class="error-message alert alert-danger" style="display: none"></div>
 
           <!-- Email Field -->
           <div class="form-group">
@@ -35,6 +33,7 @@
               class="form-control"
               placeholder="farmer@example.com"
               autocomplete="email"
+              required
             />
           </div>
 
@@ -47,6 +46,7 @@
               class="form-control"
               placeholder="Enter your password"
               autocomplete="current-password"
+              required
             />
           </div>
 
@@ -63,9 +63,7 @@
 
           <!-- Submit Button -->
           <div class="form-group">
-            <button type="submit" id="loginBtn" class="btn btn-primary btn-block btn-lg">
-              🔐 Sign In
-            </button>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">🔐 Sign In</button>
           </div>
         </form>
 
@@ -88,6 +86,6 @@
     </div>
 
     <!-- Scripts (ES Module) -->
-    <script type="module" src="./js/index.js"></script>
+    <script type="module" src="./src/assets/scripts/index.js"></script>
   </body>
 </html>

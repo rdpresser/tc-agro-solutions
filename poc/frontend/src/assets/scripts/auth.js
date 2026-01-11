@@ -217,14 +217,14 @@ export function isAuthenticated() {
  * Redirect to dashboard if authenticated
  */
 export function redirectToDashboard() {
-  window.location.href = 'dashboard.html';
+  window.location.href = '/src/pages/dashboard.html';
 }
 
 /**
  * Redirect to login if not authenticated
  */
 export function redirectToLogin() {
-  window.location.href = 'index.html';
+  window.location.href = '/index.html';
 }
 
 /**

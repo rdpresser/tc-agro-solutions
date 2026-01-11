@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="TC Agro Solutions - Plot Management" />
     <title>Plots | TC Agro Solutions</title>
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" type="image/svg+xml" href="../../public/favicon.svg" />
+    <link rel="stylesheet" href="../../assets/styles/style.css" />
   </head>
   <body>
     <div class="app-container">
@@ -19,15 +20,15 @@
         <nav class="sidebar-nav">
           <div class="nav-section">
             <div class="nav-section-title">Main</div>
-            <a href="dashboard.html" class="nav-item">
+            <a href="../dashboard.html" class="nav-item">
               <span class="nav-icon">📊</span>
               <span class="nav-text">Dashboard</span>
             </a>
-            <a href="properties.html" class="nav-item">
+            <a href="../properties/index.html" class="nav-item">
               <span class="nav-icon">🏘️</span>
               <span class="nav-text">Properties</span>
             </a>
-            <a href="plots.html" class="nav-item active">
+            <a href="index.html" class="nav-item active">
               <span class="nav-icon">🌱</span>
               <span class="nav-text">Plots</span>
             </a>
@@ -35,11 +36,11 @@
 
           <div class="nav-section">
             <div class="nav-section-title">Monitoring</div>
-            <a href="sensors.html" class="nav-item">
+            <a href="../sensors/index.html" class="nav-item">
               <span class="nav-icon">📡</span>
               <span class="nav-text">Sensors</span>
             </a>
-            <a href="alerts.html" class="nav-item">
+            <a href="../alerts/index.html" class="nav-item">
               <span class="nav-icon">🔔</span>
               <span class="nav-text">Alerts</span>
             </a>
@@ -79,7 +80,7 @@
               <span class="page-header-icon">🌱</span>
               <div>
                 <div class="breadcrumb">
-                  <a href="dashboard.html">Dashboard</a>
+                  <a href="../dashboard.html">Dashboard</a>
                   <span class="breadcrumb-separator">/</span>
                   <span>Plots</span>
                 </div>
@@ -87,7 +88,7 @@
               </div>
             </div>
             <div class="page-header-actions">
-              <a href="plots-form.html" class="btn btn-primary"> ➕ Add Plot </a>
+              <a href="form.html" class="btn btn-primary"> ➕ Add Plot </a>
             </div>
           </div>
 
@@ -154,10 +155,7 @@
                   <td>4 sensors</td>
                   <td><span class="badge badge-success">Healthy</span></td>
                   <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=1"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
+                    <a href="form.html?id=1" class="btn btn-outline btn-sm btn-icon" title="Edit"
                       >✏️</a
                     >
                     <button
@@ -177,10 +175,7 @@
                   <td>6 sensors</td>
                   <td><span class="badge badge-success">Healthy</span></td>
                   <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=2"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
+                    <a href="form.html?id=2" class="btn btn-outline btn-sm btn-icon" title="Edit"
                       >✏️</a
                     >
                     <button
@@ -200,10 +195,7 @@
                   <td>3 sensors</td>
                   <td><span class="badge badge-warning">⚠️ Low Moisture</span></td>
                   <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=3"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
+                    <a href="form.html?id=3" class="btn btn-outline btn-sm btn-icon" title="Edit"
                       >✏️</a
                     >
                     <button
@@ -223,10 +215,7 @@
                   <td>5 sensors</td>
                   <td><span class="badge badge-success">Healthy</span></td>
                   <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=4"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
+                    <a href="form.html?id=4" class="btn btn-outline btn-sm btn-icon" title="Edit"
                       >✏️</a
                     >
                     <button
@@ -246,10 +235,7 @@
                   <td>8 sensors</td>
                   <td><span class="badge badge-danger">🚨 Sensor Offline</span></td>
                   <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=5"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
+                    <a href="form.html?id=5" class="btn btn-outline btn-sm btn-icon" title="Edit"
                       >✏️</a
                     >
                     <button
@@ -282,6 +268,6 @@
     </div>
 
     <!-- Scripts (ES Module) -->
-    <script type="module" src="./js/plots.js"></script>
+    <script type="module" src="../../assets/scripts/plots.js"></script>
   </body>
 </html>

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="TC Agro Solutions - Dashboard" />
     <title>Dashboard | TC Agro Solutions</title>
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" type="image/svg+xml" href="../public/favicon.svg" />
+    <link rel="stylesheet" href="../assets/styles/style.css" />
   </head>
   <body>
     <div class="app-container">
@@ -24,11 +25,11 @@
               <span class="nav-icon">📊</span>
               <span class="nav-text">Dashboard</span>
             </a>
-            <a href="properties.html" class="nav-item">
+            <a href="properties/index.html" class="nav-item">
               <span class="nav-icon">🏘️</span>
               <span class="nav-text">Properties</span>
             </a>
-            <a href="plots.html" class="nav-item">
+            <a href="plots/index.html" class="nav-item">
               <span class="nav-icon">🌱</span>
               <span class="nav-text">Plots</span>
             </a>
@@ -37,11 +38,11 @@
           <!-- Monitoring -->
           <div class="nav-section">
             <div class="nav-section-title">Monitoring</div>
-            <a href="sensors.html" class="nav-item">
+            <a href="sensors/index.html" class="nav-item">
               <span class="nav-icon">📡</span>
               <span class="nav-text">Sensors</span>
             </a>
-            <a href="alerts.html" class="nav-item">
+            <a href="alerts/index.html" class="nav-item">
               <span class="nav-icon">🔔</span>
               <span class="nav-text">Alerts</span>
             </a>
@@ -216,7 +217,7 @@
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">📋 Latest Readings</h3>
-              <a href="sensors.html" class="btn btn-outline btn-sm">View All →</a>
+              <a href="sensors/index.html" class="btn btn-outline btn-sm">View All →</a>
             </div>
             <div class="table-container" style="box-shadow: none">
               <table class="table">
@@ -243,7 +244,7 @@
           <div class="card" style="margin-top: 24px">
             <div class="card-header">
               <h3 class="card-title">⚠️ Pending Alerts</h3>
-              <a href="alerts.html" class="btn btn-outline btn-sm">View All →</a>
+              <a href="alerts/index.html" class="btn btn-outline btn-sm">View All →</a>
             </div>
             <div id="pending-alerts">
               <p class="text-center text-muted" style="padding: 20px">Loading alerts...</p>
@@ -257,6 +258,6 @@
     <button id="logout-btn" style="display: none"></button>
 
     <!-- Main Script (ES Module) -->
-    <script type="module" src="./js/dashboard.js"></script>
+    <script type="module" src="../assets/scripts/dashboard.js"></script>
   </body>
 </html>

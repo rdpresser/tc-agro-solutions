@@ -79,7 +79,7 @@ export function isAuthenticated() {
 
 export function requireAuth() {
   if (!isAuthenticated()) {
-    window.location.href = 'index.html';
+    window.location.href = '/index.html';
     return false;
   }
 
@@ -98,7 +98,7 @@ export function requireAuth() {
 
 export function redirectIfAuthenticated() {
   if (isAuthenticated()) {
-    window.location.href = 'dashboard.html';
+    window.location.href = '/src/pages/dashboard.html';
     return true;
   }
   return false;
@@ -445,7 +445,7 @@ export function initSidebar() {
       e.preventDefault();
       if (window.confirm('Are you sure you want to logout?')) {
         clearToken();
-        window.location.href = 'index.html';
+        window.location.href = '/index.html';
       }
     });
   });
