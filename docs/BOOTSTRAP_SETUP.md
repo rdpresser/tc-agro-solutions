@@ -88,9 +88,12 @@ cd tc-agro-solutions
 This will:
 
 1. Create `services/` and `common/` directories
-2. Clone all 5 services
-3. Clone `common` repository
-4. Create `.env` file with local configuration
+2. Validate Git and Docker are installed
+3. Test internet connectivity
+4. Clone all 5 services
+5. Clone `common` repository
+6. Create `.env` file with local configuration
+7. **Verify all repositories were cloned successfully**
 
 ### 3️⃣ Open Solution
 
@@ -242,7 +245,7 @@ dotnet run
 Create a `docker-compose.yml` at project root to orchestrate local services:
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -300,6 +303,32 @@ Command 'docker' not found.
 
 **Solution:** Install Docker Desktop from https://www.docker.com/products/docker-desktop
 
+### Bootstrap shows "Nothing happens" for common repo
+
+If the script completes but `common/` folder is empty or missing:
+
+1. **Check internet connection:**
+   ```powershell
+   git ls-remote https://github.com/rdpresser/tc-agro-common.git
+   ```
+
+2. **Run bootstrap again with detailed output:**
+   ```powershell
+   .\scripts\bootstrap.ps1 -NoPull
+   ```
+   This skips existing repos and provides more detailed logging
+
+3. **Manual clone if needed:**
+   ```powershell
+   git clone https://github.com/rdpresser/tc-agro-common.git common
+   ```
+
+4. **Verify all repositories exist:**
+   ```powershell
+   dir services
+   dir common
+   ```
+
 ### Repo already exists - want to pull?
 
 Script asks interactively if you want to update existing repos:
@@ -315,13 +344,19 @@ Answer `y` to update or `n` to keep as is.
 
 ```
 ✗ Failed to clone identity-service
+Repository not accessible or does not exist
 ```
 
 **Check:**
 
-- Internet connection working
+- Internet connection is working and stable
 - Correct URLs in `scripts/bootstrap.ps1`
 - Repository access permissions
+- GitHub credentials if repository is private
+- Try running script again with `-NoPull` to skip existing repos:
+  ```powershell
+  .\scripts\bootstrap.ps1 -NoPull
+  ```
 
 ### PowerShell: Execution Policy
 
@@ -347,7 +382,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Common (1 shared repository)
 
-| Repository    | URL                                             | Local Folder |
+| Repository     | URL                                             | Local Folder |
 | -------------- | ----------------------------------------------- | ------------ |
 | tc-agro-common | https://github.com/rdpresser/tc-agro-common.git | `common`     |
 

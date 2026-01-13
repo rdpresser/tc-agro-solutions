@@ -58,13 +58,31 @@ function Ask-YesNo($question) {
 function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
     if (-not (Test-Path $targetPath)) {
         Write-Step "Cloning $repoName -> $targetPath"
-        git clone $repoUrl $targetPath
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "$repoName cloned"
+        
+        try {
+            # Test if repository is accessible
+            Write-Info "Testing repository connectivity..."
+            git ls-remote $repoUrl HEAD 2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error-Custom "Repository not accessible: $repoUrl"
+                throw "Repository $repoName is not accessible or does not exist"
+            }
+            
+            Write-Info "Repository is accessible, cloning now..."
+            git clone $repoUrl $targetPath
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "$repoName cloned successfully to $targetPath"
+            }
+            else {
+                Write-Error-Custom "Failed to clone $repoName"
+                throw "Clone of $repoName failed"
+            }
         }
-        else {
-            Write-Error-Custom "Failed to clone $repoName"
-            throw "Clone of $repoName failed"
+        catch {
+            Write-Error-Custom "Error cloning $repoName : $_"
+            throw
         }
     }
     else {
@@ -89,7 +107,7 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
                     Write-Success "$repoName updated to $defaultBranch"
                 }
                 catch {
-                    Write-Error-Custom "Failed to pull $repoName"
+                    Write-Error-Custom "Failed to pull $repoName : $_"
                 }
                 finally {
                     Pop-Location
@@ -206,6 +224,17 @@ Write-Success "Git found"
 Ensure-Command "docker"
 Write-Success "Docker found"
 
+# Test internet connectivity
+Write-Step "Testing internet connectivity..."
+try {
+    $testUrl = "https://github.com"
+    $null = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+    Write-Success "Internet connectivity verified"
+}
+catch {
+    Write-Warning "Could not verify internet connectivity. Make sure you have a working internet connection."
+}
+
 # ===========================
 # Create Directories
 # ===========================
@@ -286,6 +315,36 @@ Write-Info "    - dashboard-service/"
 Write-Info "  ✓ common/"
 Write-Info "  ✓ .env (local configuration)"
 
+# Verify folder structure
+Write-Step "Verifying cloned repositories..."
+
+$expectedFolders = @(
+    "services/identity-service",
+    "services/farm-service",
+    "services/sensor-ingest-service",
+    "services/analytics-worker",
+    "services/dashboard-service",
+    "common"
+)
+
+$allSuccess = $true
+foreach ($folder in $expectedFolders) {
+    $fullPath = Join-Path $rootPath $folder
+    if (Test-Path $fullPath) {
+        Write-Success "✓ $folder exists"
+    }
+    else {
+        Write-Error-Custom "✗ $folder NOT FOUND"
+        $allSuccess = $false
+    }
+}
+
+if (-not $allSuccess) {
+    Write-Warning "Some repositories are missing. Please check the errors above."
+    exit 1
+}
+
+Write-Info ""
 Write-Info "Next steps:"
 Write-Info "  1. Open tc-agro-solutions.sln in Visual Studio 2026"
 Write-Info "  2. Add service projects to solution"
