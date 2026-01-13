@@ -4,67 +4,88 @@ Agricultural monitoring platform with IoT, sensor data processing, alerts, and d
 
 **Deadline:** February 27, 2026  
 **Team:** 4 backend developers  
-**Architecture:** Microservices on AKS with Git submodules
+**Architecture:** Microservices with Bootstrap PowerShell script
 
 ---
 
-## 🎯 Quick Start
+## 🚀 Quick Start (Local Development)
 
-### Clone with All Services
-```bash
-git clone --recurse-submodules git@github.com:your-org/tc-agro-solutions.git
+### 1️⃣ Clone Repository
+```powershell
+git clone https://github.com/rdpresser/tc-agro-solutions.git
 cd tc-agro-solutions
-
-# Start local development environment
-docker-compose up -d
-
-# Verify all services are running
-curl http://localhost:5001/health  # Identity
-curl http://localhost:5002/health  # Farm
-curl http://localhost:5003/health  # Sensor Ingest
-curl http://localhost:5004/health  # Dashboard
 ```
 
-### Deploy to Azure
-```bash
-cd infrastructure
-terraform init
-terraform plan
-terraform apply
-
-# Deploy applications via ArgoCD (configured in Kubernetes)
+### 2️⃣ Run Bootstrap
+```powershell
+# Clone all services and common libraries automatically
+.\scripts\bootstrap.ps1
 ```
+
+This will:
+- Clone 5 microservices to `services/`
+- Clone common libraries to `common/`
+- Create `.env` with local configuration
+- Optionally start Docker Compose
+
+### 3️⃣ Open Solution
+```powershell
+# Open in Visual Studio 2026
+start tc-agro-solutions.sln
+```
+
+### 4️⃣ Start Infrastructure
+```powershell
+# Start PostgreSQL, Redis, RabbitMQ
+docker compose up -d
+```
+
+**For detailed setup instructions, see [📖 Bootstrap Setup Guide](./docs/BOOTSTRAP_SETUP.md)**
 
 ---
 
-## 📊 Solution Architecture
+## 🏗️ Solution Architecture
 
 ### Parent Repository (this repo)
 ```
 tc-agro-solutions/
+├── services/                # 🔄 Cloned by bootstrap.ps1
+│   ├── identity-service/
+│   ├── farm-service/
+│   ├── sensor-ingest-service/
+│   ├── analytics-worker/
+│   └── dashboard-service/
+├── common/                  # 🔄 Cloned by bootstrap.ps1
 ├── infrastructure/          # Terraform IaC for AKS
 ├── kubernetes/             # Kubernetes manifests
-├── scripts/                # Automation scripts
+├── scripts/
+│   └── bootstrap.ps1       # ⚙️ Setup automation
 ├── docs/                   # Architecture & ADRs
-└── docker-compose.yml      # Local development
+├── .env                    # 🔄 Created by bootstrap
+└── docker-compose.yml      # (To be created)
 ```
 
-### Service Repositories (Submodules)
-```
-services/
-├── agro-identity-service/          # Authentication & Authorization
-├── agro-farm-service/              # Properties & Plots management
-├── agro-sensor-ingest-service/     # Sensor data ingestion
-├── agro-analytics-worker/          # Rules & alerts processing
-└── agro-dashboard-service/         # Optimized dashboards & reads
+---
 
-common/
-├── agro-shared-library/            # Shared utilities & validators
-├── agro-domain-models/             # Domain entities & DTOs
-└── agro-integration-tests/         # Shared test fixtures
-```
+## � Service Repositories
 
-**See [GIT_SUBMODULES_STRATEGY.md](GIT_SUBMODULES_STRATEGY.md) for detailed structure and workflows.**
+### Microservices (5 independent repositories)
+
+| Service | Repository | Folder | Purpose |
+|---------|-----------|--------|---------|
+| **Identity** | tc-agro-identity-service | `services/identity-service` | Authentication & JWT |
+| **Farm** | tc-agro-farm-service | `services/farm-service` | Properties & Plots |
+| **Sensor Ingest** | tc-agro-sensor-ingest-service | `services/sensor-ingest-service` | Data ingestion API |
+| **Analytics Worker** | tc-agro-analytics-worker | `services/analytics-worker` | Rules & alerts |
+| **Dashboard** | tc-agro-dashboard-service | `services/dashboard-service` | Optimized reads |
+
+### Common Libraries
+
+| Repository | Folder | Purpose |
+|-----------|--------|---------|
+| **tc-agro-common** | `common/` | Shared utilities, validators, domain models |
+
+**All services are cloned automatically by `bootstrap.ps1`**
 
 ---
 
@@ -76,21 +97,25 @@ common/
 - **[🤖 Copilot Instructions](.github/copilot-instructions.md)** - Coding standards
 
 ### For Architects / Tech Leads
+## 📚 Documentation
+
+### Getting Started
+- **[🚀 Bootstrap Setup Guide](docs/BOOTSTRAP_SETUP.md)** - Quick setup with `bootstrap.ps1` ⭐ **START HERE**
+- **[🧑‍💻 Local Development](docs/development/local-setup.md)** - Detailed local environment guide
+
+### Architecture & Design
 - **[🗺️ Technical Roadmap](README_ROADMAP.md)** - Complete strategy, phases, deliverables
 - **[✅ Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)** - Hackathon spec → roadmap traceability
 - **[📋 Architectural Decision Records (ADRs)](docs/adr/)** - All decisions (001-007)
 - **[📊 C4 Diagrams](docs/architecture/)** - System context + container diagrams
 
-### For DevOps / Infrastructure
+### Infrastructure & Deployment
 - **[🏗️ Terraform Infrastructure Guide](docs/architecture/infrastructure-terraform.md)** - IaC implementation
 - **[⚙️ AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** - Performance + cost optimization
 - **[📖 Node Pool Quick Reference](terraform/AKS_NODE_POOLS_REFERENCE.md)** - Ready-to-use HCL
 
-### For Adding New Services
+### Development
 - **[📝 New Microservice Template](NEW_MICROSERVICE_TEMPLATE.md)** - Step-by-step checklist
-
-### For Git Submodules
-- **[🔗 Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)** - Complete setup & workflow guide
 
 ---
 

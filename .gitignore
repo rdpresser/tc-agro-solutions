@@ -1,0 +1,149 @@
+# ======================================================
+# TC Agro Solutions - .gitignore
+# ======================================================
+
+# Services & Common (clonados pelo bootstrap)
+# Esses são repositórios independentes gerenciados separadamente
+services/
+common/
+
+# ======================================================
+# Build & Runtime
+# ======================================================
+
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.user
+
+# Node.js / Frontend
+node_modules/
+dist/
+build/
+*.log
+package-lock.json
+
+# ======================================================
+# Environment & Secrets
+# ======================================================
+
+.env
+.env.local
+.env.*.local
+.env.production.local
+appsettings.Secrets.json
+secrets.json
+*.pem
+*.key
+
+# ======================================================
+# Infrastructure & Cloud
+# ======================================================
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/terraform.tfstate*
+*.tfstate
+*.tfstate.backup
+
+# Kubernetes
+.kube/
+kubeconfig
+*.kubeconfig
+
+# Docker
+.dockerignore
+.docker/
+
+# ======================================================
+# IDE & Editor
+# ======================================================
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# ======================================================
+# Logs & Temporary
+# ======================================================
+
+logs/
+*.log
+*.log.*
+tmp/
+temp/
+
+# ======================================================
+# OS Specific
+# ======================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ======================================================
+# Development Artifacts
+# ======================================================
+
+# Local Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# ======================================================
+# Project Specific
+# ======================================================
+
+# Local docker compose overrides
+docker-compose.override.yml
+
+# Local testing artifacts
+test-results/
+**/TestResults/
+
+# Build outputs (infrastructure)
+terraform/tfplan
+terraform/tfplan.json
+
+# API Documentation
+*.openapi.json
+swagger-ui/
