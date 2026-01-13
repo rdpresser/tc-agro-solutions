@@ -1,27 +1,28 @@
 # 🚀 Bootstrap Setup - TC Agro Solutions
 
-**Data:** January 13, 2026  
-**Versão:** 1.0  
+**Date:** January 13, 2026  
+**Version:** 1.0  
 **Status:** Production Ready
 
 ---
 
-## 📋 Visão Geral
+## 📋 Overview
 
-Este documento descreve como configurar o ambiente de desenvolvimento local do TC Agro Solutions usando o script **`bootstrap.ps1`**.
+This document describes how to set up your local development environment for TC Agro Solutions using the **`bootstrap.ps1`** script.
 
-O bootstrap automatiza:
-- ✅ Clone de todos os 5 microserviços (via HTTPS)
-- ✅ Clone do repositório `common` compartilhado
-- ✅ Criação de arquivo `.env` com configurações locais
-- ✅ Atualização de repositórios existentes (com confirmação)
-- ✅ Preparação da estrutura de pastas
+The bootstrap automates:
+
+- ✅ Clone of all 5 microservices (via HTTPS)
+- ✅ Clone of shared `common` libraries
+- ✅ Creation of `.env` file with local configuration
+- ✅ Update of existing repositories (with confirmation)
+- ✅ Preparation of folder structure
 
 ---
 
-## 🏗️ Arquitetura de Pastas
+## 🏗️ Folder Architecture
 
-Após bootstrap, a estrutura local será:
+After bootstrap, your local structure will be:
 
 ```
 tc-agro-solutions/
@@ -63,114 +64,98 @@ tc-agro-solutions/
 
 ## 🚀 Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
-- **Git** instalado
-- **Docker** instalado e rodando
-- **PowerShell 5.0+** (Windows) ou **PowerShell Core** (qualquer SO)
-- **Visual Studio 2026** (para abrir a solution)
+- **Git** installed
+- **Docker** installed and running
+- **PowerShell 5.0+** (Windows) or **PowerShell Core** (any OS)
+- **Visual Studio 2026** (to open solution)
 
-### 1️⃣ Clonar o Repositório
+### 1️⃣ Clone Repository
 
 ```powershell
 git clone https://github.com/rdpresser/tc-agro-solutions.git
 cd tc-agro-solutions
 ```
 
-### 2️⃣ Executar Bootstrap
+### 2️⃣ Run Bootstrap
 
 ```powershell
-# Executar com todos os defaults
+# Run with all defaults
 .\scripts\bootstrap.ps1
 ```
 
-Isso irá:
-1. Criar pastas `services/` e `common/`
-2. Clonar todos os 5 serviços
-3. Clonar o repositório `common`
-4. Criar arquivo `.env` com configurações padrão
-5. Oferecer para subir `docker-compose` (será criado manualmente)
+This will:
 
-### 3️⃣ Abrir Solution
+1. Create `services/` and `common/` directories
+2. Clone all 5 services
+3. Clone `common` repository
+4. Create `.env` file with local configuration
+
+### 3️⃣ Open Solution
 
 ```powershell
-# Abrir no Visual Studio
+# Open in Visual Studio
 start tc-agro-solutions.sln
 ```
 
-Ou abra manualmente com Visual Studio 2026 → File → Open → Solution
+Or manually open with Visual Studio 2026 → File → Open → Solution
 
-### 4️⃣ Adicionar Projetos à Solution
+### 4️⃣ Add Projects to Solution
 
-No Visual Studio, adicione os projetos dos serviços:
+In Visual Studio, add service projects:
 
 ```
 Right-click Solution → Add → Existing Project
 ```
 
-Adicione cada `.csproj`:
+Add each `.csproj`:
+
 - `services/identity-service/src/Agro.Identity.Api/Agro.Identity.Api.csproj`
 - `services/farm-service/src/Agro.Farm.Api/Agro.Farm.Api.csproj`
-- Etc...
+- And so on...
 
-### 5️⃣ Subir Infraestrutura
+### 5️⃣ Start Infrastructure
 
 ```powershell
-# Criar docker-compose.yml manualmente (será documentado separadamente)
-# Ou usar um template existente
-
+# Create docker-compose.yml manually (or use provided template)
 docker compose up -d
 ```
 
-Isso sobe:
-- PostgreSQL (porta 5432)
-- Redis (porta 6379)
-- RabbitMQ (portas 5672 e 15672)
+This starts:
+
+- PostgreSQL (port 5432)
+- Redis (port 6379)
+- RabbitMQ (ports 5672 and 15672)
 
 ---
 
-## ⚙️ Parâmetros do Script
+## ⚙️ Script Parameters
 
-### Executar com Defaults
+### Run with Defaults
 
 ```powershell
 .\scripts\bootstrap.ps1
 ```
 
-Clone/pull de tudo, pergunta sobre docker-compose.
+Clone/pull everything, interactive confirmation for existing repos.
 
-### Não fazer Pull em Repos Existentes
+### Do NOT Pull Existing Repos
 
 ```powershell
 .\scripts\bootstrap.ps1 -NoPull
 ```
 
-Se os serviços já existem, apenas skip o pull. Útil para CI/CD.
-
-### Não Subir Docker Compose
-
-```powershell
-.\scripts\bootstrap.ps1 -NoUp
-```
-
-Clona/pull tudo, mas não executa `docker compose up`.
-
-### Combinar Parâmetros
-
-```powershell
-.\scripts\bootstrap.ps1 -NoPull -NoUp
-```
-
-Apenas clona o que não existe, não atualiza nada.
+If services already exist, skip the pull. Useful for CI/CD.
 
 ---
 
-## 📝 Arquivo `.env` Gerado
+## 📝 Generated `.env` File
 
-O bootstrap cria um arquivo `.env` na raiz com configurações seguras para desenvolvimento:
+Bootstrap creates a `.env` file at root with safe local configuration:
 
 ```bash
-# Ambiente
+# Environment
 ASPNETCORE_ENVIRONMENT=Development
 
 # PostgreSQL
@@ -194,7 +179,7 @@ JWT_ISSUER=http://localhost:5001
 JWT_AUDIENCE=http://localhost:5000
 JWT_SECRET_KEY=your-256-bit-secret-key-change-in-production-12345678
 
-# Portas dos Serviços
+# Service Ports
 IDENTITY_HTTP_PORT=5001
 FARM_HTTP_PORT=5002
 SENSOR_INGEST_HTTP_PORT=5003
@@ -202,63 +187,94 @@ ANALYTICS_WORKER_HTTP_PORT=5004
 DASHBOARD_HTTP_PORT=5005
 ```
 
-⚠️ **Importante:** Este `.env` é apenas para desenvolvimento local. Em produção, use Azure Key Vault.
+⚠️ **Important:** This `.env` is for local development only. Use Azure Key Vault in production.
 
 ---
 
-## 🔄 Workflow Diário
+## 🔄 Daily Workflow
 
-### Atualizar Todos os Serviços
+### Update All Services
 
 ```powershell
 cd c:\Projects\tc-agro-solutions
 
-# Clonar/atualizar tudo com confirmação interativa
+# Clone/update everything with interactive confirmation
 .\scripts\bootstrap.ps1
 ```
 
-### Trabalhar em um Serviço Específico
+### Work on Specific Service
 
 ```powershell
-# Entrar na pasta do serviço
+# Enter service folder
 cd services\identity-service
 
-# Criar feature branch
+# Create feature branch
 git checkout -b feature/new-endpoint
 
-# Fazer mudanças
+# Make changes
 # ...
 
-# Commit e push
+# Commit and push
 git add .
 git commit -m "feat: add new endpoint"
 git push origin feature/new-endpoint
 
-# Voltar para raiz
+# Return to root
 cd ..\..
 ```
 
-### Testar Localmente (sem Docker)
+### Test Locally (without Docker)
 
 ```powershell
-# Entrar na pasta do serviço
+# Enter service folder
 cd services\identity-service\src\Agro.Identity.Api
 
-# Rodar diretamente
+# Run directly
 dotnet run
 
-# Será disponível em http://localhost:5001
+# Available at http://localhost:5001
 ```
 
 ---
 
-## 🐳 Docker Compose (Próximo Passo)
+## 🐳 Docker Compose
 
-O bootstrap **não cria** `docker-compose.yml` automaticamente. Você precisa:
+Create a `docker-compose.yml` at project root to orchestrate local services:
 
-1. **Criar manualmente** (ou usar template que será fornecido)
-2. **Adicionar os serviços** que foram clonados
-3. **Executar**:
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agro
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  postgres-data:
+```
+
+Then run:
 
 ```powershell
 docker compose up -d
@@ -268,47 +284,48 @@ docker compose up -d
 
 ## 🔧 Troubleshooting
 
-### Erro: Git não encontrado
+### Error: Git not found
 
 ```
-Comando 'git' não encontrado.
+Command 'git' not found.
 ```
 
-**Solução:** Instale Git do site https://git-scm.com/
+**Solution:** Install Git from https://git-scm.com/
 
-### Erro: Docker não encontrado
-
-```
-Comando 'docker' não encontrado.
-```
-
-**Solução:** Instale Docker Desktop de https://www.docker.com/products/docker-desktop
-
-### Repo já existe - quer fazer pull?
-
-O script pergunta interativamente se deseja atualizar repos existentes:
+### Error: Docker not found
 
 ```
-ℹ identity-service já existe em services/identity-service
-Deseja fazer pull (git pull origin main) em identity-service? (s/n): s
+Command 'docker' not found.
 ```
 
-Responda `s` para atualizar ou `n` para manter como está.
+**Solution:** Install Docker Desktop from https://www.docker.com/products/docker-desktop
 
-### Falha ao clonar um repo
+### Repo already exists - want to pull?
+
+Script asks interactively if you want to update existing repos:
 
 ```
-✗ Falha ao clonar identity-service
+ℹ identity-service already exists in services/identity-service
+Do you want to pull (git pull origin main) for identity-service? (y/n): y
 ```
 
-**Verificar:**
-- Conexão internet funcionando
-- URLs corretas em `scripts/bootstrap.ps1`
-- Permissões de acesso ao repositório
+Answer `y` to update or `n` to keep as is.
+
+### Failed to clone a repo
+
+```
+✗ Failed to clone identity-service
+```
+
+**Check:**
+
+- Internet connection working
+- Correct URLs in `scripts/bootstrap.ps1`
+- Repository access permissions
 
 ### PowerShell: Execution Policy
 
-Se receber erro sobre execution policy:
+If you get execution policy error:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -316,76 +333,77 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ---
 
-## 📚 Estrutura de Repositórios
+## 📚 Repository Structure
 
-### Services (5 repositórios independentes)
+### Services (5 independent repositories)
 
-| Repositório | URL | Pasta Local |
-|------------|-----|-------------|
-| tc-agro-identity-service | https://github.com/rdpresser/tc-agro-identity-service.git | `services/identity-service` |
-| tc-agro-farm-service | https://github.com/rdpresser/tc-agro-farm-service.git | `services/farm-service` |
+| Repository                    | URL                                                            | Local Folder                     |
+| ----------------------------- | -------------------------------------------------------------- | -------------------------------- |
+| tc-agro-identity-service      | https://github.com/rdpresser/tc-agro-identity-service.git      | `services/identity-service`      |
+| tc-agro-farm-service          | https://github.com/rdpresser/tc-agro-farm-service.git          | `services/farm-service`          |
 | tc-agro-sensor-ingest-service | https://github.com/rdpresser/tc-agro-sensor-ingest-service.git | `services/sensor-ingest-service` |
-| tc-agro-analytics-worker | https://github.com/rdpresser/tc-agro-analytics-worker.git | `services/analytics-worker` |
-| tc-agro-dashboard-service | https://github.com/rdpresser/tc-agro-dashboard-service.git | `services/dashboard-service` |
+| tc-agro-analytics-worker      | https://github.com/rdpresser/tc-agro-analytics-worker.git      | `services/analytics-worker`      |
+| tc-agro-dashboard-service     | https://github.com/rdpresser/tc-agro-dashboard-service.git     | `services/dashboard-service`     |
 
-### Common (1 repositório compartilhado)
+### Common (1 shared repository)
 
-| Repositório | URL | Pasta Local |
-|------------|-----|-------------|
-| tc-agro-common | https://github.com/rdpresser/tc-agro-common.git | `common` |
-
----
-
-## 🎯 Próximos Passos
-
-1. ✅ **Executar bootstrap**: `.\scripts\bootstrap.ps1`
-2. ✅ **Verificar estrutura**: `dir services`, `dir common`
-3. ✅ **Abrir solution**: `start tc-agro-solutions.sln`
-4. ✅ **Adicionar projetos** à solution (Add Existing Project)
-5. ⏳ **Criar docker-compose.yml** (será documentado)
-6. ⏳ **Executar**: `docker compose up -d`
-7. ⏳ **Testar APIs** com Swagger
+| Repository    | URL                                             | Local Folder |
+| -------------- | ----------------------------------------------- | ------------ |
+| tc-agro-common | https://github.com/rdpresser/tc-agro-common.git | `common`     |
 
 ---
 
-## 📖 Documentação Relacionada
+## 🎯 Next Steps
 
-- [Local Development Setup](./development/local-setup.md) - Ambiente local detalhado
-- [Architecture Decisions (ADRs)](./adr/) - Decisões arquiteturais
-- [README Principal](../README.md) - Overview do projeto
+1. ✅ **Run bootstrap**: `.\scripts\bootstrap.ps1`
+2. ✅ **Check structure**: `dir services`, `dir common`
+3. ✅ **Open solution**: `start tc-agro-solutions.sln`
+4. ✅ **Add projects** to solution (Add Existing Project)
+5. ⏳ **Create docker-compose.yml** (see template above)
+6. ⏳ **Run**: `docker compose up -d`
+7. ⏳ **Test APIs** with Swagger
+
+---
+
+## 📖 Related Documentation
+
+- [Local Development Setup](./development/local-setup.md) - Detailed local environment guide
+- [Architecture Decisions (ADRs)](./adr/) - Architectural decisions
+- [Main README](../README.md) - Project overview
 
 ---
 
 ## ❓ FAQ
 
-**P: Por que não usar Git Submodules?**  
-R: Submodules adicionam complexidade sem benefício significativo. O bootstrap em PowerShell é mais simples e idempotente.
+**Q: Why not use Git Submodules?**  
+A: Submodules add complexity without significant benefit. PowerShell bootstrap is simpler and idempotent.
 
-**P: E se um repositório estiver privado?**  
-R: O script usa HTTPS. Configure seu GitHub token via:
+**Q: What if a repository is private?**  
+A: Script uses HTTPS. Configure your GitHub token via:
+
 ```bash
 git config --global credential.helper wincred
 ```
 
-**P: Posso clonar só alguns serviços?**  
-R: Edite o array `$repos` no script `bootstrap.ps1` e remova os que não quer.
+**Q: Can I clone only some services?**  
+A: Edit the `$repos` array in `bootstrap.ps1` and remove unwanted ones.
 
-**P: Como fazer pull de novos commits?**  
-R: Execute o bootstrap novamente e responda `s` para pull.
+**Q: How do I pull new commits?**  
+A: Run bootstrap again and answer `y` to pull.
 
 ---
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
 1. Clone/pull via bootstrap
-2. Crie feature branch em um serviço
-3. Commit e push para seu fork
-4. Abra PR no repositório específico do serviço
-5. Após merge, volte à raiz e execute bootstrap para sincronizar
+2. Create feature branch in a service
+3. Commit and push to your fork
+4. Open PR in the specific service repository
+5. After merge, return to root and run bootstrap to sync
 
 ---
 
-> **Versão:** 1.0  
-> **Última atualização:** January 13, 2026  
+> **Version:** 1.0  
+> **Last Updated:** January 13, 2026  
 > **Status:** Production Ready  
-> **Próximo:** Criar docker-compose.yml centralizado
+> **Next:** Create docker-compose.yml template

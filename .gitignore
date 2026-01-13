@@ -2,8 +2,8 @@
 # TC Agro Solutions - .gitignore
 # ======================================================
 
-# Services & Common (clonados pelo bootstrap)
-# Esses são repositórios independentes gerenciados separadamente
+# Services & Common (cloned by bootstrap)
+# These are independent repositories managed separately
 services/
 common/
 

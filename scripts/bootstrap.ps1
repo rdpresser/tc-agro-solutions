@@ -1,12 +1,11 @@
 param(
-    [switch]$NoPull = $false,
-    [switch]$NoUp = $false
+    [switch]$NoPull = $false
 )
 
 $ErrorActionPreference = "Stop"
 
 # ===========================
-# FUNÇÕES AUXILIARES
+# HELPER FUNCTIONS
 # ===========================
 
 function Write-Header($msg) {
@@ -40,44 +39,46 @@ function Write-Error-Custom($msg) {
 
 function Ensure-Command($name) {
     if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
-        throw "Comando '$name' não encontrado. Instale e tente novamente."
+        throw "Command '$name' not found. Please install it and try again."
     }
 }
 
 function Ensure-Dir($path) {
     if (-not (Test-Path $path)) {
         New-Item -ItemType Directory -Path $path -Force | Out-Null
-        Write-Success "Pasta criada: $path"
+        Write-Success "Directory created: $path"
     }
 }
 
 function Ask-YesNo($question) {
-    $response = Read-Host "$question (s/n)"
-    return $response -eq 's'
+    $response = Read-Host "$question (y/n)"
+    return $response -eq 'y'
 }
 
 function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
     if (-not (Test-Path $targetPath)) {
-        Write-Step "Clonando $repoName -> $targetPath"
+        Write-Step "Cloning $repoName -> $targetPath"
         git clone $repoUrl $targetPath
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "$repoName clonado"
-        } else {
-            Write-Error-Custom "Falha ao clonar $repoName"
-            throw "Clone de $repoName falhou"
+            Write-Success "$repoName cloned"
         }
-    } else {
-        Write-Info "$repoName já existe em $targetPath"
+        else {
+            Write-Error-Custom "Failed to clone $repoName"
+            throw "Clone of $repoName failed"
+        }
+    }
+    else {
+        Write-Info "$repoName already exists in $targetPath"
         
         if (-not $NoPull) {
-            if (Ask-YesNo "Deseja fazer pull (git pull origin main) em $repoName?") {
-                Write-Step "Atualizando $repoName com pull..."
+            if (Ask-YesNo "Do you want to pull (git pull origin main) for $repoName?") {
+                Write-Step "Updating $repoName with pull..."
                 Push-Location $targetPath
                 
                 try {
                     git fetch origin --prune
                     
-                    # Verifica qual branch padrão (main ou master)
+                    # Checks which default branch (main or master)
                     $branches = git branch -r
                     $hasMain = $branches | Select-String "origin/main"
                     $defaultBranch = if ($hasMain) { "main" } else { "master" }
@@ -85,17 +86,21 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
                     git checkout $defaultBranch 2>$null | Out-Null
                     git pull origin $defaultBranch
                     
-                    Write-Success "$repoName atualizado para $defaultBranch"
-                } catch {
-                    Write-Error-Custom "Falha ao fazer pull em $repoName"
-                } finally {
+                    Write-Success "$repoName updated to $defaultBranch"
+                }
+                catch {
+                    Write-Error-Custom "Failed to pull $repoName"
+                }
+                finally {
                     Pop-Location
                 }
-            } else {
-                Write-Info "Pull skipped para $repoName"
             }
-        } else {
-            Write-Info "Pull desabilitado (--NoPull)"
+            else {
+                Write-Info "Pull skipped for $repoName"
+            }
+        }
+        else {
+            Write-Info "Pull disabled (--NoPull)"
         }
     }
 }
@@ -104,14 +109,14 @@ function Ensure-DotEnv($rootPath) {
     $envPath = Join-Path $rootPath ".env"
     
     if (-not (Test-Path $envPath)) {
-        Write-Step "Criando arquivo .env"
+        Write-Step "Creating .env file"
         
         $envContent = @"
 # =====================================================
-# TC Agro Solutions - Configuração Local
+# TC Agro Solutions - Local Configuration
 # =====================================================
 
-# Ambiente
+# Environment
 ASPNETCORE_ENVIRONMENT=Development
 ASPNETCORE_URLS=http://0.0.0.0:5000
 
@@ -124,7 +129,7 @@ POSTGRES_DB=agro
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 
-# Connection String para .NET (opcional, construído pelos serviços)
+# Connection String for .NET (optional, built by services)
 # DefaultConnection=Host=postgres;Port=5432;Database=agro;Username=postgres;Password=postgres
 
 # =====================================================
@@ -144,7 +149,7 @@ RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
 
 # =====================================================
-# Serviços - Portas HTTP
+# Services - HTTP Ports
 # =====================================================
 IDENTITY_HTTP_PORT=5001
 FARM_HTTP_PORT=5002
@@ -153,7 +158,7 @@ ANALYTICS_WORKER_HTTP_PORT=5004
 DASHBOARD_HTTP_PORT=5005
 
 # =====================================================
-# JWT / Autenticação
+# JWT / Authentication
 # =====================================================
 JWT_ISSUER=http://localhost:5001
 JWT_AUDIENCE=http://localhost:5000
@@ -172,51 +177,52 @@ COMPOSE_PROJECT_NAME=tc-agro-solutions
 "@
         
         Set-Content -Path $envPath -Value $envContent -Encoding UTF8
-        Write-Success ".env criado: $envPath"
-    } else {
-        Write-Info ".env já existe"
+        Write-Success ".env created: $envPath"
+    }
+    else {
+        Write-Info ".env already exists"
     }
 }
 
 # ===========================
-# EXECUÇÃO PRINCIPAL
+# MAIN EXECUTION
 # ===========================
 
 Write-Header "TC Agro Solutions - Bootstrap"
 
-# Resolve caminho para a raiz do projeto (um nível acima de scripts/)
+# Resolve path to project root (one level above scripts/)
 $rootPath = Resolve-Path (Join-Path $PSScriptRoot "..")
 
-Write-Info "Raiz do projeto: $rootPath"
+Write-Info "Project root: $rootPath"
 
 # ===========================
-# Validar Pré-requisitos
+# Validate Prerequisites
 # ===========================
-Write-Step "Validando pré-requisitos"
+Write-Step "Validating prerequisites"
 
 Ensure-Command "git"
-Write-Success "Git encontrado"
+Write-Success "Git found"
 
 Ensure-Command "docker"
-Write-Success "Docker encontrado"
+Write-Success "Docker found"
 
 # ===========================
-# Criar Pastas
+# Create Directories
 # ===========================
-Write-Step "Preparando estrutura de pastas"
+Write-Step "Preparing folder structure"
 
 Ensure-Dir (Join-Path $rootPath "services")
 Ensure-Dir (Join-Path $rootPath "common")
 
 # ===========================
-# Criar .env
+# Create .env
 # ===========================
 Ensure-DotEnv $rootPath
 
 # ===========================
-# Clonar/Atualizar Repositórios
+# Clone/Update Repositories
 # ===========================
-Write-Step "Clonando/atualizando repositórios de serviços"
+Write-Step "Cloning/updating service repositories"
 
 $repos = @(
     @{
@@ -252,9 +258,9 @@ foreach ($repo in $repos) {
 }
 
 # ===========================
-# Clonar/Atualizar Common
+# Clone/Update Common
 # ===========================
-Write-Step "Clonando/atualizando repositório common"
+Write-Step "Cloning/updating common repository"
 
 $commonRepo = @{
     name = "common"
@@ -266,11 +272,11 @@ $commonFullPath = Join-Path $rootPath $commonRepo.path
 Clone-Or-Pull-Repo $commonRepo.url $commonFullPath $commonRepo.name
 
 # ===========================
-# Resumo Final
+# Final Summary
 # ===========================
-Write-Header "Bootstrap Concluído com Sucesso"
+Write-Header "Bootstrap Complete"
 
-Write-Info "Estrutura criada:"
+Write-Info "Structure created:"
 Write-Info "  ✓ services/"
 Write-Info "    - identity-service/"
 Write-Info "    - farm-service/"
@@ -278,38 +284,14 @@ Write-Info "    - sensor-ingest-service/"
 Write-Info "    - analytics-worker/"
 Write-Info "    - dashboard-service/"
 Write-Info "  ✓ common/"
-Write-Info "  ✓ .env (configuração local)"
+Write-Info "  ✓ .env (local configuration)"
 
-Write-Info "Próximos passos:"
-Write-Info "  1. Abrir tc-agro-solutions.sln no Visual Studio 2026"
-Write-Info "  2. Adicionar projetos dos serviços à solution"
-Write-Info "  3. Configurar docker-compose.yml com os serviços"
-Write-Info "  4. Rodar: docker compose up -d"
-
-if (-not $NoUp) {
-    Write-Host ""
-    if (Ask-YesNo "Deseja subir docker-compose agora?") {
-        Write-Step "Subindo docker-compose..."
-        Push-Location $rootPath
-        
-        try {
-            docker compose up -d
-            Write-Success "Docker Compose subido"
-            Write-Info "Acesse:"
-            Write-Info "  - PostgreSQL: localhost:5432"
-            Write-Info "  - Redis: localhost:6379"
-            Write-Info "  - RabbitMQ Management: http://localhost:15672 (guest/guest)"
-        } catch {
-            Write-Error-Custom "Falha ao subir docker-compose"
-            Write-Warning "Execute manualmente: docker compose up -d"
-        } finally {
-            Pop-Location
-        }
-    }
-} else {
-    Write-Info "Docker Compose não foi subido (--NoUp)"
-}
+Write-Info "Next steps:"
+Write-Info "  1. Open tc-agro-solutions.sln in Visual Studio 2026"
+Write-Info "  2. Add service projects to solution"
+Write-Info "  3. Create docker-compose.yml with services"
+Write-Info "  4. Run: docker compose up -d"
 
 Write-Host ""
-Write-Host "✅ Ambiente pronto para desenvolvimento!" -ForegroundColor Green
+Write-Host "✅ Environment ready for development!" -ForegroundColor Green
 Write-Host ""

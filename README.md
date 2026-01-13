@@ -11,30 +11,34 @@ Agricultural monitoring platform with IoT, sensor data processing, alerts, and d
 ## 🚀 Quick Start (Local Development)
 
 ### 1️⃣ Clone Repository
+
 ```powershell
 git clone https://github.com/rdpresser/tc-agro-solutions.git
 cd tc-agro-solutions
 ```
 
 ### 2️⃣ Run Bootstrap
+
 ```powershell
 # Clone all services and common libraries automatically
 .\scripts\bootstrap.ps1
 ```
 
 This will:
+
 - Clone 5 microservices to `services/`
 - Clone common libraries to `common/`
 - Create `.env` with local configuration
-- Optionally start Docker Compose
 
 ### 3️⃣ Open Solution
+
 ```powershell
 # Open in Visual Studio 2026
 start tc-agro-solutions.sln
 ```
 
 ### 4️⃣ Start Infrastructure
+
 ```powershell
 # Start PostgreSQL, Redis, RabbitMQ
 docker compose up -d
@@ -47,6 +51,7 @@ docker compose up -d
 ## 🏗️ Solution Architecture
 
 ### Parent Repository (this repo)
+
 ```
 tc-agro-solutions/
 ├── services/                # 🔄 Cloned by bootstrap.ps1
@@ -71,18 +76,18 @@ tc-agro-solutions/
 
 ### Microservices (5 independent repositories)
 
-| Service | Repository | Folder | Purpose |
-|---------|-----------|--------|---------|
-| **Identity** | tc-agro-identity-service | `services/identity-service` | Authentication & JWT |
-| **Farm** | tc-agro-farm-service | `services/farm-service` | Properties & Plots |
-| **Sensor Ingest** | tc-agro-sensor-ingest-service | `services/sensor-ingest-service` | Data ingestion API |
-| **Analytics Worker** | tc-agro-analytics-worker | `services/analytics-worker` | Rules & alerts |
-| **Dashboard** | tc-agro-dashboard-service | `services/dashboard-service` | Optimized reads |
+| Service              | Repository                    | Folder                           | Purpose              |
+| -------------------- | ----------------------------- | -------------------------------- | -------------------- |
+| **Identity**         | tc-agro-identity-service      | `services/identity-service`      | Authentication & JWT |
+| **Farm**             | tc-agro-farm-service          | `services/farm-service`          | Properties & Plots   |
+| **Sensor Ingest**    | tc-agro-sensor-ingest-service | `services/sensor-ingest-service` | Data ingestion API   |
+| **Analytics Worker** | tc-agro-analytics-worker      | `services/analytics-worker`      | Rules & alerts       |
+| **Dashboard**        | tc-agro-dashboard-service     | `services/dashboard-service`     | Optimized reads      |
 
 ### Common Libraries
 
-| Repository | Folder | Purpose |
-|-----------|--------|---------|
+| Repository         | Folder    | Purpose                                     |
+| ------------------ | --------- | ------------------------------------------- |
 | **tc-agro-common** | `common/` | Shared utilities, validators, domain models |
 
 **All services are cloned automatically by `bootstrap.ps1`**
@@ -92,29 +97,35 @@ tc-agro-solutions/
 ## 🏗️ Key Documentation
 
 ### For Developers (First Time)
+
 - **[⚡ Quick Start (5 min)](QUICK_START_SUBMODULES.md)** - Clone and run immediately
 - **[🐳 Local Development Setup](docs/development/local-setup.md)** - Docker Compose guide
 - **[🤖 Copilot Instructions](.github/copilot-instructions.md)** - Coding standards
 
 ### For Architects / Tech Leads
+
 ## 📚 Documentation
 
 ### Getting Started
+
 - **[🚀 Bootstrap Setup Guide](docs/BOOTSTRAP_SETUP.md)** - Quick setup with `bootstrap.ps1` ⭐ **START HERE**
 - **[🧑‍💻 Local Development](docs/development/local-setup.md)** - Detailed local environment guide
 
 ### Architecture & Design
+
 - **[🗺️ Technical Roadmap](README_ROADMAP.md)** - Complete strategy, phases, deliverables
 - **[✅ Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)** - Hackathon spec → roadmap traceability
 - **[📋 Architectural Decision Records (ADRs)](docs/adr/)** - All decisions (001-007)
 - **[📊 C4 Diagrams](docs/architecture/)** - System context + container diagrams
 
 ### Infrastructure & Deployment
+
 - **[🏗️ Terraform Infrastructure Guide](docs/architecture/infrastructure-terraform.md)** - IaC implementation
 - **[⚙️ AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** - Performance + cost optimization
 - **[📖 Node Pool Quick Reference](terraform/AKS_NODE_POOLS_REFERENCE.md)** - Ready-to-use HCL
 
 ### Development
+
 - **[📝 New Microservice Template](NEW_MICROSERVICE_TEMPLATE.md)** - Step-by-step checklist
 
 ---
@@ -122,6 +133,7 @@ tc-agro-solutions/
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Language:** C# / .NET 9
 - **Framework:** FastEndpoints (not MVC Controllers)
 - **ORM:** Entity Framework Core 9
@@ -129,6 +141,7 @@ tc-agro-solutions/
 - **Pattern:** Pragmatic CQRS (no full event sourcing)
 
 ### Cloud Infrastructure
+
 - **Orchestration:** Azure Kubernetes Service (AKS)
 - **Database:** Azure PostgreSQL Flexible Server + TimescaleDB
 - **Cache:** Azure Redis Cache
@@ -137,6 +150,7 @@ tc-agro-solutions/
 - **Observability:** Application Insights + Log Analytics
 
 ### Local Development
+
 - **Orchestration:** Docker Compose
 - **Database:** PostgreSQL 16
 - **Cache:** Redis 7
@@ -146,40 +160,45 @@ tc-agro-solutions/
 
 ## 📅 Development Timeline (Phase 5)
 
-| Phase | Duration | Focus |
-|-------|----------|-------|
-| **Phase 0** | Week 1 | Infra setup, code structure, local environment |
-| **Phase 1** | Weeks 1-2 | Domain structure, API design, database schema |
+| Phase       | Duration  | Focus                                            |
+| ----------- | --------- | ------------------------------------------------ |
+| **Phase 0** | Week 1    | Infra setup, code structure, local environment   |
+| **Phase 1** | Weeks 1-2 | Domain structure, API design, database schema    |
 | **Phase 2** | Weeks 2-3 | Data modeling, performance testing, aggregations |
-| **Phase 3** | Weeks 3-4 | Ingestion endpoints, alerts worker, dashboards |
-| **Phase 4** | Weeks 4-5 | Code quality, observability, testing |
-| **Phase 5** | Weeks 5-6 | Integrated demo, dashboards, presentation |
+| **Phase 3** | Weeks 3-4 | Ingestion endpoints, alerts worker, dashboards   |
+| **Phase 4** | Weeks 4-5 | Code quality, observability, testing             |
+| **Phase 5** | Weeks 5-6 | Integrated demo, dashboards, presentation        |
 
 ---
 
 ## 🚀 Microservices
 
 ### 🔐 Agro.Identity.Api
+
 Authentication, authorization, user management via JWT tokens.
 
 **Repo:** `git@github.com:your-org/agro-identity-service.git`
 
 ### 🌾 Agro.Farm.Api
+
 Properties, plots, sensors management (CRUD with caching).
 
 **Repo:** `git@github.com:your-org/agro-farm-service.git`
 
 ### 📡 Agro.Sensor.Ingest.Api
+
 Receives sensor data, validates, persists to TimescaleDB, publishes events.
 
 **Repo:** `git@github.com:your-org/agro-sensor-ingest-service.git`
 
 ### 📈 Agro.Analytics.Worker
+
 Consumes events, applies rules, generates alerts (background worker).
 
 **Repo:** `git@github.com:your-org/agro-analytics-worker.git`
 
 ### 📊 Agro.Dashboard.Api
+
 Optimized queries, aggregations, caching for dashboards.
 
 **Repo:** `git@github.com:your-org/agro-dashboard-service.git`
@@ -189,6 +208,7 @@ Optimized queries, aggregations, caching for dashboards.
 ## 💾 Data Model
 
 ### Core Tables
+
 ```
 Identity
 ├── Users (email, password_hash, status)
@@ -214,17 +234,20 @@ Analytics
 ## 🔗 Git Submodules Quick Guide
 
 ### Clone Everything
+
 ```bash
 git clone --recurse-submodules git@github.com:your-org/tc-agro-solutions.git
 cd tc-agro-solutions
 ```
 
 ### Update All Services
+
 ```bash
 git submodule update --remote
 ```
 
 ### Work on a Service
+
 ```bash
 cd services/agro-identity-service
 git checkout -b feature/new-feature
@@ -246,11 +269,11 @@ git commit -m "chore: update identity service"
 
 Three optimized node pools for stability, performance, and cost:
 
-| Pool | SKU | Min-Max | Workload |
-|------|-----|---------|----------|
-| **system** | B2ms (8GB) | 1-2 | Kubernetes infrastructure |
-| **platform** | B2s (4GB) | 1-3 | ArgoCD, Ingress, cert-manager |
-| **worker** | B2s (4GB) | 2-5 | .NET APIs, workers |
+| Pool         | SKU        | Min-Max | Workload                      |
+| ------------ | ---------- | ------- | ----------------------------- |
+| **system**   | B2ms (8GB) | 1-2     | Kubernetes infrastructure     |
+| **platform** | B2s (4GB)  | 1-3     | ArgoCD, Ingress, cert-manager |
+| **worker**   | B2s (4GB)  | 2-5     | .NET APIs, workers            |
 
 **Est. Cost:** $375–575/month  
 **Details:** [ADR-007: AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)
@@ -260,15 +283,19 @@ Three optimized node pools for stability, performance, and cost:
 ## 🔐 Security
 
 ### JWT Authentication
+
 All APIs protected with JWT Bearer tokens (except login endpoint).
 
 ### Validation
+
 FluentValidation on all endpoints.
 
 ### Secrets Management
+
 Azure Key Vault for production secrets.
 
 ### Network
+
 - APIs behind Ingress Controller
 - Service-to-service via Kubernetes DNS
 - External requests only via Ingress
@@ -278,15 +305,18 @@ Azure Key Vault for production secrets.
 ## 📈 Observability
 
 ### Application Insights
+
 - Custom metrics (ingestion rate, processing time)
 - Distributed tracing (correlation IDs)
 - Dependency tracking
 
 ### Log Analytics
+
 - Centralized logs from all services
 - KQL queries for analysis
 
 ### Azure Monitor Workbooks
+
 - Real-time system health dashboard
 - Alert status and trends
 - Query performance metrics
@@ -296,15 +326,19 @@ Azure Key Vault for production secrets.
 ## 🧪 Testing
 
 ### Unit Tests
+
 xUnit with NSubstitute/Moq for each service.
 
 ### Integration Tests
+
 API endpoint tests with in-memory database.
 
 ### Load Tests
+
 k6 simulating 100+ sensors with continuous readings.
 
 ### Smoke Tests
+
 Automated post-deployment validation.
 
 ---
@@ -338,18 +372,21 @@ docs/
 ## 🚀 Getting Started
 
 ### For Developers
+
 1. Clone solution: `git clone --recurse-submodules <url>`
 2. Start local env: `docker-compose up -d`
 3. Read [Local Development Setup](docs/development/local-setup.md)
 4. Check [Copilot Instructions](.github/copilot-instructions.md)
 
 ### For DevOps/Infrastructure
+
 1. Review [Terraform Guide](docs/architecture/infrastructure-terraform.md)
 2. Read [Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)
 3. Check [Node Pool Reference](terraform/AKS_NODE_POOLS_REFERENCE.md)
 4. Deploy: `cd infrastructure && terraform apply`
 
 ### For Team Leads
+
 1. Review [Technical Roadmap](README_ROADMAP.md)
 2. Check [Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)
 3. Review all [ADRs](docs/adr/) for decision context
@@ -359,6 +396,7 @@ docs/
 ## 🔄 Workflow Examples
 
 ### Adding a New Microservice
+
 1. Create new repository: `agro-new-service`
 2. Add as submodule: `git submodule add git@github.com:org/agro-new-service.git services/agro-new-service`
 3. Add Kubernetes manifest in `infrastructure/kubernetes/`
@@ -366,12 +404,14 @@ docs/
 5. Commit: `git add . && git commit -m "feat: add new microservice"`
 
 ### Deploying a Service Update
+
 1. Developer creates PR in service repo
 2. Service repo CI/CD runs tests, builds Docker image
 3. After merge, parent repo is updated via: `git submodule update --remote`
 4. ArgoCD detects new image and rolls out to AKS
 
 ### Local Development with Service Changes
+
 ```bash
 # Clone solution
 git clone --recurse-submodules <url>
@@ -393,11 +433,13 @@ docker-compose up -d agro-farm-service
 ## 🤝 Contributing
 
 ### Branch Naming
+
 - Feature: `feature/description`
 - Bugfix: `bugfix/description`
 - Hotfix: `hotfix/description`
 
 ### Commit Messages
+
 ```
 feat: add new endpoint
 fix: resolve timeout issue
@@ -408,6 +450,7 @@ test: add integration test
 ```
 
 ### Code Review
+
 - All changes via pull request
 - Minimum 1 approval required
 - CI/CD must pass
@@ -418,12 +461,14 @@ test: add integration test
 ## 📞 Support & Resources
 
 ### Documentation
+
 - [Technical Roadmap](README_ROADMAP.md)
 - [Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)
 - [All ADRs](docs/adr/)
 - [Copilot Instructions](.github/copilot-instructions.md)
 
 ### External Resources
+
 - [FastEndpoints](https://fast-endpoints.com/)
 - [Wolverine](https://wolverine.netlify.app/)
 - [TimescaleDB](https://docs.timescale.com/)
