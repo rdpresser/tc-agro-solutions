@@ -305,29 +305,27 @@ Command 'docker' not found.
 
 ### Bootstrap shows "Nothing happens" for common repo
 
-If the script completes but `common/` folder is empty or missing:
+**Symptom:** Script says "common already exists" and offers pull, but folder is empty or has no git repository.
 
-1. **Check internet connection:**
-   ```powershell
-   git ls-remote https://github.com/rdpresser/tc-agro-common.git
-   ```
+**Root Cause (FIXED in v1.1):** Previous bootstrap versions pre-created an empty `common` folder. When the script tried to clone, it detected the folder exists and offered pull instead - but pull fails on an empty folder.
 
-2. **Run bootstrap again with detailed output:**
-   ```powershell
-   .\scripts\bootstrap.ps1 -NoPull
-   ```
-   This skips existing repos and provides more detailed logging
+**Solution:**
 
-3. **Manual clone if needed:**
-   ```powershell
-   git clone https://github.com/rdpresser/tc-agro-common.git common
-   ```
+```powershell
+# Delete the empty/invalid common folder
+Remove-Item -Recurse -Force common
 
-4. **Verify all repositories exist:**
-   ```powershell
-   dir services
-   dir common
-   ```
+# Run bootstrap again - will clone properly now
+.\scripts\bootstrap.ps1
+```
+
+**What's different in v1.1+:** Bootstrap no longer pre-creates the `common` folder. It lets `git clone` create it automatically, preventing this issue.
+
+**Alternative - Manual clone:**
+
+```powershell
+git clone https://github.com/rdpresser/tc-agro-common.git common
+```
 
 ### Repo already exists - want to pull?
 

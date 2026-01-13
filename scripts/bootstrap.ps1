@@ -86,6 +86,16 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
         }
     }
     else {
+        # Check if it's a valid git repository
+        $gitPath = Join-Path $targetPath ".git"
+        
+        if (-not (Test-Path $gitPath)) {
+            Write-Error-Custom "$repoName folder exists but is not a valid git repository (missing .git folder)"
+            Write-Warning "Please delete $targetPath and run bootstrap again, or manually clone:"
+            Write-Warning "  git clone $repoUrl $targetPath"
+            throw "Invalid repository state for $repoName"
+        }
+        
         Write-Info "$repoName already exists in $targetPath"
         
         if (-not $NoPull) {
@@ -187,11 +197,6 @@ JWT_EXPIRATION_MINUTES=480
 # Logging
 # =====================================================
 LOG_LEVEL=Information
-
-# =====================================================
-# Docker
-# =====================================================
-COMPOSE_PROJECT_NAME=tc-agro-solutions
 "@
         
         Set-Content -Path $envPath -Value $envContent -Encoding UTF8
@@ -241,7 +246,7 @@ catch {
 Write-Step "Preparing folder structure"
 
 Ensure-Dir (Join-Path $rootPath "services")
-Ensure-Dir (Join-Path $rootPath "common")
+# Note: 'common' folder will be created by git clone
 
 # ===========================
 # Create .env
