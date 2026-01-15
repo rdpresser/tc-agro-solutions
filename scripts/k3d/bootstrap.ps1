@@ -15,7 +15,8 @@
   - Tempo
   - OpenTelemetry Collector
   - KEDA
-  - Ingress NGINX
+  
+  Note: Traefik is k3s built-in (no Helm install needed)
   
   Total cluster RAM: 20GB (Server 2GB + System 4GB + Platform 6GB + Apps 8GB)
   Note: Agents created individually to allow different memory per node pool
