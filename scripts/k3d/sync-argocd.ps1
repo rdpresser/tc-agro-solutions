@@ -39,7 +39,7 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 # Check ArgoCD is installed
-$argocdCheck = kubectl get ns argocd -q 2>$null
+$argocdCheck = kubectl get ns argocd --no-headers 2>$null
 if (-not $argocdCheck) {
     Write-Host "❌ ArgoCD not found in cluster" -ForegroundColor $Color.Error
     Write-Host "   Run: .\bootstrap.ps1 first" -ForegroundColor $Color.Warning
@@ -54,16 +54,16 @@ $applications = @()
 
 switch ($Target) {
     "all" {
-        Write-Host "🔄 Syncing ALL applications..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap", "app-frontend")
+        Write-Host "Syncing ALL applications..." -ForegroundColor $Color.Info
+        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx")
     }
     "platform" {
-        Write-Host "🔄 Syncing PLATFORM components..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap")
+        Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
+        $applications = @("platform-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx")
     }
     "apps" {
-        Write-Host "🔄 Syncing APPLICATION components..." -ForegroundColor $Color.Info
-        $applications = @("app-frontend")
+        Write-Host "Syncing APPLICATION components..." -ForegroundColor $Color.Info
+        $applications = @("apps-bootstrap")
     }
 }
 
@@ -76,10 +76,10 @@ foreach ($app in $applications) {
     Write-Host "Syncing: $app" -ForegroundColor $Color.Warning
     
     # Check if application exists
-    $appExists = kubectl get application $app -n argocd -q 2>$null
+    $appExists = kubectl get application $app -n argocd --no-headers 2>$null
     
     if (-not $appExists) {
-        Write-Host "  ⚠️  Application not found: $app" -ForegroundColor $Color.Warning
+        Write-Host "  Application not found: $app" -ForegroundColor $Color.Warning
         $failedCount++
         continue
     }

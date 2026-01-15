@@ -3,6 +3,31 @@
 # Log aggregation stack
 # Target: k3d cluster with "system" node pool
 
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  nodeSelector:
+    agentpool: system
+  
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+  
+  persistence:
+    enabled: true
+    size: 2Gi
+
 loki:
   auth_enabled: false
   
@@ -24,24 +49,3 @@ loki:
   
   limits_config:
     retention_period: 12h
-  
-  persistence:
-    enabled: true
-    size: 2Gi
-  
-  resources:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-  
-  nodeSelector:
-    agentpool: system
-  
-  tolerations:
-    - key: "agentpool"
-      operator: "Equal"
-      value: "system"
-      effect: "NoSchedule"
