@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Minimal bootstrap script that ONLY:
-  1. Creates k3d cluster (1 server + 2 agents with AKS-like node pools)
+  1. Creates k3d cluster (1 server + 3 agents with AKS-like node pools)
   2. Installs ArgoCD via Helm
   3. Applies ArgoCD bootstrap Application (App-of-apps)
   4. Applies platform Project
@@ -17,7 +17,8 @@
   - KEDA
   - Ingress NGINX
   
-  Total cluster RAM: 18GB (Server 2GB + System 6GB + Apps 10GB)
+  Total cluster RAM: 20GB (Server 2GB + System 4GB + Platform 6GB + Apps 8GB)
+  Note: Agents created individually to allow different memory per node pool
 
 .NOTES
   Requirements: k3d v5.x+, kubectl, helm, docker
@@ -35,10 +36,12 @@ $clusterName = "dev"
 $registryName = "localhost"
 $registryPort = 5000
 
-# Node resource allocation (18GB total)
+# Node resource allocation (20GB total)
+# Creating agents individually allows different memory per node pool
 $serverMemory = "2g"
-$systemAgentMemory = "6g"
-$appsAgentMemory = "10g"
+$systemAgentMemory = "4g"    # agent-0: kube-system, CoreDNS, CNI, CSI
+$platformAgentMemory = "6g"  # agent-1: ArgoCD, Ingress, cert-manager
+$appsAgentMemory = "8g"       # agent-2: .NET microservices
 
 # ArgoCD config
 $argocdNamespace = "argocd"
@@ -116,15 +119,23 @@ function Remove-ExistingCluster {
 }
 
 function New-K3dCluster {
-    Write-Step "Creating k3d cluster (1 server + 2 agents)"
+    Write-Step "Creating k3d cluster (1 server, agents added separately)"
+    Write-Host "   💾 Target memory allocation per node pool:" -ForegroundColor $Color.Info
+    Write-Host "      Server: $serverMemory (control plane)" -ForegroundColor $Color.Muted
+    Write-Host "      System: $systemAgentMemory (agent-0)" -ForegroundColor $Color.Muted
+    Write-Host "      Platform: $platformAgentMemory (agent-1)" -ForegroundColor $Color.Muted
+    Write-Host "      Apps: $appsAgentMemory (agent-2)" -ForegroundColor $Color.Muted
+    Write-Host "      Total: 20GB (2+4+6+8)" -ForegroundColor $Color.Success
+    Write-Host ""
     
+    # Step 1: Create cluster WITHOUT agents (we'll add them individually)
+    Write-Host "   Step 1/2: Creating server node..." -ForegroundColor $Color.Info
     k3d cluster create $clusterName `
         --servers 1 `
-        --agents 2 `
+        --agents 0 `
         --port "80:80@loadbalancer" `
         --port "443:443@loadbalancer" `
         --servers-memory $serverMemory `
-        --agents-memory $appsAgentMemory `
         --registry-use "$registryName`:$registryPort" 2>&1 | Out-Null
     
     if ($LASTEXITCODE -ne 0) {
@@ -132,12 +143,58 @@ function New-K3dCluster {
         exit 1
     }
     
-    Write-Host "   Waiting for cluster initialization..." -ForegroundColor $Color.Muted
-    Start-Sleep -Seconds 15
+    Write-Host "   ✅ Server node created" -ForegroundColor $Color.Success
+    Write-Host ""
+    
+    # Step 2: Add agents individually with specific memory
+    Write-Host "   Step 2/2: Adding agent nodes with specific memory..." -ForegroundColor $Color.Info
+    
+    # Agent 0 - System pool (4GB)
+    Write-Host "      Creating agent-0 (system pool, 4GB)..." -ForegroundColor $Color.Muted
+    k3d node create "$clusterName-agent-system" `
+        --cluster $clusterName `
+        --role agent `
+        --memory $systemAgentMemory 2>&1 | Out-Null
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ⚠️  Warning: Failed to create system agent" -ForegroundColor $Color.Warning
+    } else {
+        Write-Host "      ✅ System agent created (4GB)" -ForegroundColor $Color.Success
+    }
+    
+    # Agent 1 - Platform pool (6GB)
+    Write-Host "      Creating agent-1 (platform pool, 6GB)..." -ForegroundColor $Color.Muted
+    k3d node create "$clusterName-agent-platform" `
+        --cluster $clusterName `
+        --role agent `
+        --memory $platformAgentMemory 2>&1 | Out-Null
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ⚠️  Warning: Failed to create platform agent" -ForegroundColor $Color.Warning
+    } else {
+        Write-Host "      ✅ Platform agent created (6GB)" -ForegroundColor $Color.Success
+    }
+    
+    # Agent 2 - Apps pool (8GB)
+    Write-Host "      Creating agent-2 (apps pool, 8GB)..." -ForegroundColor $Color.Muted
+    k3d node create "$clusterName-agent-apps" `
+        --cluster $clusterName `
+        --role agent `
+        --memory $appsAgentMemory 2>&1 | Out-Null
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ⚠️  Warning: Failed to create apps agent" -ForegroundColor $Color.Warning
+    } else {
+        Write-Host "      ✅ Apps agent created (8GB)" -ForegroundColor $Color.Success
+    }
+    
+    Write-Host ""
+    Write-Host "   Waiting for cluster stabilization..." -ForegroundColor $Color.Muted
+    Start-Sleep -Seconds 20
     
     # Set kubectl context
     kubectl config use-context "k3d-$clusterName" 2>&1 | Out-Null
-    Write-Host "✅ Cluster created" -ForegroundColor $Color.Success
+    Write-Host "✅ Cluster created with 3 node pools (4GB + 6GB + 8GB)" -ForegroundColor $Color.Success
 }
 
 function Fix-KubeconfigForDocker {
@@ -188,12 +245,12 @@ function Wait-ForNodes {
     Write-Step "Waiting for nodes to register"
     for ($i = 0; $i -lt 30; $i++) {
         $nodes = kubectl get nodes --no-headers 2>$null
-        if ($nodes -and ($nodes | Measure-Object).Count -ge 3) {
-            Write-Host "✅ All nodes registered:" -ForegroundColor $Color.Success
+        if ($nodes -and ($nodes | Measure-Object).Count -ge 4) {
+            Write-Host "✅ All 4 nodes registered:" -ForegroundColor $Color.Success
             kubectl get nodes -o wide 2>$null | ForEach-Object { Write-Host "   $_" -ForegroundColor $Color.Muted }
             return
         }
-        Write-Host "   Attempt $($i+1)/30: Waiting for $($i+2) nodes..." -ForegroundColor $Color.Muted
+        Write-Host "   Attempt $($i+1)/30: Waiting for 4 nodes (1 server + 3 agents)..." -ForegroundColor $Color.Muted
         Start-Sleep -Seconds 3
     }
     
@@ -201,10 +258,41 @@ function Wait-ForNodes {
     Write-Host "   This may indicate Docker network issues. Attempting to continue..." -ForegroundColor $Color.Warning
 }
 
-function Set-NodeLabelsAndTaints {
-    Write-Step "Labeling nodes for AKS-like pools"
+function Verify-NodePools {
+    Write-Step "Verifying node pool configuration"
     
-    # Get all nodes (k3d creates: k3d-dev-agent-0, k3d-dev-agent-1, k3d-dev-server-0)
+    Write-Host "   Checking Docker container memory limits..." -ForegroundColor $Color.Info
+    Write-Host ""
+    
+    # Get actual memory from Docker containers
+    $containers = docker ps --filter "name=k3d-$clusterName" --format "{{.Names}}"
+    foreach ($container in $containers) {
+        $memLimit = docker inspect $container --format "{{.HostConfig.Memory}}" 2>$null
+        if ($memLimit) {
+            $memGB = [math]::Round($memLimit / 1GB, 1)
+            $label = "unknown"
+            if ($container -match "server") { $label = "Server (control)" }
+            elseif ($container -match "system") { $label = "System pool" }
+            elseif ($container -match "platform") { $label = "Platform pool" }
+            elseif ($container -match "apps") { $label = "Apps pool" }
+            
+            Write-Host "      $container → ${memGB}GB ($label)" -ForegroundColor $Color.Success
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "   💡 Node pool strategy achieved:" -ForegroundColor $Color.Info
+    Write-Host "      System (4GB): kube-system components (critical)" -ForegroundColor $Color.Muted
+    Write-Host "      Platform (6GB): ArgoCD + Ingress (infrastructure)" -ForegroundColor $Color.Muted
+    Write-Host "      Apps (8GB): .NET microservices (business logic)" -ForegroundColor $Color.Muted
+    Write-Host ""
+    Write-Host "✅ Node pool configuration verified" -ForegroundColor $Color.Success
+}
+
+function Set-NodeLabelsAndTaints {
+    Write-Step "Labeling nodes for AKS-like pools (3 node pools)"
+    
+    # Get all nodes (k3d creates: k3d-dev-agent-0, agent-1, agent-2, server-0)
     $allNodes = kubectl get nodes -o name 2>$null | ForEach-Object { $_.Replace("node/", "") }
     
     if ($allNodes.Count -eq 0) {
@@ -213,26 +301,31 @@ function Set-NodeLabelsAndTaints {
     }
     
     # Label agents with agentpool (simulating AKS node pools)
-    # agent-0 = system pool (with NoSchedule taint)
-    # agent-1 = apps pool (no taint)
-    $agent0 = $allNodes | Where-Object { $_ -like "*agent-0" } | Select-Object -First 1
-    $agent1 = $allNodes | Where-Object { $_ -like "*agent-1" } | Select-Object -First 1
+    # Agents created with custom names: dev-agent-system, dev-agent-platform, dev-agent-apps
+    $agentSystem = $allNodes | Where-Object { $_ -like "*agent-system" } | Select-Object -First 1
+    $agentPlatform = $allNodes | Where-Object { $_ -like "*agent-platform" } | Select-Object -First 1
+    $agentApps = $allNodes | Where-Object { $_ -like "*agent-apps" } | Select-Object -First 1
     
-    if ($agent0) {
-        kubectl label node $agent0 agentpool=system --overwrite 2>&1 | Out-Null
-        kubectl taint node $agent0 agentpool=system:NoSchedule --overwrite 2>&1 | Out-Null
-        Write-Host "   ✓ $agent0 labeled as 'system' pool (NoSchedule taint)" -ForegroundColor $Color.Success
+    if ($agentSystem) {
+        kubectl label node $agentSystem agentpool=system workload=system --overwrite 2>&1 | Out-Null
+        kubectl taint node $agentSystem agentpool=system:NoSchedule --overwrite 2>&1 | Out-Null
+        Write-Host "   ✓ $agentSystem → system pool (4GB, NoSchedule taint)" -ForegroundColor $Color.Success
     }
     
-    if ($agent1) {
-        kubectl label node $agent1 agentpool=apps --overwrite 2>&1 | Out-Null
-        Write-Host "   ✓ $agent1 labeled as 'apps' pool" -ForegroundColor $Color.Success
+    if ($agentPlatform) {
+        kubectl label node $agentPlatform agentpool=platform workload=platform --overwrite 2>&1 | Out-Null
+        Write-Host "   ✓ $agentPlatform → platform pool (6GB)" -ForegroundColor $Color.Success
     }
     
-    if ($agent0 -or $agent1) {
-        Write-Host "✅ Nodes labeled successfully" -ForegroundColor $Color.Success
-        Write-Host "   Viewing node labels:" -ForegroundColor $Color.Muted
-        kubectl get nodes --show-labels 2>&1 | Select-Object -First 5 | ForEach-Object { 
+    if ($agentApps) {
+        kubectl label node $agentApps agentpool=apps workload=application --overwrite 2>&1 | Out-Null
+        Write-Host "   ✓ $agentApps → apps pool (8GB)" -ForegroundColor $Color.Success
+    }
+    
+    if ($agentSystem -or $agentPlatform -or $agentApps) {
+        Write-Host "✅ All 3 node pools labeled successfully" -ForegroundColor $Color.Success
+        Write-Host "   Viewing node allocation:" -ForegroundColor $Color.Muted
+        kubectl get nodes -L agentpool,workload 2>&1 | ForEach-Object { 
             Write-Host "   $_" -ForegroundColor $Color.Muted 
         }
     }
@@ -411,6 +504,7 @@ New-K3dCluster
 Fix-KubeconfigForDocker
 Validate-KubernetesAPI
 Wait-ForNodes
+Verify-NodePools
 Set-NodeLabelsAndTaints
 Install-ArgoCD
 Set-ArgocdPassword
@@ -425,8 +519,12 @@ Write-Host "║     ✅ GITOPS BOOTSTRAP COMPLETE                          ║" 
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
 Write-Host ""
 Write-Host "📊 CLUSTER INFO" -ForegroundColor $Color.Info
-Write-Host "   Cluster: $clusterName (3 nodes - 1 server + 2 agents)" -ForegroundColor $Color.Muted
-Write-Host "   Total RAM: 18GB (Server 2GB + System 6GB + Apps 10GB)" -ForegroundColor $Color.Muted
+Write-Host "   Cluster: $clusterName (4 nodes - 1 server + 3 agents)" -ForegroundColor $Color.Muted
+Write-Host "   Total RAM: 20GB allocated (2+4+6+8)" -ForegroundColor $Color.Muted
+Write-Host "      Server: 2GB (control plane)" -ForegroundColor $Color.Success
+Write-Host "      System: 4GB (kube-system, CoreDNS, CNI)" -ForegroundColor $Color.Success
+Write-Host "      Platform: 6GB (ArgoCD, Ingress, cert-manager)" -ForegroundColor $Color.Success
+Write-Host "      Apps: 8GB (.NET microservices)" -ForegroundColor $Color.Success
 Write-Host "   Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
 
 Write-Host ""
