@@ -50,6 +50,7 @@ foreach ($img in $images) {
     $tag = "localhost:$registryPort/${imageName}:latest"
     $k3dTag = "k3d-localhost:$registryPort/${imageName}:latest"
     
+    # Build with both tags (for local docker and k3d cluster reference)
     docker build -t $tag -t $k3dTag -f $dockerfilePath $imagePath
     
     if ($LASTEXITCODE -ne 0) {
@@ -58,14 +59,15 @@ foreach ($img in $images) {
     }
     
     Write-Host "   ✅ Built: $tag" -ForegroundColor $Color.Success
+    Write-Host "   ✅ Tagged: $k3dTag (for in-cluster pulls)" -ForegroundColor $Color.Success
     
+    # Push only to localhost:5000 (k3d registry mirrors this internally as k3d-localhost:5000)
     Write-Host "   Pushing to registry..." -ForegroundColor $Color.Muted
     docker push $tag
-    docker push $k3dTag
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   ✅ Pushed: $tag" -ForegroundColor $Color.Success
-        Write-Host "   ✅ Pushed: $k3dTag" -ForegroundColor $Color.Success
+        Write-Host "   ℹ️  k3d cluster will pull via: $k3dTag" -ForegroundColor $Color.Muted
     }
     else {
         Write-Host "   ❌ Push failed" -ForegroundColor $Color.Error
