@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
-export default defineConfig({
-  // Ensure assets work from any base path (e.g., CDN, reverse proxy, AKS ingress)
-  base: './',
+export default defineConfig(({ mode }) => ({
+  // Base path configuration:
+  // - Development (npm run dev): './' (root, works with localhost:3000)
+  // - Production (npm run build): '/agro/' (Kubernetes path-based routing)
+  // - Override via VITE_BASE_PATH env var
+  base: process.env.VITE_BASE_PATH || (mode === 'production' ? '/agro/' : './'),
+
   // Plugins
   plugins: [],
 
@@ -98,4 +102,4 @@ export default defineConfig({
     port: 3001,
     open: true
   }
-});
+}));

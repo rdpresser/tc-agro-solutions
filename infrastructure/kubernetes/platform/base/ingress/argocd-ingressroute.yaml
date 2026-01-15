@@ -1,0 +1,53 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    app: argocd
+    project: tc-agro-solutions
+spec:
+  entryPoints:
+    - web  # HTTP porta 80
+  routes:
+    # Path-based: localhost/argocd (always works, zero config)
+    - match: Host(`localhost`) && PathPrefix(`/argocd`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80
+      middlewares:
+        - name: strip-argocd-prefix
+        - name: compress
+    
+    # Host-based: argocd.local (clean URLs, requires hosts file)
+    - match: Host(`argocd.local`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80
+      middlewares:
+        - name: compress
+
+---
+# Middleware: Remove /argocd prefix before sending to ArgoCD
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-argocd-prefix
+  namespace: argocd
+spec:
+  stripPrefix:
+    prefixes:
+      - /argocd
+
+---
+# Middleware: Compression (shared)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: argocd
+spec:
+  compress:
+    minResponseBodyBytes: 1024

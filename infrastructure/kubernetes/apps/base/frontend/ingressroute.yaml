@@ -1,0 +1,56 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: frontend
+  namespace: agro-apps
+  labels:
+    app: frontend
+    project: tc-agro-solutions
+    managed-by: argocd
+spec:
+  entryPoints:
+    - web  # HTTP porta 80
+  routes:
+    # Path-based: localhost/agro (sempre funciona, zero config)
+    - match: Host(`localhost`) && PathPrefix(`/agro`)
+      kind: Rule
+      services:
+        - name: frontend
+          port: 80
+      middlewares:
+        - name: strip-agro-prefix
+        - name: compress
+    
+    # Host-based: agro.local (clean URLs, requer hosts file)
+    - match: Host(`agro.local`)
+      kind: Rule
+      services:
+        - name: frontend
+          port: 80
+      middlewares:
+        - name: compress
+
+---
+# Middleware: Remove /agro prefix antes de enviar ao frontend
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-agro-prefix
+  namespace: agro-apps
+  labels:
+    app: frontend
+spec:
+  stripPrefix:
+    prefixes:
+      - /agro
+
+---
+# Middleware: Compressão (compartilhado)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: agro-apps
+spec:
+  compress:
+    minResponseBodyBytes: 1024

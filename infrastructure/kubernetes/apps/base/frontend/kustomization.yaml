@@ -7,7 +7,10 @@ resources:
   - namespace.yaml
   - deployment.yaml
   - service.yaml
-  - ingress.yaml
+  # Using Traefik IngressRoute (k3s default) instead of NGINX Ingress
+  # to avoid IngressClass conflicts. For NGINX, use ingress.yaml instead.
+  - ingressroute.yaml
+  # - ingress.yaml  # Legacy: NGINX Ingress (disabled)
 
 commonLabels:
   project: tc-agro-solutions
