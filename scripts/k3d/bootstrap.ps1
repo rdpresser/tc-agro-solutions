@@ -158,7 +158,8 @@ function New-K3dCluster {
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "      ⚠️  Warning: Failed to create system agent" -ForegroundColor $Color.Warning
-    } else {
+    }
+    else {
         Write-Host "      ✅ System agent created (4GB)" -ForegroundColor $Color.Success
     }
     
@@ -171,7 +172,8 @@ function New-K3dCluster {
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "      ⚠️  Warning: Failed to create platform agent" -ForegroundColor $Color.Warning
-    } else {
+    }
+    else {
         Write-Host "      ✅ Platform agent created (6GB)" -ForegroundColor $Color.Success
     }
     
@@ -184,7 +186,8 @@ function New-K3dCluster {
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "      ⚠️  Warning: Failed to create apps agent" -ForegroundColor $Color.Warning
-    } else {
+    }
+    else {
         Write-Host "      ✅ Apps agent created (8GB)" -ForegroundColor $Color.Success
     }
     
@@ -325,7 +328,7 @@ function Set-NodeLabelsAndTaints {
     if ($agentSystem -or $agentPlatform -or $agentApps) {
         Write-Host "✅ All 3 node pools labeled successfully" -ForegroundColor $Color.Success
         Write-Host "   Viewing node allocation:" -ForegroundColor $Color.Muted
-        kubectl get nodes -L agentpool,workload 2>&1 | ForEach-Object { 
+        kubectl get nodes -L agentpool, workload 2>&1 | ForEach-Object { 
             Write-Host "   $_" -ForegroundColor $Color.Muted 
         }
     }
