@@ -353,7 +353,7 @@ function Set-NodeLabelsAndTaints {
     if ($labeledCount -eq 3) {
         Write-Host "✅ All 3 node pools labeled successfully" -ForegroundColor $Color.Success
         Write-Host "   Viewing node allocation:" -ForegroundColor $Color.Muted
-        kubectl get nodes -L agentpool, workload 2>&1 | ForEach-Object { 
+        kubectl get nodes -L agentpool 2>&1 | ForEach-Object { 
             Write-Host "   $_" -ForegroundColor $Color.Muted 
         }
     }

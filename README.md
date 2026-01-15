@@ -48,7 +48,7 @@ cd scripts\k3d
 **Routing (via Traefik):**
 
 - 🌐 Frontend: `http://localhost/agro`
-- 🔐 ArgoCD: `http://localhost/arcocd`
+- 🔐 ArgoCD: `http://localhost/argocd`
 - 📚 [Traefik Routing Guide](TRAEFIK_ROUTING_GUIDE.md) - Complete routing documentation
 
 **Best for:** Testing K8s deployments, validating observability, rehearsing AKS production setup

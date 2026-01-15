@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
   - namespaces/namespaces.yaml
-  - ingress/arcocd-ingressroute.yaml  # Traefik IngressRoute (k3s built-in)
+  - ingress/argocd-ingressroute.yaml  # Traefik IngressRoute (k3s built-in)
