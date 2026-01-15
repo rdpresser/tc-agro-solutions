@@ -228,7 +228,7 @@ function Set-ArgocdPassword {
     Write-Host "   Retrieving initial password..." -ForegroundColor $Color.Info
     $initialPassword = kubectl -n $argocdNamespace get secret argocd-initial-admin-secret `
         -o jsonpath="{.data.password}" 2>$null | 
-        ForEach-Object { [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+    ForEach-Object { [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
     
     if (-not $initialPassword) {
         Write-Host "⚠️  Could not retrieve initial password" -ForegroundColor $Color.Warning
@@ -265,12 +265,12 @@ function Set-ArgocdPassword {
         # Update password
         $updateBody = @{ 
             currentPassword = $initialPassword
-            newPassword = $argocdAdminPassword 
+            newPassword     = $argocdAdminPassword 
         } | ConvertTo-Json
         
         $headers = @{ 
             "Authorization" = "Bearer $token"
-            "Content-Type" = "application/json" 
+            "Content-Type"  = "application/json" 
         }
         
         Invoke-RestMethod `
@@ -307,6 +307,13 @@ function Apply-GitOpsBootstrap {
     if (Test-Path $projectFile) {
         kubectl apply -f $projectFile 2>&1 | Out-Null
         Write-Host "✅ Platform project created" -ForegroundColor $Color.Success
+    }
+    
+    # Apply apps project
+    $appsProjectFile = Join-Path $platformPath "argocd\projects\project-apps.yaml"
+    if (Test-Path $appsProjectFile) {
+        kubectl apply -f $appsProjectFile 2>&1 | Out-Null
+        Write-Host "✅ Apps project created" -ForegroundColor $Color.Success
     }
     
     # Apply platform base manifests (namespaces, ingress)
