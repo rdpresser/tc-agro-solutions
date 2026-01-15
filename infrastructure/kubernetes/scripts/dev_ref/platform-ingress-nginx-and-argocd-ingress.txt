@@ -1,0 +1,102 @@
+# Platform Ingress NGINX + ArgoCD Ingress (host-based)
+# ======================================================
+# Files generated (logical split):
+# 1) infrastructure/kubernetes/platform/argocd/applications/platform-ingress-nginx.yaml
+# 2) infrastructure/kubernetes/platform/helm-values/dev/ingress-nginx.values.yaml
+# 3) infrastructure/kubernetes/platform/base/ingress/argocd-ingress.yaml   (optional - plain manifest)
+#
+# Notes:
+# - This assumes you have a k3d cluster with port mappings:
+#     --port "80:80@loadbalancer" --port "443:443@loadbalancer"
+# - We schedule ingress-nginx on the "system" node pool using nodeSelector + tolerations.
+# - The ArgoCD Ingress is host-based: argocd.local -> argocd-server (HTTP)
+# - For local dev, TLS is optional; here we keep it HTTP to simplify.
+#
+# Replace <ORG>/<REPO> in the ArgoCD Application with your repo.
+# If you use a different domain than *.local, update hosts accordingly.
+
+---
+# 1) platform-ingress-nginx.yaml (ArgoCD Application)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-ingress-nginx
+  namespace: argocd
+spec:
+  project: platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-nginx
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  sources:
+    - repoURL: https://kubernetes.github.io/ingress-nginx
+      chart: ingress-nginx
+      targetRevision: 4.11.3
+      helm:
+        valueFiles:
+          - $values/infrastructure/kubernetes/platform/helm-values/dev/ingress-nginx.values.yaml
+    - repoURL: https://github.com/<ORG>/<REPO>.git
+      targetRevision: main
+      ref: values
+
+---
+# 2) ingress-nginx.values.yaml (DEV)
+# Path: infrastructure/kubernetes/platform/helm-values/dev/ingress-nginx.values.yaml
+controller:
+  kind: Deployment
+
+  # IMPORTANT: keep this service as LoadBalancer in k3d.
+  # k3d will provide a loadbalancer container and map host ports 80/443 to it.
+  service:
+    type: LoadBalancer
+
+  # Schedule ingress controller on system pool
+  nodeSelector:
+    agentpool: system
+
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Optional: reduce noise in local
+  config:
+    enable-access-log: "true"
+
+---
+# 3) ArgoCD Ingress (host-based) - plain manifest
+# Path suggestion: infrastructure/kubernetes/platform/base/ingress/argocd-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-ingress
+  namespace: argocd
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: argocd.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80

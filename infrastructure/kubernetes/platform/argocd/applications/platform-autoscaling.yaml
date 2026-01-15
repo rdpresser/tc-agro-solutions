@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-autoscaling
+  namespace: argocd
+spec:
+  project: platform
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  
+  sources:
+    - repoURL: https://kedacore.github.io/charts
+      chart: keda
+      targetRevision: 2.15.1
+      helm:
+        valueFiles:
+          - $values/infrastructure/kubernetes/platform/helm-values/dev/keda.values.yaml
+    
+    - repoURL: https://github.com/rdpresser/tc-agro-solutions.git
+      targetRevision: main
+      ref: values

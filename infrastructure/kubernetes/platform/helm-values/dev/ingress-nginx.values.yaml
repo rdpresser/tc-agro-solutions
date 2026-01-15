@@ -1,0 +1,32 @@
+# Ingress NGINX Helm Values (DEV)
+# =================================
+# Ingress controller for k3d with native LoadBalancer
+# Target: k3d cluster with "system" node pool
+
+controller:
+  kind: Deployment
+  
+  # IMPORTANT: k3d provides LoadBalancer via svclb
+  # Port mapping: 80:80@loadbalancer, 443:443@loadbalancer
+  service:
+    type: LoadBalancer
+  
+  nodeSelector:
+    agentpool: system
+  
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  config:
+    enable-access-log: "true"

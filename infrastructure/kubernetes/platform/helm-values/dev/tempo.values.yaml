@@ -1,0 +1,28 @@
+# Tempo Helm Values (DEV)
+# =======================
+# Distributed tracing backend
+# Target: k3d cluster with "system" node pool
+
+tempo:
+  retention: 12h
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  nodeSelector:
+    agentpool: system
+  
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+  
+  persistence:
+    enabled: true
+    size: 2Gi

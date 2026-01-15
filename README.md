@@ -4,11 +4,60 @@ Agricultural monitoring platform with IoT, sensor data processing, alerts, and d
 
 **Deadline:** February 27, 2026  
 **Team:** 4 backend developers  
-**Architecture:** Microservices with Bootstrap PowerShell script
+**Architecture:** Microservices with GitOps deployment
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 🎯 Two Development Modes
+
+### 🐳 Docker Compose Mode (API Development)
+
+Simple local environment for API development without Kubernetes complexity.
+
+```powershell
+docker compose up -d  # PostgreSQL + Redis + RabbitMQ
+dotnet run --project services/farm-service/src/Agro.Farm.Api
+```
+
+**Best for:** Coding APIs, debugging services, database migrations
+
+---
+
+### ☸️ K3D Mode (Full Stack + GitOps)
+
+Complete Kubernetes cluster with full observability stack managed via ArgoCD GitOps.
+
+```powershell
+cd scripts\k3d
+.\bootstrap.ps1  # Creates cluster + ArgoCD installs everything
+```
+
+**What you get:**
+
+- ✅ k3d cluster (3 nodes, 18GB)
+- ✅ 🐳 Local registry at `localhost:5000` (auto-configured!)
+- ✅ ArgoCD (GitOps controller)
+- ✅ **Auto-installed via GitOps:**
+  - Prometheus + Grafana (metrics)
+  - Loki (logs)
+  - Tempo (traces)
+  - OpenTelemetry Collector (telemetry hub)
+  - KEDA (autoscaling)
+  - Ingress NGINX (routing)
+
+**Best for:** Testing K8s deployments, validating observability, rehearsing AKS production setup
+
+**Time:** ~4 minutes for full stack
+
+📚 **K3D Documentation:**
+
+- [📖 K3D GitOps Guide](scripts/k3d/README.md) - Complete workflow
+- [🐳 Registry Configuration](scripts/k3d/REGISTRY_CONFIGURATION.md) - How to build & push images
+- [🏗️ Architecture Diagram](scripts/k3d/ARCHITECTURE_DIAGRAM.md) - Visual overview
+
+---
+
+## 🚀 Quick Start (Choose Your Mode)
 
 ### 1️⃣ Clone Repository
 
@@ -150,7 +199,7 @@ tc-agro-solutions/
 - **Messaging:** Wolverine + Azure Service Bus
 - **Pattern:** Pragmatic CQRS (no full event sourcing)
 
-### Cloud Infrastructure
+### Cloud Infrastructure (Production)
 
 - **Orchestration:** Azure Kubernetes Service (AKS)
 - **Database:** Azure PostgreSQL Flexible Server + TimescaleDB
@@ -159,12 +208,36 @@ tc-agro-solutions/
 - **Registry:** Azure Container Registry (ACR)
 - **Observability:** Application Insights + Log Analytics
 
-### Local Development
+### Local Development (Two Modes)
+
+#### 🐳 Docker Compose Mode (Recommended for API development)
 
 - **Orchestration:** Docker Compose
 - **Database:** PostgreSQL 16
 - **Cache:** Redis 7
 - **Messaging:** RabbitMQ (Azure Service Bus replacement)
+
+#### ☸️ K3D Mode (Recommended for K8s/GitOps testing)
+
+- **Orchestration:** k3d (lightweight Kubernetes)
+- **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA, Ingress NGINX)
+- **Cluster:** 18GB total (1 server 2GB + 2 agents: system 6GB + apps 10GB)
+- **Registry:** localhost:5000 (local image registry)
+
+**Choose your mode:**
+
+- 🐳 **Docker Compose** → Simple API development
+- ☸️ **K3D** → Full K8s with observability stack
+
+**Quick Start K3D:**
+
+```powershell
+cd scripts\k3d
+.\bootstrap.ps1
+# Wait ~4 minutes for full GitOps deployment
+```
+
+See [📖 K3D GitOps Guide](scripts/k3d/README.md) for details.
 
 ---
 

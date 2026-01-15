@@ -1,0 +1,40 @@
+# Placeholder for future microservices ApplicationSet
+# ===================================================
+# This will be populated when microservices have Kubernetes manifests
+#
+# Example structure:
+# apiVersion: argoproj.io/v1alpha1
+# kind: ApplicationSet
+# metadata:
+#   name: agro-microservices
+#   namespace: argocd
+# spec:
+#   generators:
+#     - list:
+#         elements:
+#           - service: identity
+#             repo: https://github.com/rdpresser/tc-agro-identity-service.git
+#           - service: farm
+#             repo: https://github.com/rdpresser/tc-agro-farm-service.git
+#           - service: sensor-ingest
+#             repo: https://github.com/rdpresser/tc-agro-sensor-ingest-service.git
+#           - service: analytics-worker
+#             repo: https://github.com/rdpresser/tc-agro-analytics-worker.git
+#           - service: dashboard
+#             repo: https://github.com/rdpresser/tc-agro-dashboard-service.git
+#   template:
+#     metadata:
+#       name: 'agro-{{service}}'
+#     spec:
+#       project: apps
+#       source:
+#         repoURL: '{{repo}}'
+#         targetRevision: main
+#         path: k8s/overlays/dev
+#       destination:
+#         server: https://kubernetes.default.svc
+#         namespace: agro-apps
+#       syncPolicy:
+#         automated:
+#           prune: true
+#           selfHeal: true

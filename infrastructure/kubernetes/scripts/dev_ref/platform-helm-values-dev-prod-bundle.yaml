@@ -1,0 +1,299 @@
+# Helm Values Bundle (DEV) — Platform Stack (k3d / AKS-like)
+# ================================================================
+# Includes:
+# - kube-prometheus-stack.values.yaml (dev)
+# - loki.values.yaml (dev)
+# - tempo.values.yaml (dev)
+# - otel-collector.values.yaml (dev)
+# - keda.values.yaml (dev)
+# - ingress-nginx.values.yaml (dev)
+#
+# Assumptions:
+# - You have a "system" node pool with:
+#     label: agentpool=system
+#     taint: agentpool=system:NoSchedule
+#
+# Goal:
+# - Keep platform components on system pool
+# - Keep resource usage stable under ~18GB total cluster RAM
+# - DEV retention: 12h (Prometheus/Loki/Tempo)
+# - DEV persistence: ON (small local volumes) for Loki/Tempo
+#
+# NOTE:
+# - These values are conservative and "safe".
+# - You can tune up/down later based on actual usage.
+
+################################################################################
+# DEV: kube-prometheus-stack.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/kube-prometheus-stack.values.yaml
+################################################################################
+kube-prometheus-stack:
+  # Some charts wrap values under top-level keys; if your chart expects flat values,
+  # remove this wrapper and keep only inner keys.
+  enabled: true
+
+grafana:
+  adminPassword: admin
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  nodeSelector:
+    agentpool: system
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+prometheus:
+  prometheusSpec:
+    retention: 12h
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    nodeSelector:
+      agentpool: system
+    tolerations:
+      - key: "agentpool"
+        operator: "Equal"
+        value: "system"
+        effect: "NoSchedule"
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    nodeSelector:
+      agentpool: system
+    tolerations:
+      - key: "agentpool"
+        operator: "Equal"
+        value: "system"
+        effect: "NoSchedule"
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  nodeSelector:
+    agentpool: system
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+################################################################################
+# DEV: loki.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/loki.values.yaml
+################################################################################
+loki:
+  auth_enabled: false
+
+  commonConfig:
+    replication_factor: 1
+
+  storage:
+    type: filesystem
+
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+  limits_config:
+    retention_period: 12h
+
+  persistence:
+    enabled: true
+    size: 2Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  nodeSelector:
+    agentpool: system
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+################################################################################
+# DEV: tempo.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/tempo.values.yaml
+################################################################################
+tempo:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  nodeSelector:
+    agentpool: system
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+  persistence:
+    enabled: true
+    size: 2Gi
+
+  tempo:
+    retention: 12h
+
+################################################################################
+# DEV: otel-collector.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/otel-collector.values.yaml
+################################################################################
+mode: deployment
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector:
+  agentpool: system
+
+tolerations:
+  - key: "agentpool"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+        http:
+
+  processors:
+    batch:
+
+  exporters:
+    logging:
+      loglevel: info
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [logging]
+
+################################################################################
+# DEV: keda.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/keda.values.yaml
+################################################################################
+resources:
+  operator:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  metricServer:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  webhooks:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+nodeSelector:
+  agentpool: system
+
+tolerations:
+  - key: "agentpool"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
+
+################################################################################
+# DEV: ingress-nginx.values.yaml
+# Path: infrastructure/kubernetes/platform/helm-values/dev/ingress-nginx.values.yaml
+################################################################################
+controller:
+  kind: Deployment
+
+  service:
+    type: LoadBalancer
+
+  nodeSelector:
+    agentpool: system
+
+  tolerations:
+    - key: "agentpool"
+      operator: "Equal"
+      value: "system"
+      effect: "NoSchedule"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  config:
+    enable-access-log: "true"
