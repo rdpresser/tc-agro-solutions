@@ -43,6 +43,96 @@ $Color = @{
     Muted   = "Gray"
 }
 
+# Function to check if port-forward is already running for a specific service
+function Test-PortForwardRunning($port, $serviceName) {
+    # First check if port is in use
+    $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    if ($connections.Count -eq 0) {
+        return $false
+    }
+
+    # Check if it's a kubectl port-forward for this specific service
+    $kubectlProcs = Get-Process -Name kubectl -ErrorAction SilentlyContinue
+    if (-not $kubectlProcs) {
+        # Port in use but not kubectl - consider as free for our purposes
+        return $false
+    }
+
+    $foundProcesses = @()
+    foreach ($proc in $kubectlProcs) {
+        try {
+            $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+            # Check if it's port-forward for the same service and port
+            if ($cmdLine -and
+                $cmdLine -like "*port-forward*" -and
+                $cmdLine -like "*svc/$serviceName*" -and
+                $cmdLine -like "*$port`:*") {
+                
+                $foundProcesses += $proc.Id
+                Write-Host "   ℹ️  Found existing process: PID $($proc.Id)" -ForegroundColor $Color.Muted
+            }
+        }
+        catch {
+            continue
+        }
+    }
+
+    # If we found multiple processes, kill all but the first one
+    if ($foundProcesses.Count -gt 1) {
+        Write-Host "   ⚠️  Found $($foundProcesses.Count) duplicate processes, cleaning up..." -ForegroundColor $Color.Warning
+        for ($i = 1; $i -lt $foundProcesses.Count; $i++) {
+            $processId = $foundProcesses[$i]
+            Write-Host "   🔫 Killing duplicate process: PID $processId" -ForegroundColor $Color.Warning
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Seconds 2
+        return $true
+    }
+
+    return $foundProcesses.Count -gt 0
+}
+
+# Function to start port-forward in background
+function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
+    # Check if port-forward already exists for this service on this port
+    if (Test-PortForwardRunning $port $serviceName) {
+        Write-Host "⚠️  Port-forward for $serviceName is already running on port $port" -ForegroundColor $Color.Warning
+        return $null
+    }
+
+    Write-Host "🚀 Starting port-forward for $serviceName..." -ForegroundColor $Color.Info
+    Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
+
+    # Start process in background
+    $process = Start-Process -FilePath kubectl `
+        -ArgumentList "port-forward", "svc/$serviceName", "-n", "$namespace", "${port}:${targetPort}", "--address", "127.0.0.1" `
+        -WindowStyle Hidden `
+        -PassThru
+
+    Write-Host "   ⏳ Process started: PID $($process.Id)" -ForegroundColor $Color.Muted
+
+    # Wait a moment to ensure port-forward is active
+    Start-Sleep -Seconds 3
+
+    # Check if process is still running
+    if ($process.HasExited) {
+        Write-Host "❌ Failed to start port-forward for $serviceName" -ForegroundColor $Color.Error
+        Write-Host "   The process terminated immediately. Check if the service exists in the cluster." -ForegroundColor $Color.Warning
+        return $null
+    }
+
+    # Validate if the port is actually listening
+    $portCheck = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    if (-not $portCheck) {
+        Write-Host "❌ Port-forward started but port $port is not listening" -ForegroundColor $Color.Error
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    Write-Host "✅ Port-forward for $serviceName started (PID: $($process.Id))" -ForegroundColor $Color.Success
+    return $process
+}
+
 function Write-Title {
     param([string]$Text)
     Write-Host ""
@@ -51,9 +141,16 @@ function Write-Title {
     Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Title
 }
 
+# Check if kubectl is available
+if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) {
+    Write-Host "❌ ERROR: kubectl not found in PATH" -ForegroundColor $Color.Error
+    exit 1
+}
+
 Write-Title "Setting up Port-Forwards"
 
 $servicesToForward = if ($Service -eq "all") { $portForwards.Keys } else { @($Service) }
+$processes = @()
 
 foreach ($svc in $servicesToForward) {
     $pf = $portForwards[$svc]
@@ -72,21 +169,11 @@ foreach ($svc in $servicesToForward) {
         continue
     }
     
-    Write-Host "   Starting kubectl port-forward (background)..." -ForegroundColor $Color.Muted
-    
-    # Kill existing port-forward if any
-    Get-Process kubectl -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*port-forward*$local*" } | Stop-Process -Force -ErrorAction SilentlyContinue
-    
-    # Start new port-forward
-    $pf = Start-Process -FilePath kubectl `
-        -ArgumentList "port-forward svc/$name -n $ns $local`:$remote --address 127.0.0.1" `
-        -WindowStyle Hidden `
-        -PassThru
-    
-    Start-Sleep -Seconds 2
-    
-    Write-Host "   ✅ Port-forward started (PID: $($pf.Id))" -ForegroundColor $Color.Success
-    Write-Host "   Access: http://localhost:$local" -ForegroundColor $Color.Success
+    # Start port-forward using the robust function
+    $proc = Start-PortForward $name $ns $local $remote
+    if ($proc) { 
+        $processes += $proc 
+    }
 }
 
 Write-Host ""
