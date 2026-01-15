@@ -73,6 +73,49 @@ else {
     Write-Host "❌ Registry deletion cancelled" -ForegroundColor $Color.Muted
 }
 
+# Docker cleanup
+Write-Host ""
+Write-Host "=== Clean Docker resources? (containers, images, volumes, networks) ===" -ForegroundColor $Color.Warning
+Write-Host "   This will remove:" -ForegroundColor $Color.Info
+Write-Host "   - All stopped k3d containers" -ForegroundColor $Color.Muted
+Write-Host "   - All k3d images (rancher/k3s, rancher/k3d-*)" -ForegroundColor $Color.Muted
+Write-Host "   - All unused volumes" -ForegroundColor $Color.Muted
+Write-Host "   - All unused networks" -ForegroundColor $Color.Muted
+$confirmDocker = Read-Host "Type 'yes' to confirm"
+
+if ($confirmDocker -eq "yes") {
+    Write-Host "   Removing stopped k3d containers..." -ForegroundColor $Color.Info
+    docker ps -a --filter "name=k3d-" --format "{{.ID}}" | ForEach-Object {
+        docker rm -f $_ 2>&1 | Out-Null
+    }
+    
+    Write-Host "   Removing k3d images..." -ForegroundColor $Color.Info
+    docker images --filter "reference=rancher/k3d-*" --format "{{.ID}}" | ForEach-Object {
+        docker rmi -f $_ 2>&1 | Out-Null
+    }
+    docker images --filter "reference=rancher/k3s*" --format "{{.ID}}" | ForEach-Object {
+        docker rmi -f $_ 2>&1 | Out-Null
+    }
+    
+    Write-Host "   Pruning unused volumes..." -ForegroundColor $Color.Info
+    docker volume prune -f 2>&1 | Out-Null
+    
+    Write-Host "   Pruning unused networks..." -ForegroundColor $Color.Info
+    docker network prune -f 2>&1 | Out-Null
+    
+    Write-Host "✅ Docker cleanup complete" -ForegroundColor $Color.Success
+}
+else {
+    Write-Host "❌ Docker cleanup cancelled" -ForegroundColor $Color.Muted
+}
+
 Write-Host ""
 Write-Host "✅ Cleanup complete" -ForegroundColor $Color.Success
+Write-Host ""
+Write-Host "📊 Current state:" -ForegroundColor $Color.Info
+Write-Host "   k3d clusters:" -ForegroundColor $Color.Muted
+k3d cluster list
+Write-Host ""
+Write-Host "   Docker containers:" -ForegroundColor $Color.Muted
+docker ps -a --filter "name=k3d-"
 Write-Host ""

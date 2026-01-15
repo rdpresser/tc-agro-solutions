@@ -204,22 +204,40 @@ function Wait-ForNodes {
 function Set-NodeLabelsAndTaints {
     Write-Step "Labeling nodes for AKS-like pools"
     
-    # Find nodes by pattern
-    $allNodes = kubectl get nodes -o name | ForEach-Object { $_.Replace("node/", "") }
-    $systemNode = $allNodes | Where-Object { $_ -like "*system*" } | Select-Object -First 1
-    $appsNode = $allNodes | Where-Object { $_ -like "*apps*" } | Select-Object -First 1
+    # Get all nodes (k3d creates: k3d-dev-agent-0, k3d-dev-agent-1, k3d-dev-server-0)
+    $allNodes = kubectl get nodes -o name 2>$null | ForEach-Object { $_.Replace("node/", "") }
     
-    if ($systemNode -and $appsNode) {
-        kubectl label node $systemNode agentpool=system --overwrite 2>&1 | Out-Null
-        kubectl taint node $systemNode agentpool=system:NoSchedule --overwrite 2>&1 | Out-Null
-        
-        kubectl label node $appsNode agentpool=apps --overwrite 2>&1 | Out-Null
-        
-        Write-Host "✅ Nodes labeled and tainted" -ForegroundColor $Color.Success
-        kubectl get nodes --show-labels 2>&1 | Select-Object -First 5
+    if ($allNodes.Count -eq 0) {
+        Write-Host "⚠️  No nodes found" -ForegroundColor $Color.Warning
+        return
+    }
+    
+    # Label agents with agentpool (simulating AKS node pools)
+    # agent-0 = system pool (with NoSchedule taint)
+    # agent-1 = apps pool (no taint)
+    $agent0 = $allNodes | Where-Object { $_ -like "*agent-0" } | Select-Object -First 1
+    $agent1 = $allNodes | Where-Object { $_ -like "*agent-1" } | Select-Object -First 1
+    
+    if ($agent0) {
+        kubectl label node $agent0 agentpool=system --overwrite 2>&1 | Out-Null
+        kubectl taint node $agent0 agentpool=system:NoSchedule --overwrite 2>&1 | Out-Null
+        Write-Host "   ✓ $agent0 labeled as 'system' pool (NoSchedule taint)" -ForegroundColor $Color.Success
+    }
+    
+    if ($agent1) {
+        kubectl label node $agent1 agentpool=apps --overwrite 2>&1 | Out-Null
+        Write-Host "   ✓ $agent1 labeled as 'apps' pool" -ForegroundColor $Color.Success
+    }
+    
+    if ($agent0 -or $agent1) {
+        Write-Host "✅ Nodes labeled successfully" -ForegroundColor $Color.Success
+        Write-Host "   Viewing node labels:" -ForegroundColor $Color.Muted
+        kubectl get nodes --show-labels 2>&1 | Select-Object -First 5 | ForEach-Object { 
+            Write-Host "   $_" -ForegroundColor $Color.Muted 
+        }
     }
     else {
-        Write-Host "⚠️  Could not auto-detect nodes" -ForegroundColor $Color.Warning
+        Write-Host "⚠️  Could not find agent nodes to label" -ForegroundColor $Color.Warning
     }
 }
 
@@ -406,32 +424,32 @@ Write-Host "╔═════════════════════�
 Write-Host "║     ✅ GITOPS BOOTSTRAP COMPLETE                          ║" -ForegroundColor $Color.Success
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host "📊 CLUSTER INFO:" -ForegroundColor $Color.Info
-Write-Host "   Cluster: $clusterName (3 nodes: 1 server + 2 agents)" -ForegroundColor $Color.Muted
+Write-Host "📊 CLUSTER INFO" -ForegroundColor $Color.Info
+Write-Host "   Cluster: $clusterName (3 nodes - 1 server + 2 agents)" -ForegroundColor $Color.Muted
 Write-Host "   Total RAM: 18GB (Server 2GB + System 6GB + Apps 10GB)" -ForegroundColor $Color.Muted
 Write-Host "   Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
 
 Write-Host ""
-Write-Host "🔐 ARGOCD:" -ForegroundColor $Color.Info
+Write-Host "🔐 ARGOCD" -ForegroundColor $Color.Info
 Write-Host "   Username: admin" -ForegroundColor $Color.Muted
 Write-Host "   Password: $argocdAdminPassword" -ForegroundColor $Color.Muted
 Write-Host "   URL: http://argocd.local (after updating hosts file)" -ForegroundColor $Color.Muted
 
 Write-Host ""
-Write-Host "🔗 NEXT STEPS:" -ForegroundColor $Color.Info
-Write-Host "   1) Watch ArgoCD sync platform stack:" -ForegroundColor $Color.Muted
+Write-Host "🔗 NEXT STEPS" -ForegroundColor $Color.Info
+Write-Host "   1) Watch ArgoCD sync platform stack" -ForegroundColor $Color.Muted
 Write-Host "      kubectl get applications -n argocd --watch" -ForegroundColor $Color.Success
 
 Write-Host ""
-Write-Host "   2) Update Windows hosts file (for Ingress access):" -ForegroundColor $Color.Muted
+Write-Host "   2) Update Windows hosts file for Ingress access" -ForegroundColor $Color.Muted
 Write-Host "      .\update-hosts-file.ps1" -ForegroundColor $Color.Success
 
 Write-Host ""
-Write-Host "   3) Access ArgoCD (via Ingress - no port-forward!):" -ForegroundColor $Color.Muted
+Write-Host "   3) Access ArgoCD via Ingress (no port-forward needed)" -ForegroundColor $Color.Muted
 Write-Host "      http://argocd.local" -ForegroundColor $Color.Success
 
 Write-Host ""
-Write-Host "   4) (Optional) Port-forward Grafana:" -ForegroundColor $Color.Muted
+Write-Host "   4) Optional: Port-forward Grafana" -ForegroundColor $Color.Muted
 Write-Host "      .\port-forward.ps1 grafana" -ForegroundColor $Color.Success
 
 Write-Host ""
