@@ -381,8 +381,8 @@ function Install-ArgoCD {
         --set server.service.type=ClusterIP `
         --set server.ingress.enabled=false `
         --set configs.params."server\.insecure"=true `
-        --set configs.cm."server\.basehref"="/argocd" `
-        --set configs.cm."server\.rootpath"="/argocd" `
+        --set configs.params."server\.basehref"="/argocd" `
+        --set configs.params."server\.rootpath"="/argocd" `
         --wait --timeout=5m 2>&1 | Out-Null
     
     if ($LASTEXITCODE -eq 0) {
@@ -401,72 +401,20 @@ function Install-ArgoCD {
 function Set-ArgocdPassword {
     Write-Step "Configuring ArgoCD admin password"
     
-    # Get initial password from secret
-    Write-Host "   Retrieving initial password..." -ForegroundColor $Color.Info
-    $initialPassword = kubectl -n $argocdNamespace get secret argocd-initial-admin-secret `
-        -o jsonpath="{.data.password}" 2>$null | 
-    ForEach-Object { [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+    # Delegate to reset-argocd-password.ps1 for standardized password change logic
+    # This ensures bootstrap.ps1 and reset-argocd-password.ps1 use identical code paths
+    $scriptPath = Join-Path $PSScriptRoot "reset-argocd-password.ps1"
     
-    if (-not $initialPassword) {
-        Write-Host "⚠️  Could not retrieve initial password" -ForegroundColor $Color.Warning
+    if (-not (Test-Path $scriptPath)) {
+        Write-Host "⚠️  reset-argocd-password.ps1 not found at $scriptPath" -ForegroundColor $Color.Warning
+        Write-Host "   Password must be changed manually or via manager.ps1 option 5" -ForegroundColor $Color.Info
         return
     }
     
-    Write-Host "   Initial password: $initialPassword" -ForegroundColor $Color.Muted
+    Write-Host "   Delegating to reset-argocd-password.ps1 (standardized password change)..." -ForegroundColor $Color.Muted
+    Write-Host ""
     
-    # Start temporary port-forward
-    Write-Host "   Starting port-forward..." -ForegroundColor $Color.Info
-    $pfProcess = Start-Process -FilePath kubectl `
-        -ArgumentList "port-forward svc/argocd-server -n $argocdNamespace 8090:443 --address 127.0.0.1" `
-        -WindowStyle Hidden -PassThru
-    
-    Start-Sleep -Seconds 8
-    
-    # Change password via REST API
-    try {
-        # Login to get token
-        $loginBody = @{ 
-            username = "admin"
-            password = $initialPassword 
-        } | ConvertTo-Json
-        
-        $loginResponse = Invoke-RestMethod `
-            -Uri "http://localhost:8090/api/v1/session" `
-            -Method Post `
-            -Body $loginBody `
-            -ContentType "application/json" `
-            -ErrorAction Stop
-        
-        $token = $loginResponse.token
-        
-        # Update password
-        $updateBody = @{ 
-            currentPassword = $initialPassword
-            newPassword     = $argocdAdminPassword 
-        } | ConvertTo-Json
-        
-        $headers = @{ 
-            "Authorization" = "Bearer $token"
-            "Content-Type"  = "application/json" 
-        }
-        
-        Invoke-RestMethod `
-            -Uri "http://localhost:8090/api/v1/account/password" `
-            -Method Put `
-            -Headers $headers `
-            -Body $updateBody `
-            -ErrorAction Stop | Out-Null
-        
-        Write-Host "✅ Password changed to: $argocdAdminPassword" -ForegroundColor $Color.Success
-    }
-    catch {
-        Write-Host "⚠️  Failed to change password: $_" -ForegroundColor $Color.Warning
-        Write-Host "   Manual change: http://localhost:8080" -ForegroundColor $Color.Info
-    }
-    finally {
-        # Stop port-forward
-        Stop-Process -Id $pfProcess.Id -Force -ErrorAction SilentlyContinue
-    }
+    & $scriptPath -NewPassword $argocdAdminPassword
 }
 
 function Apply-GitOpsBootstrap {

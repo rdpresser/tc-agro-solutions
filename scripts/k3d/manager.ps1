@@ -45,16 +45,17 @@ function Show-Menu {
     Write-Host ""
     Write-Host "🔐 ARGOCD MANAGEMENT:" -ForegroundColor $Color.Info
     Write-Host "   5) Reset ArgoCD admin password"
-    Write-Host "   6) Force sync ArgoCD applications (after Git changes)"
+    Write-Host "   6) Test password change (debug mode)"
+    Write-Host "   7) Force sync ArgoCD applications (after Git changes)"
     Write-Host ""
     Write-Host "🌐 NETWORKING & ACCESS:" -ForegroundColor $Color.Info
-    Write-Host "   7) Start port-forward (ArgoCD, Grafana, etc.)"
-    Write-Host "   8) List active port-forwards"
-    Write-Host "   9) Stop port-forwards"
+    Write-Host "   8) Start port-forward (ArgoCD, Grafana, etc.)"
+    Write-Host "   9) List active port-forwards"
+    Write-Host "  10) Stop port-forwards"
     Write-Host ""
     Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
-    Write-Host "  10) Build & push images"
-    Write-Host "  11) List secrets"
+    Write-Host "  11) Build & push images"
+    Write-Host "  12) List secrets"
     Write-Host ""
     Write-Host "❌ EXIT: q) Quit" -ForegroundColor $Color.Muted
     Write-Host ""
@@ -130,8 +131,8 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-11 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11") -notcontains $choice -and $choice -ne "q")
+        $choice = Read-Host "Enter command (1-12 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12") -notcontains $choice -and $choice -ne "q")
 }
 
 switch ($choice) {
@@ -161,6 +162,11 @@ switch ($choice) {
     }
     
     "6" {
+        $null = Invoke-Script "reset-argocd-password.ps1" -Arguments @("-TestOnly")
+        $null = Read-Host "`nPress Enter to continue"
+    }
+    
+    "7" {
         Write-Host ""
         Write-Host "Force sync targets:" -ForegroundColor $Color.Info
         Write-Host "  - all (platform + apps)" -ForegroundColor $Color.Muted
@@ -180,7 +186,7 @@ switch ($choice) {
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "7" {
+    "8" {
         Write-Host ""
         Write-Host "Port-forward to services:" -ForegroundColor $Color.Info
         Write-Host "  - argocd (default)" -ForegroundColor $Color.Muted
@@ -204,22 +210,22 @@ switch ($choice) {
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "8" {
+    "9" {
         $null = Invoke-Script "list-port-forwards.ps1"
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "9" {
+    "10" {
         $null = Invoke-Script "stop-port-forward.ps1" -Arguments @("all")
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "10" {
+    "11" {
         $null = Invoke-Script "build-push-images.ps1"
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "11" {
+    "12" {
         Write-Host ""
         $ns = Read-Host "Enter namespace (or press Enter for all)"
         if ($ns) {

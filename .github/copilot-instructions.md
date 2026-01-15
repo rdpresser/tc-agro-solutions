@@ -15,6 +15,7 @@
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Language:** C# / .NET 9
 - **Web Framework:** FastEndpoints (do not use traditional Controllers)
 - **ORM:** Entity Framework Core 9
@@ -22,6 +23,7 @@
 - **Pattern:** Pragmatic CQRS (no full event sourcing)
 
 ### Infrastructure
+
 - **Cloud:** Microsoft Azure
 - **Orchestration:** Azure Kubernetes Service (AKS)
 - **Database:** Azure PostgreSQL Flexible Server + TimescaleDB (for time series)
@@ -32,6 +34,7 @@
 - **CI/CD:** GitHub Actions + ArgoCD (GitOps)
 
 ### Testing
+
 - **Unit Tests:** xUnit
 - **Load Tests:** k6
 - **Mocking:** NSubstitute or Moq
@@ -62,6 +65,7 @@ tc-agro-solutions/              # Parent repository (this repo)
 ```
 
 **Key Resources:**
+
 - [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md) - Complete setup guide
 - [QUICK_START_SUBMODULES.md](../QUICK_START_SUBMODULES.md) - 5-minute quick start
 - [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md) - Template for new services
@@ -76,6 +80,7 @@ tc-agro-solutions/              # Parent repository (this repo)
 5. **Agro.Dashboard.Api** - Optimized queries with plot status badges (read-only)
 
 ### Inter-Service Communication
+
 - **Synchronous:** HTTP/REST with JWT authentication
 - **Asynchronous:** Azure Service Bus (domain events)
 - **Pattern:** Each service has its own logical database
@@ -86,6 +91,7 @@ tc-agro-solutions/              # Parent repository (this repo)
 ## 📝 C# Coding Conventions
 
 ### Project Structure (Per Service Repository)
+
 ```
 src/
 ├── Agro.Identity.Api/
@@ -99,6 +105,7 @@ src/
 **Note:** Each microservice lives in its own Git repository as a submodule. When creating new services, follow [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md).
 
 ### Naming Conventions
+
 - **Namespaces:** `Agro.{ServiceName}.{Layer}`
 - **Classes:** PascalCase
 - **Methods:** PascalCase
@@ -107,6 +114,7 @@ src/
 - **Interfaces:** Prefix `I` (e.g., `IUserRepository`)
 
 ### FastEndpoints - Endpoint Structure
+
 ```csharp
 using FastEndpoints;
 
@@ -132,7 +140,7 @@ public class CreatePropertyEndpoint : Endpoint<CreatePropertyRequest, CreateProp
     public override async Task HandleAsync(CreatePropertyRequest req, CancellationToken ct)
     {
         var result = await _propertyService.CreateAsync(req, ct);
-        
+
         if (result.IsSuccess)
         {
             await SendCreatedAtAsync<GetPropertyEndpoint>(
@@ -149,6 +157,7 @@ public class CreatePropertyEndpoint : Endpoint<CreatePropertyRequest, CreateProp
 ```
 
 ### Entity Framework Core - Entities
+
 ```csharp
 public class Property
 {
@@ -159,13 +168,14 @@ public class Property
     public Guid OwnerId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     // Navigation properties
     public ICollection<Plot> Plots { get; set; } = new List<Plot>();
 }
 ```
 
 ### DbContext - Configuration
+
 ```csharp
 public class FarmDbContext : DbContext
 {
@@ -183,25 +193,26 @@ public class FarmDbContext : DbContext
 ```
 
 ### Entity Configuration
+
 ```csharp
 public class PropertyConfiguration : IEntityTypeConfiguration<Property>
 {
     public void Configure(EntityTypeBuilder<Property> builder)
     {
         builder.HasKey(p => p.Id);
-        
+
         builder.Property(p => p.Name)
             .IsRequired()
             .HasMaxLength(200);
-        
+
         builder.Property(p => p.Location)
             .HasMaxLength(500);
-        
+
         builder.HasMany(p => p.Plots)
             .WithOne()
             .HasForeignKey(plot => plot.PropertyId)
             .OnDelete(DeleteBehavior.Cascade);
-        
+
         builder.HasIndex(p => p.OwnerId);
     }
 }
@@ -212,6 +223,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
 ## 🔄 Pragmatic CQRS with Wolverine
 
 ### Command (Write)
+
 ```csharp
 public record CreateSensorReadingCommand(
     string SensorId,
@@ -228,7 +240,7 @@ public class CreateSensorReadingHandler
     private readonly ILogger<CreateSensorReadingHandler> _logger;
 
     public CreateSensorReadingHandler(
-        SensorDbContext db, 
+        SensorDbContext db,
         IMessageBus bus,
         ILogger<CreateSensorReadingHandler> logger)
     {
@@ -255,7 +267,7 @@ public class CreateSensorReadingHandler
         // Publish event for Analytics Worker
         await _bus.PublishAsync(new SensorReadingReceivedEvent(reading.Id, command.SensorId), ct);
 
-        _logger.LogInformation("Sensor reading {ReadingId} created for sensor {SensorId}", 
+        _logger.LogInformation("Sensor reading {ReadingId} created for sensor {SensorId}",
             reading.Id, command.SensorId);
 
         return reading.Id;
@@ -264,6 +276,7 @@ public class CreateSensorReadingHandler
 ```
 
 ### Query (Read)
+
 ```csharp
 public record GetLatestReadingsQuery(string SensorId, int Limit = 10);
 
@@ -317,6 +330,7 @@ public class GetLatestReadingsHandler
 ## ⏰ TimescaleDB - Time Series Data
 
 ### Hypertable Configuration
+
 ```csharp
 // In DbContext or Migration
 public partial class InitialCreate : Migration
@@ -352,15 +366,16 @@ public partial class InitialCreate : Migration
 ```
 
 ### TimescaleDB Aggregation Queries
+
 ```csharp
 // Query with time_bucket (hourly aggregation)
 public async Task<List<HourlyAggregateDto>> GetHourlyAggregates(
-    string sensorId, 
-    int days, 
+    string sensorId,
+    int days,
     CancellationToken ct)
 {
     var sql = @"
-        SELECT 
+        SELECT
             time_bucket('1 hour', time) AS hour,
             AVG(temperature) AS avg_temperature,
             MAX(temperature) AS max_temperature,
@@ -384,6 +399,7 @@ public async Task<List<HourlyAggregateDto>> GetHourlyAggregates(
 ## 🔍 Observability with Application Insights
 
 ### Structured Logging
+
 ```csharp
 public class SensorIngestService
 {
@@ -419,7 +435,7 @@ public class SensorIngestService
                 reading.Id,
                 reading.SensorId
             );
-            
+
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }
@@ -428,6 +444,7 @@ public class SensorIngestService
 ```
 
 ### Custom Metrics
+
 ```csharp
 public class MetricsService
 {
@@ -465,6 +482,7 @@ public class MetricsService
 ## 🔐 JWT Authentication
 
 ### Program.cs Configuration
+
 ```csharp
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -485,6 +503,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 ```
 
 ### Token Generation
+
 ```csharp
 public class JwtTokenService
 {
@@ -548,6 +567,7 @@ public class CreatePropertyRequestValidator : Validator<CreatePropertyRequest>
 ## 🧪 Testing - Patterns and Examples
 
 ### Unit Test - Handler
+
 ```csharp
 public class CreatePropertyHandlerTests
 {
@@ -558,10 +578,10 @@ public class CreatePropertyHandlerTests
         var options = new DbContextOptionsBuilder<FarmDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         await using var context = new FarmDbContext(options);
         var handler = new CreatePropertyHandler(context);
-        
+
         var command = new CreatePropertyCommand(
             "Test Farm",
             "São Paulo, SP",
@@ -582,6 +602,7 @@ public class CreatePropertyHandlerTests
 ```
 
 ### Integration Test - Endpoint
+
 ```csharp
 public class PropertiesEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -622,6 +643,7 @@ public class PropertiesEndpointTests : IClassFixture<WebApplicationFactory<Progr
 ## 📦 Dockerization
 
 ### Standard Dockerfile
+
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
@@ -649,10 +671,14 @@ ENTRYPOINT ["dotnet", "Agro.Farm.Api.dll"]
 ## � Local Development Environment
 
 ### Local vs Cloud Strategy
+
 The project supports two distinct environments:
+
 - **Local (Development):** Docker Compose with PostgreSQL, Redis, RabbitMQ (no Terraform, no Azure)
 - **Cloud (Production):** Azure via Terraform modules with AKS and managed services
+
 ### Git Submodules Workflow
+
 ```bash
 # Clone with all services
 git clone --recurse-submodules git@github.com:org/tc-agro-solutions.git
@@ -664,27 +690,32 @@ git submodule update --remote
 ./scripts/submodules-manage.sh update
 ./scripts/submodules-manage.sh status
 ```
+
 ### Local Orchestration
+
 - **Primary tool:** Docker Compose (required for all developers)
 - **Optional:** .NET Aspire (for individual developer preference only)
 - **Why Docker Compose:** Universal, simple, explicit, no vendor lock-in
 
 ### Terraform Strategy
+
 - **Single environment:** Terraform provisions Azure resources (production)
 - **No multi-environment complexity:** Local = Docker Compose, Azure = Terraform
 - **Modular structure:** One module per Azure resource type
 - **Clear separation:** Development happens locally, deployment targets Azure
 
 ### Local Technology Stack
-| Component | Local | Cloud (Azure) |
-|-----------|-------|---------------|
-| Database | PostgreSQL + TimescaleDB | Azure PostgreSQL Flexible Server |
-| Cache | Redis (Docker) | Azure Redis Cache |
-| Messaging | RabbitMQ | Azure Service Bus |
-| Orchestration | Docker Compose | AKS |
-| Observability | Console logs | Application Insights |
+
+| Component     | Local                    | Cloud (Azure)                    |
+| ------------- | ------------------------ | -------------------------------- |
+| Database      | PostgreSQL + TimescaleDB | Azure PostgreSQL Flexible Server |
+| Cache         | Redis (Docker)           | Azure Redis Cache                |
+| Messaging     | RabbitMQ                 | Azure Service Bus                |
+| Orchestration | Docker Compose           | AKS                              |
+| Observability | Console logs             | Application Insights             |
 
 ### Running Locally
+
 ```bash
 # Clone solution with all services
 git clone --recurse-submodules git@github.com:org/tc-agro-solutions.git
@@ -707,15 +738,30 @@ dotnet run --project src/Agro.Farm.Api
 ```
 
 ### Configuration Patterns
+
 - Use `appsettings.Development.json` for local environment
 - Use `appsettings.Production.json` for Azure environment
 - Connection strings via environment variables or User Secrets
 
 ---
 
+## 📝 Documentation and Language Standards
+
+### Documentation Files
+
+- **No automatic .md file creation:** Do not create markdown documentation files unless explicitly requested
+- **Suggest before creating:** If a .md file seems valuable, ask the user first or mention it at the end of the interaction
+- **Visual summaries in chat:** Provide clear, visual summaries of work completed in the conversation (emoji, formatting, etc.)
+- **Use English for all content:** All files created, modified, or generated (code, comments, filenames, folders, .md files, etc.) must use English
+  - Exception: Chat responses can be in Portuguese if the user writes in Portuguese
+  - Apply this rule to: PowerShell comments, C# code/comments, variable names, file/folder names, and all documentation
+
+---
+
 ## 🎯 Important Rules
 
 ### ✅ ALWAYS Do:
+
 - Use **FastEndpoints** for APIs (not MVC Controllers)
 - Use **async/await** in all I/O operations
 - Implement **structured logging** with Application Insights (cloud) or Console (local)
@@ -729,6 +775,7 @@ dotnet run --project src/Agro.Farm.Api
 - Support both local (Docker Compose) and cloud (Azure) configurations
 
 ### ❌ NEVER Do:
+
 - Use MVC Controllers (use FastEndpoints)
 - Expose domain entities directly in APIs
 - Perform blocking synchronous operations (use async)
@@ -741,6 +788,7 @@ dotnet run --project src/Agro.Farm.Api
 - Create coupling between microservices (use messaging)
 
 ### 📊 TimescaleDB Specific:
+
 - Use **hypertables** for sensor data (time series)
 - Aggregation queries: use **time_bucket()** from TimescaleDB
 - Indexes: always include **time** column + identifier (sensor_id, plot_id)
@@ -748,6 +796,7 @@ dotnet run --project src/Agro.Farm.Api
 - Raw SQL queries when necessary to leverage TimescaleDB functions
 
 ### 🔐 Security:
+
 - All APIs protected with JWT (except login)
 - Validate input on all endpoints
 - Never log sensitive data
@@ -756,6 +805,7 @@ dotnet run --project src/Agro.Farm.Api
 - Validate request origin (CORS)
 
 ### 📈 Performance:
+
 - Redis cache for frequent reads (TTL 1-5 min)
 - Batch processing for mass ingestion
 - Pagination on listings (do not return everything at once)
@@ -768,7 +818,8 @@ dotnet run --project src/Agro.Farm.Api
 ## 🚀 Useful Commands
 
 ### Local Development
-```bash
+
+````bash
 # Start all infrastructure services
 docker compose up -d
 
@@ -799,13 +850,15 @@ terraform validate
 
 # Format code
 terraform fmt -recursive
-```
+````
 
 ### er compose down
 
 # Stop and remove volumes (cleans data)
+
 docker compose down -v
-```
+
+````
 
 ### Entity Framework Migrations
 ```bash
@@ -817,9 +870,10 @@ dotnet ef database update --project src/Agro.Farm.Api
 
 # Generate SQL script (for production)
 dotnet ef migrations script --project src/Agro.Farm.Api --output migration.sql
-```
+````
 
 ### Docker (for Cloud Deployment)
+
 ```bash
 # Build
 docker build -t agro-farm-api:latest -f src/Agro.Farm.Api/Dockerfile .
@@ -872,15 +926,17 @@ See [ADR-007: AKS Node Pool Strategy](../docs/adr/ADR-007-node-pool-strategy.md)
 
 ### Terraform Module Structure
 ```
+
 terraform/
-├── main.tf                 # Root orchestration
-├── modules/aks/            # AKS with 3 node pools
-├── modules/postgres/       # PostgreSQL + TimescaleDB
-├── modules/redis/          # Azure Redis
-├── modules/servicebus/     # Azure Service Bus
-├── modules/observability/  # App Insights + Log Analytics
+├── main.tf # Root orchestration
+├── modules/aks/ # AKS with 3 node pools
+├── modules/postgres/ # PostgreSQL + TimescaleDB
+├── modules/redis/ # Azure Redis
+├── modules/servicebus/ # Azure Service Bus
+├── modules/observability/ # App Insights + Log Analytics
 └── ...other modules
-```
+
+````
 
 ### Terraform Deployment
 
@@ -891,23 +947,29 @@ terraform validate && terraform fmt -recursive
 terraform plan -out=tfplan
 terraform apply tfplan
 terraform output -json > outputs.json
-```
+````
 
 ---
 
 > **Last update:** January 2026  
 > **Version:** 1.1
+
 # Apply manifests
+
 kubectl apply -f k8s/
 
 # Check pods
+
 kubectl get pods -n agro
 
 # Logs
+
 kubectl logs -f <pod-name> -n agro
 
 # Port forward for debugging
+
 kubectl port-forward svc/farm-api 8080:80 -n agro
+
 ```
 
 ---
@@ -917,27 +979,29 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 ### Overview
 A pure HTML/CSS/JavaScript frontend for demonstrating the dashboard UI without requiring Azure/backend dependencies.
 
-**Location:** `poc/frontend/`  
+**Location:** `poc/frontend/`
 **Documentation:** [poc/frontend/README.md](../poc/frontend/README.md)
 
 ### Structure
 ```
+
 poc/frontend/
-├── index.html              # Login page (entry point)
-├── dashboard.html          # Main dashboard with stats & metrics
-├── properties.html         # Properties list
-├── properties-form.html    # Property CRUD form
-├── plots.html              # Plots list
-├── plots-form.html         # Plot CRUD form
-├── sensors.html            # Sensor monitoring grid
-├── alerts.html             # Alert management
-├── css/style.css           # Agro-themed styles
+├── index.html # Login page (entry point)
+├── dashboard.html # Main dashboard with stats & metrics
+├── properties.html # Properties list
+├── properties-form.html # Property CRUD form
+├── plots.html # Plots list
+├── plots-form.html # Plot CRUD form
+├── sensors.html # Sensor monitoring grid
+├── alerts.html # Alert management
+├── css/style.css # Agro-themed styles
 ├── js/
-│   ├── utils.js            # Common utilities
-│   ├── auth.js             # Authentication (mock + prepared real)
-│   └── api.js              # API client with mock data
-└── README.md               # Integration guide
-```
+│ ├── utils.js # Common utilities
+│ ├── auth.js # Authentication (mock + prepared real)
+│ └── api.js # API client with mock data
+└── README.md # Integration guide
+
+````
 
 ### Key Patterns
 
@@ -947,9 +1011,10 @@ poc/frontend/
 sessionStorage.setItem('agro_token', token);
 sessionStorage.getItem('agro_token');
 sessionStorage.removeItem('agro_token');
-```
+````
 
 #### Mock Data Pattern
+
 ```javascript
 // All API functions return mock data for demo
 // Real AJAX calls are commented and ready to uncomment
@@ -966,6 +1031,7 @@ return handleResponse(response);
 ```
 
 #### Security Model
+
 ```
 ⚠️ CRITICAL: Frontend security is for UX only!
 
@@ -976,6 +1042,7 @@ The frontend CANNOT enforce security. Backend MUST validate all tokens.
 ```
 
 ### Running the POC
+
 ```bash
 # Option 1: Open directly in browser
 # Just open poc/frontend/index.html
@@ -988,6 +1055,7 @@ cd poc/frontend && python -m http.server 8000
 ```
 
 ### Design System
+
 - **Primary Color:** #2D5016 (Dark Green)
 - **Icons:** Unicode emoji (🌾🏘️📊📡🔔)
 - **Responsive:** Mobile-first with breakpoints at 768px/1024px
@@ -997,6 +1065,7 @@ cd poc/frontend && python -m http.server 8000
 ## 📚 References and Documentation
 
 ### Technology Stack
+
 - **FastEndpoints:** https://fast-endpoints.com/
 - **Wolverine:** https://wolverine.netlify.app/
 - **TimescaleDB:** https://docs.timescale.com/
@@ -1004,6 +1073,7 @@ cd poc/frontend && python -m http.server 8000
 - **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
 
 ### Project Documentation
+
 - **Frontend POC:** [poc/frontend/README.md](../poc/frontend/README.md) - Dashboard demo guide
 - **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](../docs/REQUIREMENTS_MAPPING.md) - Hackathon spec → roadmap traceability
 - **Technical Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md) - Complete strategy, phases, deliverables
@@ -1016,6 +1086,7 @@ cd poc/frontend && python -m http.server 8000
 - **Terraform Infrastructure:** [docs/architecture/infrastructure-terraform.md](../docs/architecture/infrastructure-terraform.md) - IaC + delivery evidence
 
 ### Key ADRs
+
 - [ADR-001: Microservices Architecture](../docs/adr/ADR-001-microservices.md)
 - [ADR-002: Data Persistence Strategy](../docs/adr/ADR-002-persistence.md)
 - [ADR-003: TimescaleDB for Time Series](../docs/adr/ADR-003-timeseries.md)
