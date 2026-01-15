@@ -381,6 +381,8 @@ function Install-ArgoCD {
         --set server.service.type=ClusterIP `
         --set server.ingress.enabled=false `
         --set configs.params."server\.insecure"=true `
+        --set configs.cm."server\.basehref"="/argocd" `
+        --set configs.cm."server\.rootpath"="/argocd" `
         --wait --timeout=5m 2>&1 | Out-Null
     
     if ($LASTEXITCODE -eq 0) {
@@ -522,6 +524,34 @@ function Apply-GitOpsBootstrap {
     }
 }
 
+function Apply-LocalManifests {
+    Write-Step "Applying platform/apps overlays (local safety net)"
+
+    # repo root = ..\.. from scripts/k3d
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+
+    $platformOverlay = Join-Path $repoRoot "infrastructure\kubernetes\platform\overlays\dev"
+    $appsOverlay = Join-Path $repoRoot "infrastructure\kubernetes\apps\overlays\dev"
+
+    if (Test-Path $platformOverlay) {
+        Write-Host "   Applying platform overlay (namespaces, ingress, ArgoCD projects)..." -ForegroundColor $Color.Info
+        kubectl apply -k $platformOverlay 2>&1 | Out-Null
+        Write-Host "✅ Platform overlay applied" -ForegroundColor $Color.Success
+    }
+    else {
+        Write-Host "⚠️  Platform overlay not found: $platformOverlay" -ForegroundColor $Color.Warning
+    }
+
+    if (Test-Path $appsOverlay) {
+        Write-Host "   Applying apps overlay (frontend ingress/deployment)..." -ForegroundColor $Color.Info
+        kubectl apply -k $appsOverlay 2>&1 | Out-Null
+        Write-Host "✅ Apps overlay applied" -ForegroundColor $Color.Success
+    }
+    else {
+        Write-Host "⚠️  Apps overlay not found: $appsOverlay" -ForegroundColor $Color.Warning
+    }
+}
+
 # =====================================================
 # === Main Execution
 # =====================================================
@@ -550,6 +580,7 @@ Set-NodeLabelsAndTaints
 Install-ArgoCD
 Set-ArgocdPassword
 Apply-GitOpsBootstrap
+Apply-LocalManifests
 
 # =====================================================
 # === Summary
