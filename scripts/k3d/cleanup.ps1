@@ -78,7 +78,7 @@ Write-Host ""
 Write-Host "=== Clean Docker resources? (containers, images, volumes, networks) ===" -ForegroundColor $Color.Warning
 Write-Host "   This will remove:" -ForegroundColor $Color.Info
 Write-Host "   - All stopped k3d containers" -ForegroundColor $Color.Muted
-Write-Host "   - All k3d images (rancher/k3s, rancher/k3d-*)" -ForegroundColor $Color.Muted
+Write-Host "   - All k3d images (rancher/k3s, rancher/k3d-*, ghcr.io/k3d-io/*)" -ForegroundColor $Color.Muted
 Write-Host "   - All unused volumes" -ForegroundColor $Color.Muted
 Write-Host "   - All unused networks" -ForegroundColor $Color.Muted
 $confirmDocker = Read-Host "Type 'yes' to confirm"
@@ -89,11 +89,18 @@ if ($confirmDocker -eq "yes") {
         docker rm -f $_ 2>&1 | Out-Null
     }
     
-    Write-Host "   Removing k3d images..." -ForegroundColor $Color.Info
+    Write-Host "   Removing k3d images (rancher/k3d-*)..." -ForegroundColor $Color.Info
     docker images --filter "reference=rancher/k3d-*" --format "{{.ID}}" | ForEach-Object {
         docker rmi -f $_ 2>&1 | Out-Null
     }
+    
+    Write-Host "   Removing k3s images (rancher/k3s*)..." -ForegroundColor $Color.Info
     docker images --filter "reference=rancher/k3s*" --format "{{.ID}}" | ForEach-Object {
+        docker rmi -f $_ 2>&1 | Out-Null
+    }
+    
+    Write-Host "   Removing k3d-io images (ghcr.io/k3d-io/*)..." -ForegroundColor $Color.Info
+    docker images --filter "reference=ghcr.io/k3d-io/*" --format "{{.ID}}" | ForEach-Object {
         docker rmi -f $_ 2>&1 | Out-Null
     }
     
