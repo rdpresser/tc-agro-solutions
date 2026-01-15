@@ -116,44 +116,72 @@ function Remove-ExistingCluster {
 }
 
 function New-K3dCluster {
-    Write-Step "Creating k3d cluster (Step 1/2): 1 server + 0 agents"
-    Write-Host "   ℹ️  Agents added separately for per-node resource allocation" -ForegroundColor $Color.Info
+    Write-Step "Creating k3d cluster (1 server + 2 agents)"
     
     k3d cluster create $clusterName `
         --servers 1 `
-        --agents 0 `
+        --agents 2 `
         --port "80:80@loadbalancer" `
         --port "443:443@loadbalancer" `
         --servers-memory $serverMemory `
-        --registry-use "$registryName`:$registryPort" `
-        --wait 2>&1 | Out-Null
+        --agents-memory $appsAgentMemory `
+        --registry-use "$registryName`:$registryPort" 2>&1 | Out-Null
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Failed to create cluster" -ForegroundColor $Color.Error
         exit 1
     }
     
-    Start-Sleep -Seconds 10
+    Write-Host "   Waiting for cluster initialization..." -ForegroundColor $Color.Muted
+    Start-Sleep -Seconds 15
+    
+    # Set kubectl context
     kubectl config use-context "k3d-$clusterName" 2>&1 | Out-Null
     Write-Host "✅ Cluster created" -ForegroundColor $Color.Success
 }
 
-function Add-AgentNodes {
-    Write-Step "Adding agent nodes (Step 2/2)"
+function Fix-KubeconfigForDocker {
+    Write-Step "Adjusting kubeconfig for Docker Desktop"
     
-    Write-Host "   Adding SYSTEM agent ($systemAgentMemory RAM)..." -ForegroundColor $Color.Info
-    k3d node create "$clusterName-agent-system-0" `
-        --cluster $clusterName `
-        --role agent `
-        --memory $systemAgentMemory 2>&1 | Out-Null
+    try {
+        $serverUrl = kubectl config view -o json 2>$null | ConvertFrom-Json |
+        ForEach-Object { $_.clusters | Where-Object { $_.name -eq "k3d-$clusterName" } } |
+        ForEach-Object { $_.cluster.server }
+        
+        if ($serverUrl -match "host\.docker\.internal:(\d+)") {
+            $port = $matches[1]
+            kubectl config set-cluster "k3d-$clusterName" --server="https://127.0.0.1:$port" 2>&1 | Out-Null
+            Write-Host "✅ Kubeconfig adjusted to https://127.0.0.1:$port" -ForegroundColor $Color.Success
+        }
+    }
+    catch {
+        Write-Host "⚠️  Could not adjust kubeconfig (non-critical)" -ForegroundColor $Color.Warning
+    }
+}
+
+function Validate-KubernetesAPI {
+    Write-Step "Validating Kubernetes API connectivity"
     
-    Write-Host "   Adding APPS agent ($appsAgentMemory RAM)..." -ForegroundColor $Color.Info
-    k3d node create "$clusterName-agent-apps-0" `
-        --cluster $clusterName `
-        --role agent `
-        --memory $appsAgentMemory 2>&1 | Out-Null
+    for ($i = 0; $i -lt 30; $i++) {
+        try {
+            $result = kubectl cluster-info 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ Kubernetes API accessible" -ForegroundColor $Color.Success
+                return $true
+            }
+        }
+        catch {}
+        
+        Write-Host "   Attempt $($i+1)/30: API not ready yet..." -ForegroundColor $Color.Muted
+        Start-Sleep -Seconds 5
+    }
     
-    Write-Host "✅ Agent nodes added" -ForegroundColor $Color.Success
+    Write-Host "❌ ERROR: Kubernetes API did not respond after 2.5 minutes" -ForegroundColor $Color.Error
+    Write-Host "   Troubleshooting steps:" -ForegroundColor $Color.Warning
+    Write-Host "   1. Restart Docker Desktop" -ForegroundColor $Color.Warning
+    Write-Host "   2. Run: k3d cluster delete $clusterName" -ForegroundColor $Color.Warning
+    Write-Host "   3. Run this script again" -ForegroundColor $Color.Warning
+    return $false
 }
 
 function Wait-ForNodes {
@@ -162,14 +190,15 @@ function Wait-ForNodes {
         $nodes = kubectl get nodes --no-headers 2>$null
         if ($nodes -and ($nodes | Measure-Object).Count -ge 3) {
             Write-Host "✅ All nodes registered:" -ForegroundColor $Color.Success
-            kubectl get nodes -o wide
+            kubectl get nodes -o wide 2>$null | ForEach-Object { Write-Host "   $_" -ForegroundColor $Color.Muted }
             return
         }
-        Write-Host "   Attempt $($i+1)/30..." -ForegroundColor $Color.Muted
+        Write-Host "   Attempt $($i+1)/30: Waiting for $($i+2) nodes..." -ForegroundColor $Color.Muted
         Start-Sleep -Seconds 3
     }
     
-    Write-Host "⚠️  Timeout waiting for nodes" -ForegroundColor $Color.Warning
+    Write-Host "⚠️  WARNING: Nodes did not register within 90 seconds" -ForegroundColor $Color.Warning
+    Write-Host "   This may indicate Docker network issues. Attempting to continue..." -ForegroundColor $Color.Warning
 }
 
 function Set-NodeLabelsAndTaints {
@@ -361,7 +390,8 @@ Stop-PortForwards
 New-LocalRegistry
 Remove-ExistingCluster
 New-K3dCluster
-Add-AgentNodes
+Fix-KubeconfigForDocker
+Validate-KubernetesAPI
 Wait-ForNodes
 Set-NodeLabelsAndTaints
 Install-ArgoCD
