@@ -6,9 +6,23 @@ metadata:
   labels:
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-compress@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
+  - host: argocd.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+  # Alternative: Path-based routing (works better with k3d localhost)
   - host: localhost
     http:
       paths:
