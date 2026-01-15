@@ -221,10 +221,85 @@ function Install-ArgoCD {
         deployment/argocd-server -n $argocdNamespace 2>&1 | Out-Null
 }
 
+function Set-ArgocdPassword {
+    Write-Step "Configuring ArgoCD admin password"
+    
+    # Get initial password from secret
+    Write-Host "   Retrieving initial password..." -ForegroundColor $Color.Info
+    $initialPassword = kubectl -n $argocdNamespace get secret argocd-initial-admin-secret `
+        -o jsonpath="{.data.password}" 2>$null | 
+        ForEach-Object { [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+    
+    if (-not $initialPassword) {
+        Write-Host "⚠️  Could not retrieve initial password" -ForegroundColor $Color.Warning
+        return
+    }
+    
+    Write-Host "   Initial password: $initialPassword" -ForegroundColor $Color.Muted
+    
+    # Start temporary port-forward
+    Write-Host "   Starting port-forward..." -ForegroundColor $Color.Info
+    $pfProcess = Start-Process -FilePath kubectl `
+        -ArgumentList "port-forward svc/argocd-server -n $argocdNamespace 8090:443 --address 127.0.0.1" `
+        -WindowStyle Hidden -PassThru
+    
+    Start-Sleep -Seconds 8
+    
+    # Change password via REST API
+    try {
+        # Login to get token
+        $loginBody = @{ 
+            username = "admin"
+            password = $initialPassword 
+        } | ConvertTo-Json
+        
+        $loginResponse = Invoke-RestMethod `
+            -Uri "http://localhost:8090/api/v1/session" `
+            -Method Post `
+            -Body $loginBody `
+            -ContentType "application/json" `
+            -ErrorAction Stop
+        
+        $token = $loginResponse.token
+        
+        # Update password
+        $updateBody = @{ 
+            currentPassword = $initialPassword
+            newPassword = $argocdAdminPassword 
+        } | ConvertTo-Json
+        
+        $headers = @{ 
+            "Authorization" = "Bearer $token"
+            "Content-Type" = "application/json" 
+        }
+        
+        Invoke-RestMethod `
+            -Uri "http://localhost:8090/api/v1/account/password" `
+            -Method Put `
+            -Headers $headers `
+            -Body $updateBody `
+            -ErrorAction Stop | Out-Null
+        
+        Write-Host "✅ Password changed to: $argocdAdminPassword" -ForegroundColor $Color.Success
+    }
+    catch {
+        Write-Host "⚠️  Failed to change password: $_" -ForegroundColor $Color.Warning
+        Write-Host "   Manual change: http://localhost:8080" -ForegroundColor $Color.Info
+    }
+    finally {
+        # Stop port-forward
+        Stop-Process -Id $pfProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Apply-GitOpsBootstrap {
     Write-Step "Applying GitOps bootstrap (App-of-apps)"
     
-    $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    # Calculate repo root correctly:
+    # PSScriptRoot = c:\Projects\tc-agro-solutions\scripts\k3d
+    # Parent 1 = c:\Projects\tc-agro-solutions\scripts
+    # Parent 2 = c:\Projects\tc-agro-solutions (repo root) ✅
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     $platformPath = Join-Path $repoRoot "infrastructure\kubernetes\platform"
     
     # Apply platform project first
@@ -271,6 +346,7 @@ Add-AgentNodes
 Wait-ForNodes
 Set-NodeLabelsAndTaints
 Install-ArgoCD
+Set-ArgocdPassword
 Apply-GitOpsBootstrap
 
 # =====================================================

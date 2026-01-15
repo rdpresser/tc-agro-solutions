@@ -1,40 +1,64 @@
-# Placeholder for future microservices ApplicationSet
-# ===================================================
-# This will be populated when microservices have Kubernetes manifests
-#
-# Example structure:
-# apiVersion: argoproj.io/v1alpha1
-# kind: ApplicationSet
-# metadata:
-#   name: agro-microservices
-#   namespace: argocd
-# spec:
-#   generators:
-#     - list:
-#         elements:
-#           - service: identity
-#             repo: https://github.com/rdpresser/tc-agro-identity-service.git
-#           - service: farm
-#             repo: https://github.com/rdpresser/tc-agro-farm-service.git
-#           - service: sensor-ingest
-#             repo: https://github.com/rdpresser/tc-agro-sensor-ingest-service.git
-#           - service: analytics-worker
-#             repo: https://github.com/rdpresser/tc-agro-analytics-worker.git
-#           - service: dashboard
-#             repo: https://github.com/rdpresser/tc-agro-dashboard-service.git
-#   template:
-#     metadata:
-#       name: 'agro-{{service}}'
-#     spec:
-#       project: apps
-#       source:
-#         repoURL: '{{repo}}'
-#         targetRevision: main
-#         path: k8s/overlays/dev
-#       destination:
-#         server: https://kubernetes.default.svc
-#         namespace: agro-apps
-#       syncPolicy:
-#         automated:
-#           prune: true
-#           selfHeal: true
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: agro-apps
+  namespace: argocd
+  labels:
+    project: apps
+    environment: dev
+spec:
+  generators:
+    - list:
+        elements:
+          - name: frontend
+            path: infrastructure/kubernetes/apps/base/frontend
+  
+  template:
+    metadata:
+      name: 'app-{{name}}'
+      namespace: argocd
+      labels:
+        project: apps
+        component: '{{name}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    
+    spec:
+      project: apps
+      
+      source:
+        repoURL: https://github.com/rdpresser/tc-agro-solutions.git
+        targetRevision: main
+        path: '{{path}}'
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: agro-apps
+      
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+      
+      revisionHistoryLimit: 3
+
+# ==============================================================================
+# Future microservices can be added to the elements list above
+# ==============================================================================
+# Example:
+# - name: identity-api
+#   path: infrastructure/kubernetes/apps/base/identity-api
+# - name: farm-api
+#   path: infrastructure/kubernetes/apps/base/farm-api
+

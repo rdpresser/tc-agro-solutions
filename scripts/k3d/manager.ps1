@@ -38,19 +38,22 @@ function Show-Menu {
     Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Title
     Write-Host ""
     Write-Host "🚀 CLUSTER OPERATIONS:" -ForegroundColor $Color.Info
-    Write-Host "  1) Bootstrap (create cluster + ArgoCD + GitOps)"
-    Write-Host "  2) Start cluster"
-    Write-Host "  3) Status (nodes, services, ArgoCD apps)"
-    Write-Host "  4) Cleanup (delete cluster + registry)"
+    Write-Host "   1) Bootstrap (create cluster + ArgoCD + GitOps)"
+    Write-Host "   2) Start cluster"
+    Write-Host "   3) Status (nodes, services, ArgoCD apps)"
+    Write-Host "   4) Cleanup (delete cluster + registry)"
     Write-Host ""
-    Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
-    Write-Host "  5) Build & push images"
-    Write-Host "  6) List secrets"
+    Write-Host "🔐 ARGOCD MANAGEMENT:" -ForegroundColor $Color.Info
+    Write-Host "   5) Reset ArgoCD admin password"
     Write-Host ""
     Write-Host "🌐 NETWORKING & ACCESS:" -ForegroundColor $Color.Info
-    Write-Host "  7) Update Windows hosts file"
-    Write-Host "  8) Port-forward (Grafana, Prometheus, etc.)"
-    Write-Host "  9) Stop port-forwards"
+    Write-Host "   6) Start port-forward (ArgoCD, Grafana, etc.)"
+    Write-Host "   7) List active port-forwards"
+    Write-Host "   8) Stop port-forwards"
+    Write-Host ""
+    Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
+    Write-Host "   9) Build & push images"
+    Write-Host "  10) List secrets"
     Write-Host ""
     Write-Host "❌ EXIT: q) Quit" -ForegroundColor $Color.Muted
     Write-Host ""
@@ -126,64 +129,80 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-9 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9") -notcontains $choice -and $choice -ne "q")
+        $choice = Read-Host "Enter command (1-10 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10") -notcontains $choice -and $choice -ne "q")
 }
 
 switch ($choice) {
     "1" {
-        Invoke-Script "bootstrap.ps1"
+        $null = Invoke-Script "bootstrap.ps1"
+        Read-Host "`nPress Enter to continue"
     }
     
     "2" {
-        Invoke-Script "start-cluster.ps1"
+        $null = Invoke-Script "start-cluster.ps1"
+        Read-Host "`nPress Enter to continue"
     }
     
     "3" {
-        Invoke-Script "status.ps1"
+        $null = Invoke-Script "status.ps1"
+        Read-Host "`nPress Enter to continue"
     }
     
     "4" {
-        Invoke-Script "cleanup.ps1"
+        $null = Invoke-Script "cleanup.ps1"
+        Read-Host "`nPress Enter to continue"
     }
     
     "5" {
-        Invoke-Script "build-push-images.ps1"
+        $null = Invoke-Script "reset-argocd-password.ps1"
+        Read-Host "`nPress Enter to continue"
     }
     
     "6" {
         Write-Host ""
-        $ns = Read-Host "Enter namespace (or press Enter for all)"
-        if ($ns) {
-            Invoke-Script "list-secrets.ps1" -Arguments @($ns)
-        }
-        else {
-            Invoke-Script "list-secrets.ps1"
-        }
-    }
-    
-    "7" {
-        Invoke-Script "update-hosts-file.ps1"
-    }
-    
-    "8" {
-        Write-Host ""
         Write-Host "🔗 Available port-forwards:" -ForegroundColor $Color.Info
-        Write-Host "  - grafana (port 3000)"
-        Write-Host "  - prometheus (port 9090)"
-        Write-Host "  - loki (port 3100)"
-        Write-Host "  - tempo (port 3200)"
+        Write-Host "  - argocd (port 8080) ← ArgoCD web UI"
+        Write-Host "  - grafana (port 3000) ← Grafana dashboards"
+        Write-Host "  - prometheus (port 9090) ← Prometheus metrics"
+        Write-Host "  - loki (port 3100) ← Loki logs"
+        Write-Host "  - tempo (port 3200) ← Tempo traces"
+        Write-Host "  - frontend (port 3080) ← TC Agro Frontend"
         Write-Host "  - all (all services)"
         Write-Host ""
         
         $pf = Read-Host "Enter service name (or 'all')"
         if ($pf) {
-            Invoke-Script "port-forward.ps1" -Arguments @($pf)
+            $null = Invoke-Script "port-forward.ps1" -Arguments @($pf)
         }
+        Read-Host "`nPress Enter to continue"
+    }
+    
+    "7" {
+        $null = Invoke-Script "list-port-forwards.ps1"
+        Read-Host "`nPress Enter to continue"
+    }
+    
+    "8" {
+        $null = Invoke-Script "stop-port-forward.ps1" -Arguments @("all")
+        Read-Host "`nPress Enter to continue"
     }
     
     "9" {
-        Invoke-Script "stop-port-forward.ps1" -Arguments @("all")
+        $null = Invoke-Script "build-push-images.ps1"
+        Read-Host "`nPress Enter to continue"
+    }
+    
+    "10" {
+        Write-Host ""
+        $ns = Read-Host "Enter namespace (or press Enter for all)"
+        if ($ns) {
+            $null = Invoke-Script "list-secrets.ps1" -Arguments @($ns)
+        }
+        else {
+            $null = Invoke-Script "list-secrets.ps1"
+        }
+        Read-Host "`nPress Enter to continue"
     }
     
     "q" {
