@@ -49,13 +49,31 @@ if (-not $argocdCheck) {
 Write-Host "✅ ArgoCD found in cluster" -ForegroundColor $Color.Success
 Write-Host ""
 
+# Ensure ArgoCD projects exist before syncing applications
+Write-Host "Ensuring ArgoCD projects exist..." -ForegroundColor $Color.Info
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$projectsPath = Join-Path $repoRoot "infrastructure\kubernetes\platform\argocd\projects"
+
+$projectPlatform = Join-Path $projectsPath "project-platform.yaml"
+$projectApps = Join-Path $projectsPath "project-apps.yaml"
+
+if (Test-Path $projectPlatform) {
+    kubectl apply -f $projectPlatform 2>&1 | Out-Null
+    Write-Host "  ✅ Platform project applied" -ForegroundColor $Color.Success
+}
+if (Test-Path $projectApps) {
+    kubectl apply -f $projectApps 2>&1 | Out-Null
+    Write-Host "  ✅ Apps project applied" -ForegroundColor $Color.Success
+}
+Write-Host ""
+
 # Define applications to sync
 $applications = @()
 
 switch ($Target) {
     "all" {
         Write-Host "Syncing ALL applications..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx")
+        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx", "app-frontend")
     }
     "platform" {
         Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
@@ -63,7 +81,7 @@ switch ($Target) {
     }
     "apps" {
         Write-Host "Syncing APPLICATION components..." -ForegroundColor $Color.Info
-        $applications = @("apps-bootstrap")
+        $applications = @("apps-bootstrap", "app-frontend")
     }
 }
 

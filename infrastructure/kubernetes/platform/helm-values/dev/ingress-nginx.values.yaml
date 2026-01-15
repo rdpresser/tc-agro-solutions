@@ -6,10 +6,13 @@
 controller:
   kind: Deployment
   
-  # IMPORTANT: k3d provides LoadBalancer via svclb
-  # Port mapping: 80:80@loadbalancer, 443:443@loadbalancer
+  # IMPORTANT: k3d already maps ports 80:80 and 443:443 via its loadbalancer
+  # Using NodePort avoids svclb pod conflicts with k3d's port binding
   service:
-    type: LoadBalancer
+    type: NodePort
+    nodePorts:
+      http: 30080
+      https: 30443
   
   nodeSelector:
     agentpool: system
