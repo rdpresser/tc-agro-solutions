@@ -48,8 +48,9 @@ foreach ($img in $images) {
     }
     
     $tag = "localhost:$registryPort/${imageName}:latest"
+    $k3dTag = "k3d-localhost:$registryPort/${imageName}:latest"
     
-    docker build -t $tag -f $dockerfilePath $imagePath
+    docker build -t $tag -t $k3dTag -f $dockerfilePath $imagePath
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "   ❌ Build failed" -ForegroundColor $Color.Error
@@ -60,9 +61,11 @@ foreach ($img in $images) {
     
     Write-Host "   Pushing to registry..." -ForegroundColor $Color.Muted
     docker push $tag
+    docker push $k3dTag
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   ✅ Pushed: $tag" -ForegroundColor $Color.Success
+        Write-Host "   ✅ Pushed: $k3dTag" -ForegroundColor $Color.Success
     }
     else {
         Write-Host "   ❌ Push failed" -ForegroundColor $Color.Error

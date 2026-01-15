@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: localhost:5000/agro-frontend:latest
+        image: k3d-localhost:5000/agro-frontend:latest
         imagePullPolicy: Always
         ports:
         - name: http
