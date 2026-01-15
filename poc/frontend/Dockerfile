@@ -24,8 +24,9 @@ RUN npm ci --only=production=false \
 # Copy application source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application for Kubernetes with base path /agro/
+# npm run build:k8s uses: cross-env VITE_BASE_PATH=/agro/ npm run build
+RUN npm run build:k8s
 
 # Verify build output exists
 RUN ls -la dist/

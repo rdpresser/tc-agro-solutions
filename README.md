@@ -34,8 +34,9 @@ cd scripts\k3d
 
 **What you get:**
 
-- ✅ k3d cluster (3 nodes, 18GB)
+- ✅ k3d cluster (4 nodes: 1 server + 3 agents)
 - ✅ 🐳 Local registry at `localhost:5000` (auto-configured!)
+- ✅ **Traefik** (k3s built-in ingress controller)
 - ✅ ArgoCD (GitOps controller)
 - ✅ **Auto-installed via GitOps:**
   - Prometheus + Grafana (metrics)
@@ -43,7 +44,12 @@ cd scripts\k3d
   - Tempo (traces)
   - OpenTelemetry Collector (telemetry hub)
   - KEDA (autoscaling)
-  - Ingress NGINX (routing)
+
+**Routing (via Traefik):**
+
+- 🌐 Frontend: `http://localhost/agro`
+- 🔐 ArgoCD: `http://localhost/arcocd`
+- 📚 [Traefik Routing Guide](TRAEFIK_ROUTING_GUIDE.md) - Complete routing documentation
 
 **Best for:** Testing K8s deployments, validating observability, rehearsing AKS production setup
 
