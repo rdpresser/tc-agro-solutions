@@ -295,45 +295,76 @@ function Verify-NodePools {
 function Set-NodeLabelsAndTaints {
     Write-Step "Labeling nodes for AKS-like pools (3 node pools)"
     
-    # Get all nodes (k3d creates: k3d-dev-agent-0, agent-1, agent-2, server-0)
-    $allNodes = kubectl get nodes -o name 2>$null | ForEach-Object { $_.Replace("node/", "") }
+    # Retry logic: sometimes nodes take a moment to fully register
+    $retries = 0
+    $maxRetries = 5
+    $allNodes = @()
+    
+    while ($allNodes.Count -lt 3 -and $retries -lt $maxRetries) {
+        $allNodes = kubectl get nodes -o name 2>$null | ForEach-Object { $_.Replace("node/", "") }
+        
+        if ($allNodes.Count -lt 3) {
+            $retries++
+            Write-Host "   ⏳ Waiting for all nodes to register ($($allNodes.Count)/4 ready, retry $retries/$maxRetries)..." -ForegroundColor $Color.Muted
+            Start-Sleep -Seconds 2
+        }
+    }
     
     if ($allNodes.Count -eq 0) {
-        Write-Host "⚠️  No nodes found" -ForegroundColor $Color.Warning
+        Write-Host "❌ No nodes found after waiting" -ForegroundColor $Color.Error
         return
     }
     
+    Write-Host "   📍 Found nodes: $($allNodes -join ', ')" -ForegroundColor $Color.Muted
+    
     # Label agents with agentpool (simulating AKS node pools)
-    # Agents created with custom names: dev-agent-system, dev-agent-platform, dev-agent-apps
-    $agentSystem = $allNodes | Where-Object { $_ -like "*agent-system" } | Select-Object -First 1
-    $agentPlatform = $allNodes | Where-Object { $_ -like "*agent-platform" } | Select-Object -First 1
-    $agentApps = $allNodes | Where-Object { $_ -like "*agent-apps" } | Select-Object -First 1
+    # Agents created with custom names: k3d-dev-agent-system, k3d-dev-agent-platform, k3d-dev-agent-apps
+    $agentSystem = $allNodes | Where-Object { $_ -like "*agent-system*" } | Select-Object -First 1
+    $agentPlatform = $allNodes | Where-Object { $_ -like "*agent-platform*" } | Select-Object -First 1
+    $agentApps = $allNodes | Where-Object { $_ -like "*agent-apps*" } | Select-Object -First 1
+    
+    Write-Host "   🔍 Matching patterns:" -ForegroundColor $Color.Muted
+    Write-Host "      System (*agent-system*): $($agentSystem ?? 'NOT FOUND')" -ForegroundColor $Color.Muted
+    Write-Host "      Platform (*agent-platform*): $($agentPlatform ?? 'NOT FOUND')" -ForegroundColor $Color.Muted
+    Write-Host "      Apps (*agent-apps*): $($agentApps ?? 'NOT FOUND')" -ForegroundColor $Color.Muted
+    
+    $labeledCount = 0
     
     if ($agentSystem) {
         kubectl label node $agentSystem agentpool=system workload=system --overwrite 2>&1 | Out-Null
         kubectl taint node $agentSystem agentpool=system:NoSchedule --overwrite 2>&1 | Out-Null
         Write-Host "   ✓ $agentSystem → system pool (4GB, NoSchedule taint)" -ForegroundColor $Color.Success
+        $labeledCount++
     }
     
     if ($agentPlatform) {
         kubectl label node $agentPlatform agentpool=platform workload=platform --overwrite 2>&1 | Out-Null
         Write-Host "   ✓ $agentPlatform → platform pool (6GB)" -ForegroundColor $Color.Success
+        $labeledCount++
     }
     
     if ($agentApps) {
         kubectl label node $agentApps agentpool=apps workload=application --overwrite 2>&1 | Out-Null
         Write-Host "   ✓ $agentApps → apps pool (8GB)" -ForegroundColor $Color.Success
+        $labeledCount++
     }
     
-    if ($agentSystem -or $agentPlatform -or $agentApps) {
+    if ($labeledCount -eq 3) {
         Write-Host "✅ All 3 node pools labeled successfully" -ForegroundColor $Color.Success
         Write-Host "   Viewing node allocation:" -ForegroundColor $Color.Muted
-        kubectl get nodes -L agentpool, workload 2>&1 | ForEach-Object { 
+        kubectl get nodes -L agentpool,workload 2>&1 | ForEach-Object { 
             Write-Host "   $_" -ForegroundColor $Color.Muted 
         }
     }
+    elseif ($labeledCount -gt 0) {
+        Write-Host "⚠️  Only $labeledCount/3 node pools labeled" -ForegroundColor $Color.Warning
+        Write-Host "   Nodes found: $($allNodes -join ', ')" -ForegroundColor $Color.Muted
+        Write-Host "   This may resolve automatically in a few moments" -ForegroundColor $Color.Info
+    }
     else {
-        Write-Host "⚠️  Could not find agent nodes to label" -ForegroundColor $Color.Warning
+        Write-Host "❌ Could not find agent nodes matching patterns" -ForegroundColor $Color.Error
+        Write-Host "   Nodes available: $($allNodes -join ', ')" -ForegroundColor $Color.Muted
+        Write-Host "   Expected patterns: *agent-system*, *agent-platform*, *agent-apps*" -ForegroundColor $Color.Muted
     }
 }
 
@@ -508,6 +539,12 @@ Fix-KubeconfigForDocker
 Validate-KubernetesAPI
 Wait-ForNodes
 Verify-NodePools
+
+# Give nodes a moment to fully register before labeling
+Write-Host ""
+Write-Host "⏳ Allowing nodes to fully stabilize before labeling..." -ForegroundColor $Color.Info
+Start-Sleep -Seconds 3
+
 Set-NodeLabelsAndTaints
 Install-ArgoCD
 Set-ArgocdPassword
