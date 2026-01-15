@@ -151,15 +151,24 @@ Adds to `C:\Windows\System32\drivers\etc\hosts`:
 ### 4. Access ArgoCD
 
 ```powershell
-# Via Ingress (no port-forward needed!)
-http://argocd.local
+# Option 1: Port-Forward (Recommended for development)
+.\port-forward.ps1 argocd
+# Then access: http://localhost:8090/argocd/
+
+# Option 2: Via Ingress (requires hosts file configuration)
+# Edit C:\Windows\System32\drivers\etc\hosts and add:
+#   127.0.0.1 argocd.local
+# Then access: http://argocd.local/
 
 # Credentials
 Username: admin
-Password: Argo@123!
+Password: Argo@123! (or initial password from secret)
 
-# (Optional) Get initial admin password if you didn't set custom:
+# (Optional) Get initial admin password if needed:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# (Optional) Reset password if needed:
+.\reset-argocd-password.ps1 -CurrentPassword "Argo@123!"
 ```
 
 ---
@@ -482,14 +491,44 @@ infrastructure/kubernetes/platform/helm-values/dev/
 
 ---
 
-## 🌐 Ingress Access
+## 🌐 Access Methods
 
-| Service    | URL                 | Notes                         |
-| ---------- | ------------------- | ----------------------------- |
-| **ArgoCD** | http://argocd.local | Via Ingress (no port-forward) |
-| **Apps**   | http://agro.local   | (future deployments)          |
+| Service    | Method       | URL                             | Notes                                 |
+| ---------- | ------------ | ------------------------------- | ------------------------------------- |
+| **ArgoCD** | Port-Forward | `http://localhost:8090/argocd/` | Recommended: works immediately        |
+| **ArgoCD** | Ingress      | `http://argocd.local/`          | Requires hosts file setup (see below) |
+| **Apps**   | Port-Forward | `http://localhost:8080`         | (future deployments)                  |
 
-**Port-forwards (optional):**
+### Port-Forward Method (Quick & Easy)
+
+```powershell
+# Start port-forward for ArgoCD
+.\port-forward.ps1 argocd
+
+# Access at:
+# http://localhost:8090/argocd/
+```
+
+### Ingress Method (Clean URLs, requires setup)
+
+Edit `C:\Windows\System32\drivers\etc\hosts` and add:
+
+```
+127.0.0.1 argocd.local
+127.0.0.1 agro.local
+```
+
+Then access:
+
+```
+http://argocd.local/   (if Ingress configured)
+```
+
+**Note:** Traefik Ingress for ArgoCD requires additional configuration due to k3d networking. Port-forward is the reliable method for local development.
+
+---
+
+## 📊 Port Forwards (Optional)
 
 - Grafana: `.\port-forward.ps1 grafana` → `http://localhost:3000`
 - Prometheus: `.\port-forward.ps1 prometheus` → `http://localhost:9090`
