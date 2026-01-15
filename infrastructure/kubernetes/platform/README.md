@@ -19,7 +19,8 @@ platform/
 │
 ├── argocd/                              # ArgoCD manifests
 │   ├── bootstrap/
-│   │   └── application-bootstrap.yaml   # App-of-apps (creates all Applications)
+│   │   ├── bootstrap-platform.yaml      # Platform infrastructure bootstrap
+│   │   └── bootstrap-apps.yaml          # Applications bootstrap
 │   ├── projects/
 │   │   └── project-platform.yaml        # Platform Project
 │   └── applications/
@@ -48,7 +49,8 @@ platform/
 ```
 scripts/k3d/bootstrap.ps1
   └── Creates cluster + installs ArgoCD
-  └── Applies: argocd/bootstrap/application-bootstrap.yaml
+  └── Applies: argocd/bootstrap/bootstrap-platform.yaml (platform)
+  └── Applies: argocd/bootstrap/bootstrap-apps.yaml (applications)
 
 ArgoCD reads: argocd/applications/
   ├── platform-observability.yaml

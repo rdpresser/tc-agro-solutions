@@ -316,15 +316,27 @@ function Apply-GitOpsBootstrap {
         Write-Host "✅ Base manifests applied (namespaces, ingress)" -ForegroundColor $Color.Success
     }
     
-    # Apply bootstrap Application (App-of-apps)
-    $bootstrapFile = Join-Path $platformPath "argocd\bootstrap\application-bootstrap.yaml"
-    if (Test-Path $bootstrapFile) {
-        kubectl apply -f $bootstrapFile 2>&1 | Out-Null
-        Write-Host "✅ Bootstrap Application applied" -ForegroundColor $Color.Success
+    # Apply bootstrap Applications (App-of-apps)
+    # 1. Platform bootstrap (infrastructure)
+    $bootstrapPlatformFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-platform.yaml"
+    if (Test-Path $bootstrapPlatformFile) {
+        kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
+        Write-Host "✅ Platform bootstrap Applied (infrastructure components)" -ForegroundColor $Color.Success
         Write-Host "   ℹ️  ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA, Ingress NGINX" -ForegroundColor $Color.Info
     }
     else {
-        Write-Host "⚠️  Bootstrap file not found: $bootstrapFile" -ForegroundColor $Color.Warning
+        Write-Host "⚠️  Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning
+    }
+    
+    # 2. Apps bootstrap (applications)
+    $bootstrapAppsFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-apps.yaml"
+    if (Test-Path $bootstrapAppsFile) {
+        kubectl apply -f $bootstrapAppsFile 2>&1 | Out-Null
+        Write-Host "✅ Apps bootstrap Applied (application components)" -ForegroundColor $Color.Success
+        Write-Host "   ℹ️  ArgoCD will now install: Frontend and future microservices" -ForegroundColor $Color.Info
+    }
+    else {
+        Write-Host "⚠️  Apps bootstrap file not found: $bootstrapAppsFile" -ForegroundColor $Color.Warning
     }
 }
 

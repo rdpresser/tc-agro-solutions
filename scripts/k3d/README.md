@@ -51,7 +51,8 @@ create-all-from-zero.ps1
 1. .\bootstrap.ps1
    └─ Cria cluster k3d (18GB: 2+6+10)
    └─ Instala ArgoCD via Helm
-   └─ Aplica Application-Bootstrap (App-of-apps)
+   └─ Aplica bootstrap-platform.yaml (Infraestrutura)
+   └─ Aplica bootstrap-apps.yaml (Aplicações)
 
 2. ArgoCD assume e instala:
    ├─ platform-observability

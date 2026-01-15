@@ -59,7 +59,8 @@ Complete visual overview of the new GitOps infrastructure setup with registry co
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
 │  │ 4️⃣ Apply ArgoCD Bootstrap Application (App-of-apps)                 │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
-│  │ kubectl apply -f bootstrap/application-bootstrap.yaml              │       │
+│  │ kubectl apply -f bootstrap/bootstrap-platform.yaml
+kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
 │  │ ↓                                                                    │       │
 │  │ 🎯 Application: "platform-bootstrap" (App-of-apps)                  │       │
 │  │    source: infrastructure/kubernetes/platform/argocd/applications/ │       │
@@ -231,7 +232,8 @@ tc-agro-solutions/
 │  │  │
 │  │  ├─ argocd/
 │  │  │  ├─ bootstrap/
-│  │  │  │  └─ application-bootstrap.yaml        (App-of-apps)
+│  │  │  │  ├─ bootstrap-platform.yaml           (Platform infrastructure)
+│  │  │  │  └─ bootstrap-apps.yaml               (Applications)
 │  │  │  ├─ projects/
 │  │  │  │  └─ project-platform.yaml             (Platform Project)
 │  │  │  └─ applications/
