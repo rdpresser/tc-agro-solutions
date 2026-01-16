@@ -8,11 +8,15 @@
   
   Can also run in test mode (-TestOnly) to verify password change works without actually changing it.
   
+  The -Force flag enables a direct secret patching method using bcrypt hash generation,
+  which works even when the current password is unknown.
+  
   Useful when:
   - Bootstrap didn't change password correctly
   - You forgot the password
   - Need to reset to known value
   - Debugging password change issues
+  - All known passwords fail (use -Force)
 
 .PARAMETER TestOnly
   If specified, tests password change without actually changing it.
@@ -20,6 +24,14 @@
 
 .PARAMETER NewPassword
   Custom password to set (default: Argo@123!)
+
+.PARAMETER CurrentPassword
+  If provided, use this instead of initial secret for authentication.
+
+.PARAMETER Force
+  Bypass API authentication and force password reset via direct secret patching.
+  Uses bcrypt hash generation via temporary Python container.
+  Works even when current password is unknown.
 
 .EXAMPLE
   .\reset-argocd-password.ps1
@@ -40,12 +52,21 @@
 .EXAMPLE
   .\reset-argocd-password.ps1 -CurrentPassword "Argo@123!" -NewPassword "NewPass@456"
   # Change from one known password to another
+
+.EXAMPLE
+  .\reset-argocd-password.ps1 -Force
+  # Force reset password via kubectl (no current password needed)
+
+.EXAMPLE
+  .\reset-argocd-password.ps1 -Force -NewPassword "MyNewPass@123"
+  # Force reset to custom password via kubectl
 #>
 
 param(
     [switch]$TestOnly,
     [string]$NewPassword = "Argo@123!",
-    [string]$CurrentPassword = ""  # If provided, use this instead of initial secret
+    [string]$CurrentPassword = "",  # If provided, use this instead of initial secret
+    [switch]$Force  # Force reset via bcrypt + kubectl patch (no current password needed)
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +81,132 @@ $Color = @{
     Error   = "Red"
     Info    = "Cyan"
     Muted   = "Gray"
+}
+
+# ============================================================
+# Force Password Reset Function (bcrypt + kubectl patch)
+# ============================================================
+function Invoke-ForcePasswordReset {
+    param(
+        [string]$Password,
+        [string]$Namespace = "argocd"
+    )
+    
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Warning
+    Write-Host "║  FORCE PASSWORD RESET (kubectl patch method)              ║" -ForegroundColor $Color.Warning
+    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Warning
+    Write-Host ""
+    
+    # Step 1: Generate bcrypt hash via Python container
+    Write-Host "🔐 Generating bcrypt hash..." -ForegroundColor $Color.Info
+    Write-Host "   Using temporary Python container..." -ForegroundColor $Color.Muted
+    
+    $pythonScript = "import bcrypt; print(bcrypt.hashpw(b'$Password', bcrypt.gensalt(10)).decode())"
+    $bcryptHash = $null
+    
+    try {
+        # Run Python container to generate bcrypt hash
+        $bcryptHash = kubectl run bcrypt-gen --rm -i --restart=Never --image=python:3.11-slim `
+            -- /bin/bash -c "pip install bcrypt -q && python -c `"$pythonScript`"" 2>&1 | 
+        Where-Object { $_ -match '^\$2[aby]?\$' } | Select-Object -First 1
+        
+        if (-not $bcryptHash) {
+            throw "Failed to generate bcrypt hash"
+        }
+        
+        # Clean up hash (remove any extra whitespace)
+        $bcryptHash = $bcryptHash.Trim()
+        
+        Write-Host "   ✅ Hash generated successfully" -ForegroundColor $Color.Success
+        Write-Host "   Hash: $($bcryptHash.Substring(0, 20))..." -ForegroundColor $Color.Muted
+    }
+    catch {
+        Write-Host "   ❌ Failed to generate bcrypt hash" -ForegroundColor $Color.Error
+        Write-Host "   Error: $_" -ForegroundColor $Color.Error
+        return $false
+    }
+    
+    # Step 2: Patch argocd-secret with new password hash
+    Write-Host ""
+    Write-Host "📝 Patching argocd-secret..." -ForegroundColor $Color.Info
+    
+    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
+    $patchJson = @{
+        stringData = @{
+            "admin.password"      = $bcryptHash
+            "admin.passwordMtime" = $timestamp
+        }
+    } | ConvertTo-Json -Compress
+    
+    try {
+        kubectl patch secret argocd-secret -n $Namespace -p $patchJson 2>&1 | Out-Null
+        Write-Host "   ✅ Secret patched successfully" -ForegroundColor $Color.Success
+    }
+    catch {
+        Write-Host "   ❌ Failed to patch secret" -ForegroundColor $Color.Error
+        Write-Host "   Error: $_" -ForegroundColor $Color.Error
+        return $false
+    }
+    
+    # Step 3: Restart argocd-server deployment
+    Write-Host ""
+    Write-Host "🔄 Restarting ArgoCD server..." -ForegroundColor $Color.Info
+    
+    try {
+        kubectl rollout restart deployment argocd-server -n $Namespace 2>&1 | Out-Null
+        Write-Host "   Waiting for rollout to complete..." -ForegroundColor $Color.Muted
+        
+        # Wait for pod to be ready
+        kubectl rollout status deployment/argocd-server -n $Namespace --timeout=60s 2>&1 | Out-Null
+        Write-Host "   ✅ ArgoCD server restarted" -ForegroundColor $Color.Success
+    }
+    catch {
+        Write-Host "   ⚠️  Rollout may still be in progress" -ForegroundColor $Color.Warning
+        Write-Host "   Check with: kubectl get pods -n $Namespace" -ForegroundColor $Color.Muted
+    }
+    
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Success
+    Write-Host "║  ✅ Force Password Reset Completed!                       ║" -ForegroundColor $Color.Success
+    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
+    Write-Host ""
+    Write-Host "🔐 New credentials:" -ForegroundColor $Color.Info
+    Write-Host "   Username: admin" -ForegroundColor $Color.Muted
+    Write-Host "   Password: $Password" -ForegroundColor $Color.Success
+    Write-Host ""
+    Write-Host "🌐 Access ArgoCD at:" -ForegroundColor $Color.Info
+    Write-Host "   http://localhost:8090/argocd/" -ForegroundColor $Color.Muted
+    Write-Host "   (requires: .\port-forward.ps1 argocd)" -ForegroundColor $Color.Muted
+    Write-Host ""
+    
+    return $true
+}
+
+# ============================================================
+# If -Force flag is set, bypass API and use direct patching
+# ============================================================
+if ($Force) {
+    Write-Host "`n╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Warning
+    Write-Host "║  FORCE MODE: Bypassing API authentication                 ║" -ForegroundColor $Color.Warning
+    Write-Host "╚════════════════════════════════════════════════════════════╝`n" -ForegroundColor $Color.Warning
+    
+    # Check if ArgoCD is installed
+    Write-Host "🔍 Checking ArgoCD installation..." -ForegroundColor $Color.Info
+    $argocdPod = kubectl get pods -n $argocdNamespace -l app.kubernetes.io/name=argocd-server --no-headers 2>$null
+    if (-not $argocdPod) {
+        Write-Host "❌ ArgoCD not found in namespace '$argocdNamespace'" -ForegroundColor $Color.Error
+        exit 1
+    }
+    Write-Host "✅ ArgoCD found" -ForegroundColor $Color.Success
+    
+    $result = Invoke-ForcePasswordReset -Password $NewPassword -Namespace $argocdNamespace
+    if ($result) {
+        exit 0
+    }
+    else {
+        exit 1
+    }
 }
 
 if ($TestOnly) {
@@ -363,14 +510,56 @@ catch {
         Write-Host "   HTTP Status: $($_.Exception.Response.StatusCode.value__)" -ForegroundColor $Color.Error
     }
     
-    Write-Host ""
-    Write-Host "📋 Troubleshooting:" -ForegroundColor $Color.Warning
-    Write-Host "   1. Check if current password is correct" -ForegroundColor $Color.Muted
-    Write-Host "   2. Try: .\port-forward.ps1 argocd" -ForegroundColor $Color.Muted
-    Write-Host "   3. Open: http://localhost:8080" -ForegroundColor $Color.Muted
-    Write-Host "   4. Change password manually in UI" -ForegroundColor $Color.Muted
-    Write-Host "   5. Check if ArgoCD pod is healthy: kubectl get pods -n argocd" -ForegroundColor $Color.Muted
-    Write-Host ""
+    # Check if this is an authentication failure (401)
+    $is401Error = $_.Exception.Message -match "401" -or 
+    $_.Exception.Message -match "Invalid username or password" -or
+    ($_.Exception.Response -and $_.Exception.Response.StatusCode.value__ -eq 401)
+    
+    if ($is401Error -and -not $TestOnly) {
+        Write-Host ""
+        Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Warning
+        Write-Host "║  🔑 Authentication Failed - Force Reset Available         ║" -ForegroundColor $Color.Warning
+        Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Warning
+        Write-Host ""
+        Write-Host "The current password is unknown or invalid." -ForegroundColor $Color.Muted
+        Write-Host "You can force reset the password via kubectl." -ForegroundColor $Color.Muted
+        Write-Host ""
+        Write-Host "Options:" -ForegroundColor $Color.Info
+        Write-Host "   1. Specify current password:" -ForegroundColor $Color.Muted
+        Write-Host "      .\reset-argocd-password.ps1 -CurrentPassword 'your-password'" -ForegroundColor $Color.Muted
+        Write-Host ""
+        Write-Host "   2. Force reset (no current password needed):" -ForegroundColor $Color.Muted
+        Write-Host "      .\reset-argocd-password.ps1 -Force" -ForegroundColor $Color.Muted
+        Write-Host ""
+        
+        $response = Read-Host "Would you like to force reset now? (y/N)"
+        if ($response -eq "y" -or $response -eq "Y") {
+            # Stop port-forward before force reset
+            Write-Host ""
+            Write-Host "🛑 Stopping port-forward..." -ForegroundColor $Color.Info
+            Stop-Process -Id $pfProcess.Id -Force -ErrorAction SilentlyContinue
+            
+            # Execute force reset
+            $result = Invoke-ForcePasswordReset -Password $NewPassword -Namespace $argocdNamespace
+            if ($result) {
+                exit 0
+            }
+            else {
+                exit 1
+            }
+        }
+    }
+    else {
+        Write-Host ""
+        Write-Host "📋 Troubleshooting:" -ForegroundColor $Color.Warning
+        Write-Host "   1. Check if current password is correct" -ForegroundColor $Color.Muted
+        Write-Host "   2. Try: .\port-forward.ps1 argocd" -ForegroundColor $Color.Muted
+        Write-Host "   3. Open: http://localhost:8090/argocd/" -ForegroundColor $Color.Muted
+        Write-Host "   4. Change password manually in UI" -ForegroundColor $Color.Muted
+        Write-Host "   5. Check if ArgoCD pod is healthy: kubectl get pods -n argocd" -ForegroundColor $Color.Muted
+        Write-Host "   6. Force reset: .\reset-argocd-password.ps1 -Force" -ForegroundColor $Color.Muted
+        Write-Host ""
+    }
 }
 finally {
     # Stop port-forward

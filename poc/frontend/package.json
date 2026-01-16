@@ -9,7 +9,7 @@
     "build": "node --no-deprecation -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
     "build:k8s": "cross-env VITE_BASE_PATH=/agro/ npm run build",
     "build:root": "cross-env VITE_BASE_PATH=/ npm run build",
-    "build-and-preview": "npm run build && npm run preview",
+    "build-and-preview": "npm run build:k8s && npm run preview",
     "preview": "vite preview",
     "upgrade-deps": "npm-check-updates -u && npm install",
     "lint": "eslint .",

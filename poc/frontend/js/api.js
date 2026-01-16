@@ -7,7 +7,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
 
 import { toast } from './i18n.js';
-import { APP_CONFIG, getToken, clearToken } from './utils.js';
+import { APP_CONFIG, getToken, clearToken, navigateTo } from './utils.js';
 
 // ============================================
 // AXIOS INSTANCE WITH INTERCEPTORS
@@ -58,7 +58,7 @@ api.interceptors.response.use(
     // Handle unauthorized
     if (error.response?.status === 401) {
       clearToken();
-      window.location.href = 'index.html';
+      navigateTo('index.html');
       return Promise.reject(error);
     }
 

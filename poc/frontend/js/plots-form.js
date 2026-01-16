@@ -6,7 +6,7 @@
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $id, getQueryParam } from './utils.js';
+import { $id, getQueryParam, navigateTo } from './utils.js';
 
 // ============================================
 // Page State
@@ -135,7 +135,7 @@ function setupEditMode() {
     loadSensors();
   } else {
     toast('plot.not_found', 'error');
-    window.location.href = 'plots.html';
+    navigateTo('plots.html');
   }
 
   /* ============================================
@@ -147,7 +147,7 @@ function setupEditMode() {
     loadSensors();
   } catch (error) {
     showToast('Failed to load plot', 'error');
-    window.location.href = 'plots.html';
+    navigateTo('plots.html');
   }
    */
 }
@@ -257,7 +257,7 @@ function handleSubmit(e) {
   toast(isEditMode ? 'plot.updated_success' : 'plot.created_success', 'success');
 
   setTimeout(() => {
-    window.location.href = 'plots.html';
+    navigateTo('plots.html');
   }, 1500);
 
   /* ============================================
@@ -271,7 +271,7 @@ function handleSubmit(e) {
       await createPlot(formData);
       showToast('Plot created successfully!', 'success');
     }
-    setTimeout(() => window.location.href = 'plots.html', 1500);
+    setTimeout(() => navigateTo('plots.html'), 1500);
   } catch (error) {
     showToast(error.message || 'Failed to save plot', 'error');
   }

@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Manages background kubectl port-forward processes for:
-  - argocd (8080:80)
+  - argocd (8090:80)
   - grafana (3000:80)
   - prometheus (9090:9090)
   - loki (3100:3100)
@@ -26,7 +26,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $portForwards = @{
-    argocd     = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8080; remotePort = 80 }
+    argocd     = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8090; remotePort = 80 }
     grafana    = @{ namespace = "monitoring"; service = "kube-prom-stack-grafana"; localPort = 3000; remotePort = 80 }
     prometheus = @{ namespace = "monitoring"; service = "kube-prom-stack-kube-prome-prometheus"; localPort = 9090; remotePort = 9090 }
     loki       = @{ namespace = "monitoring"; service = "loki"; localPort = 3100; remotePort = 3100 }

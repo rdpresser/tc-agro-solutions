@@ -17,7 +17,8 @@ import {
   getToken,
   isValidEmail,
   showLoading,
-  hideLoading
+  hideLoading,
+  navigateTo
 } from './utils.js';
 
 // ============================================
@@ -117,7 +118,7 @@ export function handleLogout() {
 
   // Redirect to login
   setTimeout(() => {
-    window.location.href = '/index.html';
+    navigateTo('index.html');
   }, 500);
 }
 
@@ -147,7 +148,7 @@ export function refreshToken() {
     return response.data.token;
   } catch (error) {
     clearToken();
-    window.location.href = 'index.html';
+    navigateTo('index.html');
     throw error;
   }
   */
@@ -217,14 +218,14 @@ export function isAuthenticated() {
  * Redirect to dashboard if authenticated
  */
 export function redirectToDashboard() {
-  window.location.href = 'dashboard.html';
+  navigateTo('dashboard.html');
 }
 
 /**
  * Redirect to login if not authenticated
  */
 export function redirectToLogin() {
-  window.location.href = 'index.html';
+  navigateTo('index.html');
 }
 
 /**

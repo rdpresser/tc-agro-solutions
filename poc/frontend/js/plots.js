@@ -5,7 +5,7 @@
 import { getPlots, getProperties, deletePlot } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, $$, showConfirm } from './utils.js';
+import { $, $$, showConfirm, getPageUrl } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -82,7 +82,7 @@ function renderPlotsTable(plots) {
         </span>
       </td>
       <td class="actions">
-        <a href="plots-form.html?id=${plot.id}" class="btn btn-sm btn-outline">✏️ Edit</a>
+        <a href="${getPageUrl('plots-form.html')}?id=${plot.id}" class="btn btn-sm btn-outline">✏️ Edit</a>
         <button class="btn btn-sm btn-danger" data-action="delete" data-id="${plot.id}">🗑️</button>
       </td>
     </tr>

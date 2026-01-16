@@ -5,7 +5,7 @@
 import { getProperties, deleteProperty } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, $$, showConfirm } from './utils.js';
+import { $, $$, showConfirm, getPageUrl } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -66,7 +66,7 @@ function renderPropertiesTable(properties) {
         </span>
       </td>
       <td class="actions">
-        <a href="properties-form.html?id=${prop.id}" class="btn btn-sm btn-outline">✏️ Edit</a>
+        <a href="${getPageUrl('properties-form.html')}?id=${prop.id}" class="btn btn-sm btn-outline">✏️ Edit</a>
         <button class="btn btn-sm btn-danger" data-action="delete" data-id="${prop.id}">🗑️</button>
       </td>
     </tr>

@@ -493,11 +493,11 @@ infrastructure/kubernetes/platform/helm-values/dev/
 
 ## 🌐 Access Methods
 
-| Service    | Method       | URL                             | Notes                                 |
-| ---------- | ------------ | ------------------------------- | ------------------------------------- |
-| **ArgoCD** | Port-Forward | `http://localhost:8090/argocd/` | Recommended: works immediately        |
-| **ArgoCD** | Ingress      | `http://argocd.local/`          | Requires hosts file setup (see below) |
-| **Apps**   | Port-Forward | `http://localhost:8080`         | (future deployments)                  |
+| Service      | Method       | URL                             | Notes                                 |
+| ------------ | ------------ | ------------------------------- | ------------------------------------- |
+| **ArgoCD**   | Port-Forward | `http://localhost:8090/argocd/` | Recommended: works immediately        |
+| **ArgoCD**   | Ingress      | `http://argocd.local/`          | Requires hosts file setup (see below) |
+| **Frontend** | Port-Forward | `http://localhost:3080`         | Frontend POC app                      |
 
 ### Port-Forward Method (Quick & Easy)
 

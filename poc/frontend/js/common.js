@@ -5,7 +5,7 @@
 
 import { handleLogout, requireAuth, getTokenInfo } from './auth.js';
 import { initSidebar } from './sidebar.js';
-import { $ } from './utils.js';
+import { $, APP_CONFIG } from './utils.js';
 
 // Check authentication for protected pages
 export function initProtectedPage() {
@@ -18,8 +18,37 @@ export function initProtectedPage() {
   setupLogout();
   setupUserDisplay();
   updateActiveNavItem();
+  rewriteNavLinks();
 
   return true;
+}
+
+// Rewrite navigation links to include base path
+// This is needed because Vite only transforms asset URLs, not anchor hrefs
+function rewriteNavLinks() {
+  const basePath = APP_CONFIG.basePath;
+
+  // Only rewrite if base path is not root
+  if (basePath === '/' || basePath === './') {
+    return;
+  }
+
+  // Normalize base path
+  const base = basePath.endsWith('/') ? basePath : basePath + '/';
+
+  // Find all internal links (relative .html links)
+  document.querySelectorAll('a[href$=".html"]').forEach((link) => {
+    const href = link.getAttribute('href');
+
+    // Skip if already has base path or is external
+    if (!href || href.startsWith('http') || href.startsWith(base)) {
+      return;
+    }
+
+    // Handle query strings
+    const cleanHref = href.startsWith('/') ? href.slice(1) : href;
+    link.setAttribute('href', base + cleanHref);
+  });
 }
 
 // Setup logout handlers

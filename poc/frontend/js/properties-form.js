@@ -7,7 +7,7 @@ import { getProperty, createProperty, updateProperty } from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $id, getQueryParam } from './utils.js';
+import { $id, getQueryParam, navigateTo } from './utils.js';
 
 // ============================================
 // Page Initialization
@@ -39,7 +39,7 @@ async function loadProperty(id) {
     const property = await getProperty(id);
     if (!property) {
       toast('property.not_found', 'danger');
-      window.location.href = 'properties.html';
+      navigateTo('properties.html');
       return;
     }
 
@@ -132,7 +132,7 @@ function setupFormHandler() {
 
       // Redirect to list
       setTimeout(() => {
-        window.location.href = 'properties.html';
+        navigateTo('properties.html');
       }, 1000);
     } catch (error) {
       console.error('Failed to save property:', error);

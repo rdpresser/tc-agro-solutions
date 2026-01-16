@@ -146,7 +146,7 @@ Write-Host "   kubectl get applications -n argocd" -ForegroundColor $Color.Info
 Write-Host ""
 Write-Host "   Via ArgoCD UI:" -ForegroundColor $Color.Muted
 Write-Host "   1. Port-forward: .\manager.ps1 6 → argocd" -ForegroundColor $Color.Info
-Write-Host "   2. Open: http://localhost:8080" -ForegroundColor $Color.Info
+Write-Host "   2. Open: http://localhost:8090/argocd/" -ForegroundColor $Color.Info
 Write-Host "   3. Login: admin / Argo@123!" -ForegroundColor $Color.Info
 Write-Host ""
 

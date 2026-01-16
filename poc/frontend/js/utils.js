@@ -19,8 +19,33 @@ export const APP_CONFIG = {
   apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   tokenKey: 'agro_token',
   userKey: 'agro_user',
-  signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true'
+  signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true',
+  // Base path for navigation (Vite injects this at build time)
+  basePath: import.meta.env.BASE_URL || '/'
 };
+
+/**
+ * Navigate to a page respecting the base path configuration
+ * @param {string} page - Page filename (e.g., 'dashboard.html')
+ */
+export function navigateTo(page) {
+  // Remove leading slash if present
+  const cleanPage = page.startsWith('/') ? page.slice(1) : page;
+  // Ensure basePath ends with /
+  const base = APP_CONFIG.basePath.endsWith('/') ? APP_CONFIG.basePath : APP_CONFIG.basePath + '/';
+  window.location.href = base + cleanPage;
+}
+
+/**
+ * Get full URL for a page respecting the base path
+ * @param {string} page - Page filename (e.g., 'dashboard.html')
+ * @returns {string} Full URL path
+ */
+export function getPageUrl(page) {
+  const cleanPage = page.startsWith('/') ? page.slice(1) : page;
+  const base = APP_CONFIG.basePath.endsWith('/') ? APP_CONFIG.basePath : APP_CONFIG.basePath + '/';
+  return base + cleanPage;
+}
 
 // ============================================
 // SESSION STORAGE HELPERS
@@ -79,7 +104,7 @@ export function isAuthenticated() {
 
 export function requireAuth() {
   if (!isAuthenticated()) {
-    window.location.href = 'index.html';
+    navigateTo('index.html');
     return false;
   }
 
@@ -98,7 +123,7 @@ export function requireAuth() {
 
 export function redirectIfAuthenticated() {
   if (isAuthenticated()) {
-    window.location.href = 'dashboard.html';
+    navigateTo('dashboard.html');
     return true;
   }
   return false;
@@ -445,7 +470,7 @@ export function initSidebar() {
       e.preventDefault();
       if (window.confirm('Are you sure you want to logout?')) {
         clearToken();
-        window.location.href = 'index.html';
+        navigateTo('index.html');
       }
     });
   });
