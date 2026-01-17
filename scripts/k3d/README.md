@@ -47,7 +47,7 @@ create-all-from-zero.ps1
 # - Auto-sync, auto-heal, self-service
 ```
 
-**Resultado**: Script de 350 linhas → ~200 linhas. Todo o resto é GitOps.
+**Result**: Script from 350 lines → ~200 lines. Everything else is GitOps.
 
 ---
 
