@@ -16,6 +16,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
   
   sources:
     - repoURL: https://kedacore.github.io/charts
