@@ -4,3 +4,4 @@ kind: Kustomization
 # Application microservices
 resources:
   - frontend
+  - identity

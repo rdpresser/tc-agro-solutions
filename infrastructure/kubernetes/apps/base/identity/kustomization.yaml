@@ -4,11 +4,10 @@ kind: Kustomization
 namespace: agro-apps
 
 resources:
-  - namespace.yaml
   - deployment.yaml
   - service.yaml
   - ingressroute.yaml
 
-commonLabels:
+labels:
   project: tc-agro-solutions
   managed-by: argocd
