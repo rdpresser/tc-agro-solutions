@@ -195,13 +195,14 @@ switch ($choice) {
         Write-Host "  - loki" -ForegroundColor $Color.Muted
         Write-Host "  - tempo" -ForegroundColor $Color.Muted
         Write-Host "  - frontend" -ForegroundColor $Color.Muted
+        Write-Host "  - identity" -ForegroundColor $Color.Muted
         Write-Host "  - all" -ForegroundColor $Color.Muted
         Write-Host ""
         
         $pf = Read-Host "Enter service (default: argocd)"
         if (-not $pf) { $pf = "argocd" }
         
-        if (@("argocd", "grafana", "prometheus", "loki", "tempo", "frontend", "all") -contains $pf) {
+        if (@("argocd", "grafana", "prometheus", "loki", "tempo", "frontend", "identity", "all") -contains $pf) {
             $null = Invoke-Script "port-forward.ps1" -Arguments @($pf)
         }
         else {
@@ -251,3 +252,4 @@ switch ($choice) {
 if (-not $Command) {
     & $PSScriptRoot\manager.ps1
 }
+
