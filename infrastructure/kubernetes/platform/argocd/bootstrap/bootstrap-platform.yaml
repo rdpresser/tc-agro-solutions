@@ -15,7 +15,6 @@ spec:
     path: infrastructure/kubernetes/platform/argocd/applications
     directory:
       recurse: true
-      exclude: 'platform-ingress-nginx.yaml'  # NGINX disabled: Traefik is k3s built-in
   
   destination:
     server: https://kubernetes.default.svc
