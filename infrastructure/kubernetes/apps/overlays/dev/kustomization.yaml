@@ -5,4 +5,7 @@ resources:
   - ../../base/frontend
   - ../../base/identity
   - identity-hpa.yaml
+
+# Strategic merge patch for identity deployment replicas
+patchesStrategicMerge:
   - identity-patch.yaml

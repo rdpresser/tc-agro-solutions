@@ -73,7 +73,7 @@ $applications = @()
 switch ($Target) {
     "all" {
         Write-Host "Syncing ALL applications..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx", "app-frontend")
+        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "platform-ingress-nginx", "agro-apps")
     }
     "platform" {
         Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
@@ -81,7 +81,7 @@ switch ($Target) {
     }
     "apps" {
         Write-Host "Syncing APPLICATION components..." -ForegroundColor $Color.Info
-        $applications = @("apps-bootstrap", "app-frontend")
+        $applications = @("apps-bootstrap", "agro-apps")
     }
 }
 
