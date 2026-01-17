@@ -11,10 +11,12 @@
 ### ✅ Documentation Phase Complete
 
 All critical `.md` files now clearly separate:
+
 - 🔵 **CURRENT (Phase 5):** Localhost development with k3d + Docker Compose
 - 🟣 **FUTURE (Post-Hackathon):** Azure production deployment
 
 **12 Files Updated:**
+
 1. README.md
 2. README_ROADMAP.md ⭐ PRIMARY
 3. ADR-005 ⭐ CRITICAL
@@ -37,15 +39,16 @@ All critical `.md` files now clearly separate:
 **Goal:** Ensure infrastructure documentation matches actual folder structure
 
 #### Tasks:
+
 ```
 [ ] Review scripts/k3d/ARCHITECTURE_DIAGRAM.md
     - Verify it matches actual k3d cluster topology
     - Update port mappings if needed
-    
+
 [ ] Check infrastructure/kubernetes/platform/argocd/applications/
     - Verify all Application manifests are current
     - Confirm no orphaned/deprecated applications
-    
+
 [ ] Validate services/*/src structure
     - Each service has proper Dockerfile
     - Services can build locally
@@ -61,15 +64,16 @@ All critical `.md` files now clearly separate:
 **Goal:** Ensure code examples in documentation are accurate
 
 #### Tasks:
+
 ```
 [ ] Review code examples in ADR-*.md files
     - Run them locally to verify they work
     - Fix any path references (localhost:5000 etc)
-    
+
 [ ] Update .github/copilot-instructions.md
     - Add localhost-specific guidelines
     - Reference k3d setup in microservice template
-    
+
 [ ] Create or update CONTRIBUTING.md
     - "Start with k3d setup" as first step
     - Link to local-setup.md
@@ -84,17 +88,18 @@ All critical `.md` files now clearly separate:
 **Goal:** Verify all services can deploy to k3d
 
 #### Tasks:
+
 ```
 [ ] Test each microservice deployment
     - Does Helm chart/manifests exist?
     - Can it deploy to k3d?
     - Does health endpoint work?
-    
+
 [ ] Verify ArgoCD applications sync correctly
     - Check platform-observability
     - Check platform-autoscaling
     - Check apps-dev (microservices)
-    
+
 [ ] Test observability stack locally
     - Can Grafana reach Prometheus?
     - Can Loki receive logs?
@@ -110,17 +115,18 @@ All critical `.md` files now clearly separate:
 **Goal:** Create automated checks that documentation stays in sync
 
 #### Tasks:
+
 ```
 [ ] Create scripts/validation/check-docs.ps1
     - Verify all file references in .md files exist
     - Check port numbers are consistent
     - Validate Mermaid diagram syntax
-    
+
 [ ] Create scripts/validation/check-infrastructure.ps1
     - Verify k3d cluster has expected namespaces
     - Check ArgoCD applications are synced
     - Validate pod health checks
-    
+
 [ ] Add to CI/CD pipeline
     - Run checks on every PR
     - Ensure docs stay accurate
@@ -140,17 +146,20 @@ All critical `.md` files now clearly separate:
 # Getting Started with TC Agro Solutions (Local Development)
 
 ## 5-Minute Setup
+
 1. Clone repo with submodules
 2. Run bootstrap.ps1
 3. Access services at localhost
 
 ## Folder Reference
+
 - services/: 5 microservice repos (Git submodules)
 - infrastructure/kubernetes/: k3d manifests
 - scripts/k3d/: Bootstrap and management scripts
 - terraform/: Future Azure deployment (reference only)
 
 ## Troubleshooting
+
 [Common issues + fixes]
 ```
 
@@ -164,15 +173,19 @@ All critical `.md` files now clearly separate:
 # Local Architecture Decisions (Phase 5)
 
 ## Q: Why k3d instead of Docker Compose for everything?
+
 A: Need real Kubernetes for ArgoCD + GitOps validation
 
 ## Q: Why RabbitMQ instead of Azure Service Bus locally?
+
 A: Free, runs in Docker, same event-driven pattern
 
 ## Q: Why Prometheus/Grafana instead of Application Insights locally?
+
 A: Free, local, no cloud costs, complete observability
 
 ## Q: How does this differ from production (Azure)?
+
 See: ADR-005 (local-vs-cloud.md)
 ```
 
@@ -186,12 +199,14 @@ See: ADR-005 (local-vs-cloud.md)
 # Deployment Checklist for Phase 5
 
 ## Pre-Demo (1 week before)
+
 - [ ] All services health checks passing
 - [ ] Observability dashboards working
 - [ ] Demo data loaded in database
 - [ ] Sensor simulations running
 
 ## Demo Day
+
 - [ ] k3d cluster started
 - [ ] All pods healthy
 - [ ] ArgoCD synced
@@ -200,6 +215,7 @@ See: ADR-005 (local-vs-cloud.md)
 - [ ] Show Grafana dashboards
 
 ## Post-Demo
+
 - [ ] Cluster still healthy
 - [ ] Logs captured for analysis
 ```
@@ -253,15 +269,14 @@ When transitioning to Azure:
 
 ## 📚 Quick Reference
 
-| Question | Answer | Source |
-|----------|--------|--------|
-| Where do I develop? | Localhost k3d | [README.md](../README.md) |
-| How do I set it up? | Run bootstrap.ps1 | [local-setup.md](./development/local-setup.md) |
-| What about Azure? | Post-hackathon | [ADR-005](./adr/ADR-005-local-vs-cloud.md) |
-| How does it work? | See C4 diagram | [c4-container.md](./architecture/c4-container.md) |
-| Why k3d + RabbitMQ? | Read decisions | [README_ROADMAP.md](../README_ROADMAP.md) |
+| Question            | Answer            | Source                                            |
+| ------------------- | ----------------- | ------------------------------------------------- |
+| Where do I develop? | Localhost k3d     | [README.md](../README.md)                         |
+| How do I set it up? | Run bootstrap.ps1 | [local-setup.md](./development/local-setup.md)    |
+| What about Azure?   | Post-hackathon    | [ADR-005](./adr/ADR-005-local-vs-cloud.md)        |
+| How does it work?   | See C4 diagram    | [c4-container.md](./architecture/c4-container.md) |
+| Why k3d + RabbitMQ? | Read decisions    | [README_ROADMAP.md](../README_ROADMAP.md)         |
 
 ---
 
 > **Next Step:** Choose Phase 1 task and begin. Documentation is now aligned and ready to support development!
-

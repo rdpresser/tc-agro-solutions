@@ -20,6 +20,7 @@ cd scripts\k3d
 ```
 
 **What you get:**
+
 - ✅ k3d Kubernetes cluster (4 nodes on localhost)
 - ✅ 5 microservices deployed via ArgoCD
 - ✅ PostgreSQL + TimescaleDB (Docker)

@@ -5,6 +5,7 @@
 This folder contains Kubernetes manifests for platform infrastructure components running on **local k3d cluster**. All configurations are optimized for localhost development.
 
 **Components managed here:**
+
 - Prometheus (metrics)
 - Grafana (dashboards)
 - Loki (logs)

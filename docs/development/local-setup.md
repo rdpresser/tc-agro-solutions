@@ -20,30 +20,30 @@ This is NOT a simplified development mode - it's a complete, production-like set
 
 ## 🧩 Local Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Orchestration | k3d (Kubernetes) | Container orchestration |
-| Ingress | Traefik (k3s built-in) | HTTP routing |
-| GitOps | ArgoCD | Cluster management |
-| Database | PostgreSQL 15 | Persistent storage |
-| Time Series | TimescaleDB (extension) | Sensor data hypertables |
-| Cache | Redis 7 | Query caching |
-| Messaging | RabbitMQ 3.12 | Event streaming (local replacement for Azure Service Bus) |
-| Metrics | Prometheus | Monitoring |
-| Dashboards | Grafana | Visualization |
-| Logs | Loki | Log aggregation |
-| Traces | Tempo | Distributed tracing |
-| Telemetry | OpenTelemetry Collector | Observability hub |
+| Component     | Technology              | Purpose                                                   |
+| ------------- | ----------------------- | --------------------------------------------------------- |
+| Orchestration | k3d (Kubernetes)        | Container orchestration                                   |
+| Ingress       | Traefik (k3s built-in)  | HTTP routing                                              |
+| GitOps        | ArgoCD                  | Cluster management                                        |
+| Database      | PostgreSQL 15           | Persistent storage                                        |
+| Time Series   | TimescaleDB (extension) | Sensor data hypertables                                   |
+| Cache         | Redis 7                 | Query caching                                             |
+| Messaging     | RabbitMQ 3.12           | Event streaming (local replacement for Azure Service Bus) |
+| Metrics       | Prometheus              | Monitoring                                                |
+| Dashboards    | Grafana                 | Visualization                                             |
+| Logs          | Loki                    | Log aggregation                                           |
+| Traces        | Tempo                   | Distributed tracing                                       |
+| Telemetry     | OpenTelemetry Collector | Observability hub                                         |
 
 **Comparison with Production (Azure):**
 
-| Component | Local (Now) | Azure (Future) |
-|-----------|-----------|--------------|
-| Orchestration | k3d | AKS |
-| Ingress | Traefik | Application Gateway / Traefik on AKS |
-| Database | PostgreSQL (Docker) | Azure PostgreSQL Flexible Server |
-| Messaging | RabbitMQ (Docker) | Azure Service Bus |
-| Cache | Redis (Docker) | Azure Redis Cache |
+| Component     | Local (Now)                   | Azure (Future)                               |
+| ------------- | ----------------------------- | -------------------------------------------- |
+| Orchestration | k3d                           | AKS                                          |
+| Ingress       | Traefik                       | Application Gateway / Traefik on AKS         |
+| Database      | PostgreSQL (Docker)           | Azure PostgreSQL Flexible Server             |
+| Messaging     | RabbitMQ (Docker)             | Azure Service Bus                            |
+| Cache         | Redis (Docker)                | Azure Redis Cache                            |
 | Observability | Prometheus/Grafana/Loki/Tempo | Application Insights/Log Analytics/Workbooks |
 
 ---
@@ -51,17 +51,20 @@ This is NOT a simplified development mode - it's a complete, production-like set
 ## 🚀 Quick Start
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-org/tc-agro-solutions.git
 cd tc-agro-solutions
 ```
 
 ### 2. Start Infrastructure Services
+
 ```bash
 docker compose up -d postgres redis rabbitmq
 ```
 
 ### 3. Apply Database Migrations
+
 ```bash
 dotnet ef database update --project src/Agro.Identity.Api
 dotnet ef database update --project src/Agro.Farm.Api
@@ -69,6 +72,7 @@ dotnet ef database update --project src/Agro.Sensor.Ingest.Api
 ```
 
 ### 4. Start Microservices
+
 ```bash
 # Option A: Run all via Docker Compose
 docker compose up -d
@@ -82,6 +86,7 @@ dotnet run --project src/Agro.Dashboard.Api
 ```
 
 ### 5. Verify Services
+
 ```bash
 # Check all containers are running
 docker compose ps
@@ -98,6 +103,7 @@ curl http://localhost:5004/health  # Dashboard
 ## 🔧 Service Configuration
 
 ### 🗄️ PostgreSQL
+
 - **Host:** `localhost`
 - **Port:** `5432`
 - **Database:** `agro_db`
@@ -105,6 +111,7 @@ curl http://localhost:5004/health  # Dashboard
 - **Password:** `postgres`
 
 **Connection String:**
+
 ```
 Host=localhost;Port=5432;Database=agro_db;Username=postgres;Password=postgres
 ```
@@ -112,6 +119,7 @@ Host=localhost;Port=5432;Database=agro_db;Username=postgres;Password=postgres
 **TimescaleDB Extension:** Enabled automatically on database creation.
 
 ### 📬 RabbitMQ (Azure Service Bus Replacement)
+
 - **AMQP URL:** `amqp://localhost:5672`
 - **Management UI:** [http://localhost:15672](http://localhost:15672)
 - **User:** `guest`
@@ -121,30 +129,33 @@ Host=localhost;Port=5432;Database=agro_db;Username=postgres;Password=postgres
 Navigate to http://localhost:15672 and login with `guest` / `guest`.
 
 ### ⚡ Redis
+
 - **Host:** `localhost`
 - **Port:** `6379`
 - **Password:** _(none for local)_
 
 **Connection String:**
+
 ```
 localhost:6379
 ```
 
 ### 🚀 Microservices APIs
 
-| Service | URL | Swagger |
-|---------|-----|---------|
-| **Identity** | http://localhost:5001 | [/swagger](http://localhost:5001/swagger) |
-| **Farm** | http://localhost:5002 | [/swagger](http://localhost:5002/swagger) |
-| **Ingest** | http://localhost:5003 | [/swagger](http://localhost:5003/swagger) |
-| **Dashboard** | http://localhost:5004 | [/swagger](http://localhost:5004/swagger) |
-| **Analytics Worker** | _(background service)_ | N/A |
+| Service              | URL                    | Swagger                                   |
+| -------------------- | ---------------------- | ----------------------------------------- |
+| **Identity**         | http://localhost:5001  | [/swagger](http://localhost:5001/swagger) |
+| **Farm**             | http://localhost:5002  | [/swagger](http://localhost:5002/swagger) |
+| **Ingest**           | http://localhost:5003  | [/swagger](http://localhost:5003/swagger) |
+| **Dashboard**        | http://localhost:5004  | [/swagger](http://localhost:5004/swagger) |
+| **Analytics Worker** | _(background service)_ | N/A                                       |
 
 ---
 
 ## 🧪 Testing the Stack
 
 ### 1. Create a User (Identity API)
+
 ```bash
 curl -X POST http://localhost:5001/auth/register \
   -H "Content-Type: application/json" \
@@ -155,6 +166,7 @@ curl -X POST http://localhost:5001/auth/register \
 ```
 
 ### 2. Login and Get JWT Token
+
 ```bash
 curl -X POST http://localhost:5001/auth/login \
   -H "Content-Type: application/json" \
@@ -165,6 +177,7 @@ curl -X POST http://localhost:5001/auth/login \
 ```
 
 ### 3. Create a Property (Farm API)
+
 ```bash
 TOKEN="<your-jwt-token>"
 
@@ -179,6 +192,7 @@ curl -X POST http://localhost:5002/properties \
 ```
 
 ### 4. Ingest Sensor Data (Ingest API)
+
 ```bash
 curl -X POST http://localhost:5003/sensors/readings \
   -H "Authorization: Bearer $TOKEN" \
@@ -193,6 +207,7 @@ curl -X POST http://localhost:5003/sensors/readings \
 ```
 
 ### 5. Query Dashboard (Dashboard API)
+
 ```bash
 curl -X GET http://localhost:5004/dashboard/latest \
   -H "Authorization: Bearer $TOKEN"
@@ -203,6 +218,7 @@ curl -X GET http://localhost:5004/dashboard/latest \
 ## 🛠️ Development Workflow
 
 ### Running Migrations
+
 ```bash
 # Add a new migration
 dotnet ef migrations add <MigrationName> --project src/Agro.Farm.Api
@@ -215,12 +231,14 @@ dotnet ef database update <MigrationName> --project src/Agro.Farm.Api
 ```
 
 ### Seeding Test Data
+
 ```bash
 # Run seeder (if implemented)
 dotnet run --project src/Agro.Farm.Api -- --seed
 ```
 
 ### Viewing Logs
+
 ```bash
 # All services
 docker compose logs -f
@@ -234,6 +252,7 @@ docker compose logs -f rabbitmq
 ```
 
 ### Cleaning Up
+
 ```bash
 # Stop all services
 docker compose down
@@ -250,6 +269,7 @@ docker compose down --rmi all
 ## 🐛 Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 # Find process using port 5432
 netstat -ano | findstr :5432  # Windows
@@ -259,6 +279,7 @@ lsof -i :5432                 # macOS/Linux
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Verify PostgreSQL is running
 docker compose ps postgres
@@ -271,6 +292,7 @@ docker exec -it agro-postgres psql -U postgres -d agro_db
 ```
 
 ### RabbitMQ Connection Issues
+
 ```bash
 # Verify RabbitMQ is running
 docker compose ps rabbitmq
@@ -283,6 +305,7 @@ docker compose logs rabbitmq
 ```
 
 ### Migration Errors
+
 ```bash
 # Drop database and recreate
 docker compose down -v
@@ -328,6 +351,7 @@ LOG_LEVEL=Information
 ## 🎯 Next Steps
 
 After successfully running locally:
+
 1. Review [API Conventions](api-conventions.md)
 2. Read [Testing Strategy](testing-strategy.md)
 3. Check [Deployment Checklist](deployment-checklist.md) for Azure deployment

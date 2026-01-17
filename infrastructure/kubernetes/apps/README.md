@@ -5,6 +5,7 @@
 This folder contains Kubernetes manifests for **microservice deployments on local k3d cluster**. All configurations are optimized for localhost development.
 
 **Microservices deployed here:**
+
 - 🔐 Identity.Api (authentication)
 - 🌾 Farm.Api (properties/plots management)
 - 📡 Ingest.Api (sensor data ingestion)

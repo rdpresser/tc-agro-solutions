@@ -1,20 +1,21 @@
 # 🚀 Technical Roadmap - Phase 5: Hackathon 8NETT
+
 ## Development on Localhost (k3d) • Production on Azure (Future)
 
 ---
 
 ## 🎯 At a Glance
 
-| Aspect | 🔵 NOW (Localhost Development) | 🟣 FUTURE (Azure Production) |
-|--------|-----|-----|
-| **Where?** | Your laptop (all developers) | Cloud (post-hackathon) |
-| **Kubernetes** | k3d (lightweight local cluster) | AKS (managed Azure service) |
-| **Database** | PostgreSQL (Docker) | Azure PostgreSQL Flexible Server |
-| **Messaging** | RabbitMQ (Docker) | Azure Service Bus |
-| **Cache** | Redis (Docker) | Azure Redis Cache |
-| **Telemetry** | Prometheus/Grafana/Loki/OTel (Docker) | Application Insights/Log Analytics |
-| **Cost** | $0 | Azure subscription required |
-| **Status** | ✅ Active & Used Daily | 📋 Documented (terraform/) - Not deployed |
+| Aspect         | 🔵 NOW (Localhost Development)        | 🟣 FUTURE (Azure Production)              |
+| -------------- | ------------------------------------- | ----------------------------------------- |
+| **Where?**     | Your laptop (all developers)          | Cloud (post-hackathon)                    |
+| **Kubernetes** | k3d (lightweight local cluster)       | AKS (managed Azure service)               |
+| **Database**   | PostgreSQL (Docker)                   | Azure PostgreSQL Flexible Server          |
+| **Messaging**  | RabbitMQ (Docker)                     | Azure Service Bus                         |
+| **Cache**      | Redis (Docker)                        | Azure Redis Cache                         |
+| **Telemetry**  | Prometheus/Grafana/Loki/OTel (Docker) | Application Insights/Log Analytics        |
+| **Cost**       | $0                                    | Azure subscription required               |
+| **Status**     | ✅ Active & Used Daily                | 📋 Documented (terraform/) - Not deployed |
 
 ---
 
@@ -73,15 +74,16 @@ graph TB
 
 **Phase 5 (Current):** Build and demonstrate microservices platform running locally on k3d with complete observability.
 
-| Aspect | Details |
-|---------|----------|
-| ⏰ Final deadline | **February 27, 2026** |
-| 👥 Team | **4 backend developers** |
-| 🌍 Development | **k3d + Docker Compose (Localhost)** |
-| 🎯 Primary Focus | **realistic, well-architected, observable delivery** |
-| 📊 Deliverables | Working system on k3d, health checks, observability dashboards, GitOps validation |
+| Aspect            | Details                                                                           |
+| ----------------- | --------------------------------------------------------------------------------- |
+| ⏰ Final deadline | **February 27, 2026**                                                             |
+| 👥 Team           | **4 backend developers**                                                          |
+| 🌍 Development    | **k3d + Docker Compose (Localhost)**                                              |
+| 🎯 Primary Focus  | **realistic, well-architected, observable delivery**                              |
+| 📊 Deliverables   | Working system on k3d, health checks, observability dashboards, GitOps validation |
 
 **Objective:** Deliver a fully functional system demonstrating:
+
 - ✅ 5 microservices running in k3d Kubernetes
 - ✅ Complete observability (Prometheus, Grafana, Loki, Tempo, OTel)
 - ✅ GitOps workflows with ArgoCD
@@ -95,19 +97,20 @@ graph TB
 
 ## ⚙️ 2. Assumptions and Constraints
 
-| Assumption | Description |
-|----------|-----------|
-| 🎨 Frontend | No dedicated complex frontend |
-| 📊 Data | Sensor data can be simulated |
+| Assumption                | Description                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| 🎨 Frontend               | No dedicated complex frontend                                                |
+| 📊 Data                   | Sensor data can be simulated                                                 |
 | ✅ Evaluation prioritizes | • Architecture<br>• Observability<br>• Infrastructure<br>• Technical clarity |
-| 🛑 Avoid | Large structural changes |
-| 📈 Prioritize | **Delivered value** and **quality** |
+| 🛑 Avoid                  | Large structural changes                                                     |
+| 📈 Prioritize             | **Delivered value** and **quality**                                          |
 
 ---
 
 ## 🛠️ 3. Adopted Technology Stack
 
 ### 💾 Backend
+
 ```
 ├── C# / .NET 9
 ├── FastEndpoints
@@ -117,6 +120,7 @@ graph TB
 ```
 
 ### ☁️ Infrastructure
+
 ```
 ├── Azure Kubernetes Service (AKS)
 ├── Azure Container Registry (ACR)
@@ -127,6 +131,7 @@ graph TB
 ```
 
 ### 📊 Observability and Operations
+
 ```
 ├── Application Insights
 ├── Log Analytics
@@ -147,13 +152,13 @@ Architecture based on **independent microservices**, each with its own logical d
 
 #### Proposed Services:
 
-| Service | Function | Responsibility |
-|---------|--------|------------------|
-| 🔐 **Agro.Identity.Api** | Authentication and authorization | Manage users, JWT tokens |
-| 🌾 **Agro.Farm.Api** | Properties and plots | CRUD of properties, plots, configurations |
-| 📡 **Agro.Sensor.Ingest.Api** | Data ingestion | Receive sensor data, publish to Service Bus |
-| 📈 **Agro.Analytics.Worker** | Rules and alerts | Process events, apply rules, generate alerts |
-| 📊 **Agro.Dashboard.Api** | Queries and read | Optimized reads for dashboards, cache |
+| Service                       | Function                         | Responsibility                               |
+| ----------------------------- | -------------------------------- | -------------------------------------------- |
+| 🔐 **Agro.Identity.Api**      | Authentication and authorization | Manage users, JWT tokens                     |
+| 🌾 **Agro.Farm.Api**          | Properties and plots             | CRUD of properties, plots, configurations    |
+| 📡 **Agro.Sensor.Ingest.Api** | Data ingestion                   | Receive sensor data, publish to Service Bus  |
+| 📈 **Agro.Analytics.Worker**  | Rules and alerts                 | Process events, apply rules, generate alerts |
+| 📊 **Agro.Dashboard.Api**     | Queries and read                 | Optimized reads for dashboards, cache        |
 
 ---
 
@@ -179,11 +184,11 @@ Architecture based on **independent microservices**, each with its own logical d
 
 ### 4.3 🗄️ EF Core vs Event Sourcing
 
-| Case | Decision | Note |
-|------|---------|-----------|
-| 🔧 Simple CRUD | **EF Core** | Recommended |
-| 📋 High auditing | Marten (optional) | If needed |
-| ⏱️ Time series | EF Core + TimescaleDB | Better performance |
+| Case             | Decision              | Note               |
+| ---------------- | --------------------- | ------------------ |
+| 🔧 Simple CRUD   | **EF Core**           | Recommended        |
+| 📋 High auditing | Marten (optional)     | If needed          |
+| ⏱️ Time series   | EF Core + TimescaleDB | Better performance |
 
 > **Note:** For this project, **event sourcing is not mandatory** and would be overengineering.
 
@@ -196,6 +201,7 @@ Architecture based on **independent microservices**, each with its own logical d
 Data whose primary axis is **time**:
 
 #### Characteristics:
+
 - 📡 Sensor readings
 - 📈 Continuous metrics
 - 📚 Historical data for dashboards
@@ -204,6 +210,7 @@ Data whose primary axis is **time**:
 - 🌾 Stock price per day
 
 #### Conceptual format:
+
 ```
 [timestamp] → [sensor_value]
 [timestamp] → [sensor_value]
@@ -216,6 +223,7 @@ Real domain example:
 ### 5.2 ❓ Why a "normal" relational database with a big table falls short?
 
 **Problem:** Inserting 1 million records/day into a common SQL table:
+
 - 📊 Indexes become slow
 - 💾 Storage becomes inefficient
 - 🔍 Historical queries stall
@@ -226,6 +234,7 @@ Real domain example:
 **TimescaleDB is a PostgreSQL extension**, specifically optimized for time series.
 
 Behavior:
+
 - Partitions data by time ("hypertables")
 - Automatic compression for history
 - Super fast aggregations (avg, sum, etc.)
@@ -233,19 +242,20 @@ Behavior:
 
 #### Why/when to use TimescaleDB?
 
-| Criterion | Use TimescaleDB? |
-|----------|-------------------|
-| 🔧 Less than 100k records/day | No, normal Postgres suffices |
-| 📊 100k - 10M records/day | **YES** |
-| 💾 More than 10M records/day | **YES, STRONGLY** |
-| 📈 Needs period aggregations (hour/day/month) | **YES** |
-| 🔍 Needs to query 1+ year of history | **YES** |
+| Criterion                                     | Use TimescaleDB?             |
+| --------------------------------------------- | ---------------------------- |
+| 🔧 Less than 100k records/day                 | No, normal Postgres suffices |
+| 📊 100k - 10M records/day                     | **YES**                      |
+| 💾 More than 10M records/day                  | **YES, STRONGLY**            |
+| 📈 Needs period aggregations (hour/day/month) | **YES**                      |
+| 🔍 Needs to query 1+ year of history          | **YES**                      |
 
 ### 5.4 🚀 TimescaleDB and NuGet? Library? Where does it fit?
 
 It is not a NuGet. TimescaleDB is a **database** (PostgreSQL extension running on Azure PostgreSQL Flexible Server).
 
 You:
+
 - It is not a C# library.
 - You enable it on Azure PostgreSQL by enabling the extension.
 - EF Core accesses it normally (tables look like common big tables).
@@ -256,9 +266,10 @@ You:
 **Yes. It is perfect for sensor readings.**
 
 Real domain example:
+
 ```sql
 -- TimescaleDB does this very fast:
-SELECT 
+SELECT
   time_bucket('1 hour', time) AS hour,
   AVG(temperature) AS avg_temp,
   MAX(humidity) AS max_humidity
@@ -292,19 +303,23 @@ Azure Monitor Workbooks (visualizes)
 ### 6.1 📊 Main Tables
 
 #### 📋 Identity
+
 - **Users** (id, email, password_hash, status)
 - **Roles** (id, name)
 - **UserRoles** (user_id, role_id)
 
 #### 🌾 Farm
+
 - **Properties** (id, name, location, owner)
 - **Plots** (id, property_id, name, area, crop_type)
 - **Sensors** (id, plot_id, type, status)
 
 #### 📡 Sensor Data (TimescaleDB)
+
 - **sensor_readings** (hypertable: time, sensor_id, temperature, humidity, soil_moisture, value)
 
 #### 📈 Analytics & Alerts
+
 - **Rules** (id, plot_id, metric, condition, threshold, action)
 - **Alerts** (id, rule_id, timestamp, message, status)
 - **AuditLog** (id, entity, action, timestamp, user_id)
@@ -312,12 +327,14 @@ Azure Monitor Workbooks (visualizes)
 ### 6.2 🔌 Main Endpoints
 
 #### 🔐 Identity
+
 - `POST /auth/login` → JWT token
 - `POST /auth/refresh` → new token
 - `POST /users` → create user
 - `GET /users/{id}` → user data
 
 #### 🌾 Farm
+
 - `GET /properties` → list properties
 - `POST /properties` → create property
 - `GET /plots/{propertyId}` → list plots
@@ -325,6 +342,7 @@ Azure Monitor Workbooks (visualizes)
 - `GET /sensors/{plotId}` → list sensors
 
 #### 📡 Ingest
+
 - `POST /sensors/readings` → insert reading
 - `POST /sensors/batch` → insert batch
 - Example:
@@ -339,6 +357,7 @@ Azure Monitor Workbooks (visualizes)
   ```
 
 #### 📊 Dashboard
+
 - `GET /dashboard/latest` → latest readings
 - `GET /dashboard/history/{sensorId}` → history
 - `GET /dashboard/analytics/{plotId}` → aggregated analyses
@@ -376,6 +395,7 @@ These diagrams are now in the architecture documentation:
 **Status:** 🟢 Initial preparation
 
 #### Checklist
+
 - ✅ Structure repository (monorepo vs multi-repo)
 - ✅ Configure Azure DevOps / GitHub Actions pipeline
 - ✅ Define coding conventions (C# style guide)
@@ -391,6 +411,7 @@ These diagrams are now in the architecture documentation:
 **Focus:** Structure domain and specify data
 
 #### 1.1 Requirements Gathering
+
 - ✅ Understand data flow (sensor → ingestion → alerts → dashboard)
 - ✅ Define business models (Property, Plot, Sensor)
 - ✅ List collected metrics (temperature, humidity, soil, etc.)
@@ -398,6 +419,7 @@ These diagrams are now in the architecture documentation:
 - ✅ Document data retention periods
 
 #### 1.2 API and Domain Structure
+
 - ✅ Create .NET projects (Identity, Farm, Ingest, Analytics, Dashboard)
 - ✅ Define DTOs (Data Transfer Objects)
 - ✅ Model domain entities
@@ -405,6 +427,7 @@ These diagrams are now in the architecture documentation:
 - ✅ Configure EF Core DbContext
 
 #### 1.3 Database Schema
+
 - ✅ Create migrations (Identity, Farm, Sensors)
 - ✅ Define primary keys, foreign keys
 - ✅ Create TimescaleDB hypertable for sensor_readings
@@ -418,24 +441,28 @@ These diagrams are now in the architecture documentation:
 **Focus:** Understand volume and aggregation challenges
 
 #### 2.1 Sensor Dimensionality
+
 - ✅ How many sensors? (10, 100, 1000?)
 - ✅ Reading frequency? (1/min, 1/5min, 1/15min?)
 - ✅ How many years of retention?
 - ✅ Metrics to aggregate? (avg, max, min, stddev)
 
 #### 2.2 Ingestion Performance
+
 - ✅ Load test: simulated insertion
 - ✅ Measure latency P50, P99
 - ✅ Validate indexes in TimescaleDB
 - ✅ Implement batch processing if needed
 
 #### 2.3 Query Performance
+
 - ✅ Historical queries (last 7 days, 30 days, 1 year)
 - ✅ Aggregations per period (hour, day, week)
 - ✅ Validate execution plan with EXPLAIN
 - ✅ Implement Redis caching for hot queries
 
 #### 2.4 Retention and Compression
+
 - ✅ Configure TimescaleDB compression policy (e.g., 7 days)
 - ✅ Implement routine to clean old data
 - ✅ Validate storage savings
@@ -447,6 +474,7 @@ These diagrams are now in the architecture documentation:
 **Focus:** Implement business logic
 
 #### 3.1 Ingestion Endpoints
+
 ```
 POST /sensors/readings
 Content-Type: application/json
@@ -467,12 +495,14 @@ Content-Type: application/json
 ```
 
 #### 3.2 Alerts Worker (Wolverine)
+
 - ✅ Consume Ingest events via Service Bus
 - ✅ Apply rules (e.g., temperature > 35°C)
 - ✅ Generate alerts (CREATE in Alerts table)
 - ✅ Publish to notifications topic (optional: Logic Apps)
 
 #### 3.3 Dashboard Queries
+
 ```
 GET /dashboard/latest
 Response:
@@ -501,9 +531,10 @@ Response:
 ```
 
 #### 3.4 Aggregated Queries
+
 ```sql
 -- TimescaleDB aggregation
-SELECT 
+SELECT
   time_bucket('1 hour', time) AS hour,
   AVG(temperature) AS avg_temp,
   MAX(temperature) AS max_temp,
@@ -522,6 +553,7 @@ ORDER BY hour DESC;
 **Focus:** Polish code, patterns, observability
 
 #### 4.1 Coding Standards
+
 - ✅ Pragmatic CQRS (Commands and Queries separated where it makes sense)
 - ✅ Domain handlers (use Wolverine)
 - ✅ Validation with FluentValidation
@@ -529,18 +561,21 @@ ORDER BY hour DESC;
 - ✅ Structured logging (with Application Insights)
 
 #### 4.2 Observability
+
 - ✅ Instrument all services with Application Insights SDK
 - ✅ Add custom metrics (ingestion time, alerts generated)
 - ✅ Distributed tracing (correlate logs across services)
 - ✅ Create Workbooks to visualize system health
 
 #### 4.3 Testing
+
 - ✅ Unit tests (validation, handlers)
 - ✅ Integration tests (API endpoints)
 - ✅ Load tests with k6 (simulate 1000 sensors)
 - ✅ Smoke tests post-deploy
 
 #### 4.4 Documentation
+
 - ✅ OpenAPI (Swagger) for each API
 - ✅ ADR documentation
 - ✅ Operations playbooks
@@ -553,6 +588,7 @@ ORDER BY hour DESC;
 **Focus:** Final delivery, dashboards, presentation
 
 #### 5.1 Business Dashboards
+
 - ✅ Dashboard.Api returning real-time data
 - ✅ Azure Monitor Workbooks showing:
   - Alerts per plot
@@ -561,12 +597,14 @@ ORDER BY hour DESC;
   - Processing latency
 
 #### 5.2 Performance & Scale
+
 - ✅ Simulate 100 sensors × 1 reading/min
 - ✅ Generate 144k events/day
 - ✅ Validate SLA: ingestion < 100ms, query < 500ms
 - ✅ Document load test results
 
 #### 5.3 Technical Presentation
+
 - ✅ Live ingestion demo
 - ✅ Show dashboards working
 - ✅ Explain architectural decisions (ADRs)
@@ -574,6 +612,7 @@ ORDER BY hour DESC;
 - ✅ Discuss observability and scalability
 
 #### 5.4 Clean and Documented Code
+
 - ✅ Final code review
 - ✅ Refactor duplicated code
 - ✅ README updated with deployment instructions
@@ -588,11 +627,13 @@ ORDER BY hour DESC;
 **Responsibility:** Authentication, authorization, user management
 
 #### Stack
+
 - FastEndpoints
 - JWT Bearer
 - EF Core + PostgreSQL
 
 #### Endpoints
+
 ```
 POST   /auth/login          → JWT token
 POST   /auth/refresh        → New token
@@ -603,6 +644,7 @@ DELETE /users/{id}          → Delete user
 ```
 
 #### Data Model
+
 ```csharp
 public class User
 {
@@ -621,11 +663,13 @@ public class User
 **Responsibility:** Management of properties, plots, sensors
 
 #### Stack
+
 - FastEndpoints
 - EF Core + PostgreSQL
 - Redis Cache (catalog read)
 
 #### Endpoints
+
 ```
 GET    /properties               → List all properties
 POST   /properties               → Create property
@@ -642,6 +686,7 @@ PUT    /sensors/{id}             → Update sensor status
 ```
 
 #### Models
+
 ```csharp
 public class Property
 {
@@ -677,6 +722,7 @@ public class Sensor
 **Responsibility:** Receive sensor data, persist, publish events
 
 #### Stack
+
 - FastEndpoints
 - EF Core + TimescaleDB
 - Azure Service Bus (publisher)
@@ -684,6 +730,7 @@ public class Sensor
 - Input validation
 
 #### Main Endpoint
+
 ```
 POST /sensors/readings
 
@@ -705,6 +752,7 @@ Response: 202 Accepted
 ```
 
 #### Batch Endpoint
+
 ```
 POST /sensors/batch
 
@@ -714,6 +762,7 @@ Response: 202 Accepted with processed count
 ```
 
 #### Flow
+
 0. Enforce JWT on all ingestion endpoints
 1. Validate input (schema, limits)
 2. Persist to sensor_readings (TimescaleDB hypertable)
@@ -728,11 +777,13 @@ Response: 202 Accepted with processed count
 **Responsibility:** Process events, apply rules, generate alerts
 
 #### Stack
+
 - Wolverine (event handler)
 - EF Core
 - Azure Service Bus (subscriber)
 
 #### Event Handler
+
 ```csharp
 public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
 {
@@ -756,7 +807,7 @@ public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
                     CreatedAt = DateTime.UtcNow,
                     Status = "Pending"
                 };
-                
+
                 await _db.Alerts.AddAsync(alert);
             }
         }
@@ -767,6 +818,7 @@ public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
 ```
 
 #### Example Rules
+
 - Temperature > 35°C → Alert "Excessive heat"
 - Humidity < 30% → Alert "Low humidity"
 - Rainfall > 100mm/day → Alert "Heavy rain"
@@ -778,12 +830,14 @@ public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
 **Responsibility:** Optimized queries and reads for dashboards
 
 #### Stack
+
 - FastEndpoints
 - EF Core + TimescaleDB (read-only)
 - Redis Cache
 - Query optimization
 
 #### Endpoints
+
 ```
 GET /dashboard/latest
   → Latest readings from all sensors (with cache)
@@ -802,13 +856,14 @@ GET /alerts/history/{plotId}?days=30
 ```
 
 #### Example: Aggregation Query
+
 ```csharp
 [HttpGet("/analytics/{plotId}")]
 public async Task<DashboardAnalyticsResponse> GetAnalytics(Guid plotId)
 {
     var result = await _db.SensorReadings
         .FromSqlInterpolated($@"
-            SELECT 
+            SELECT
               time_bucket('1 hour', time) AS hour,
               AVG(temperature) AS avg_temperature,
               MAX(temperature) AS max_temperature,
@@ -826,6 +881,7 @@ public async Task<DashboardAnalyticsResponse> GetAnalytics(Guid plotId)
 ```
 
 #### Cache Strategy
+
 ```csharp
 // Short TTL for real-time data
 const int CacheTtlSeconds = 60;
@@ -837,7 +893,7 @@ if (cached != null)
     return JsonSerializer.Deserialize(cached);
 
 var data = await FetchFromDatabase();
-await _redis.SetAsync(cacheKey, JsonSerializer.Serialize(data), 
+await _redis.SetAsync(cacheKey, JsonSerializer.Serialize(data),
     TimeSpan.FromSeconds(CacheTtlSeconds));
 
 return data;
@@ -850,6 +906,7 @@ return data;
 ### 11.1 Infrastructure (IaC with Terraform)
 
 **Environment Strategy:**
+
 - **Local (Development):** Docker Compose (no Terraform)
 - **Cloud (Production):** Azure via Terraform modules with optimized node pools
 
@@ -857,15 +914,16 @@ return data;
 
 TC Agro Solutions uses a **3-node-pool strategy** on AKS to optimize for stability, cost, and simplicity:
 
-| Node Pool | Purpose | SKU | Min | Max | Justification |
-|-----------|---------|-----|-----|-----|---------------|
-| **system** | Kubernetes infrastructure (kube-system, CoreDNS, CNI, CSI) | B2ms (2vCPU, 8GB) | 1 | 2 | Critical components with unpredictable memory; isolation prevents cluster-wide failure |
-| **platform** | ArgoCD, Ingress, cert-manager | B2s (2vCPU, 4GB) | 1 | 3 | Infrastructure services with controlled consumption; cost-optimized without observability overhead |
-| **worker** | .NET microservices, domain workers | B2s (2vCPU, 4GB) | 2 | 5 | Business applications with bounded resource requests/limits; horizontal scaling enabled |
+| Node Pool    | Purpose                                                    | SKU               | Min | Max | Justification                                                                                      |
+| ------------ | ---------------------------------------------------------- | ----------------- | --- | --- | -------------------------------------------------------------------------------------------------- |
+| **system**   | Kubernetes infrastructure (kube-system, CoreDNS, CNI, CSI) | B2ms (2vCPU, 8GB) | 1   | 2   | Critical components with unpredictable memory; isolation prevents cluster-wide failure             |
+| **platform** | ArgoCD, Ingress, cert-manager                              | B2s (2vCPU, 4GB)  | 1   | 3   | Infrastructure services with controlled consumption; cost-optimized without observability overhead |
+| **worker**   | .NET microservices, domain workers                         | B2s (2vCPU, 4GB)  | 2   | 5   | Business applications with bounded resource requests/limits; horizontal scaling enabled            |
 
 **See [ADR-007: AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** for detailed justification, performance implications, and cost analysis.
 
 **Terraform Structure:**
+
 ```
 terraform/
 ├── providers.tf           # Azure provider configuration
@@ -897,6 +955,7 @@ terraform/
 ```
 
 **Root main.tf Example:**
+
 ```hcl
 module "rg" {
   source   = "./modules/resource-group"
@@ -908,7 +967,7 @@ module "aks" {
   source              = "./modules/aks"
   resource_group_name = module.rg.name
   location            = var.location
-  
+
   # 3-node-pool configuration (see ADR-007)
   system_node_count   = 1
   platform_node_count = 1
@@ -948,6 +1007,7 @@ module "keyvault" {
 ```
 
 **Resources to provision:**
+
 - ✅ Azure Resource Group
 - ✅ Azure Kubernetes Service (AKS) with 3+ nodes
 - ✅ Azure Container Registry (ACR)
@@ -975,12 +1035,12 @@ jobs:
           docker build -t agro-identity:${{ github.sha }} ./src/Identity
           docker build -t agro-farm:${{ github.sha }} ./src/Farm
           # ... more services
-      
+
       - name: Push to ACR
         run: |
           az acr build --registry $ACR_NAME \
             --image agro-identity:${{ github.sha }} ./src/Identity
-      
+
       - name: Deploy to AKS
         run: |
           kubectl set image deployment/identity \
@@ -1047,6 +1107,7 @@ spec:
 ### 12.3 Dashboard in Azure Monitor Workbooks
 
 **Panels:**
+
 - 🟢 System Health (green = ok)
 - 📊 Ingest Metrics (volume chart)
 - 🚨 Alerts Status (active alerts)
@@ -1110,12 +1171,14 @@ The project documentation is organized as follows:
 ```
 
 ### Quick Links
+
 - **Getting Started:** [Local Development Setup](docs/development/local-setup.md)
 - **Architecture:** [C4 Diagrams](docs/architecture/c4-context.md) | [ADRs](docs/adr/)
 - **Infrastructure:** [Terraform Guide](docs/architecture/infrastructure-terraform.md)
 - **Deployment:** [Deployment Guide](docs/architecture/deployment.md)
 
 ### Documentation consolidation
+
 - Treat this roadmap as the single high-level source; keep ADRs for decisions only.
 - Merge submodule guidance into a single entry point (GIT_SUBMODULES_STRATEGY.md referencing QUICK_START_SUBMODULES.md) and retire redundant summaries when practical (e.g., SOLUTION_STRUCTURE_GUIDE.md).
 - Prefer linking to authoritative guides instead of duplicating content in new Markdown files.
@@ -1132,7 +1195,7 @@ This **Roadmap** provides:
 ✅ **Detailed timeline** (5 phases, 6 weeks)  
 ✅ **Technical specifications** (endpoints, models, queries)  
 ✅ **Deployment guide** (IaC, CI/CD, GitOps)  
-✅ **Observability strategy** (metrics, alerts, dashboards)  
+✅ **Observability strategy** (metrics, alerts, dashboards)
 
 **Deadline:** February 27, 2026  
 **Team:** 4 backend developers  
@@ -1141,5 +1204,5 @@ This **Roadmap** provides:
 ---
 
 > **Version 3.0** - Complete Roadmap with Architecture, Detailed Phases, ADRs, and C4 Diagrams
-> 
+>
 > Ready for presentation, technical documentation, and execution. ✅

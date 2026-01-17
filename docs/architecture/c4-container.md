@@ -14,7 +14,7 @@ graph TB
             Analytics["📈 Analytics.Worker<br/>Wolverine<br/>Rules & Alerts"]
             Dashboard["📊 Dashboard.Api<br/>Optimized Queries<br/>Cache Layer"]
         end
-        
+
         subgraph infra["Infrastructure"]
             ArgoCD["🔄 ArgoCD<br/>GitOps Controller"]
             Traefik["🌐 Traefik<br/>Ingress Controller"]
@@ -32,7 +32,7 @@ graph TB
     Traefik -->|route| Identity
     Traefik -->|route| Dashboard
     Traefik -->|route| ArgoCD
-    
+
     agro -->|Query/Write| PG
     agro -->|Cache| Redis
     Ingest & Analytics -->|Publish/Subscribe| RabbitMQ
@@ -40,6 +40,7 @@ graph TB
 ```
 
 **Components:**
+
 - **k3d Cluster:** 4 nodes (1 server + 3 agents) running Kubernetes locally
 - **Microservices:** 5 APIs + 1 worker in agro-apps namespace
 - **Infrastructure:** ArgoCD (GitOps), Traefik (ingress)
@@ -73,30 +74,31 @@ graph TB
     User -->|Dashboard| Dashboard
     Dashboard -->|Query| Database
     Dashboard -->|Cache| Cache
-    
+
     Ingest -->|HTTP POST| Ingest
     Ingest -->|Publish| Messaging
     Messaging -->|Subscribe| Analytics
-    
+
     Identity -->|Validate| Ingest
     Identity -->|Validate| Dashboard
-    
+
     Farm -->|Read/Write| Database
     Ingest -->|Write| Database
     Analytics -->|Read/Write| Database
     Dashboard -->|Read| Database
-    
+
     Identity -->|Telemetry| Telemetry
     Farm -->|Telemetry| Telemetry
     Ingest -->|Telemetry| Telemetry
     Analytics -->|Telemetry| Telemetry
     Dashboard -->|Telemetry| Telemetry
-    
+
     Telemetry -->|Stream| Analytics_Svc
     Analytics_Svc -->|Display| Workbooks
 ```
 
 **Components (same architecture as localhost, but using Azure managed services):**
+
 - **AKS Cluster:** Managed Kubernetes service
 - **Microservices:** Same 5 APIs + 1 worker
 - **Managed Services:** PostgreSQL, Service Bus, Redis, App Insights

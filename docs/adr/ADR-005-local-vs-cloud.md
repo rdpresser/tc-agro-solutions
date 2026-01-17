@@ -1,6 +1,7 @@
 # ADR-005: Local vs Cloud Development Strategy
 
 ## Status
+
 ✅ Accepted & **IMPLEMENTED (Phase 5)**
 
 ---
@@ -8,6 +9,7 @@
 ## Current Implementation
 
 ### 🔵 NOW (Phase 5 - Active)
+
 - **Development:** k3d (localhost Kubernetes cluster)
 - **Infrastructure services:** Docker Compose (PostgreSQL, Redis, RabbitMQ, observability stack)
 - **GitOps:** ArgoCD managing k3d cluster
@@ -15,6 +17,7 @@
 - **Status:** ✅ Running daily by all developers
 
 ### 🟣 FUTURE (Post-Hackathon - Reference)
+
 - **Production:** Azure Kubernetes Service (AKS)
 - **Managed services:** Azure PostgreSQL, Azure Service Bus, Azure Redis, etc.
 - **Location:** `terraform/` (Azure infrastructure modules)
@@ -25,6 +28,7 @@
 ## Context
 
 Phase 5 requires:
+
 - **Cost-free development** for entire team (no Azure subscription charges during hackathon)
 - **Real Kubernetes experience** - full k3d cluster, not just Docker Compose
 - **Complete observability** - local observability stack (no cloud telemetry bills)
@@ -38,6 +42,7 @@ The team needs to develop and validate efficiently without cloud costs while mai
 Adopt **two strictly separated environments:**
 
 ### 🔵 Local Development Environment (CURRENT - ACTIVE)
+
 - **Orchestration:** k3d (lightweight Kubernetes, 4 nodes: 1 server + 3 agents)
 - **Networking:** Traefik ingress controller (k3s built-in), localhost-based routing
 - **Cluster Management:** ArgoCD (installed via bootstrap script)
@@ -65,6 +70,7 @@ Adopt **two strictly separated environments:**
   - Observe metrics/logs → Grafana + Loki dashboard
 
 ### 🟣 Cloud Production Environment (FUTURE - REFERENCE ONLY)
+
 - **Orchestration:** Azure Kubernetes Service (AKS)
 - **Networking:** Azure Application Gateway or Traefik on AKS
 - **Cluster Management:** ArgoCD (same as localhost)
@@ -83,6 +89,7 @@ Adopt **two strictly separated environments:**
 - **Deployment:** Post-hackathon migration (not Phase 5 scope)
 
 ## Justification
+
 - Reduces development costs significantly
 - Avoids excessive cloud dependency during development
 - Enables parallel development by the entire team
@@ -90,19 +97,23 @@ Adopt **two strictly separated environments:**
 - Allows rapid iteration without cloud provisioning delays
 
 ## Consequences
+
 ### Positive
+
 - Zero cloud costs during development
 - Faster feedback loops
 - Team can work offline or with intermittent connectivity
 - Easier debugging and troubleshooting
 
 ### Negative
+
 - Local infrastructure does not replicate all Azure services
 - Azure Service Bus must be simulated locally (RabbitMQ)
 - Local observability is simplified (no Application Insights)
 - Requires maintaining parity between environments
 
 ## Implementation Notes
+
 - Use Docker Compose for local orchestration
 - PostgreSQL runs locally (no Azure PostgreSQL Flexible Server)
 - RabbitMQ replaces Azure Service Bus for local messaging

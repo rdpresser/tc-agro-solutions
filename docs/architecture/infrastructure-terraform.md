@@ -2,7 +2,7 @@
 
 ## ⚠️ IMPORTANT: Future Reference (Not Current Phase 5)
 
-This document describes infrastructure-as-code for **post-hackathon Azure deployment**. 
+This document describes infrastructure-as-code for **post-hackathon Azure deployment**.
 
 **🟣 FUTURE (Phase 6+):** These Terraform modules are documented and ready but **NOT deployed during Phase 5 (Hackathon 8NETT).**
 
@@ -12,12 +12,13 @@ This document describes infrastructure-as-code for **post-hackathon Azure deploy
 
 ## Environment Strategy
 
-| Environment | Location | Tool | Status | Purpose |
-|-------------|----------|------|--------|---------|
-| **Development** | Localhost | k3d + Docker Compose | 🟢 **ACTIVE** | Developer workstations (all team members) |
-| **Production** | Azure Cloud | Terraform + AKS | 🟣 **FUTURE** | Post-hackathon (documented in this file) |
+| Environment     | Location    | Tool                 | Status        | Purpose                                   |
+| --------------- | ----------- | -------------------- | ------------- | ----------------------------------------- |
+| **Development** | Localhost   | k3d + Docker Compose | 🟢 **ACTIVE** | Developer workstations (all team members) |
+| **Production**  | Azure Cloud | Terraform + AKS      | 🟣 **FUTURE** | Post-hackathon (documented in this file)  |
 
-**Key Decision:** 
+**Key Decision:**
+
 - No multi-environment Terraform setup
 - **Phase 5 Development:** Happens locally with Docker Compose + k3d (zero cost)
 - **Phase 6+ Production:** Terraform provisions Azure resources (when ready to deploy to cloud)
@@ -25,6 +26,7 @@ This document describes infrastructure-as-code for **post-hackathon Azure deploy
 ## Delivery Evidence (Hackathon 8NETT)
 
 For Phase 5 delivery, capture proof of:
+
 - Kubernetes objects (namespaces, deployments, services) running on **local k3d cluster**
 - Observability (metrics, traces, logs) from **local Prometheus/Grafana/Loki/Tempo**
 - Screenshots: ArgoCD applications synced, Grafana dashboards, pod health checks
@@ -187,11 +189,11 @@ resource "azurerm_kubernetes_cluster" "main" {
     min_count           = 1
     max_count           = 2
     os_disk_size_gb     = 30
-    
+
     node_labels = {
       workload = "system"
     }
-    
+
     node_taints = [
       {
         key    = "CriticalAddonsOnly"
@@ -210,7 +212,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     min_count           = 1
     max_count           = 3
     os_disk_size_gb     = 30
-    
+
     node_labels = {
       workload = "platform"
     }
@@ -225,7 +227,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     min_count           = 2
     max_count           = 5
     os_disk_size_gb     = 50
-    
+
     node_labels = {
       workload = "application"
     }
@@ -265,13 +267,14 @@ output "cluster_fqdn" {
 
 **Node Pool Strategy:**
 
-| Pool | Purpose | SKU | Min | Max | Rationale |
-|------|---------|-----|-----|-----|-----------|
-| **system** | kube-system, CoreDNS, CNI, CSI | B2ms | 1 | 2 | Critical infra, unpredictable memory, OOMKill affects cluster |
-| **platform** | ArgoCD, Ingress, cert-manager | B2s | 1 | 3 | Infrastructure services with moderate, controlled consumption |
-| **worker** | .NET APIs, domain workers | B2s | 2 | 5 | Business workloads with bounded resource requests/limits |
+| Pool         | Purpose                        | SKU  | Min | Max | Rationale                                                     |
+| ------------ | ------------------------------ | ---- | --- | --- | ------------------------------------------------------------- |
+| **system**   | kube-system, CoreDNS, CNI, CSI | B2ms | 1   | 2   | Critical infra, unpredictable memory, OOMKill affects cluster |
+| **platform** | ArgoCD, Ingress, cert-manager  | B2s  | 1   | 3   | Infrastructure services with moderate, controlled consumption |
+| **worker**   | .NET APIs, domain workers      | B2s  | 2   | 5   | Business workloads with bounded resource requests/limits      |
 
 **Pod Placement:** Applications use `nodeSelector` to target appropriate pools:
+
 ```yaml
 # Platform workload (ArgoCD)
 nodeSelector:
@@ -316,7 +319,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
   resource_group_name = var.resource_group_name
   location            = var.location
   version             = "16"
-  
+
   administrator_login    = var.admin_username
   administrator_password = var.admin_password
 
@@ -517,25 +520,30 @@ terraform output -json > outputs.json
 ## Best Practices
 
 ### 1. State Management
+
 - Store Terraform state in Azure Storage Account
 - Enable state locking
 - Never commit `.tfstate` files to Git
 
 ### 2. Secrets Management
+
 - Use Azure Key Vault for secrets
 - Mark sensitive outputs with `sensitive = true`
 - Never hardcode credentials
 
 ### 3. Resource Naming
+
 - Use consistent naming conventions
 - Include project prefix: `agro-{resource}-{suffix}`
 - Example: `agro-aks-cluster`, `agro-postgres-db`
 
 ### 4. Tagging
+
 - Tag all resources with: `Project`, `Environment`, `ManagedBy`
 - Enables cost tracking and resource management
 
 ### 5. Module Reusability
+
 - Keep modules generic where appropriate
 - Use variables for configurable parameters
 - Document module inputs/outputs
@@ -553,22 +561,22 @@ on:
   push:
     branches: [main]
     paths:
-      - 'terraform/**'
+      - "terraform/**"
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        
+
       - name: Terraform Init
         run: terraform init
         working-directory: terraform
-        
+
       - name: Terraform Plan
         run: terraform plan
         working-directory: terraform
@@ -577,7 +585,7 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          
+
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve

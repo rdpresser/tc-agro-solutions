@@ -5,6 +5,7 @@
 This folder contains scripts and documentation for running the complete TC Agro Solutions system locally on k3d with ArgoCD managing everything via GitOps.
 
 **What you get:**
+
 - k3d Kubernetes cluster (4 nodes: 1 server + 3 agents) on localhost
 - Full observability stack (Prometheus, Grafana, Loki, Tempo, OTel)
 - All 5 microservices deployed via GitOps
