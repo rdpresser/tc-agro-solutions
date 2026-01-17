@@ -369,7 +369,7 @@ All scripts are **idempotent**:
 ### Windows-First
 
 - Scripts are optimized for **PowerShell 7+ on Windows**
-- macOS support planned for future refactor
+- Future platform support planned
 - Requires **Administrator** for hosts file updates
 
 ### Local-Only

@@ -100,19 +100,11 @@ cd tc-agro-solutions
 
 ### 2️⃣ Run Bootstrap
 
-**On Windows:**
+**Windows:**
 
 ```powershell
 # Clone all services and common libraries automatically
 .\scripts\bootstrap.ps1
-```
-
-**On macOS/Linux:**
-
-```bash
-# Make script executable and run
-chmod +x scripts/bootstrap-macos.sh
-./scripts/bootstrap-macos.sh
 ```
 
 This will:

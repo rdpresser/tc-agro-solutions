@@ -273,7 +273,7 @@ docker compose down --rmi all
 ```bash
 # Find process using port 5432
 netstat -ano | findstr :5432  # Windows
-lsof -i :5432                 # macOS/Linux
+netstat -ano | findstr :5432  # Windows
 
 # Kill the process or change port in docker-compose.yml
 ```
