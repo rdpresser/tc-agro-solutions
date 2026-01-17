@@ -26,37 +26,37 @@ After bootstrap, your local structure will be:
 
 ```
 tc-agro-solutions/
-├── services/                                # 🔄 Clonado por bootstrap
+├── services/                                # 🔄 Cloned by bootstrap
 │   ├── identity-service/                   # Agro.Identity.Api
 │   ├── farm-service/                       # Agro.Farm.Api
 │   ├── sensor-ingest-service/              # Agro.Sensor.Ingest.Api
 │   ├── analytics-worker/                   # Agro.Analytics.Worker
 │   └── dashboard-service/                  # Agro.Dashboard.Api
 │
-├── common/                                  # 🔄 Clonado por bootstrap
+├── common/                                  # 🔄 Cloned by bootstrap
 │   ├── (shared libraries)
 │   └── (domain models)
 │
-├── infrastructure/                          # 📦 Infraestrutura (Terraform, Kubernetes)
+├── infrastructure/                          # 📦 Infrastructure (Terraform, Kubernetes)
 │   ├── terraform/
 │   ├── kubernetes/
 │   └── docker/
 │
 ├── scripts/
-│   └── bootstrap.ps1                        # ⚙️ Este script
+│   └── bootstrap.ps1                        # ⚙️ This script
 │
-├── docs/                                    # 📚 Documentação
-│   ├── adr/                                 # Arquitetura Decisions Records
-│   ├── architecture/                        # Diagramas e arquitetura
-│   └── development/                         # Guias de desenvolvimento
+├── docs/                                    # 📚 Documentation
+│   ├── adr/                                 # Architecture Decision Records
+│   ├── architecture/                        # Diagrams and architecture
+│   └── development/                         # Development guides
 │
 ├── poc/                                     # 🧪 Frontend POC
 │   └── frontend/                            # Dashboard UI demo
 │
 ├── .gitignore                               # Git: ignore services/ e common/
-├── .env                                     # ⚙️ Criado por bootstrap
-├── docker-compose.yml                       # 🐳 Orquestração local (futuro)
-├── README.md                                # 📖 Início rápido
+├── .env                                     # ⚙️ Created by bootstrap
+├── docker-compose.yml                       # 🐳 Local orchestration (future)
+├── README.md                                # 📖 Quick start
 └── tc-agro-solutions.sln                    # 🔧 Solution (.NET)
 ```
 
