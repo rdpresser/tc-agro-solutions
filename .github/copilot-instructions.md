@@ -1097,6 +1097,126 @@ cd poc/frontend && python -m http.server 8000
 
 ---
 
-> **Last update:** January 2026  
-> **Version:** 1.3  
+## 📋 Documentation Maintenance & Review Protocol
+
+### When Making Infrastructure or Script Changes
+
+**✅ CRITICAL: Always perform documentation validation**
+
+After creating, modifying, or deleting files (especially scripts, manifests, or infrastructure-related code):
+
+#### 1. **File Reference Audit**
+
+```bash
+# Search for references to newly created/modified/deleted files
+grep -r "filename-pattern" docs/ scripts/ infrastructure/
+
+# Check for broken links in all .md files
+# Ensure file paths match actual directory structure
+```
+
+#### 2. **Structural References to Update**
+
+- [ ] Any `.md` file showing directory structure (check folder layout is current)
+- [ ] Any `.md` file listing scripts or manifests (check names match actual files)
+- [ ] Any `.md` file showing file paths (verify no deleted files referenced)
+- [ ] Any `.md` file with code examples (check paths are correct)
+
+#### 3. **Documentation Files to Always Check**
+
+| File                                             | When to Check           | What to Validate             |
+| ------------------------------------------------ | ----------------------- | ---------------------------- |
+| **scripts/k3d/README.md**                        | Script renamed/moved    | Script names, usage examples |
+| **scripts/k3d/ARCHITECTURE_DIAGRAM.md**          | K8s structure changed   | Folder layout, filenames     |
+| **infrastructure/kubernetes/platform/README.md** | Manifests renamed/moved | File references, paths       |
+| **infrastructure/kubernetes/apps/README.md**     | App structure changed   | Directory tree accuracy      |
+| **docs/architecture/\*.md**                      | Infrastructure changed  | Tech stack section           |
+| **docs/development/local-setup.md**              | Local setup changed     | Endpoint URLs, ports         |
+
+#### 4. **Smart Reference Search Pattern**
+
+When deleting a file named `argocd-ingress.yaml`:
+
+```bash
+# Search for ALL variations:
+grep -r "argocd.ingress\|argocd-ingress\|argocd_ingress" .
+grep -r "\.yaml.*ingress" docs/ scripts/
+grep -r "Ingress" docs/ --include="*.md"
+```
+
+#### 5. **Before Closing Any Session**
+
+After significant infrastructure or script changes, ask these questions:
+
+**🤔 Self-Review Questions:**
+
+1. **What files were created/deleted/renamed?**
+   - Created: `arcocd-ingressroute.yaml` (typo - should have been deleted)
+   - Deleted: `argocd-ingress.yaml` (obsolete NGINX)
+   - Have I updated ALL references?
+
+2. **What documentation needs updating?**
+   - Directory structures in READMEs?
+   - Architecture diagrams?
+   - Script usage examples?
+   - File path references?
+
+3. **Are there orphaned references?**
+   - Does any `.md` file reference deleted files?
+   - Does any script reference old paths?
+   - Are there comments/documentation pointing to wrong locations?
+
+4. **Is the documentation dual-perspective (Current vs Future)?**
+   - Is it clear what's LOCALHOST (Phase 5 - CURRENT)?
+   - Is it clear what's AZURE (Future - REFERENCE)?
+   - Or does it mix concerns?
+
+**✅ Validation Checklist:**
+
+- [ ] Ran `grep` search for all old/new file references
+- [ ] Updated all `.md` files with accurate paths
+- [ ] No broken links in markdown files
+- [ ] Script examples match actual filenames
+- [ ] Directory structures in diagrams match reality
+- [ ] No references to deleted files
+- [ ] Current setup (localhost) is clearly marked
+- [ ] Future setup (Azure) is clearly marked as "future"
+
+### Suggested Improvements During Complex Changes
+
+When making changes that span multiple systems (e.g., infra + docs + scripts):
+
+**Propose Questions Like:**
+
+- "This change affects k3d bootstrap. Should we create a validation script to verify all references?"
+- "The docs reference files in 4 different places. Should we consider a centralized manifest?"
+- "This is the 3rd time we've deleted a file and updated 10 references. Should we create a tracking system?"
+- "The localhost vs Azure docs are now mixed. Should we separate them more explicitly?"
+
+### Current Phase Context (January 17, 2026)
+
+**🔵 PHASE 5 - LOCALHOST FOCUS (CURRENT):**
+
+- All development happens locally with k3d + Docker Compose
+- PostgreSQL, Redis, RabbitMQ run in containers
+- Traefik handles ingress (k3s built-in)
+- Console logs for observability
+
+**🟣 AZURE PRODUCTION (FUTURE - Reference Only):**
+
+- Terraform code exists for reference
+- AKS, managed PostgreSQL, Azure Service Bus documented
+- For post-hackathon migration
+- Not currently active
+
+**Key Rule:**  
+When updating docs, clearly separate these two perspectives. Make it obvious to developers what's CURRENT vs what's PLANNED.
+
+---
+
+> **Last update:** January 17, 2026  
+> **Version:** 1.4  
+> **Key Addition:** Documentation maintenance protocol + reference audit procedures
+>
 > Use these instructions to guide code generation in the TC Agro Solutions project.
+> Always validate documentation references when making infrastructure changes.
