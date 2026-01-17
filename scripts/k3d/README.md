@@ -17,8 +17,7 @@ create-all-from-zero.ps1
   ├── Instala Loki via Helm
   ├── Instala Tempo via Helm
   ├── Instala OTel via Helm
-  ├── Instala KEDA via Helm
-  └── Instala Ingress NGINX via Helm
+  └── Instala KEDA via Helm
 
 ❌ Problemas:
 - Script gigante (~500+ linhas)
@@ -60,8 +59,7 @@ create-all-from-zero.ps1
    │  ├── Loki (logs)
    │  ├── Tempo (traces)
    │  └── OpenTelemetry Collector
-   ├── platform-autoscaling (KEDA)
-   └── platform-ingress-nginx
+   └── platform-autoscaling (KEDA)
 
 3. You manage microservices via Git:
    - Push manifests to repos
@@ -89,7 +87,6 @@ create-all-from-zero.ps1
 - **Tempo** (distributed tracing)
 - **OpenTelemetry Collector** (telemetry hub)
 - **KEDA** (event-driven autoscaling)
-- **Ingress NGINX** (with native k3d LoadBalancer)
 
 ---
 
@@ -129,7 +126,6 @@ Expected applications:
 
 - `platform-observability` (Prometheus, Grafana, Loki, Tempo, OTel)
 - `platform-autoscaling` (KEDA)
-- `platform-ingress-nginx`
 
 ---
 
@@ -181,7 +177,6 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 2. **ArgoCD** automatically syncs and installs:
    - **platform-observability** (Prometheus, Grafana, Loki, Tempo, OTel Collector)
    - **platform-autoscaling** (KEDA)
-   - **platform-ingress-nginx** (Ingress Controller)
 3. All configurations come from **versioned Helm values** in Git
 4. Changes to `platform/helm-values/dev/*.values.yaml` auto-sync via ArgoCD
 
@@ -203,7 +198,7 @@ This single command:
 - ✅ Installs ArgoCD via Helm
 - ✅ Applies GitOps bootstrap (App-of-apps)
 - ✅ **Creates local registry at localhost:5000** ⭐ **NEW**
-- ✅ ArgoCD auto-installs: Prometheus, Grafana, Loki, Tempo, OTel, KEDA, Ingress NGINX
+- ✅ ArgoCD auto-installs: Prometheus, Grafana, Loki, Tempo, OTel, KEDA
 
 ⏱️ **Time:** ~3-4 minutes
 
@@ -288,7 +283,6 @@ You should see:
 NAME                      SYNC STATUS   HEALTH STATUS
 platform-observability    Synced        Healthy
 platform-autoscaling      Synced        Healthy
-platform-ingress-nginx    Synced        Healthy
 ```
 
 ---
@@ -374,7 +368,6 @@ Expected applications:
 
 - `platform-observability` (Prometheus, Grafana, Loki, Tempo, OTel)
 - `platform-autoscaling` (KEDA)
-- `platform-ingress-nginx` (Ingress Controller)
 
 ---
 
@@ -462,10 +455,8 @@ tc-agro-solutions/
        └── ArgoCD reads: infrastructure/kubernetes/platform/argocd/applications/
            ├── platform-observability.yaml
            │   └── Installs: Prometheus, Grafana, Loki, Tempo, OTel
-           ├── platform-autoscaling.yaml
-           │   └── Installs: KEDA
-           └── platform-ingress-nginx.yaml
-               └── Installs: Ingress NGINX
+           └── platform-autoscaling.yaml
+               └── Installs: KEDA
 ```
 
 ### Helm Values Strategy
@@ -478,8 +469,7 @@ infrastructure/kubernetes/platform/helm-values/dev/
 ├── loki.values.yaml
 ├── tempo.values.yaml
 ├── otel-collector.values.yaml
-├── keda.values.yaml
-└── ingress-nginx.values.yaml
+└── keda.values.yaml
 ```
 
 **Why?**

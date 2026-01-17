@@ -78,7 +78,7 @@ Ensure-Context
 
 Show-Section "📊 Nodes:" "kubectl get nodes -o wide"
 Show-Section "📁 Namespaces:" "kubectl get namespaces"
-Show-Section "🔧 Core Services:" "kubectl get svc -A | Select-String -Pattern '(argocd|grafana|prometheus|loki|tempo|ingress-nginx|keda)'"
+Show-Section "🔧 Core Services:" "kubectl get svc -A | Select-String -Pattern '(argocd|grafana|prometheus|loki|tempo|traefik|keda)'"
 Show-Section "📦 ArgoCD Applications:" "kubectl get applications -n argocd"
 Show-Section "📦 Deployments (monitoring):" "kubectl get deployments -n monitoring"
 Show-Section "📦 StatefulSets (monitoring):" "kubectl get statefulsets -n monitoring"

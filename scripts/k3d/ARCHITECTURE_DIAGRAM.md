@@ -39,8 +39,7 @@ Complete visual overview of the new GitOps infrastructure setup with registry co
 │  │                                                                      │       │
 │  │  🖥️ Agent - APPS (10GB) [agentpool=apps]                            │       │
 │  │  ├─ KEDA Operator                                                  │       │
-│  │  ├─ Ingress NGINX                                                  │       │
-│  │  └─ (future) Microservices                                         │       │
+│  │  └─ (Microservices & apps deployed via ArgoCD)                    │       │
 │  │                                                                      │       │
 │  │  Registry Integration: --registry-use localhost:5000                │       │
 │  │  ↓ All nodes auto-configured to access localhost:5000              │       │
@@ -98,12 +97,7 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
 │  │     valueFiles: $values/.../keda.values.yaml                       │       │
 │  │     ↓ Installs: KEDA (event-driven autoscaling)                    │       │
 │  │                                                                      │       │
-│  │  🌐 Application: platform-ingress-nginx                            │       │
-│  │     Source: Helm: ingress-nginx/ingress-nginx (4.10.0)             │       │
-│  │     valueFiles: $values/.../ingress-nginx.values.yaml              │       │
-│  │     ↓ Installs: Ingress NGINX (LoadBalancer on k3d)                │       │
-│  │                                                                      │       │
-│  │  Namespace: monitoring, keda, ingress-nginx                         │       │
+│  │  Namespace: monitoring, keda                                        │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │                                                                                  │
@@ -205,11 +199,8 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
                     │  ├─ tempo (Tempo)
                     │  └─ otel-collector (OpenTelemetry)
                     │
-                    ├─ platform-autoscaling.yaml
-                    │  └─ keda (KEDA)
-                    │
-                    └─ platform-ingress-nginx.yaml
-                       └─ ingress-nginx (Ingress NGINX)
+                    └─ platform-autoscaling.yaml
+                       └─ keda (KEDA)
 ```
 
 ---
@@ -227,8 +218,7 @@ tc-agro-solutions/
 │  │  │  ├─ loki.values.yaml                     (Loki config)
 │  │  │  ├─ tempo.values.yaml                    (Tempo config)
 │  │  │  ├─ otel-collector.values.yaml           (OTEL config)
-│  │  │  ├─ keda.values.yaml                     (KEDA config)
-│  │  │  └─ ingress-nginx.values.yaml            (Ingress config)
+│  │  │  └─ keda.values.yaml                     (KEDA config)
 │  │  │
 │  │  ├─ argocd/
 │  │  │  ├─ bootstrap/
@@ -238,12 +228,11 @@ tc-agro-solutions/
 │  │  │  │  └─ project-platform.yaml             (Platform Project)
 │  │  │  └─ applications/
 │  │  │     ├─ platform-observability.yaml       (Multi-source: 4 Helm + values repo)
-│  │  │     ├─ platform-autoscaling.yaml         (Helm + values repo)
-│  │  │     └─ platform-ingress-nginx.yaml       (Helm + values repo)
+│  │  │     └─ platform-autoscaling.yaml         (Helm + values repo)
 │  │  │
 │  │  ├─ base/
 │  │  │  ├─ namespaces/
-│  │  │  │  └─ namespaces.yaml                   (5 namespaces)
+│  │  │  │  └─ namespaces.yaml                   (4 namespaces)
 │  │  │  ├─ ingress/
 │  │  │  │  └─ argocd-ingress.yaml               (ArgoCD Ingress)
 │  │  │  └─ kustomization.yaml

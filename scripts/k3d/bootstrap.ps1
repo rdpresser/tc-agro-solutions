@@ -454,7 +454,7 @@ function Apply-GitOpsBootstrap {
     if (Test-Path $bootstrapPlatformFile) {
         kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
         Write-Host "✅ Platform bootstrap Applied (infrastructure components)" -ForegroundColor $Color.Success
-        Write-Host "   ℹ️  ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA, Ingress NGINX" -ForegroundColor $Color.Info
+        Write-Host "   ℹ️  ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA" -ForegroundColor $Color.Info
     }
     else {
         Write-Host "⚠️  Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning

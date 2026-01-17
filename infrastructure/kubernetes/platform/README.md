@@ -1,6 +1,6 @@
 # Platform GitOps Structure - TC Agro Solutions
 
-**GitOps-managed platform components:** Prometheus, Grafana, Loki, Tempo, OpenTelemetry, KEDA, Ingress NGINX.
+**GitOps-managed platform components:** Prometheus, Grafana, Loki, Tempo, OpenTelemetry, KEDA.
 
 ---
 
@@ -14,8 +14,7 @@ platform/
 │       ├── loki.values.yaml
 │       ├── tempo.values.yaml
 │       ├── otel-collector.values.yaml
-│       ├── keda.values.yaml
-│       └── ingress-nginx.values.yaml
+│       └── keda.values.yaml
 │
 ├── argocd/                              # ArgoCD manifests
 │   ├── bootstrap/
@@ -25,12 +24,10 @@ platform/
 │   │   └── project-platform.yaml        # Platform Project
 │   └── applications/
 │       ├── platform-observability.yaml  # Installs: Prometheus, Grafana, Loki, Tempo, OTel
-│       ├── platform-autoscaling.yaml    # Installs: KEDA
-│       └── platform-ingress-nginx.yaml  # Installs: Ingress NGINX
-│
+│       └── platform-autoscaling.yaml    # Installs: KEDA
 ├── base/                                # Kustomize base (namespaces, ingress)
 │   ├── namespaces/
-│   │   └── namespaces.yaml              # argocd, monitoring, keda, ingress-nginx, agro-apps
+│       └── namespaces.yaml              # argocd, monitoring, keda, agro-apps
 │   ├── ingress/
 │   │   └── argocd-ingress.yaml          # argocd.local → argocd-server
 │   └── kustomization.yaml
@@ -55,10 +52,8 @@ scripts/k3d/bootstrap.ps1
 ArgoCD reads: argocd/applications/
   ├── platform-observability.yaml
   │   └── Installs: Prometheus, Grafana, Loki, Tempo, OTel
-  ├── platform-autoscaling.yaml
-  │   └── Installs: KEDA
-  └── platform-ingress-nginx.yaml
-      └── Installs: Ingress NGINX
+  └── platform-autoscaling.yaml
+      └── Installs: KEDA
 ```
 
 ---
@@ -216,14 +211,13 @@ git push origin main
 
 ## 📊 Platform Components
 
-| Component                   | Purpose                             | Namespace     | Helm Chart                                 |
-| --------------------------- | ----------------------------------- | ------------- | ------------------------------------------ |
-| **kube-prometheus-stack**   | Prometheus + Grafana + AlertManager | monitoring    | prometheus-community/kube-prometheus-stack |
-| **Loki**                    | Log aggregation                     | monitoring    | grafana/loki                               |
-| **Tempo**                   | Distributed tracing                 | monitoring    | grafana/tempo                              |
-| **OpenTelemetry Collector** | Telemetry hub (OTLP)                | monitoring    | open-telemetry/opentelemetry-collector     |
-| **KEDA**                    | Event-driven autoscaling            | keda          | kedacore/keda                              |
-| **Ingress NGINX**           | Ingress controller                  | ingress-nginx | ingress-nginx/ingress-nginx                |
+| Component                   | Purpose                             | Namespace  | Helm Chart                                 |
+| --------------------------- | ----------------------------------- | ---------- | ------------------------------------------ |
+| **kube-prometheus-stack**   | Prometheus + Grafana + AlertManager | monitoring | prometheus-community/kube-prometheus-stack |
+| **Loki**                    | Log aggregation                     | monitoring | grafana/loki                               |
+| **Tempo**                   | Distributed tracing                 | monitoring | grafana/tempo                              |
+| **OpenTelemetry Collector** | Telemetry hub (OTLP)                | monitoring | open-telemetry/opentelemetry-collector     |
+| **KEDA**                    | Event-driven autoscaling            | keda       | kedacore/keda                              |
 
 ---
 

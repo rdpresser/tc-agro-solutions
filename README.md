@@ -226,7 +226,7 @@ tc-agro-solutions/
 #### ☸️ K3D Mode (Recommended for K8s/GitOps testing)
 
 - **Orchestration:** k3d (lightweight Kubernetes)
-- **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA, Ingress NGINX)
+- **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA)
 - **Cluster:** 18GB total (1 server 2GB + 2 agents: system 6GB + apps 10GB)
 - **Registry:** localhost:5000 (local image registry)
 
