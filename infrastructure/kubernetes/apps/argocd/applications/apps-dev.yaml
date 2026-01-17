@@ -10,8 +10,8 @@ spec:
   generators:
     - list:
         elements:
-          - name: frontend
-            path: infrastructure/kubernetes/apps/base/frontend
+          - name: apps
+            path: infrastructure/kubernetes/apps/overlays/dev
   
   template:
     metadata:

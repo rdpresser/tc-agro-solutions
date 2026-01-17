@@ -1,0 +1,32 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: identity-api
+  namespace: agro-apps
+  labels:
+    app: identity-api
+  annotations:
+    kubernetes.io/description: "Path-based routing for Identity API service"
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/identity`)
+      kind: Rule
+      services:
+        - name: identity-api
+          port: 80
+      middlewares:
+        - name: identity-stripprefix
+          namespace: agro-apps
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: identity-stripprefix
+  namespace: agro-apps
+spec:
+  stripPrefix:
+    prefixes:
+      - /identity

@@ -18,6 +18,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $images = @(
     @{ name = "agro-frontend"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+    @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
 )
 
 $Color = @{
@@ -50,8 +51,18 @@ foreach ($img in $images) {
     $tag = "localhost:$registryPort/${imageName}:latest"
     $k3dTag = "k3d-localhost:$registryPort/${imageName}:latest"
     
+    # Determine build context: nested Dockerfiles build from repo root
+    if ($img.dockerfile -like "*/*") {
+        $buildContext = $repoRoot
+        Write-Host "   Building from repo root (nested Dockerfile)" -ForegroundColor $Color.Muted
+    }
+    else {
+        $buildContext = $imagePath
+        Write-Host "   Building from service path" -ForegroundColor $Color.Muted
+    }
+
     # Build with both tags (for local docker and k3d cluster reference)
-    docker build -t $tag -t $k3dTag -f $dockerfilePath $imagePath
+    docker build -t $tag -t $k3dTag -f $dockerfilePath $buildContext
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "   ❌ Build failed" -ForegroundColor $Color.Error
@@ -78,3 +89,4 @@ foreach ($img in $images) {
 
 Write-Host "✅ Build & push complete!" -ForegroundColor $Color.Success
 Write-Host ""
+

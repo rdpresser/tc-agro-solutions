@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agro-apps
+  labels:
+    project: tc-agro-solutions
+    managed-by: argocd
