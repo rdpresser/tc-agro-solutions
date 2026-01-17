@@ -181,7 +181,7 @@ tc-agro-solutions/
 
 ### For Developers (First Time)
 
-- **[⚡ Quick Start (5 min)](QUICK_START_SUBMODULES.md)** - Clone and run immediately
+- **[🚀 Bootstrap Setup Guide](docs/BOOTSTRAP_SETUP.md)** - Quick setup with `bootstrap.ps1`
 - **[🐳 Local Development Setup](docs/development/local-setup.md)** - Docker Compose guide
 - **[🤖 Copilot Instructions](.github/copilot-instructions.md)** - Coding standards
 
@@ -338,41 +338,7 @@ Analytics
 
 ---
 
-## 🔗 Git Submodules Quick Guide
-
-### Clone Everything
-
-```bash
-git clone --recurse-submodules git@github.com:your-org/tc-agro-solutions.git
-cd tc-agro-solutions
-```
-
-### Update All Services
-
-```bash
-git submodule update --remote
-```
-
-### Work on a Service
-
-```bash
-cd services/agro-identity-service
-git checkout -b feature/new-feature
-# ... make changes ...
-git push origin feature/new-feature
-# After merge, update parent:
-cd ../..
-git submodule update --remote
-git add services/agro-identity-service
-git commit -m "chore: update identity service"
-```
-
-**Quick Start:** [⚡ 5-Minute Guide](QUICK_START_SUBMODULES.md)  
-**Detailed Guide:** [🔗 Complete Strategy](GIT_SUBMODULES_STRATEGY.md)
-
----
-
-## 📊 AKS Node Pool Strategy
+## AKS Node Pool Strategy
 
 Three optimized node pools for stability, performance, and cost:
 
@@ -480,7 +446,7 @@ docs/
 
 ### For Developers
 
-1. Clone solution: `git clone --recurse-submodules <url>`
+1. Clone solution: `.\scripts\bootstrap.ps1`
 2. Start local env: `docker-compose up -d`
 3. Read [Local Development Setup](docs/development/local-setup.md)
 4. Check [Copilot Instructions](.github/copilot-instructions.md)
@@ -495,8 +461,8 @@ docs/
 ### For Team Leads
 
 1. Review [Technical Roadmap](README_ROADMAP.md)
-2. Check [Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)
-3. Review all [ADRs](docs/adr/) for decision context
+2. Review all [ADRs](docs/adr/) for decision context
+3. Check [Architecture Documentation](docs/architecture/)
 
 ---
 
@@ -505,7 +471,7 @@ docs/
 ### Adding a New Microservice
 
 1. Create new repository: `agro-new-service`
-2. Add as submodule: `git submodule add git@github.com:org/agro-new-service.git services/agro-new-service`
+2. Clone it into `services/` folder locally
 3. Add Kubernetes manifest in `infrastructure/kubernetes/`
 4. Configure in ArgoCD
 5. Commit: `git add . && git commit -m "feat: add new microservice"`
@@ -514,14 +480,13 @@ docs/
 
 1. Developer creates PR in service repo
 2. Service repo CI/CD runs tests, builds Docker image
-3. After merge, parent repo is updated via: `git submodule update --remote`
-4. ArgoCD detects new image and rolls out to AKS
+3. After merge, new image is deployed via ArgoCD
 
 ### Local Development with Service Changes
 
 ```bash
 # Clone solution
-git clone --recurse-submodules <url>
+git clone <url>
 cd tc-agro-solutions
 
 # Make changes in a service
@@ -570,7 +535,7 @@ test: add integration test
 ### Documentation
 
 - [Technical Roadmap](README_ROADMAP.md)
-- [Git Submodules Strategy](GIT_SUBMODULES_STRATEGY.md)
+- [Bootstrap Setup](docs/BOOTSTRAP_SETUP.md)
 - [All ADRs](docs/adr/)
 - [Copilot Instructions](.github/copilot-instructions.md)
 
@@ -593,14 +558,14 @@ This project is proprietary. All rights reserved.
 ## ✨ Key Metrics
 
 - **Services:** 5 microservices
-- **Repositories:** 1 parent + 8 submodules (5 services + 3 shared)
+- **Repositories:** Independent git repositories per service
 - **Documentation:** 8 ADRs + architecture guides
 - **Test Coverage:** Unit, integration, load, smoke tests
 - **Deployment:** Azure AKS via Terraform + ArgoCD
 
 ---
 
-> **Version:** 2.0 - Submodule-ready architecture  
-> **Last Updated:** January 9, 2026  
+> **Version:** 2.1 - Independent service repositories (Git Submodules removed)  
+> **Last Updated:** January 17, 2026  
 > **Status:** Production-ready for Phase 5 delivery  
 > **Deadline:** February 27, 2026 ✅

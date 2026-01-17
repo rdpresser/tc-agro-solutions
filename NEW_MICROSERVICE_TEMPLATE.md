@@ -15,6 +15,7 @@ Initialize with: README ✓
 ```
 
 Example names:
+
 - `agro-identity-service`
 - `agro-farm-service`
 - `agro-notification-service`
@@ -70,11 +71,13 @@ agro-{service-name}-service/
 ## Step 4: .NET Project Setup
 
 ### Create Solution
+
 ```bash
 dotnet new sln -n Agro.{ServiceName}
 ```
 
 ### Create Projects
+
 ```bash
 # API project (FastEndpoints)
 dotnet new webapi -n Agro.{ServiceName}.Api -o src/Agro.{ServiceName}.Api
@@ -109,6 +112,7 @@ dotnet sln add src/Agro.{ServiceName}.Tests/Agro.{ServiceName}.Tests.csproj
 ## Step 5: FastEndpoints Setup
 
 ### Program.cs Template
+
 ```csharp
 using FastEndpoints;
 
@@ -149,7 +153,7 @@ app.UseHttpsRedirection();
 app.UseFastEndpoints()
     .UseSwaggerUI(config =>
     {
-        config.SwaggerEndpoint("/swagger/v1/swagger.json", 
+        config.SwaggerEndpoint("/swagger/v1/swagger.json",
             "Agro.{ServiceName}.Api v1");
     });
 
@@ -209,6 +213,7 @@ public class GetHealthEndpoint : EndpointWithoutRequest<GetHealthResponse>
 ## Step 7: Docker Setup
 
 ### Dockerfile
+
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
@@ -240,6 +245,7 @@ ENTRYPOINT ["dotnet", "Agro.{ServiceName}.Api.dll"]
 ## Step 8: GitHub Actions CI/CD
 
 ### .github/workflows/build-and-test.yml
+
 ```yaml
 name: Build and Test
 
@@ -252,26 +258,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.0.x'
-      
+          dotnet-version: "9.0.x"
+
       - name: Restore dependencies
         run: dotnet restore
-      
+
       - name: Build
         run: dotnet build --no-restore --configuration Release
-      
+
       - name: Run tests
         run: dotnet test --no-build --verbosity normal
 ```
 
 ### .github/workflows/push-to-acr.yml
+
 ```yaml
 name: Push to ACR
 
@@ -282,18 +289,18 @@ on:
 jobs:
   push:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Build image
         run: docker build -t agro-{service-name}-service:${{ github.sha }} .
-      
+
       - name: Push to ACR
         run: |
           docker tag agro-{service-name}-service:${{ github.sha }} \
             ${{ secrets.ACR_NAME }}.azurecr.io/agro-{service-name}-service:latest
-          
+
           az acr login --name ${{ secrets.ACR_NAME }}
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/agro-{service-name}-service:latest
 ```
@@ -310,11 +317,13 @@ jobs:
 ## Quick Start
 
 ### Build
+
 \`\`\`bash
 dotnet build
 \`\`\`
 
 ### Run Locally
+
 \`\`\`bash
 dotnet run --project src/Agro.{ServiceName}.Api
 \`\`\`
@@ -322,11 +331,13 @@ dotnet run --project src/Agro.{ServiceName}.Api
 API will be available at: http://localhost:5000
 
 ### Run Tests
+
 \`\`\`bash
 dotnet test
 \`\`\`
 
 ### Docker
+
 \`\`\`bash
 docker build -t agro-{service-name}-service:latest .
 docker run -p 8080:80 agro-{service-name}-service:latest
@@ -335,14 +346,15 @@ docker run -p 8080:80 agro-{service-name}-service:latest
 ## Endpoints
 
 ### GET /health
+
 Service health check.
 
 **Response:** 200 OK
 \`\`\`json
 {
-  "status": "healthy",
-  "timestamp": "2026-01-09T10:30:00Z",
-  "service": "Agro.{ServiceName}.Api"
+"status": "healthy",
+"timestamp": "2026-01-09T10:30:00Z",
+"service": "Agro.{ServiceName}.Api"
 }
 \`\`\`
 
@@ -370,18 +382,13 @@ Service health check.
 
 ---
 
-## Step 10: Add as Submodule to Parent
+## Step 10: Register Service in Parent
 
-```bash
-# From tc-agro-solutions directory
-git submodule add git@github.com:your-org/agro-{service-name}-service.git \
-    services/agro-{service-name}-service
+The service repository is now independent. Parent repository developers will:
 
-# Commit
-git add .gitmodules services/
-git commit -m "feat: add agro-{service-name}-service submodule"
-git push
-```
+1. Clone the parent: `.\scripts\bootstrap.ps1`
+2. Clone the new service separately: `git clone git@github.com:your-org/agro-{service-name}-service.git services/agro-{service-name}-service`
+3. Service will be automatically integrated via ArgoCD GitOps
 
 ---
 
@@ -500,7 +507,6 @@ docker-compose down
 - [ ] Dockerfile created and tested
 - [ ] GitHub Actions workflows added
 - [ ] README.md written
-- [ ] Added as submodule to parent repo
 - [ ] Kubernetes manifest created
 - [ ] docker-compose.yml entry added
 - [ ] Local testing successful
