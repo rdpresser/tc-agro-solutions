@@ -21,7 +21,7 @@ spec:
     # kube-prometheus-stack (Prometheus + Grafana + AlertManager)
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
-      targetRevision: 65.0.0
+      targetRevision: 81.0.0
       helm:
         valueFiles:
           - $values/infrastructure/kubernetes/platform/helm-values/dev/kube-prometheus-stack.values.yaml
@@ -29,7 +29,7 @@ spec:
     # Loki (log aggregation)
     - repoURL: https://grafana.github.io/helm-charts
       chart: loki
-      targetRevision: 6.16.0
+      targetRevision: 6.49.0
       helm:
         valueFiles:
           - $values/infrastructure/kubernetes/platform/helm-values/dev/loki.values.yaml
@@ -37,7 +37,7 @@ spec:
     # Tempo (distributed tracing)
     - repoURL: https://grafana.github.io/helm-charts
       chart: tempo
-      targetRevision: 1.10.3
+      targetRevision: 1.24.3
       helm:
         valueFiles:
           - $values/infrastructure/kubernetes/platform/helm-values/dev/tempo.values.yaml
@@ -45,7 +45,7 @@ spec:
     # OpenTelemetry Collector
     - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
       chart: opentelemetry-collector
-      targetRevision: 0.105.0
+      targetRevision: 0.143.0
       helm:
         valueFiles:
           - $values/infrastructure/kubernetes/platform/helm-values/dev/otel-collector.values.yaml

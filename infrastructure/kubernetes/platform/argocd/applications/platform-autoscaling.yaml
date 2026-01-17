@@ -21,7 +21,7 @@ spec:
   sources:
     - repoURL: https://kedacore.github.io/charts
       chart: keda
-      targetRevision: 2.15.1
+      targetRevision: 2.18.3
       helm:
         skipCrds: true
         valueFiles:
