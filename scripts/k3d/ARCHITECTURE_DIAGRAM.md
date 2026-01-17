@@ -234,7 +234,7 @@ tc-agro-solutions/
 │  │  │  ├─ namespaces/
 │  │  │  │  └─ namespaces.yaml                   (4 namespaces)
 │  │  │  ├─ ingress/
-│  │  │  │  └─ argocd-ingress.yaml               (ArgoCD Ingress)
+│  │  │  │  └─ argocd-ingressroute.yaml         (Traefik IngressRoute)
 │  │  │  └─ kustomization.yaml
 │  │  │
 │  │  └─ overlays/dev/

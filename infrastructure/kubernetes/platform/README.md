@@ -29,7 +29,7 @@ platform/
 │   ├── namespaces/
 │       └── namespaces.yaml              # argocd, monitoring, keda, agro-apps
 │   ├── ingress/
-│   │   └── argocd-ingress.yaml          # argocd.local → argocd-server
+│   │   └── argocd-ingressroute.yaml     # Traefik IngressRoute → localhost/argocd
 │   └── kustomization.yaml
 │
 └── overlays/

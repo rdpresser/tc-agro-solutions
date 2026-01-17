@@ -26,7 +26,8 @@ Write-Host "🐳 Checking if Docker is running..." -ForegroundColor Cyan
 try {
     docker ps | Out-Null
     Write-Host "✅ Docker is active" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "❌ Docker is not running. Start Docker Desktop first!" -ForegroundColor Red
     Write-Host "   Wait for Docker Desktop to fully start before continuing." -ForegroundColor Yellow
     exit 1
@@ -68,7 +69,8 @@ if ($stoppedContainers) {
 
     Write-Host "✅ Cluster started successfully" -ForegroundColor Green
     Start-Sleep -Seconds 5
-} else {
+}
+else {
     Write-Host "✅ Cluster is already running" -ForegroundColor Green
 }
 
@@ -118,16 +120,14 @@ foreach ($ns in $namespaces) {
     }
 }
 
-# 6) Verify ArgoCD Ingress is present
-Write-Host "`n🌐 Verifying ArgoCD Ingress..." -ForegroundColor Cyan
-$ingress = kubectl get ingress -n argocd argocd-server --no-headers 2>$null
-if ($ingress) {
-    Write-Host "   ✅ ArgoCD Ingress is active (argocd.local)" -ForegroundColor Green
-} else {
-    Write-Host "   ⚠️  ArgoCD Ingress not found. Applying..." -ForegroundColor Yellow
-    $manifestsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "manifests"
-    kubectl apply -f "$manifestsPath\argocd-ingress.yaml" 2>$null
-    Write-Host "   ✅ ArgoCD Ingress applied" -ForegroundColor Green
+# 6) Verify Traefik IngressRoute is present
+Write-Host "`n🌐 Verifying Traefik IngressRoute..." -ForegroundColor Cyan
+$ingressRoute = kubectl get ingressroute -n argocd argocd --no-headers 2>$null
+if ($ingressRoute) {
+    Write-Host "   ✅ Traefik IngressRoute is active (localhost/argocd)" -ForegroundColor Green
+}
+else {
+    Write-Host "   ⚠️  Traefik IngressRoute not found. Check platform base manifests." -ForegroundColor Yellow
 }
 
 # 7) Check hosts file
@@ -137,7 +137,8 @@ $hasArgocd = $hostsContent -match "argocd\.local"
 $hasCloudgames = $hostsContent -match "cloudgames\.local"
 if ($hasArgocd -and $hasCloudgames) {
     Write-Host "   ✅ Hosts file configured (argocd.local, cloudgames.local)" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "   ⚠️  Hosts file missing entries. Run as Admin:" -ForegroundColor Yellow
     Write-Host "      .\k3d-manager.ps1 update-hosts" -ForegroundColor White
 }
@@ -148,7 +149,8 @@ Write-Host "Cluster:  k3d-$clusterName" -ForegroundColor White
 Write-Host "Status:   " -NoNewline
 if ($ready) {
     Write-Host "✅ Ready" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "⚠️  Partially ready (some pods still initializing)" -ForegroundColor Yellow
 }
 

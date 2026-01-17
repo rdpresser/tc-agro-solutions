@@ -41,7 +41,7 @@ $grafanaNewUserPassword = "rdpresser@123"
 
 # === 0) Checking dependencies ===
 Write-Host "=== 0) Checking dependencies: kubectl, helm, k3d, docker ==="
-foreach ($cmd in @("k3d","kubectl","helm","docker")) {
+foreach ($cmd in @("k3d", "kubectl", "helm", "docker")) {
     if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) {
         Write-Host "ERROR: command '$cmd' not found in PATH. Install before continuing." -ForegroundColor Red
         exit 1
@@ -52,7 +52,8 @@ foreach ($cmd in @("k3d","kubectl","helm","docker")) {
 Write-Host "=== 0.1) Stopping existing port-forwards to free up ports ==="
 if (Test-Path ".\stop-port-forward.ps1") {
     .\stop-port-forward.ps1 all
-} else {
+}
+else {
     Write-Host "Warning: stop-port-forward.ps1 not found. Make sure ports 8090 and 3000 are free." -ForegroundColor Yellow
 }
 
@@ -62,7 +63,8 @@ $regList = k3d registry list
 if ($regList -notmatch $registryName) {
     Write-Host "Creating registry $registryName`:$registryPort"
     k3d registry create $registryName --port $registryPort
-} else {
+}
+else {
     Write-Host "Registry $registryName already exists. Skipping."
 }
 
@@ -72,7 +74,8 @@ k3d cluster list | Select-String -Pattern "^$clusterName\s" | Out-Null
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Cluster $clusterName exists. Deleting..."
     k3d cluster delete $clusterName
-} else {
+}
+else {
     Write-Host "Cluster $clusterName does not exist. Skipping delete."
 }
 
@@ -83,9 +86,9 @@ Write-Host "   ℹ️  Just add to hosts file: 127.0.0.1 cloudgames.local" -Fore
 Write-Host ""
 
 k3d cluster create $clusterName --servers $serverCount --agents $agentCount `
-  --port "80:80@loadbalancer" --port "443:443@loadbalancer" `
-  --servers-memory $memoryPerNode --agents-memory $agentMemory `
-  --registry-use "$registryName`:$registryPort"
+    --port "80:80@loadbalancer" --port "443:443@loadbalancer" `
+    --servers-memory $memoryPerNode --agents-memory $agentMemory `
+    --registry-use "$registryName`:$registryPort"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to create cluster. Exiting." -ForegroundColor Red
@@ -101,8 +104,8 @@ kubectl config use-context "k3d-$clusterName"
 # Fix for WSL2: replace host.docker.internal with 127.0.0.1
 Write-Host "Adjusting kubeconfig to use 127.0.0.1..." -ForegroundColor Cyan
 $serverUrl = kubectl config view -o json | ConvertFrom-Json |
-    ForEach-Object { $_.clusters | Where-Object { $_.name -eq "k3d-$clusterName" } } |
-    ForEach-Object { $_.cluster.server }
+ForEach-Object { $_.clusters | Where-Object { $_.name -eq "k3d-$clusterName" } } |
+ForEach-Object { $_.cluster.server }
 
 if ($serverUrl -match "host.docker.internal:(\d+)") {
     $port = $matches[1]
@@ -113,7 +116,7 @@ if ($serverUrl -match "host.docker.internal:(\d+)") {
 # Validate connectivity with cluster API (retry with timeout)
 Write-Host "Validating Kubernetes API connectivity..." -ForegroundColor Cyan
 $apiReady = $false
-for ($i=0; $i -lt 30; $i++) {
+for ($i = 0; $i -lt 30; $i++) {
     try {
         kubectl cluster-info 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
@@ -121,7 +124,8 @@ for ($i=0; $i -lt 30; $i++) {
             Write-Host "✅ Kubernetes API accessible" -ForegroundColor Green
             break
         }
-    } catch {}
+    }
+    catch {}
     Write-Host "   Attempt $($i+1)/30: API not ready yet..." -ForegroundColor Gray
     Start-Sleep -Seconds 5
 }
@@ -137,7 +141,7 @@ if (-not $apiReady) {
 
 # === 4) Create basic namespaces ===
 Write-Host "=== 4) Creating namespaces: argocd, monitoring, keda, users ==="
-foreach ($ns in @("argocd","monitoring","keda","users")) {
+foreach ($ns in @("argocd", "monitoring", "keda", "users")) {
     kubectl create namespace $ns --dry-run=client -o yaml | kubectl apply --validate=false -f -
 }
 
@@ -162,11 +166,7 @@ helm upgrade --install argocd argo/argo-cd -n argocd `
 Write-Host "Waiting for ArgoCD pods to be ready..."
 Start-Sleep -Seconds 10
 
-# Apply ArgoCD Ingress for native access (no port-forward needed)
-Write-Host "Applying ArgoCD Ingress (argocd.local)..."
-$manifestsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "manifests"
-kubectl apply -f "$manifestsPath\argocd-ingress.yaml"
-Write-Host "✅ ArgoCD Ingress applied (access via http://argocd.local after updating hosts file)" -ForegroundColor Green
+Write-Host "✅ Traefik IngressRoute is applied via platform base manifests (access via http://localhost/argocd)" -ForegroundColor Green
 
 # === 6) Install KEDA ===
 Write-Host "=== 6) Installing KEDA ==="
@@ -197,16 +197,16 @@ helm repo add grafana https://grafana.github.io/helm-charts 2>$null
 helm repo update
 
 helm upgrade --install kube-prom-stack prometheus-community/kube-prometheus-stack -n monitoring `
-  --create-namespace `
-  --set grafana.enabled=true `
-  --set grafana.adminPassword="$grafanaAdminPassword" `
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+    --create-namespace `
+    --set grafana.enabled=true `
+    --set grafana.adminPassword="$grafanaAdminPassword" `
+    --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
 
 Write-Host "Waiting for Grafana to be ready..."
 Start-Sleep -Seconds 10
 # wait for grafana
 $ok = $false
-for ($i=0; $i -lt 40; $i++) {
+for ($i = 0; $i -lt 40; $i++) {
     $pods = kubectl -n monitoring get pods -l app.kubernetes.io/name=grafana --no-headers
     if ($pods -match "Running") { $ok = $true; break }
     Start-Sleep -Seconds 5
@@ -223,10 +223,12 @@ try {
     $grafanaSecret = kubectl -n monitoring get secret kube-prom-stack-grafana -o jsonpath="{.data.admin-password}" 2>$null
     if ($grafanaSecret) {
         $grafanaAdminCurrent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($grafanaSecret))
-    } else {
+    }
+    else {
         $grafanaAdminCurrent = $grafanaAdminPassword
     }
-} catch {
+}
+catch {
     $grafanaAdminCurrent = $grafanaAdminPassword
 }
 Write-Host "Grafana admin password: $grafanaAdminCurrent"
@@ -241,13 +243,14 @@ Start-Sleep -Seconds 8
 
 # Check if port-forward is accessible
 $pfReady = $false
-for ($i=0; $i -lt 10; $i++) {
+for ($i = 0; $i -lt 10; $i++) {
     try {
         Invoke-WebRequest -Uri "http://localhost:8090" -Method Head -TimeoutSec 2 -ErrorAction Stop | Out-Null
         $pfReady = $true
         Write-Host "✅ Port-forward accessible via localhost:8090" -ForegroundColor Green
         break
-    } catch {
+    }
+    catch {
         Start-Sleep -Seconds 2
     }
 }
@@ -268,7 +271,8 @@ try {
     Invoke-RestMethod -Uri "http://localhost:8090/api/v1/account/password" -Method Put -Headers $headers -Body $updateBody -ErrorAction Stop | Out-Null
 
     Write-Host "✅ ArgoCD password changed successfully to: $argocdAdminNewPassword" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "⚠️  Failed to change ArgoCD password: $_" -ForegroundColor Yellow
     Write-Host "   You can change it manually via UI at http://argocd.local" -ForegroundColor Yellow
 }
@@ -284,18 +288,20 @@ $grafanaApi = "http://localhost:3000"
 # create user
 $createJson = @{ name = "Rodrigo"; email = $grafanaNewUserEmail; login = $grafanaNewUser; password = $grafanaNewUserPassword } | ConvertTo-Json
 try {
-    Invoke-RestMethod -Method Post -Uri "$grafanaApi/api/admin/users" -Body $createJson -ContentType "application/json" -Credential (New-Object System.Management.Automation.PSCredential("admin",(ConvertTo-SecureString $grafanaAdminCurrent -AsPlainText -Force))) -AllowUnencryptedAuthentication -ErrorAction Stop | Out-Null
+    Invoke-RestMethod -Method Post -Uri "$grafanaApi/api/admin/users" -Body $createJson -ContentType "application/json" -Credential (New-Object System.Management.Automation.PSCredential("admin", (ConvertTo-SecureString $grafanaAdminCurrent -AsPlainText -Force))) -AllowUnencryptedAuthentication -ErrorAction Stop | Out-Null
     Write-Host "User $grafanaNewUser created in Grafana."
-} catch {
+}
+catch {
     Write-Host "Failed to create Grafana user (may already exist) - $_" -ForegroundColor Yellow
 }
 
 # Add user to org as Admin (orgId 1 normally)
 try {
     $addJson = @{ loginOrEmail = $grafanaNewUser; role = "Admin" } | ConvertTo-Json
-    Invoke-RestMethod -Method Post -Uri "$grafanaApi/api/orgs/1/users" -Body $addJson -ContentType "application/json" -Credential (New-Object System.Management.Automation.PSCredential("admin",(ConvertTo-SecureString $grafanaAdminCurrent -AsPlainText -Force))) -AllowUnencryptedAuthentication -ErrorAction Stop
+    Invoke-RestMethod -Method Post -Uri "$grafanaApi/api/orgs/1/users" -Body $addJson -ContentType "application/json" -Credential (New-Object System.Management.Automation.PSCredential("admin", (ConvertTo-SecureString $grafanaAdminCurrent -AsPlainText -Force))) -AllowUnencryptedAuthentication -ErrorAction Stop
     Write-Host "User $grafanaNewUser promoted to Admin of the org."
-} catch {
+}
+catch {
     Write-Host "Failed to promote user (may already be admin) - $_" -ForegroundColor Yellow
 }
 
