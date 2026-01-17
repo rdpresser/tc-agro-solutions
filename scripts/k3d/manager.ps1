@@ -57,6 +57,11 @@ function Show-Menu {
     Write-Host "  11) Build & push images"
     Write-Host "  12) List secrets"
     Write-Host ""
+    Write-Host "📦 HELM CHART VERSIONS:" -ForegroundColor $Color.Info
+    Write-Host "  13) Check Helm chart versions (read-only)"
+    Write-Host "  14) Update Helm charts (dry-run)"
+    Write-Host "  15) Update Helm charts (apply with backup)"
+    Write-Host ""
     Write-Host "❌ EXIT: q) Quit" -ForegroundColor $Color.Muted
     Write-Host ""
 }
@@ -131,8 +136,8 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-12 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12") -notcontains $choice -and $choice -ne "q")
+        $choice = Read-Host "Enter command (1-15 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15") -notcontains $choice -and $choice -ne "q")
 }
 
 switch ($choice) {
@@ -234,6 +239,84 @@ switch ($choice) {
         }
         else {
             $null = Invoke-Script "list-secrets.ps1"
+        }
+        $null = Read-Host "`nPress Enter to continue"
+    }
+    
+    "13" {
+        Write-Host ""
+        Write-Host "🔍 Checking for Helm chart updates..." -ForegroundColor $Color.Info
+        Write-Host "   This will query Helm repositories for latest versions." -ForegroundColor $Color.Muted
+        Write-Host "   No changes will be made to your system." -ForegroundColor $Color.Muted
+        Write-Host ""
+        
+        $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+        $helmCheckScript = Join-Path $parentScriptsPath "check-helm-versions.ps1"
+        
+        if (Test-Path $helmCheckScript) {
+            & $helmCheckScript
+        }
+        else {
+            Write-Host "❌ Script not found: $helmCheckScript" -ForegroundColor $Color.Error
+        }
+        $null = Read-Host "`nPress Enter to continue"
+    }
+    
+    "14" {
+        Write-Host ""
+        Write-Host "🔄 Helm Chart Update - DRY RUN" -ForegroundColor $Color.Info
+        Write-Host "   This will show what would be updated without making changes." -ForegroundColor $Color.Muted
+        Write-Host "   Review the output carefully before applying." -ForegroundColor $Color.Muted
+        Write-Host ""
+        
+        $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+        $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
+        
+        if (Test-Path $helmUpdateScript) {
+            & $helmUpdateScript
+        }
+        else {
+            Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
+        }
+        $null = Read-Host "`nPress Enter to continue"
+    }
+    
+    "15" {
+        Write-Host ""
+        Write-Host "⚠️  HELM CHART UPDATE - APPLY MODE" -ForegroundColor $Color.Warning
+        Write-Host "   This will UPDATE targetRevision values in ArgoCD manifests." -ForegroundColor $Color.Warning
+        Write-Host "   Backups will be created automatically." -ForegroundColor $Color.Muted
+        Write-Host ""
+        Write-Host "⚠️  WARNING:" -ForegroundColor $Color.Warning
+        Write-Host "   - Always review release notes before updating" -ForegroundColor $Color.Muted
+        Write-Host "   - Test in development before production" -ForegroundColor $Color.Muted
+        Write-Host "   - Monitor pods after ArgoCD sync" -ForegroundColor $Color.Muted
+        Write-Host ""
+        
+        $confirm = Read-Host "Are you sure you want to apply updates? (yes/no)"
+        
+        if ($confirm -eq "yes") {
+            $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+            $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
+            
+            if (Test-Path $helmUpdateScript) {
+                & $helmUpdateScript -Apply
+                
+                Write-Host ""
+                Write-Host "✅ Updates applied!" -ForegroundColor $Color.Success
+                Write-Host ""
+                Write-Host "🔄 NEXT STEPS:" -ForegroundColor $Color.Info
+                Write-Host "   1. Review changes: git diff" -ForegroundColor $Color.Muted
+                Write-Host "   2. Commit and push to trigger ArgoCD sync" -ForegroundColor $Color.Muted
+                Write-Host "   3. Monitor: kubectl get applications -n argocd -w" -ForegroundColor $Color.Muted
+                Write-Host "   4. Verify pods: kubectl get pods -n monitoring" -ForegroundColor $Color.Muted
+            }
+            else {
+                Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
+            }
+        }
+        else {
+            Write-Host "ℹ️  Update cancelled." -ForegroundColor $Color.Info
         }
         $null = Read-Host "`nPress Enter to continue"
     }
