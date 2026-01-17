@@ -242,8 +242,7 @@ tc-agro-solutions/
 │  │
 │  └─ apps/                               # Microservices (future)
 │     ├─ argocd/
-│     │  ├─ projects/
-│     │  │  └─ project-apps.yaml                 (Apps Project - 5 microservice repos)
+│     │  ├─ projects/                     (Managed by platform; see platform/argocd/projects/)
 │     │  └─ applications/
 │     │     └─ apps-dev.yaml                     (ApplicationSet placeholder)
 │     │

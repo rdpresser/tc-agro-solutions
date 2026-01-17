@@ -9,10 +9,10 @@
 ```
 apps/
 ├── argocd/                              # ArgoCD manifests
-│   ├── projects/
-│   │   └── project-apps.yaml            # Apps Project (defines source repos)
+│   ├── projects/                        # (Managed by platform; see platform/argocd/projects/)
+│   │   └── [project-apps.yaml is in platform/]
 │   └── applications/
-│       └── apps-dev.yaml                # Placeholder for ApplicationSet
+│       └── apps-dev.yaml                # Application for microservices
 │
 ├── base/                                # Kustomize base (placeholder)
 │   └── kustomization.yaml
@@ -21,6 +21,8 @@ apps/
     └── dev/                             # DEV overlay (placeholder)
         └── kustomization.yaml
 ```
+
+**Note:** The `project-apps` AppProject is defined once in `platform/argocd/projects/project-apps.yaml` and shared by all applications.
 
 ---
 
@@ -349,26 +351,24 @@ git push origin main
 
 ## 🎯 ArgoCD Project Configuration
 
-`apps/argocd/projects/project-apps.yaml` defines:
+The `apps` project is defined in `platform/argocd/projects/project-apps.yaml` and allows:
+
+- **All source repositories** (via `sourceRepos: ['*']`)
+- **All destinations** (via `destinations: [namespace: '*']`)
+
+This flexible configuration supports all microservices and future applications:
 
 ```yaml
 spec:
   sourceRepos:
-    # All 5 microservice repositories
-    - https://github.com/rdpresser/tc-agro-identity-service.git
-    - https://github.com/rdpresser/tc-agro-farm-service.git
-    - https://github.com/rdpresser/tc-agro-sensor-ingest-service.git
-    - https://github.com/rdpresser/tc-agro-analytics-worker.git
-    - https://github.com/rdpresser/tc-agro-dashboard-service.git
-
-    # Main repo (for ApplicationSet)
-    - https://github.com/rdpresser/tc-agro-solutions.git
+    - "*" # All repositories allowed
 
   destinations:
-    # Only agro-apps namespace allowed
-    - namespace: agro-apps
+    - namespace: "*"
       server: https://kubernetes.default.svc
 ```
+
+> **Note:** Individual applications (in `apps-dev` Application) specify exact source repos and target namespace `agro-apps`.
 
 ---
 
