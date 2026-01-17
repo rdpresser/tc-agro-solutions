@@ -1,20 +1,20 @@
 # 🧑‍💻 Local Development Setup
 
+**Status:** 🔵 CURRENT - This is the active development environment for Phase 5
+
 This document describes how to run the entire TC Agro Solutions project locally without Azure dependencies.
 
 ---
 
-## 📌 Prerequisites
+## 🎯 Quick Overview
 
-### Required
-- **Docker Desktop** (with Docker Compose v2)
-- **.NET 9 SDK** ([Download](https://dotnet.microsoft.com/download/dotnet/9.0))
-- **Git**
+- **Where:** Your laptop (all developers)
+- **Kubernetes:** k3d (lightweight cluster)
+- **Backing Services:** Docker Compose (PostgreSQL, Redis, RabbitMQ, observability)
+- **Cost:** Free ($0)
+- **Time to setup:** ~4 minutes
 
-### Optional
-- **k3d** or **kind** (for local Kubernetes testing)
-- **kubectl** (Kubernetes CLI)
-- **Make** (for simplified commands)
+This is NOT a simplified development mode - it's a complete, production-like setup running locally. After hackathon, the same architecture migrates to Azure AKS.
 
 ---
 
@@ -22,12 +22,29 @@ This document describes how to run the entire TC Agro Solutions project locally 
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Database | PostgreSQL 16 | Persistent storage |
-| Time Series | TimescaleDB | Sensor data (hypertables) |
+| Orchestration | k3d (Kubernetes) | Container orchestration |
+| Ingress | Traefik (k3s built-in) | HTTP routing |
+| GitOps | ArgoCD | Cluster management |
+| Database | PostgreSQL 15 | Persistent storage |
+| Time Series | TimescaleDB (extension) | Sensor data hypertables |
 | Cache | Redis 7 | Query caching |
-| Messaging | RabbitMQ | Event streaming (Service Bus replacement) |
-| Backend | .NET 9 | Microservices |
-| Orchestration | Docker Compose | Service coordination |
+| Messaging | RabbitMQ 3.12 | Event streaming (local replacement for Azure Service Bus) |
+| Metrics | Prometheus | Monitoring |
+| Dashboards | Grafana | Visualization |
+| Logs | Loki | Log aggregation |
+| Traces | Tempo | Distributed tracing |
+| Telemetry | OpenTelemetry Collector | Observability hub |
+
+**Comparison with Production (Azure):**
+
+| Component | Local (Now) | Azure (Future) |
+|-----------|-----------|--------------|
+| Orchestration | k3d | AKS |
+| Ingress | Traefik | Application Gateway / Traefik on AKS |
+| Database | PostgreSQL (Docker) | Azure PostgreSQL Flexible Server |
+| Messaging | RabbitMQ (Docker) | Azure Service Bus |
+| Cache | Redis (Docker) | Azure Redis Cache |
+| Observability | Prometheus/Grafana/Loki/Tempo | Application Insights/Log Analytics/Workbooks |
 
 ---
 

@@ -1,10 +1,35 @@
 # 🌾 TC Agro Solutions - Phase 5 (Hackathon 8NETT)
 
-Agricultural monitoring platform with IoT, sensor data processing, alerts, and dashboards on Azure Kubernetes Service.
+Agricultural monitoring platform with IoT, sensor data processing, alerts, and dashboards.
+
+**Status:** 🔵 Developing locally on k3d | 🟣 Azure deployment planned post-hackathon
 
 **Deadline:** February 27, 2026  
 **Team:** 4 backend developers  
-**Architecture:** Microservices with GitOps deployment
+**Architecture:** Microservices with GitOps (localhost k3d → future Azure AKS)
+
+---
+
+## 🎯 Development Environment (Localhost - CURRENT)
+
+**All developers work locally with k3d and Docker Compose. Zero cloud costs.**
+
+```powershell
+cd scripts\k3d
+.\bootstrap.ps1  # Creates full k3d cluster + observability stack (~4 minutes)
+```
+
+**What you get:**
+- ✅ k3d Kubernetes cluster (4 nodes on localhost)
+- ✅ 5 microservices deployed via ArgoCD
+- ✅ PostgreSQL + TimescaleDB (Docker)
+- ✅ Redis (Docker)
+- ✅ RabbitMQ (Docker)
+- ✅ Prometheus + Grafana + Loki + Tempo + OTel (observability stack)
+- ✅ Traefik ingress (k3s built-in)
+- ✅ ArgoCD (GitOps controller)
+
+**Infrastructure location:** `infrastructure/kubernetes/platform/` (k3d-optimized configs)
 
 ---
 

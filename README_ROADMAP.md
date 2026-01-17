@@ -1,9 +1,24 @@
-# 🚀 Technical Roadmap - Phase 5: Hackathon 8NETT  
-## Architecture Strategy and Delivery on Azure
+# 🚀 Technical Roadmap - Phase 5: Hackathon 8NETT
+## Development on Localhost (k3d) • Production on Azure (Future)
 
 ---
 
-## 📊 Architecture Overview
+## 🎯 At a Glance
+
+| Aspect | 🔵 NOW (Localhost Development) | 🟣 FUTURE (Azure Production) |
+|--------|-----|-----|
+| **Where?** | Your laptop (all developers) | Cloud (post-hackathon) |
+| **Kubernetes** | k3d (lightweight local cluster) | AKS (managed Azure service) |
+| **Database** | PostgreSQL (Docker) | Azure PostgreSQL Flexible Server |
+| **Messaging** | RabbitMQ (Docker) | Azure Service Bus |
+| **Cache** | Redis (Docker) | Azure Redis Cache |
+| **Telemetry** | Prometheus/Grafana/Loki/OTel (Docker) | Application Insights/Log Analytics |
+| **Cost** | $0 | Azure subscription required |
+| **Status** | ✅ Active & Used Daily | 📋 Documented (terraform/) - Not deployed |
+
+---
+
+## 📊 Current Architecture Overview (Localhost - k3d + Docker Compose)
 
 ```mermaid
 graph TB
@@ -56,16 +71,25 @@ graph TB
 
 ## 🎯 1. Context and Objective
 
-This document describes the technical strategy and delivery plan for **Phase 5** of the project (Hackathon 8NETT), considering:
+**Phase 5 (Current):** Build and demonstrate microservices platform running locally on k3d with complete observability.
 
 | Aspect | Details |
 |---------|----------|
 | ⏰ Final deadline | **February 27, 2026** |
 | 👥 Team | **4 backend developers** |
-| 💻 Main stack | **.NET 9, C#, microservices, Azure, Kubernetes, IaC** |
-| 🎯 Focus | **realistic, well-architected, and observable delivery** |
+| 🌍 Development | **k3d + Docker Compose (Localhost)** |
+| 🎯 Primary Focus | **realistic, well-architected, observable delivery** |
+| 📊 Deliverables | Working system on k3d, health checks, observability dashboards, GitOps validation |
 
-The objective is to deliver a **functional system on Azure**, with simulated data ingestion, processing, observability, and business dashboards, minimizing risks and reusing existing infrastructure.
+**Objective:** Deliver a fully functional system demonstrating:
+- ✅ 5 microservices running in k3d Kubernetes
+- ✅ Complete observability (Prometheus, Grafana, Loki, Tempo, OTel)
+- ✅ GitOps workflows with ArgoCD
+- ✅ Event-driven architecture with RabbitMQ
+- ✅ Time-series data with PostgreSQL + TimescaleDB
+- ✅ Sensor ingestion, alert engine, dashboard
+
+**Post-Hackathon (Future):** Proven architecture migrates to Azure AKS using Terraform IaC (documented, not deployed during Phase 5).
 
 ---
 

@@ -1,10 +1,23 @@
 # Platform GitOps Structure - TC Agro Solutions
 
-**GitOps-managed platform components:** Prometheus, Grafana, Loki, Tempo, OpenTelemetry, KEDA.
+**Status:** 🔵 CURRENT (Localhost k3d) | Infrastructure components managed by ArgoCD
+
+This folder contains Kubernetes manifests for platform infrastructure components running on **local k3d cluster**. All configurations are optimized for localhost development.
+
+**Components managed here:**
+- Prometheus (metrics)
+- Grafana (dashboards)
+- Loki (logs)
+- Tempo (traces)
+- OpenTelemetry Collector (telemetry hub)
+- KEDA (autoscaling)
+- ArgoCD (GitOps controller)
+
+🟣 **Note:** For Azure production deployment (future), see [terraform/](../../terraform/) directory.
 
 ---
 
-## 📁 Directory Structure
+## 📁 Directory Structure (Localhost k3d)
 
 ```
 platform/

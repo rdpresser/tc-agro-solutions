@@ -1,23 +1,33 @@
 # Infrastructure as Code with Terraform
 
-## Overview
+## ⚠️ IMPORTANT: Future Reference (Not Current Phase 5)
 
-TC Agro Solutions uses Terraform to provision and manage Azure infrastructure in a modular, maintainable way.
+This document describes infrastructure-as-code for **post-hackathon Azure deployment**. 
+
+**🟣 FUTURE (Phase 6+):** These Terraform modules are documented and ready but **NOT deployed during Phase 5 (Hackathon 8NETT).**
+
+**🔵 CURRENT (Phase 5):** See [Local Setup Guide](../development/local-setup.md) and [ADR-005](../adr/ADR-005-local-vs-cloud.md) for current k3d + Docker Compose development.
 
 ---
 
 ## Environment Strategy
 
-| Environment | Tool | Purpose |
-|-------------|------|---------|
-| **Local (Development)** | Docker Compose | Cost-free local development, no Azure resources |
-| **Cloud (Production)** | Terraform + Azure | Live production environment with full Azure services |
+| Environment | Location | Tool | Status | Purpose |
+|-------------|----------|------|--------|---------|
+| **Development** | Localhost | k3d + Docker Compose | 🟢 **ACTIVE** | Developer workstations (all team members) |
+| **Production** | Azure Cloud | Terraform + AKS | 🟣 **FUTURE** | Post-hackathon (documented in this file) |
 
-**Key Decision:** No multi-environment Terraform setup. Development happens locally with Docker Compose, and Terraform only manages Azure (production).
+**Key Decision:** 
+- No multi-environment Terraform setup
+- **Phase 5 Development:** Happens locally with Docker Compose + k3d (zero cost)
+- **Phase 6+ Production:** Terraform provisions Azure resources (when ready to deploy to cloud)
 
 ## Delivery Evidence (Hackathon 8NETT)
 
-- Capture proof of Kubernetes objects (namespaces, deployments, services) and APM telemetry (metrics, traces, logs) as part of the delivery package. Screenshots or exported dashboards should accompany the deployment notes.
+For Phase 5 delivery, capture proof of:
+- Kubernetes objects (namespaces, deployments, services) running on **local k3d cluster**
+- Observability (metrics, traces, logs) from **local Prometheus/Grafana/Loki/Tempo**
+- Screenshots: ArgoCD applications synced, Grafana dashboards, pod health checks
 
 ---
 

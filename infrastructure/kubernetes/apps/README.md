@@ -1,10 +1,21 @@
 # Apps GitOps Structure - TC Agro Solutions
 
-**GitOps-managed microservices:** Identity, Farm, Sensor Ingest, Analytics Worker, Dashboard.
+**Status:** 🔵 CURRENT (Localhost k3d) | Microservices managed by ArgoCD
+
+This folder contains Kubernetes manifests for **microservice deployments on local k3d cluster**. All configurations are optimized for localhost development.
+
+**Microservices deployed here:**
+- 🔐 Identity.Api (authentication)
+- 🌾 Farm.Api (properties/plots management)
+- 📡 Ingest.Api (sensor data ingestion)
+- 📈 Analytics.Worker (rules and alerts)
+- 📊 Dashboard.Api (queries and dashboards)
+
+🟣 **Note:** For Azure production deployment (future), see [terraform/](../../terraform/) directory.
 
 ---
 
-## 📁 Directory Structure
+## 📁 Directory Structure (Localhost k3d)
 
 ```
 apps/
