@@ -23,6 +23,7 @@ spec:
       chart: keda
       targetRevision: 2.15.1
       helm:
+        skipCrds: true
         valueFiles:
           - $values/infrastructure/kubernetes/platform/helm-values/dev/keda.values.yaml
     
