@@ -5,10 +5,4 @@ resources:
   - ../../base/frontend
   - ../../base/identity
   - identity-hpa.yaml
-
-# DEV-specific patches for resource tuning
-patches:
-  - path: identity-patch.yaml
-    target:
-      kind: Deployment
-      name: identity-api
+  - identity-patch.yaml
