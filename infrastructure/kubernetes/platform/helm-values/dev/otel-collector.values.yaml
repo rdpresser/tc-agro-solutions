@@ -40,8 +40,8 @@ config:
       send_batch_size: 1024
 
   exporters:
-    logging:
-      loglevel: info
+    debug:
+      verbosity: detailed
     
     # Future: export to Tempo/Prometheus/Loki
     # otlp/tempo:
@@ -52,14 +52,14 @@ config:
       traces:
         receivers: [otlp]
         processors: [batch]
-        exporters: [logging]
+        exporters: [debug]
       
       metrics:
         receivers: [otlp]
         processors: [batch]
-        exporters: [logging]
+        exporters: [debug]
       
       logs:
         receivers: [otlp]
         processors: [batch]
-        exporters: [logging]
+        exporters: [debug]
