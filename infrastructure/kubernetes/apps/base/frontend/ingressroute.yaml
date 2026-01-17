@@ -9,9 +9,9 @@ metadata:
     managed-by: argocd
 spec:
   entryPoints:
-    - web  # HTTP porta 80
+    - web  # HTTP port 80
   routes:
-    # Path-based: localhost/agro (sempre funciona, zero config)
+    # Path-based: localhost/agro (always works, zero config)
     - match: Host(`localhost`) && PathPrefix(`/agro`)
       kind: Rule
       services:
@@ -21,7 +21,7 @@ spec:
         - name: strip-agro-prefix
         - name: compress
     
-    # Host-based: agro.local (clean URLs, requer hosts file)
+    # Host-based: agro.local (clean URLs, requires hosts file)
     - match: Host(`agro.local`)
       kind: Rule
       services:
@@ -31,7 +31,7 @@ spec:
         - name: compress
 
 ---
-# Middleware: Remove /agro prefix antes de enviar ao frontend
+# Middleware: Remove /agro prefix before sending to frontend
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -45,7 +45,7 @@ spec:
       - /agro
 
 ---
-# Middleware: Compressão (compartilhado)
+# Middleware: Compression (shared)
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

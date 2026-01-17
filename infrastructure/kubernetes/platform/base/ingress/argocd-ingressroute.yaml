@@ -8,7 +8,7 @@ metadata:
     project: tc-agro-solutions
 spec:
   entryPoints:
-    - web  # HTTP porta 80
+    - web  # HTTP port 80
   routes:
     # Path-based: localhost/argocd (always works, zero config)
     - match: Host(`localhost`) && PathPrefix(`/argocd`)

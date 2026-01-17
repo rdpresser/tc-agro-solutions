@@ -11,7 +11,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  # Host-based (limpo, production-like) - requer hosts file
+  # Host-based (clean, production-like) - requires hosts file
   - host: agro.local
     http:
       paths:
@@ -23,7 +23,7 @@ spec:
             port:
               number: 80
   
-  # Path-based (fallback, sempre funciona) - zero config
+  # Path-based (fallback, always works) - zero config
   - host: localhost
     http:
       paths:

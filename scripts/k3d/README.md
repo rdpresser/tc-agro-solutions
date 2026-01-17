@@ -15,35 +15,35 @@ This folder contains scripts and documentation for running the complete TC Agro 
 
 ## 🎯 GitOps Philosophy
 
-### ❌ Antes (Scripts Legados em `/dev/`)
+### ❌ Before (Legacy Scripts in `/dev/`)
 
 ```powershell
 create-all-from-zero.ps1
-  ├─ Cria cluster k3d
-  ├── Instala ArgoCD via Helm
-  ├── Instala Prometheus via Helm
-  ├── Instala Grafana via Helm
-  ├── Instala Loki via Helm
-  ├── Instala Tempo via Helm
-  ├── Instala OTel via Helm
-  └── Instala KEDA via Helm
+  ├─ Create k3d cluster
+  ├── Install ArgoCD via Helm
+  ├── Install Prometheus via Helm
+  ├── Install Grafana via Helm
+  ├── Install Loki via Helm
+  ├── Install Tempo via Helm
+  ├── Install OTel via Helm
+  └── Install KEDA via Helm
 
-❌ Problemas:
-- Script gigante (~500+ linhas)
-- Configuração hardcoded no script
-- Difícil de versionar mudanças
-- Não é GitOps real
+❌ Problems:
+- Huge script (~500+ lines)
+- Hardcoded configuration in script
+- Hard to version changes
+- Not real GitOps
 ```
 
-### ✅ Novo Approach GitOps
+### ✅ New GitOps Approach
 
 ```powershell
-# 1) Bootstrap mínimo (só cluster + ArgoCD)
+# 1) Minimal bootstrap (only cluster + ArgoCD)
 .\bootstrap.ps1
 
-# 2) ArgoCD instala TUDO sozinho via Git
-# - Lê manifests do repositório
-# - Instala Helm charts com values versionados
+# 2) ArgoCD installs EVERYTHING automatically via Git
+# - Reads manifests from repository
+# - Installs Helm charts with versioned values
 # - Auto-sync, auto-heal, self-service
 ```
 
@@ -51,18 +51,18 @@ create-all-from-zero.ps1
 
 ---
 
-## 🎯 Workflow GitOps (Como Funciona)
+## 🎯 Workflow GitOps (How it Works)
 
-### Fluxo de Bootstrap
+### Bootstrap Flow
 
 ```
 1. .\bootstrap.ps1
-   └─ Cria cluster k3d (18GB: 2+6+10)
-   └─ Instala ArgoCD via Helm
-   └─ Aplica bootstrap-platform.yaml (Infraestrutura)
-   └─ Aplica bootstrap-apps.yaml (Aplicações)
+   └─ Create k3d cluster (18GB: 2+6+10)
+   └─ Install ArgoCD via Helm
+   └─ Apply bootstrap-platform.yaml (Infrastructure)
+   └─ Apply bootstrap-apps.yaml (Applications)
 
-2. ArgoCD assume e instala:
+2. ArgoCD takes over and installs:
    ├─ platform-observability
    │  ├── kube-prometheus-stack (Prometheus + Grafana + AlertManager)
    │  ├── Loki (logs)
