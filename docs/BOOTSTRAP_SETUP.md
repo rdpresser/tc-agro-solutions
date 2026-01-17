@@ -408,9 +408,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## ❓ FAQ
 
-**Q: Why not use Git Submodules?**  
-A: Submodules add complexity without significant benefit. PowerShell bootstrap is simpler and idempotent.
-
 **Q: What if a repository is private?**  
 A: Script uses HTTPS. Configure your GitHub token via:
 

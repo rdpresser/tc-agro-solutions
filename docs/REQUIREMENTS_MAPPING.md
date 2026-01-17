@@ -150,11 +150,6 @@ docs/architecture/ (3 files)
 | ---------------------------- | ------------------------------------------------------- |
 | docs/REQUIREMENTS_MAPPING.md | Traceability from hackathon spec to roadmap (this file) |
 
-### To Retire (Future)
-
-- **SOLUTION_STRUCTURE_GUIDE.md** – After consolidating into GIT_SUBMODULES_STRATEGY.md
-- **docs/development/GITIGNORE_WITH_SUBMODULES.md** – After moving into GIT_SUBMODULES_STRATEGY.md
-
 ---
 
 ## Compliance Checklist

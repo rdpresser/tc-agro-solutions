@@ -43,33 +43,29 @@
 
 ## 🏗️ Microservices Architecture
 
-### Repository Structure (Git Submodules)
+### Repository Structure
 
-The solution uses **Git submodules** for modular organization:
+The solution uses independent git repositories for each microservice:
 
 ```
 tc-agro-solutions/              # Parent repository (this repo)
-├── services/                   # Git submodules (5 microservices)
-│   ├── agro-identity-service/
-│   ├── agro-farm-service/
-│   ├── agro-sensor-ingest-service/
-│   ├── agro-analytics-worker/
-│   └── agro-dashboard-service/
-├── common/                     # Git submodules (3 shared libraries)
-│   ├── agro-shared-library/
-│   ├── agro-domain-models/
-│   └── agro-integration-tests/
-├── infrastructure/             # Terraform + Kubernetes (local to parent)
+├── services/                   # Independent service repositories
+│   ├── identity-service/
+│   ├── farm-service/
+│   ├── sensor-ingest-service/
+│   ├── analytics-worker/
+│   └── dashboard-service/
+├── common/                     # Shared libraries repository
+├── infrastructure/             # Terraform + Kubernetes
 ├── scripts/                    # Automation scripts (local to parent)
 └── docs/                       # Architecture & ADRs (local to parent)
 ```
 
 **Key Resources:**
 
-- [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md) - Complete setup guide
-- [QUICK_START_SUBMODULES.md](../QUICK_START_SUBMODULES.md) - 5-minute quick start
+- [Bootstrap Setup Guide](../docs/BOOTSTRAP_SETUP.md) - Quick setup automation
 - [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md) - Template for new services
-- [docs/development/GITIGNORE_WITH_SUBMODULES.md](../docs/development/GITIGNORE_WITH_SUBMODULES.md) - .gitignore strategy
+- [Local Development Setup](../docs/development/local-setup.md) - Development environment
 
 ### System Services
 
@@ -84,7 +80,7 @@ tc-agro-solutions/              # Parent repository (this repo)
 - **Synchronous:** HTTP/REST with JWT authentication
 - **Asynchronous:** Azure Service Bus (domain events)
 - **Pattern:** Each service has its own logical database
-- **Repository Pattern:** Each service is an independent Git repository linked as submodule
+- **Repository Pattern:** Each service is an independent Git repository
 
 ---
 
@@ -102,7 +98,7 @@ src/
 │   └── Program.cs
 ```
 
-**Note:** Each microservice lives in its own Git repository as a submodule. When creating new services, follow [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md).
+**Note:** Each microservice lives in its own Git repository. When creating new services, follow [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md).
 
 ### Naming Conventions
 
@@ -677,18 +673,13 @@ The project supports two distinct environments:
 - **Local (Development):** Docker Compose with PostgreSQL, Redis, RabbitMQ (no Terraform, no Azure)
 - **Cloud (Production):** Azure via Terraform modules with AKS and managed services
 
-### Git Submodules Workflow
+### Bootstrap Setup
 
-```bash
-# Clone with all services
-git clone --recurse-submodules git@github.com:org/tc-agro-solutions.git
+**Windows:**
 
-# Update all submodules
-git submodule update --remote
-
-# Use automation script
-./scripts/submodules-manage.sh update
-./scripts/submodules-manage.sh status
+```powershell
+# Clone all services and common libraries automatically
+.\scripts\bootstrap.ps1
 ```
 
 ### Local Orchestration
@@ -718,7 +709,7 @@ git submodule update --remote
 
 ```bash
 # Clone solution with all services
-git clone --recurse-submodules git@github.com:org/tc-agro-solutions.git
+.\scripts\bootstrap.ps1
 cd tc-agro-solutions
 
 # Start infrastructure
@@ -1077,8 +1068,7 @@ cd poc/frontend && python -m http.server 8000
 - **Frontend POC:** [poc/frontend/README.md](../poc/frontend/README.md) - Dashboard demo guide
 - **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](../docs/REQUIREMENTS_MAPPING.md) - Hackathon spec → roadmap traceability
 - **Technical Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md) - Complete strategy, phases, deliverables
-- **Git Submodules Setup:** [GIT_SUBMODULES_STRATEGY.md](../GIT_SUBMODULES_STRATEGY.md) - In-depth workflow
-- **Quick Start Guide:** [QUICK_START_SUBMODULES.md](../QUICK_START_SUBMODULES.md) - 5-minute setup
+- **Bootstrap Setup:** [docs/BOOTSTRAP_SETUP.md](../docs/BOOTSTRAP_SETUP.md) - Quick setup guide
 - **New Service Template:** [NEW_MICROSERVICE_TEMPLATE.md](../NEW_MICROSERVICE_TEMPLATE.md) - Service creation checklist
 - **Local Setup:** [docs/development/local-setup.md](../docs/development/local-setup.md) - Docker Compose environment
 - **Architecture Decisions:** [docs/adr/](../docs/adr/) - 7 ADRs (001-007)

@@ -1180,7 +1180,6 @@ The project documentation is organized as follows:
 ### Documentation consolidation
 
 - Treat this roadmap as the single high-level source; keep ADRs for decisions only.
-- Merge submodule guidance into a single entry point (GIT_SUBMODULES_STRATEGY.md referencing QUICK_START_SUBMODULES.md) and retire redundant summaries when practical (e.g., SOLUTION_STRUCTURE_GUIDE.md).
 - Prefer linking to authoritative guides instead of duplicating content in new Markdown files.
 
 ---
