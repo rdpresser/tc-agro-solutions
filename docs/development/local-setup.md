@@ -362,7 +362,7 @@ After successfully running locally:
 ## 📚 Additional Resources
 
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [.NET 9 Documentation](https://learn.microsoft.com/dotnet/)
+- [.NET 10 Documentation](https://learn.microsoft.com/dotnet/)
 - [PostgreSQL + TimescaleDB](https://docs.timescale.com/)
 - [RabbitMQ Management](https://www.rabbitmq.com/management.html)
 

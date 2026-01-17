@@ -27,7 +27,7 @@ graph TB
 
     subgraph Azure["☁️ Microsoft Azure"]
         subgraph AKS["🐳 Azure Kubernetes Service"]
-            Identity["🔐 Agro.Identity.Api<br/>.NET 9<br/>JWT / OAuth"]
+            Identity["🔐 Agro.Identity.Api<br/>.NET 10<br/>JWT / OAuth"]
             Farm["🌾 Agro.Farm.Api<br/>EF Core<br/>CRUD Properties/Plots"]
             Ingest["📡 Agro.Sensor.Ingest.Api<br/>HTTP Endpoints<br/>Data Ingestion"]
             Analytics["📈 Agro.Analytics.Worker<br/>Wolverine<br/>Rules & Alerts"]
@@ -112,7 +112,7 @@ graph TB
 ### 💾 Backend
 
 ```
-├── C# / .NET 9
+├── C# / .NET 10
 ├── FastEndpoints
 ├── Pragmatic CQRS
 ├── Wolverine (messaging and handlers)
@@ -399,7 +399,7 @@ These diagrams are now in the architecture documentation:
 - ✅ Structure repository (monorepo vs multi-repo)
 - ✅ Configure Azure DevOps / GitHub Actions pipeline
 - ✅ Define coding conventions (C# style guide)
-- ✅ Local development setup (Docker, .NET 9)
+- ✅ Local development setup (Docker, .NET 10)
 - ✅ Create initial documentation (README, CONTRIBUTING)
 - ✅ Draw C4 and ADRs
 - ✅ Provision Azure resources (ACR, AKS, PostgreSQL, Service Bus)

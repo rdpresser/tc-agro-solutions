@@ -217,9 +217,9 @@ tc-agro-solutions/
 
 ### Backend
 
-- **Language:** C# / .NET 9
+- **Language:** C# / .NET 10
 - **Framework:** FastEndpoints (not MVC Controllers)
-- **ORM:** Entity Framework Core 9
+- **ORM:** Entity Framework Core 10
 - **Messaging:** Wolverine + Azure Service Bus
 - **Pattern:** Pragmatic CQRS (no full event sourcing)
 

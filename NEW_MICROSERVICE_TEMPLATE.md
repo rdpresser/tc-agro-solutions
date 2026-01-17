@@ -215,11 +215,11 @@ public class GetHealthEndpoint : EndpointWithoutRequest<GetHealthResponse>
 ### Dockerfile
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/Agro.{ServiceName}.Api/Agro.{ServiceName}.Api.csproj", "src/Agro.{ServiceName}.Api/"]
@@ -367,7 +367,7 @@ Service health check.
 
 ## Development
 
-1. Install .NET 9 SDK
+1. Install .NET 10 SDK
 2. Clone repository
 3. Run \`dotnet restore\`
 4. Run \`dotnet run --project src/Agro.{ServiceName}.Api\`

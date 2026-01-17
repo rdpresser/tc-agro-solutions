@@ -8,7 +8,7 @@ graph TB
 
     subgraph k3d["🐳 k3d Kubernetes (Localhost)"]
         subgraph agro["agro-apps Namespace"]
-            Identity["🔐 Identity.Api<br/>.NET 9<br/>JWT Authentication"]
+            Identity["🔐 Identity.Api<br/>.NET 10<br/>JWT Authentication"]
             Farm["🌾 Farm.Api<br/>EF Core<br/>Properties/Plots"]
             Ingest["📡 Ingest.Api<br/>Sensor Data<br/>HTTP Ingestion"]
             Analytics["📈 Analytics.Worker<br/>Wolverine<br/>Rules & Alerts"]
@@ -56,7 +56,7 @@ graph TB
 
     subgraph Azure["☁️ Microsoft Azure"]
         subgraph AKS["🐳 Azure Kubernetes Service"]
-            Identity["🔐 Agro.Identity.Api<br/>.NET 9<br/>JWT / OAuth"]
+            Identity["🔐 Agro.Identity.Api<br/>.NET 10<br/>JWT / OAuth"]
             Farm["🌾 Agro.Farm.Api<br/>EF Core<br/>CRUD Properties/Plots"]
             Ingest["📡 Agro.Sensor.Ingest.Api<br/>HTTP Endpoints<br/>Data Ingestion"]
             Analytics["📈 Agro.Analytics.Worker<br/>Wolverine<br/>Rules & Alerts"]

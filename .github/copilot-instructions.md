@@ -16,9 +16,9 @@
 
 ### Backend
 
-- **Language:** C# / .NET 9
+- **Language:** C# / .NET 10
 - **Web Framework:** FastEndpoints (do not use traditional Controllers)
-- **ORM:** Entity Framework Core 9
+- **ORM:** Entity Framework Core 10
 - **Messaging:** Wolverine + Azure Service Bus
 - **Pattern:** Pragmatic CQRS (no full event sourcing)
 
@@ -641,11 +641,11 @@ public class PropertiesEndpointTests : IClassFixture<WebApplicationFactory<Progr
 ### Standard Dockerfile
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["Agro.Farm.Api/Agro.Farm.Api.csproj", "Agro.Farm.Api/"]
 RUN dotnet restore "Agro.Farm.Api/Agro.Farm.Api.csproj"
@@ -875,7 +875,7 @@ docker run -p 8080:8080 --env-file .env agro-farm-api:latest
 - **FastEndpoints:** https://fast-endpoints.com/
 - **Wolverine:** https://wolverine.netlify.app/
 - **TimescaleDB:** https://docs.timescale.com/
-- **EF Core 9:** https://learn.microsoft.com/ef/core/
+- **EF Core 10:** https://learn.microsoft.com/ef/core/
 - **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
 
 ### Project Documentation
@@ -1060,7 +1060,7 @@ cd poc/frontend && python -m http.server 8000
 - **FastEndpoints:** https://fast-endpoints.com/
 - **Wolverine:** https://wolverine.netlify.app/
 - **TimescaleDB:** https://docs.timescale.com/
-- **EF Core 9:** https://learn.microsoft.com/ef/core/
+- **EF Core 10:** https://learn.microsoft.com/ef/core/
 - **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
 
 ### Project Documentation
