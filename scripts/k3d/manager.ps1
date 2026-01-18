@@ -52,15 +52,16 @@ function Show-Menu {
     Write-Host "   8) Start port-forward (ArgoCD, Grafana, etc.)"
     Write-Host "   9) List active port-forwards"
     Write-Host "  10) Stop port-forwards"
+    Write-Host "  11) Force port-forward ArgoCD (fallback if Ingress fails)"
     Write-Host ""
     Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
-    Write-Host "  11) Build & push images"
-    Write-Host "  12) List secrets"
+    Write-Host "  12) Build & push images"
+    Write-Host "  13) List secrets"
     Write-Host ""
     Write-Host "📦 HELM CHART VERSIONS:" -ForegroundColor $Color.Info
-    Write-Host "  13) Check Helm chart versions (read-only)"
-    Write-Host "  14) Update Helm charts (dry-run)"
-    Write-Host "  15) Update Helm charts (apply with backup)"
+    Write-Host "  14) Check Helm chart versions (read-only)"
+    Write-Host "  15) Update Helm charts (dry-run)"
+    Write-Host "  16) Update Helm charts (apply with backup)"
     Write-Host ""
     Write-Host "❌ EXIT: q) Quit" -ForegroundColor $Color.Muted
     Write-Host ""
@@ -227,11 +228,55 @@ switch ($choice) {
     }
     
     "11" {
-        $null = Invoke-Script "build-push-images.ps1"
+        Write-Host ""
+        Write-Host "🔌 FORCE PORT-FORWARD ArgoCD (Fallback)" -ForegroundColor $Color.Warning
+        Write-Host "   Use this ONLY if Ingress is not working." -ForegroundColor $Color.Muted
+        Write-Host "   Normal access: http://localhost/argocd/ (via Ingress + Traefik)" -ForegroundColor $Color.Muted
+        Write-Host "   Fallback access: http://localhost:8090/argocd/ (via port-forward)" -ForegroundColor $Color.Muted
+        Write-Host ""
+        
+        # Kill any existing port-forward for port 8090
+        $existingProcesses = Get-Process -Name kubectl -ErrorAction SilentlyContinue | Where-Object {
+            try {
+                $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
+                $cmdLine -like "*port-forward*" -and $cmdLine -like "*8090*"
+            }
+            catch { $false }
+        }
+        
+        if ($existingProcesses) {
+            Write-Host "   Stopping existing port-forward on 8090..." -ForegroundColor $Color.Muted
+            $existingProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+        }
+        
+        # Start port-forward in background
+        $portForwardProc = Start-Process -FilePath kubectl `
+            -ArgumentList "port-forward svc/argocd-server -n argocd 8090:80 --address 127.0.0.1" `
+            -WindowStyle Hidden `
+            -PassThru
+        
+        if ($portForwardProc) {
+            Write-Host "✅ Port-forward started (PID: $($portForwardProc.Id))" -ForegroundColor $Color.Success
+            Start-Sleep -Seconds 2
+            
+            Write-Host ""
+            Write-Host "🌐 FALLBACK ACCESS:" -ForegroundColor $Color.Info
+            Write-Host "   http://localhost:8090/argocd/" -ForegroundColor $Color.Success
+            Write-Host ""
+        }
+        else {
+            Write-Host "❌ Failed to start port-forward" -ForegroundColor $Color.Error
+        }
         $null = Read-Host "`nPress Enter to continue"
     }
     
     "12" {
+        $null = Invoke-Script "build-push-images.ps1"
+        $null = Read-Host "`nPress Enter to continue"
+    }
+    
+    "13" {
         Write-Host ""
         $ns = Read-Host "Enter namespace (or press Enter for all)"
         if ($ns) {
@@ -243,7 +288,7 @@ switch ($choice) {
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "13" {
+    "14" {
         Write-Host ""
         Write-Host "🔍 Checking for Helm chart updates..." -ForegroundColor $Color.Info
         Write-Host "   This will query Helm repositories for latest versions." -ForegroundColor $Color.Muted
@@ -262,7 +307,7 @@ switch ($choice) {
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "14" {
+    "15" {
         Write-Host ""
         Write-Host "🔄 Helm Chart Update - DRY RUN" -ForegroundColor $Color.Info
         Write-Host "   This will show what would be updated without making changes." -ForegroundColor $Color.Muted
@@ -281,7 +326,7 @@ switch ($choice) {
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "15" {
+    "16" {
         Write-Host ""
         Write-Host "⚠️  HELM CHART UPDATE - APPLY MODE" -ForegroundColor $Color.Warning
         Write-Host "   This will UPDATE targetRevision values in ArgoCD manifests." -ForegroundColor $Color.Warning
