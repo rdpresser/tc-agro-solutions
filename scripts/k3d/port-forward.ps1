@@ -70,7 +70,6 @@ function Test-PortForwardRunning($port, $serviceName) {
                 $cmdLine -like "*$port`:*") {
                 
                 $foundProcesses += $proc.Id
-                Write-Host "   ℹ️  Found existing process: PID $($proc.Id)" -ForegroundColor $Color.Muted
             }
         }
         catch {
@@ -78,28 +77,25 @@ function Test-PortForwardRunning($port, $serviceName) {
         }
     }
 
-    # If we found multiple processes, kill all but the first one
-    if ($foundProcesses.Count -gt 1) {
-        Write-Host "   ⚠️  Found $($foundProcesses.Count) duplicate processes, cleaning up..." -ForegroundColor $Color.Warning
-        for ($i = 1; $i -lt $foundProcesses.Count; $i++) {
-            $processId = $foundProcesses[$i]
-            Write-Host "   🔫 Killing duplicate process: PID $processId" -ForegroundColor $Color.Warning
+    # If we found any processes, kill ALL of them to avoid duplicates
+    if ($foundProcesses.Count -gt 0) {
+        Write-Host "   ℹ️  Found $($foundProcesses.Count) existing port-forward(s), cleaning up..." -ForegroundColor $Color.Muted
+        foreach ($processId in $foundProcesses) {
+            Write-Host "   🔫 Killing process: PID $processId" -ForegroundColor $Color.Muted
             Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
         }
         Start-Sleep -Seconds 2
-        return $true
+        # After cleanup, return false to allow new port-forward creation
+        return $false
     }
 
-    return $foundProcesses.Count -gt 0
+    return $false
 }
 
 # Function to start port-forward in background
 function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
-    # Check if port-forward already exists for this service on this port
-    if (Test-PortForwardRunning $port $serviceName) {
-        Write-Host "⚠️  Port-forward for $serviceName is already running on port $port" -ForegroundColor $Color.Warning
-        return $null
-    }
+    # Kill any existing port-forwards for this service/port (ensures no duplicates)
+    $null = Test-PortForwardRunning $port $serviceName
 
     Write-Host "🚀 Starting port-forward for $serviceName..." -ForegroundColor $Color.Info
     
@@ -111,11 +107,33 @@ function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
         Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
     }
 
-    # Start process in background
-    $process = Start-Process -FilePath kubectl `
-        -ArgumentList "port-forward", "svc/$serviceName", "-n", "$namespace", "${port}:${targetPort}", "--address", "127.0.0.1" `
-        -WindowStyle Hidden `
-        -PassThru
+    # Start process in background using Start-Job
+    # Note: Chocolatey creates a shim wrapper, so you'll see 2 processes (shim + real kubectl) - this is normal
+    $job = Start-Job -ScriptBlock {
+        param($svc, $ns, $localPort, $remotePort)
+        & kubectl port-forward "svc/$svc" -n $ns "${localPort}:${remotePort}" --address 127.0.0.1
+    } -ArgumentList $serviceName, $namespace, $port, $targetPort
+    
+    # Wait for kubectl process to start
+    Start-Sleep -Seconds 2
+    
+    # Find the kubectl process started by this job (get the REAL kubectl, not the Chocolatey shim)
+    $kubectlProcs = Get-Process -Name kubectl -ErrorAction SilentlyContinue | Where-Object {
+        try {
+            $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
+            # Look for the real kubectl (has longer path with "kubernetes-cli\tools")
+            $cmdLine -and $cmdLine -like "*port-forward*" -and $cmdLine -like "*$port`:*" -and $cmdLine -like "*kubernetes-cli*"
+        }
+        catch { $false }
+    } | Sort-Object StartTime -Descending | Select-Object -First 1
+    
+    if (-not $kubectlProcs) {
+        Write-Host "❌ Failed to find kubectl process for port-forward" -ForegroundColor $Color.Error
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+    
+    $process = $kubectlProcs
 
     Write-Host "   ⏳ Process started: PID $($process.Id)" -ForegroundColor $Color.Muted
 

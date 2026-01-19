@@ -42,7 +42,8 @@ foreach ($proc in $kubectlProcesses) {
         $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
 
         # Check if it's a port-forward
-        if ($cmdLine -like "*port-forward*") {
+        # Skip Chocolatey shim processes - only show the REAL kubectl process
+        if ($cmdLine -like "*port-forward*" -and $cmdLine -like "*kubernetes-cli*") {
             $found = $true
 
             # Extract information
@@ -75,7 +76,8 @@ foreach ($proc in $kubectlProcesses) {
             Write-Host "   Uptime:    $uptimeStr" -ForegroundColor $Color.Muted
             Write-Host ""
         }
-    } catch {
+    }
+    catch {
         # Ignore errors when accessing process information
         continue
     }
