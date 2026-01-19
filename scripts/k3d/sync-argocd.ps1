@@ -73,11 +73,23 @@ $applications = @()
 switch ($Target) {
     "all" {
         Write-Host "Syncing ALL applications..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap", "apps-bootstrap", "platform-observability", "platform-autoscaling", "apps-dev")
+        $applications = @(
+            "platform-bootstrap",
+            "platform-base",
+            "platform-observability",
+            "platform-autoscaling",
+            "apps-bootstrap",
+            "apps-dev"
+        )
     }
     "platform" {
         Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
-        $applications = @("platform-bootstrap", "platform-observability", "platform-autoscaling")
+        $applications = @(
+            "platform-bootstrap",
+            "platform-base",
+            "platform-observability",
+            "platform-autoscaling"
+        )
     }
     "apps" {
         Write-Host "Syncing APPLICATION components..." -ForegroundColor $Color.Info
@@ -97,31 +109,55 @@ foreach ($app in $applications) {
     $appExists = kubectl get application $app -n argocd --no-headers 2>$null
     
     if (-not $appExists) {
-        Write-Host "  Application not found: $app" -ForegroundColor $Color.Warning
+        Write-Host "  ⚠️  Application not found: $app" -ForegroundColor $Color.Warning
         $failedCount++
         continue
     }
     
-    # Force refresh
-    Write-Host "  • Refreshing repository..." -ForegroundColor $Color.Muted
-    kubectl patch application $app -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' 2>$null
+    # Hard refresh (clears cache and fetches latest from Git)
+    Write-Host "  • Hard refresh from Git..." -ForegroundColor $Color.Muted
+    kubectl patch application $app -n argocd --type merge -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}' 2>&1 | Out-Null
     
-    # Trigger sync
-    Write-Host "  • Triggering sync..." -ForegroundColor $Color.Muted
-    kubectl patch application $app -n argocd --type merge -p '{"spec":{"syncPolicy":{"automated":{"syncInterval":"1s"}}}}' 2>$null
+    Start-Sleep -Seconds 1
     
-    # Wait a moment
+    # Force sync operation
+    Write-Host "  • Forcing sync operation..." -ForegroundColor $Color.Muted
+    $syncPatch = @{
+        operation = @{
+            initiatedBy = @{
+                username = "admin"
+            }
+            sync        = @{
+                syncStrategy = @{
+                    hook = @{}
+                }
+            }
+        }
+    } | ConvertTo-Json -Depth 10 -Compress
+    
+    kubectl patch application $app -n argocd --type merge -p $syncPatch 2>&1 | Out-Null
+    
+    # Wait for sync to start
     Start-Sleep -Seconds 2
     
     # Check sync status
     $status = kubectl get application $app -n argocd -o jsonpath='{.status.operationState.phase}' 2>$null
+    $syncStatus = kubectl get application $app -n argocd -o jsonpath='{.status.sync.status}' 2>$null
     
-    if ($status -eq "Succeeded" -or $status -eq "") {
-        Write-Host "  ✅ Sync triggered successfully" -ForegroundColor $Color.Success
+    if ($syncStatus -eq "Synced") {
+        Write-Host "  ✅ Synced successfully" -ForegroundColor $Color.Success
+        $syncedCount++
+    }
+    elseif ($status -eq "Running" -or $status -eq "Progressing") {
+        Write-Host "  🔄 Sync in progress..." -ForegroundColor $Color.Warning
+        $syncedCount++
+    }
+    elseif ($status -eq "Succeeded") {
+        Write-Host "  ✅ Sync operation succeeded" -ForegroundColor $Color.Success
         $syncedCount++
     }
     else {
-        Write-Host "  ⚠️  Status: $status" -ForegroundColor $Color.Warning
+        Write-Host "  ⚠️  Status: $syncStatus (Operation: $status)" -ForegroundColor $Color.Warning
         $syncedCount++
     }
     
@@ -135,6 +171,38 @@ Write-Host "📊 SYNC SUMMARY:" -ForegroundColor $Color.Info
 Write-Host "   ✅ Triggered: $syncedCount" -ForegroundColor $Color.Success
 if ($failedCount -gt 0) {
     Write-Host "   ⚠️  Failed: $failedCount" -ForegroundColor $Color.Warning
+}
+Write-Host ""
+
+# Wait for syncs to complete (optional, with timeout)
+Write-Host "⏳ Waiting for syncs to complete (max 30s)..." -ForegroundColor $Color.Info
+$timeout = 30
+$elapsed = 0
+$allSynced = $false
+
+while ($elapsed -lt $timeout -and -not $allSynced) {
+    Start-Sleep -Seconds 3
+    $elapsed += 3
+    
+    $pendingApps = @()
+    foreach ($app in $applications) {
+        $syncStatus = kubectl get application $app -n argocd -o jsonpath='{.status.sync.status}' 2>$null
+        if ($syncStatus -ne "Synced") {
+            $pendingApps += "$app($syncStatus)"
+        }
+    }
+    
+    if ($pendingApps.Count -eq 0) {
+        $allSynced = $true
+        Write-Host "   ✅ All applications synced!" -ForegroundColor $Color.Success
+    }
+    else {
+        Write-Host "   ⏳ Pending: $($pendingApps -join ', ')" -ForegroundColor $Color.Muted
+    }
+}
+
+if (-not $allSynced) {
+    Write-Host "   ⚠️  Timeout reached. Some apps may still be syncing." -ForegroundColor $Color.Warning
 }
 Write-Host ""
 
