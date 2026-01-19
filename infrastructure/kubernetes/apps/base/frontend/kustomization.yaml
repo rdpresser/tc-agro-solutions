@@ -4,7 +4,8 @@ kind: Kustomization
 namespace: agro-apps
 
 resources:
-  - namespace.yaml
+  # Namespace is now managed by platform-base via platform/base/namespaces/namespaces.yaml
+  # Removed namespace.yaml (duplicate - removed file)
   - deployment.yaml
   - service.yaml
   # Using Traefik IngressRoute (k3s default) instead of NGINX Ingress
