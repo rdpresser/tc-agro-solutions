@@ -39,10 +39,10 @@ $registryPort = 5000
 
 # Node resource allocation (20GB total)
 # Creating agents individually allows different memory per node pool
-$serverMemory = "2g"
+$serverMemory = "3g"         # Control plane (etcd, apiserver, scheduler, controller-manager)
 $systemAgentMemory = "4g"    # agent-0: kube-system, CoreDNS, CNI, CSI
 $platformAgentMemory = "6g"  # agent-1: ArgoCD, Ingress, cert-manager
-$appsAgentMemory = "8g"       # agent-2: .NET microservices
+$appsAgentMemory = "7g"      # agent-2: .NET microservices (reduced to give server more headroom)
 
 # ArgoCD config
 $argocdNamespace = "argocd"
@@ -122,11 +122,11 @@ function Remove-ExistingCluster {
 function New-K3dCluster {
     Write-Step "Creating k3d cluster (1 server, agents added separately)"
     Write-Host "   💾 Target memory allocation per node pool:" -ForegroundColor $Color.Info
-    Write-Host "      Server: $serverMemory (control plane)" -ForegroundColor $Color.Muted
+    Write-Host "      Server: $serverMemory (control plane - increased from 2g)" -ForegroundColor $Color.Muted
     Write-Host "      System: $systemAgentMemory (agent-0)" -ForegroundColor $Color.Muted
     Write-Host "      Platform: $platformAgentMemory (agent-1)" -ForegroundColor $Color.Muted
-    Write-Host "      Apps: $appsAgentMemory (agent-2)" -ForegroundColor $Color.Muted
-    Write-Host "      Total: 20GB (2+4+6+8)" -ForegroundColor $Color.Success
+    Write-Host "      Apps: $appsAgentMemory (agent-2 - reduced from 8g)" -ForegroundColor $Color.Muted
+    Write-Host "      Total: 20GB (3+4+6+7 = better control plane headroom)" -ForegroundColor $Color.Success
     Write-Host ""
     
     # Step 1: Create cluster WITHOUT agents (we'll add them individually)
@@ -288,7 +288,8 @@ function Verify-NodePools {
     Write-Host "   💡 Node pool strategy achieved:" -ForegroundColor $Color.Info
     Write-Host "      System (4GB): kube-system components (critical)" -ForegroundColor $Color.Muted
     Write-Host "      Platform (6GB): ArgoCD + Ingress (infrastructure)" -ForegroundColor $Color.Muted
-    Write-Host "      Apps (8GB): .NET microservices (business logic)" -ForegroundColor $Color.Muted
+    Write-Host "      Apps (7GB): .NET microservices (business logic)" -ForegroundColor $Color.Muted
+    Write-Host "      Server (3GB): control plane (etcd, apiserver) +50% headroom" -ForegroundColor $Color.Muted
     Write-Host ""
     Write-Host "✅ Node pool configuration verified" -ForegroundColor $Color.Success
 }
@@ -540,11 +541,11 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 Write-Host "📊 CLUSTER INFO" -ForegroundColor $Color.Info
 Write-Host "   Cluster: $clusterName (4 nodes - 1 server + 3 agents)" -ForegroundColor $Color.Muted
-Write-Host "   Total RAM: 20GB allocated (2+4+6+8)" -ForegroundColor $Color.Muted
-Write-Host "      Server: 2GB (control plane)" -ForegroundColor $Color.Success
+Write-Host "   Total RAM: 20GB allocated (3+4+6+7 = optimized for control plane)" -ForegroundColor $Color.Muted
+Write-Host "      Server: 3GB (control plane - improved from 2GB)" -ForegroundColor $Color.Success
 Write-Host "      System: 4GB (kube-system, CoreDNS, CNI)" -ForegroundColor $Color.Success
 Write-Host "      Platform: 6GB (ArgoCD, Ingress, cert-manager)" -ForegroundColor $Color.Success
-Write-Host "      Apps: 8GB (.NET microservices)" -ForegroundColor $Color.Success
+Write-Host "      Apps: 7GB (.NET microservices - still generous)" -ForegroundColor $Color.Success
 Write-Host "   Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
 
 Write-Host ""
