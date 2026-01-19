@@ -17,8 +17,10 @@ spec:
         - name: argocd-server
           port: 80
       middlewares:
-        - name: argocd-strip-argocd-prefix  # Middleware in same namespace
+        - name: argocd-strip-argocd-prefix
+          namespace: argocd
         - name: argocd-compress
+          namespace: argocd
     
     # Host-based: argocd.local (clean URLs, requires hosts file)
     - match: Host(`argocd.local`)
@@ -28,6 +30,7 @@ spec:
           port: 80
       middlewares:
         - name: argocd-compress
+          namespace: argocd
 
 ---
 # Middleware: Remove /argocd prefix before sending to ArgoCD
