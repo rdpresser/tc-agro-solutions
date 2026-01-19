@@ -16,6 +16,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true  # Required for large CRDs (kube-prometheus-stack)
   
   sources:
     # kube-prometheus-stack (Prometheus + Grafana + AlertManager)
