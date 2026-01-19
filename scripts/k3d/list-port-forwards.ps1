@@ -88,3 +88,5 @@ if (-not $found) {
 
 Write-Host "💡 Tip: Use '.\stop-port-forward.ps1' to stop port-forwards" -ForegroundColor $Color.Info
 Write-Host ""
+
+exit 0
