@@ -40,27 +40,30 @@ function Show-Menu {
     Write-Host "🚀 CLUSTER OPERATIONS:" -ForegroundColor $Color.Info
     Write-Host "   1) Bootstrap (create cluster + ArgoCD + GitOps)"
     Write-Host "   2) Start cluster"
-    Write-Host "   3) Status (nodes, services, ArgoCD apps)"
-    Write-Host "   4) Cleanup (delete cluster + registry)"
+    Write-Host "   3) Stop cluster"
+    Write-Host "   4) Restart cluster (stop + start)"
+    Write-Host "   5) Status (nodes, services, ArgoCD apps)"
+    Write-Host "   6) Cleanup (delete cluster + registry)"
     Write-Host ""
     Write-Host "🔐 ARGOCD MANAGEMENT:" -ForegroundColor $Color.Info
-    Write-Host "   5) Reset ArgoCD admin password"
-    Write-Host "   6) Test password change (debug mode)"
-    Write-Host "   7) Force sync ArgoCD applications (after Git changes)"
+    Write-Host "   7) Reset ArgoCD admin password"
+    Write-Host "   8) Test password change (debug mode)"
+    Write-Host "   9) Force sync ArgoCD applications (after Git changes)"
     Write-Host ""
     Write-Host "🌐 NETWORKING & ACCESS:" -ForegroundColor $Color.Info
-    Write-Host "   8) Start port-forward (ArgoCD, Grafana, etc.)"
-    Write-Host "   9) List active port-forwards"
-    Write-Host "  10) Stop port-forwards"
-    Write-Host "  11) Force port-forward ArgoCD (fallback if Ingress fails)"
+    Write-Host "  10) Start port-forward (ArgoCD, Grafana, etc.)"
+    Write-Host "  11) List active port-forwards"
+    Write-Host "  12) Stop port-forwards"
+    Write-Host "  13) Force port-forward ArgoCD (fallback if Ingress fails)"
     Write-Host ""
     Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
-    Write-Host "  12) Build & push images"
-    Write-Host "  13) List secrets"
+    Write-Host "  14) Build & push images"
+    Write-Host "  15) List secrets"
+    Write-Host "  16) Diagnose ArgoCD access"
     Write-Host ""
-    Write-Host "📦 HELM CHART VERSIONS:" -ForegroundColor $Color.Info
-    Write-Host "  14) Check Helm chart versions (read-only)"
-    Write-Host "  15) Update Helm charts (dry-run)"
+    Write-Host "📦 7) Check Helm chart versions (read-only)"
+    Write-Host "  18) Update Helm charts (dry-run)"
+    Write-Host "  19) Update Helm charts (dry-run)"
     Write-Host "  16) Update Helm charts (apply with backup)"
     Write-Host ""
     Write-Host "❌ EXIT: q) Quit" -ForegroundColor $Color.Muted
@@ -137,247 +140,266 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-15 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15") -notcontains $choice -and $choice -ne "q")
-}
+        $choice = Read-Host "Enter command (1-19 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19") -notcontains $choice -and $choice -ne "q")
 
-switch ($choice) {
-    "1" {
-        $null = Invoke-Script "bootstrap.ps1"
-        $null = Read-Host "`nPress Enter to continue"
+    if ($choice -eq "q") {
+        Write-Host "`n👋 Goodbye!" -ForegroundColor $Color.Success
+        exit 0
     }
-    
-    "2" {
-        $null = Invoke-Script "start-cluster.ps1"
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "3" {
-        $null = Invoke-Script "status.ps1"
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "4" {
-        $null = Invoke-Script "cleanup.ps1"
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "5" {
-        $null = Invoke-Script "reset-argocd-password.ps1"
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "6" {
-        $null = Invoke-Script "reset-argocd-password.ps1" -Arguments @("-TestOnly")
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "7" {
-        Write-Host ""
-        Write-Host "Force sync targets:" -ForegroundColor $Color.Info
-        Write-Host "  - all (platform + apps)" -ForegroundColor $Color.Muted
-        Write-Host "  - platform (platform components only)" -ForegroundColor $Color.Muted
-        Write-Host "  - apps (application components only)" -ForegroundColor $Color.Muted
-        Write-Host ""
-        
-        $sync = Read-Host "Enter sync target (default: all)"
-        if (-not $sync) { $sync = "all" }
-        
-        if (@("all", "platform", "apps") -contains $sync) {
-            $null = Invoke-Script "sync-argocd.ps1" -Arguments @($sync)
+
+    switch ($choice) {
+        "1" {
+            $null = Invoke-Script "bootstrap.ps1"
+            $null = Read-Host "`nPress Enter to continue"
         }
-        else {
-            Write-Host "Invalid target: $sync" -ForegroundColor $Color.Error
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
     
-    "8" {
-        Write-Host ""
-        Write-Host "Port-forward to services:" -ForegroundColor $Color.Info
-        Write-Host "  - argocd (default)" -ForegroundColor $Color.Muted
-        Write-Host "  - grafana" -ForegroundColor $Color.Muted
-        Write-Host "  - prometheus" -ForegroundColor $Color.Muted
-        Write-Host "  - loki" -ForegroundColor $Color.Muted
-        Write-Host "  - tempo" -ForegroundColor $Color.Muted
-        Write-Host "  - frontend" -ForegroundColor $Color.Muted
-        Write-Host "  - identity" -ForegroundColor $Color.Muted
-        Write-Host "  - all" -ForegroundColor $Color.Muted
-        Write-Host ""
-        
-        $pf = Read-Host "Enter service (default: argocd)"
-        if (-not $pf) { $pf = "argocd" }
-        
-        if (@("argocd", "grafana", "prometheus", "loki", "tempo", "frontend", "identity", "all") -contains $pf) {
-            $null = Invoke-Script "port-forward.ps1" -Arguments @($pf)
+        "2" {
+            $null = Invoke-Script "start-cluster.ps1"
+            $null = Read-Host "`nPress Enter to continue"
         }
-        else {
-            Write-Host "Invalid service: $pf" -ForegroundColor $Color.Error
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
     
-    "9" {
+        "3" {
+            $null = Invoke-Script "stop-cluster.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "4" {
+            $null = Invoke-Script "restart-cluster.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "5" {
+            $null = Invoke-Script "status.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "8" {
+            $null = Invoke-Script "reset-argocd-password.ps1" -Arguments @("-TestOnly")
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "9" {
+            $null = Invoke-Script "reset-argocd-password.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "6" {
+            $null = Invoke-Script "reset-argocd-password.ps1" -Arguments @("-TestOnly")
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "7" {
+            Write-Host ""
+            Write-Host "Force sync targets:" -ForegroundColor $Color.Info
+            Write-Host "  - all (platform + apps)" -ForegroundColor $Color.Muted
+            Write-Host "  - platform (platform components only)" -ForegroundColor $Color.Muted
+            Write-Host "  - apps (application components only)" -ForegroundColor $Color.Muted
+            Write-Host ""
+        
+            $sync = Read-Host "Enter sync target (default: all)"
+            if (-not $sync) { $sync = "all" }
+            10  
+            if (@("all", "platform", "apps") -contains $sync) {
+                $null = Invoke-Script "sync-argocd.ps1" -Arguments @($sync)
+            }
+            else {
+                Write-Host "Invalid target: $sync" -ForegroundColor $Color.Error
+            }
+            $null = Read-Host "`nPress Enter to continue"
+        }
+    
+        "8" {
+            Write-Host ""
+            Write-Host "Port-forward to services:" -ForegroundColor $Color.Info
+            Write-Host "  - argocd (default)" -ForegroundColor $Color.Muted
+            Write-Host "  - grafana" -ForegroundColor $Color.Muted
+            Write-Host "  - prometheus" -ForegroundColor $Color.Muted
+            Write-Host "  - loki" -ForegroundColor $Color.Muted
+            Write-Host "  - tempo" -ForegroundColor $Color.Muted
+            Write-Host "  - frontend" -ForegroundColor $Color.Muted
+            Write-Host "  - identity" -ForegroundColor $Color.Muted
+            Write-Host "  - all" -ForegroundColor $Color.Muted
+            Write-Host ""
+        
+            $pf = Read-Host "Enter service (default: argocd)"
+            if (-not $pf) { $pf = "argocd" }
+            11" {
         $null = Invoke-Script "list-port-forwards.ps1"
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "10" {
+    "12" {
         $null = Invoke-Script "stop-port-forward.ps1" -Arguments @("all")
         $null = Read-Host "`nPress Enter to continue"
     }
     
-    "11" {
-        Write-Host ""
-        Write-Host "🔌 FORCE PORT-FORWARD ArgoCD (Fallback)" -ForegroundColor $Color.Warning
-        Write-Host "   Use this ONLY if Ingress is not working." -ForegroundColor $Color.Muted
-        Write-Host "   Normal access: http://localhost/argocd/ (via Ingress + Traefik)" -ForegroundColor $Color.Muted
-        Write-Host "   Fallback access: http://localhost:8090/argocd/ (via port-forward)" -ForegroundColor $Color.Muted
-        Write-Host ""
-        
-        # Kill any existing port-forward for port 8090
-        $existingProcesses = Get-Process -Name kubectl -ErrorAction SilentlyContinue | Where-Object {
-            try {
-                $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
-                $cmdLine -like "*port-forward*" -and $cmdLine -like "*8090*"
+    "13 {
+                $null = Invoke-Script "list-port-forwards.ps1"
+                $null = Read-Host "`nPress Enter to continue"
             }
-            catch { $false }
-        }
+    
+            "10" {
+                $null = Invoke-Script "stop-port-forward.ps1" -Arguments @("all")
+                $null = Read-Host "`nPress Enter to continue"
+            }
+    
+            "11" {
+                Write-Host ""
+                Write-Host "🔌 FORCE PORT-FORWARD ArgoCD (Fallback)" -ForegroundColor $Color.Warning
+                Write-Host "   Use this ONLY if Ingress is not working." -ForegroundColor $Color.Muted
+                Write-Host "   Normal access: http://localhost/argocd/ (via Ingress + Traefik)" -ForegroundColor $Color.Muted
+                Write-Host "   Fallback access: http://localhost:8090/argocd/ (via port-forward)" -ForegroundColor $Color.Muted
+                Write-Host ""
         
-        if ($existingProcesses) {
-            Write-Host "   Stopping existing port-forward on 8090..." -ForegroundColor $Color.Muted
-            $existingProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 1
-        }
+                # Kill any existing port-forward for port 8090
+                $existingProcesses = Get-Process -Name kubectl -ErrorAction SilentlyContinue | Where-Object {
+                    try {
+                        $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
+                        $cmdLine -like "*port-forward*" -and $cmdLine -like "*8090*"
+                    }
+                    catch { $false }
+                }
         
-        # Start port-forward in background
-        $portForwardProc = Start-Process -FilePath kubectl `
-            -ArgumentList "port-forward svc/argocd-server -n argocd 8090:80 --address 127.0.0.1" `
-            -WindowStyle Hidden `
-            -PassThru
+                if ($existingProcesses) {
+                    Write-Host "   Stopping existing port-forward on 8090..." -ForegroundColor $Color.Muted
+                    $existingProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 1
+                }
         
-        if ($portForwardProc) {
-            Write-Host "✅ Port-forward started (PID: $($portForwardProc.Id))" -ForegroundColor $Color.Success
-            Start-Sleep -Seconds 2
+                # Start port-forward in background
+                $portForwardProc = Start-Process -FilePath kubectl `
+                    -ArgumentList "port-forward svc/argocd-server -n argocd 8090:80 --address 127.0.0.1" `
+                    -WindowStyle Hidden `
+                    -PassThru
+        
+                if ($portForwardProc) {
+                    Write-Host "✅ Port-forward started (PID: $($portForwardProc.Id))" -ForegroundColor $Color.Success
+                    Start-Sleep -Seconds 2
             
-            Write-Host ""
-            Write-Host "🌐 FALLBACK ACCESS:" -ForegroundColor $Color.Info
-            Write-Host "   http://localhost:8090/argocd/" -ForegroundColor $Color.Success
-            Write-Host ""
-        }
-        else {
-            Write-Host "❌ Failed to start port-forward" -ForegroundColor $Color.Error
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
+                    Write-Host ""
+                    Write-Host "🌐 FALLBACK ACCESS:" -ForegroundColor $Color.Info
+                    Write-Host "   http://localhost:8090/argocd/" -ForegroundColor $Color.Success
+                    Write-Host ""
+                }
+                else {
+                    Write-Host "❌ Failed to start port-forward" -ForegroundColor $Color.Error
+                }
+                $null = Read-Host "`nPress Enter to continue"
+            }
     
-    "12" {
-        $null = Invoke-Script "build-push-images.ps1"
-        $null = Read-Host "`nPress Enter to continue"
-    }
+            "14" {
+                $null = Invoke-Script "build-push-images.ps1"
+                $null = Read-Host "`nPress Enter to continue"
+            }
     
-    "13" {
-        Write-Host ""
-        $ns = Read-Host "Enter namespace (or press Enter for all)"
-        if ($ns) {
-            $null = Invoke-Script "list-secrets.ps1" -Arguments @($ns)
-        }
-        else {
-            $null = Invoke-Script "list-secrets.ps1"
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
+            "15" {
+                Write-Host ""
+                $ns = Read-Host "Enter namespace (or press Enter for all)"
+                if ($ns) {
+                    $null = Invoke-Script "list-secrets.ps1" -Arguments @($ns)
+                }
+                else {
+                    $null = Invoke-Script "list-secrets.ps1"
+                }
+                $null = Read-Host "`nPress Enter to continue"
+            }
     
-    "14" {
-        Write-Host ""
-        Write-Host "🔍 Checking for Helm chart updates..." -ForegroundColor $Color.Info
-        Write-Host "   This will query Helm repositories for latest versions." -ForegroundColor $Color.Muted
-        Write-Host "   No changes will be made to your system." -ForegroundColor $Color.Muted
-        Write-Host ""
-        
-        $parentScriptsPath = Split-Path -Parent $PSScriptRoot
-        $helmCheckScript = Join-Path $parentScriptsPath "check-helm-versions.ps1"
-        
-        if (Test-Path $helmCheckScript) {
-            & $helmCheckScript
-        }
-        else {
-            Write-Host "❌ Script not found: $helmCheckScript" -ForegroundColor $Color.Error
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
+            "16" {
+                $null = Invoke-Script "diagnose-argocd.ps1"
+                $null = Read-Host "`nPress Enter to continue"
+            }
     
-    "15" {
-        Write-Host ""
-        Write-Host "🔄 Helm Chart Update - DRY RUN" -ForegroundColor $Color.Info
-        Write-Host "   This will show what would be updated without making changes." -ForegroundColor $Color.Muted
-        Write-Host "   Review the output carefully before applying." -ForegroundColor $Color.Muted
-        Write-Host ""
+            "17" {
+                Write-Host ""
+                Write-Host "🔍 Checking for Helm chart updates..." -ForegroundColor $Color.Info
+                Write-Host "   This will query Helm repositories for latest versions." -ForegroundColor $Color.Muted
+                Write-Host "   No changes will be made to your system." -ForegroundColor $Color.Muted
+                Write-Host ""
         
-        $parentScriptsPath = Split-Path -Parent $PSScriptRoot
-        $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
+                $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+                $helmCheckScript = Join-Path $parentScriptsPath "check-helm-versions.ps1"
         
-        if (Test-Path $helmUpdateScript) {
-            & $helmUpdateScript
-        }
-        else {
-            Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
+                if (Test-Path $helmCheckScript) {
+                    & $helmCheckScript
+                }
+                else {
+                    8     Write-Host "❌ Script not found: $helmCheckScript" -ForegroundColor $Color.Error
+                }
+                $null = Read-Host "`nPress Enter to continue"
+            }
     
-    "16" {
-        Write-Host ""
-        Write-Host "⚠️  HELM CHART UPDATE - APPLY MODE" -ForegroundColor $Color.Warning
-        Write-Host "   This will UPDATE targetRevision values in ArgoCD manifests." -ForegroundColor $Color.Warning
-        Write-Host "   Backups will be created automatically." -ForegroundColor $Color.Muted
-        Write-Host ""
-        Write-Host "⚠️  WARNING:" -ForegroundColor $Color.Warning
-        Write-Host "   - Always review release notes before updating" -ForegroundColor $Color.Muted
-        Write-Host "   - Test in development before production" -ForegroundColor $Color.Muted
-        Write-Host "   - Monitor pods after ArgoCD sync" -ForegroundColor $Color.Muted
-        Write-Host ""
+            "15" {
+                Write-Host ""
+                Write-Host "🔄 Helm Chart Update - DRY RUN" -ForegroundColor $Color.Info
+                Write-Host "   This will show what would be updated without making changes." -ForegroundColor $Color.Muted
+                Write-Host "   Review the output carefully before applying." -ForegroundColor $Color.Muted
+                Write-Host ""
         
-        $confirm = Read-Host "Are you sure you want to apply updates? (yes/no)"
+                $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+                $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
         
-        if ($confirm -eq "yes") {
-            $parentScriptsPath = Split-Path -Parent $PSScriptRoot
-            $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
+                if (Test-Path $helmUpdateScript) {
+                    & $helmUpdateScript
+                }
+                else {
+                    9     Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
+                }
+                $null = Read-Host "`nPress Enter to continue"
+            }
+    
+            "16" {
+                Write-Host ""
+                Write-Host "⚠️  HELM CHART UPDATE - APPLY MODE" -ForegroundColor $Color.Warning
+                Write-Host "   This will UPDATE targetRevision values in ArgoCD manifests." -ForegroundColor $Color.Warning
+                Write-Host "   Backups will be created automatically." -ForegroundColor $Color.Muted
+                Write-Host ""
+                Write-Host "⚠️  WARNING:" -ForegroundColor $Color.Warning
+                Write-Host "   - Always review release notes before updating" -ForegroundColor $Color.Muted
+                Write-Host "   - Test in development before production" -ForegroundColor $Color.Muted
+                Write-Host "   - Monitor pods after ArgoCD sync" -ForegroundColor $Color.Muted
+                Write-Host ""
+        
+                $confirm = Read-Host "Are you sure you want to apply updates? (yes/no)"
+        
+                if ($confirm -eq "yes") {
+                    $parentScriptsPath = Split-Path -Parent $PSScriptRoot
+                    $helmUpdateScript = Join-Path $parentScriptsPath "update-helm-versions.ps1"
             
-            if (Test-Path $helmUpdateScript) {
-                & $helmUpdateScript -Apply
+                    if (Test-Path $helmUpdateScript) {
+                        & $helmUpdateScript -Apply
                 
-                Write-Host ""
-                Write-Host "✅ Updates applied!" -ForegroundColor $Color.Success
-                Write-Host ""
-                Write-Host "🔄 NEXT STEPS:" -ForegroundColor $Color.Info
-                Write-Host "   1. Review changes: git diff" -ForegroundColor $Color.Muted
-                Write-Host "   2. Commit and push to trigger ArgoCD sync" -ForegroundColor $Color.Muted
-                Write-Host "   3. Monitor: kubectl get applications -n argocd -w" -ForegroundColor $Color.Muted
-                Write-Host "   4. Verify pods: kubectl get pods -n monitoring" -ForegroundColor $Color.Muted
+                        Write-Host ""
+                        Write-Host "✅ Updates applied!" -ForegroundColor $Color.Success
+                        Write-Host ""
+                        Write-Host "🔄 NEXT STEPS:" -ForegroundColor $Color.Info
+                        Write-Host "   1. Review changes: git diff" -ForegroundColor $Color.Muted
+                        Write-Host "   2. Commit and push to trigger ArgoCD sync" -ForegroundColor $Color.Muted
+                        Write-Host "   3. Monitor: kubectl get applications -n argocd -w" -ForegroundColor $Color.Muted
+                        Write-Host "   4. Verify pods: kubectl get pods -n monitoring" -ForegroundColor $Color.Muted
+                    }
+                    else {
+                        Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
+                    }
+                }
+                else {
+                    Write-Host "ℹ️  Update cancelled." -ForegroundColor $Color.Info
+                }
+                $null = Read-Host "`nPress Enter to continue"
             }
-            else {
-                Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
+    
+            "q" {
+                Write-Host "Goodbye!" -ForegroundColor $Color.Info
+                exit 0
+            }
+    
+            default {
+                Write-Host "Invalid choice. Please try again." -ForegroundColor $Color.Error
             }
         }
-        else {
-            Write-Host "ℹ️  Update cancelled." -ForegroundColor $Color.Info
-        }
-        $null = Read-Host "`nPress Enter to continue"
-    }
-    
-    "q" {
-        Write-Host "Goodbye!" -ForegroundColor $Color.Info
-        exit 0
-    }
-    
-    default {
-        Write-Host "Invalid choice. Please try again." -ForegroundColor $Color.Error
-    }
-}
 
-# If command was passed, exit; otherwise loop
-if (-not $Command) {
-    & $PSScriptRoot\manager.ps1
-}
+        # If command was passed, exit; otherwise loop
+        if (-not $Command) {
+            & $PSScriptRoot\manager.ps1
+        }
 
