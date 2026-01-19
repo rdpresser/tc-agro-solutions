@@ -17,8 +17,8 @@ spec:
         - name: argocd-server
           port: 80
       middlewares:
-        - name: strip-argocd-prefix
-        - name: compress
+        - name: argocd-strip-argocd-prefix  # Middleware in same namespace
+        - name: argocd-compress
     
     # Host-based: argocd.local (clean URLs, requires hosts file)
     - match: Host(`argocd.local`)
@@ -27,14 +27,14 @@ spec:
         - name: argocd-server
           port: 80
       middlewares:
-        - name: compress
+        - name: argocd-compress
 
 ---
 # Middleware: Remove /argocd prefix before sending to ArgoCD
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: strip-argocd-prefix
+  name: argocd-strip-argocd-prefix
   namespace: argocd
 spec:
   stripPrefix:
@@ -46,7 +46,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: compress
+  name: argocd-compress
   namespace: argocd
 spec:
   compress:
