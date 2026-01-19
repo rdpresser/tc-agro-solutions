@@ -102,7 +102,14 @@ function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
     }
 
     Write-Host "🚀 Starting port-forward for $serviceName..." -ForegroundColor $Color.Info
-    Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
+    
+    # Display correct URL based on service
+    if ($serviceName -eq "argocd-server") {
+        Write-Host "   📡 Accessible at: http://localhost:$port/argocd/" -ForegroundColor $Color.Success
+    }
+    else {
+        Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
+    }
 
     # Start process in background
     $process = Start-Process -FilePath kubectl `
@@ -186,7 +193,12 @@ Write-Host "📌 Access Points:" -ForegroundColor $Color.Info
 foreach ($svc in $servicesToForward) {
     if ($portForwards.ContainsKey($svc)) {
         $pf = $portForwards[$svc]
-        Write-Host "   • http://localhost:$($pf.localPort)" -ForegroundColor $Color.Info
+        if ($svc -eq "argocd") {
+            Write-Host "   • http://localhost:$($pf.localPort)/argocd/" -ForegroundColor $Color.Info
+        }
+        else {
+            Write-Host "   • http://localhost:$($pf.localPort)" -ForegroundColor $Color.Info
+        }
     }
 }
 Write-Host ""

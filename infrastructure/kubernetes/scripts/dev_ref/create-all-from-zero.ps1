@@ -245,9 +245,9 @@ Start-Sleep -Seconds 8
 $pfReady = $false
 for ($i = 0; $i -lt 10; $i++) {
     try {
-        Invoke-WebRequest -Uri "http://localhost:8090" -Method Head -TimeoutSec 2 -ErrorAction Stop | Out-Null
+        Invoke-WebRequest -Uri "http://localhost:8090/argocd" -Method Head -TimeoutSec 2 -ErrorAction Stop | Out-Null
         $pfReady = $true
-        Write-Host "✅ Port-forward accessible via localhost:8090" -ForegroundColor Green
+        Write-Host "✅ Port-forward accessible via localhost:8090/argocd" -ForegroundColor Green
         break
     }
     catch {
@@ -262,13 +262,13 @@ if (-not $pfReady) {
 try {
     # Get session token
     $loginBody = @{ username = "admin"; password = $argocdInitialPassword } | ConvertTo-Json
-    $loginResponse = Invoke-RestMethod -Uri "http://localhost:8090/api/v1/session" -Method Post -Body $loginBody -ContentType "application/json" -ErrorAction Stop
+    $loginResponse = Invoke-RestMethod -Uri "http://localhost:8090/argocd/api/v1/session" -Method Post -Body $loginBody -ContentType "application/json" -ErrorAction Stop
     $token = $loginResponse.token
 
     # Update password
     $updateBody = @{ currentPassword = $argocdInitialPassword; newPassword = $argocdAdminNewPassword } | ConvertTo-Json
     $headers = @{ "Authorization" = "Bearer $token"; "Content-Type" = "application/json" }
-    Invoke-RestMethod -Uri "http://localhost:8090/api/v1/account/password" -Method Put -Headers $headers -Body $updateBody -ErrorAction Stop | Out-Null
+    Invoke-RestMethod -Uri "http://localhost:8090/argocd/api/v1/account/password" -Method Put -Headers $headers -Body $updateBody -ErrorAction Stop | Out-Null
 
     Write-Host "✅ ArgoCD password changed successfully to: $argocdAdminNewPassword" -ForegroundColor Green
 }
