@@ -1,0 +1,19 @@
+# =====================================================
+# TC Agro Solutions - Visual Studio Release Override
+# =====================================================
+# This file is used by Visual Studio when running in Release mode (Ctrl+F5).
+# See: https://aka.ms/overrideVSDockerComposeConfiguration
+# =====================================================
+
+services:
+  tc-agro-identity-service:
+    build:
+      target: final
+    labels:
+      com.microsoft.visualstudio.debuggee.program: "dotnet"
+      com.microsoft.visualstudio.debuggee.arguments: " \"/app/TC.Agro.Identity.Service.dll\""
+      com.microsoft.visualstudio.debuggee.workingdirectory: "/app"
+      com.microsoft.visualstudio.debuggee.killprogram: "/bin/sh -c \"if PID=$$(pidof dotnet); then kill $$PID; fi\""
+      com.microsoft.visual-studio.project-name: "TC.Agro.Identity.Service"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production

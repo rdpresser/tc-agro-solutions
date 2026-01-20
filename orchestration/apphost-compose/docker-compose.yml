@@ -300,35 +300,66 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       
-      # Database
-      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=true
+      # .NET Configuration - Connection Strings (built from individual values)
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
       
-      # Redis Cache
-      - Redis__ConnectionString=${REDIS_HOST}:${REDIS_PORT}
+      # .NET Configuration - Database (Database.Postgres.*)
+      - Database__Postgres__Host=${Database__Postgres__Host}
+      - Database__Postgres__Port=${Database__Postgres__Port}
+      - Database__Postgres__Database=${Database__Postgres__Database}
+      - Database__Postgres__UserName=${Database__Postgres__UserName}
+      - Database__Postgres__Password=${Database__Postgres__Password}
+      - Database__Postgres__Schema=${Database__Postgres__Schema}
+      - Database__Postgres__MaintenanceDatabase=${Database__Postgres__MaintenanceDatabase}
+      - Database__Postgres__ConnectionTimeout=${Database__Postgres__ConnectionTimeout}
+      - Database__Postgres__MinPoolSize=${Database__Postgres__MinPoolSize}
+      - Database__Postgres__MaxPoolSize=${Database__Postgres__MaxPoolSize}
       
-      # RabbitMQ
-      - RabbitMQ__Host=${RABBITMQ_HOST}
-      - RabbitMQ__Port=${RABBITMQ_PORT}
-      - RabbitMQ__Username=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      # .NET Configuration - Cache (Cache.Redis.*)
+      - Cache__Redis__Host=${Cache__Redis__Host}
+      - Cache__Redis__Port=${Cache__Redis__Port}
+      - Cache__Redis__Password=${Cache__Redis__Password}
+      - Cache__Redis__DefaultTTL=${Cache__Redis__DefaultTTL}
       
-      # JWT Authentication
-      - Auth__Jwt__Issuer=${AUTH_JWT_ISSUER:-http://localhost:5001}
-      - Auth__Jwt__Audience=${AUTH_JWT_AUDIENCE:-http://localhost:5000}
-      - Auth__Jwt__SecretKey=${AUTH_JWT_SECRET_KEY}
-      - Auth__Jwt__ExpirationMinutes=${AUTH_JWT_EXPIRATION_MINUTES:-480}
+      # .NET Configuration - Messaging (Messaging.RabbitMQ.*)
+      - Messaging__RabbitMQ__Host=${Messaging__RabbitMQ__Host}
+      - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
+      - Messaging__RabbitMQ__ManagementPort=${Messaging__RabbitMQ__ManagementPort}
+      - Messaging__RabbitMQ__VirtualHost=${Messaging__RabbitMQ__VirtualHost}
+      - Messaging__RabbitMQ__Exchange=${Messaging__RabbitMQ__Exchange}
+      - Messaging__RabbitMQ__UserName=${Messaging__RabbitMQ__UserName}
+      - Messaging__RabbitMQ__Password=${Messaging__RabbitMQ__Password}
+      - Messaging__RabbitMQ__AutoProvision=${Messaging__RabbitMQ__AutoProvision}
+      - Messaging__RabbitMQ__Durable=${Messaging__RabbitMQ__Durable}
+      - Messaging__RabbitMQ__UseQuorumQueues=${Messaging__RabbitMQ__UseQuorumQueues}
+      - Messaging__RabbitMQ__AutoPurgeOnStartup=${Messaging__RabbitMQ__AutoPurgeOnStartup}
       
-      # OpenTelemetry
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      - OTEL_SERVICE_NAME=identity-service
-      - OTEL_SERVICE_NAMESPACE=tc-agro
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=development,service.version=1.0.0
+      # .NET Configuration - Services (Services.*.HttpPort)
+      - Services__Identity__HttpPort=${Services__Identity__HttpPort}
+      - Services__Farm__HttpPort=${Services__Farm__HttpPort}
+      - Services__SensorIngest__HttpPort=${Services__SensorIngest__HttpPort}
+      - Services__AnalyticsWorker__HttpPort=${Services__AnalyticsWorker__HttpPort}
+      - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
       
-      # Logging
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__MinimumLevel__Override__System=Warning
+      # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
+      - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
+      - Auth__Jwt__Audience=${Auth__Jwt__Audience}
+      - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
+      - Auth__Jwt__ExpirationMinutes=${Auth__Jwt__ExpirationMinutes}
+      
+      # .NET Configuration - Logging (Logging.LogLevel.*)
+      - Logging__LogLevel__Default=${Logging__LogLevel__Default}
+      - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
+      - Logging__LogLevel__System=${Logging__LogLevel__System}
+      
+      # .NET Configuration - OpenTelemetry
+      - OpenTelemetry__Enabled=${OpenTelemetry__Enabled}
+      - OpenTelemetry__Endpoint=${OpenTelemetry__Endpoint}
+      - OpenTelemetry__Protocol=${OpenTelemetry__Protocol}
+      - OpenTelemetry__ServiceName=${OpenTelemetry__ServiceName}
+      - OpenTelemetry__ServiceNamespace=${OpenTelemetry__ServiceNamespace}
+      - OpenTelemetry__Environment=${OpenTelemetry__Environment}
+      - OpenTelemetry__ServiceVersion=${OpenTelemetry__ServiceVersion}
     volumes:
       # Hot reload support (optional - comment if not needed)
       # - ../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service:/app:ro

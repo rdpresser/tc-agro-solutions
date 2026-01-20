@@ -5,14 +5,18 @@
     <DockerTargetOS>Linux</DockerTargetOS>
     <ProjectGuid>81dded9d-158b-e303-5f62-77a2896d2a5a</ProjectGuid>
   </PropertyGroup>
-  <!-- Docker Compose Files -->
-  <ItemGroup>
-    <None Remove="orchestration\**" />
-  </ItemGroup>
+  <!-- Docker Compose Files (nested under docker-compose.yml) -->
   <ItemGroup>
     <None Include="docker-compose.yml" />
-    <None Include="docker-compose.override.yml" />
-    <None Include=".env" />
+    <None Include="docker-compose.override.yml">
+      <DependentUpon>docker-compose.yml</DependentUpon>
+    </None>
+    <None Include="docker-compose.vs.debug.yml">
+      <DependentUpon>docker-compose.yml</DependentUpon>
+    </None>
+    <None Include="docker-compose.vs.release.yml">
+      <DependentUpon>docker-compose.yml</DependentUpon>
+    </None>
   </ItemGroup>
   <!-- Docker Configuration -->
   <ItemGroup>
@@ -21,13 +25,12 @@
   </ItemGroup>
   <!-- PowerShell Scripts -->
   <ItemGroup>
-    <None Include="start.ps1" />
-    <None Include="cleanup.ps1" />
+    <None Include="scripts\start.ps1" />
+    <None Include="scripts\cleanup.ps1" />
   </ItemGroup>
   <!-- Documentation -->
   <ItemGroup>
     <None Include="README.md" />
-    <None Include="orchestration\apphost-compose\OVERRIDE_GUIDE.md" />
   </ItemGroup>
   <!-- Observability - Grafana -->
   <ItemGroup>
