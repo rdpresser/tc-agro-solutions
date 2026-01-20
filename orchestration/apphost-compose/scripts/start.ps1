@@ -6,7 +6,7 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host "  TC Agro Solutions - Docker Compose Startup" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
-$scriptPath = $PSScriptRoot
+$scriptPath = Split-Path -Parent $PSScriptRoot
 Set-Location $scriptPath
 
 # Check if Docker is running

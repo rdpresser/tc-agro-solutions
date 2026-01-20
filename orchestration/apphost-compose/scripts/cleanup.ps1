@@ -6,7 +6,7 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host "  TC Agro Solutions - Docker Cleanup" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
-$scriptPath = $PSScriptRoot
+$scriptPath = Split-Path -Parent $PSScriptRoot
 Set-Location $scriptPath
 
 # Ask for confirmation
@@ -30,5 +30,5 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host "  Cleanup complete!" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
 
-Write-Host "`nTo start fresh, run: .\start.ps1" -ForegroundColor Cyan
+Write-Host "`nTo start fresh, run: .\scripts\start.ps1" -ForegroundColor Cyan
 Write-Host ""
