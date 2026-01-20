@@ -1,0 +1,41 @@
+# =====================================================
+# Tempo Configuration - Local Development
+# =====================================================
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9096
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  trace_idle_period: 10s
+  max_block_bytes: 1048576
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    max_block_bytes: 104857600
+    block_retention: 1h
+    compacted_block_retention: 10m
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/traces
+
+querier:
+  max_concurrent_queries: 20
+  search:
+    external_hedge_requests_at: 8s
+    external_hedge_requests_up_to: 2

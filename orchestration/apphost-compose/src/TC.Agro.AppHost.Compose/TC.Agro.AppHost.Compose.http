@@ -1,0 +1,6 @@
+@TC.Agro.AppHost.Compose_HostAddress = http://localhost:5234
+
+GET {{TC.Agro.AppHost.Compose_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,41 @@
+# =====================================================
+# Prometheus Configuration - Local Development
+# =====================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'tc-agro-local'
+    environment: 'development'
+
+# Scrape configurations
+scrape_configs:
+  # OpenTelemetry Collector metrics
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+        labels:
+          service: 'otel-collector'
+
+  # Identity Service metrics (Prometheus exporter)
+  - job_name: 'identity-service'
+    static_configs:
+      - targets: ['tc-agro-identity-service:8080']
+        labels:
+          service: 'identity-service'
+    metrics_path: '/metrics'
+
+  # PostgreSQL exporter (if enabled in future)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+
+  # Redis exporter (if enabled in future)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # RabbitMQ exporter (if enabled in future)
+  # - job_name: 'rabbitmq'
+  #   static_configs:
+  #     - targets: ['rabbitmq-exporter:9419']

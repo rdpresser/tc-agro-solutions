@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TC Agro - PostgreSQL",
+      "Group": "TC Agro Solutions",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "Comment": "Main PostgreSQL database with TimescaleDB extension"
+    }
+  }
+}
