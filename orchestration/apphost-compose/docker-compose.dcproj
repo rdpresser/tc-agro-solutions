@@ -20,7 +20,6 @@
   </ItemGroup>
   <!-- Docker Configuration -->
   <ItemGroup>
-    <None Include=".dockerignore" />
     <None Include="docker_pgadmin_servers.json" />
   </ItemGroup>
   <!-- PowerShell Scripts -->

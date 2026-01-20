@@ -5,7 +5,8 @@
       "commandVersion": "1.0",
       "serviceActions": {
         "tc.agro.apphost.compose": "StartDebugging"
-      }
+      },
+      "timeout": 180
     }
   }
 }

@@ -30,8 +30,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 15
+      start_period: 40s
     networks:
       - agro-net
     labels:
@@ -48,8 +48,8 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@tcagro.local
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
       - "15432:80"
     volumes:
@@ -86,8 +86,8 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 15
+      start_period: 15s
     networks:
       - agro-net
     labels:
@@ -108,17 +108,17 @@ services:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 512MB
     ports:
-      - "${RABBITMQ_PORT}:5672"           # AMQP
+      - "${RABBITMQ_PORT}:5672" # AMQP
       - "${RABBITMQ_MANAGEMENT_PORT}:15672" # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - rabbitmq_logs:/var/log/rabbitmq
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
-      interval: 15s
+      interval: 10s
       timeout: 10s
-      retries: 10
-      start_period: 30s
+      retries: 20
+      start_period: 60s
     networks:
       - agro-net
     labels:
@@ -139,11 +139,15 @@ services:
       - ./observability/loki/config.yml:/etc/loki/config.yml:ro
       - loki_data:/loki
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
-      interval: 15s
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - agro-net
     labels:
@@ -159,18 +163,22 @@ services:
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
     ports:
-      - "${TEMPO_PORT}:3200"  # HTTP
-      - "4317:4317"           # OTLP gRPC
-      - "4318:4318"           # OTLP HTTP
+      - "${TEMPO_PORT}:3200" # HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
     volumes:
       - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro
       - tempo_data:/var/tempo
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
-      interval: 15s
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - agro-net
     labels:
@@ -197,11 +205,15 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
       - "--web.enable-lifecycle"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
-      interval: 15s
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - agro-net
     labels:
@@ -216,10 +228,10 @@ services:
     container_name: tc-agro-otel-collector
     restart: unless-stopped
     ports:
-      - "${OTEL_COLLECTOR_PORT}:4317"      # OTLP gRPC
+      - "${OTEL_COLLECTOR_PORT}:4317" # OTLP gRPC
       - "${OTEL_COLLECTOR_HTTP_PORT}:4318" # OTLP HTTP
-      - "8889:8889"                        # Prometheus metrics exporter
-      - "13133:13133"                      # Health check
+      - "8889:8889" # Prometheus metrics exporter
+      - "13133:13133" # Health check
     volumes:
       - ./observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml:ro
     command: ["--config=/etc/otelcol-contrib/config.yml"]
@@ -232,10 +244,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 15
+      start_period: 40s
     networks:
       - agro-net
     labels:
@@ -268,11 +280,15 @@ services:
       loki:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
-      interval: 15s
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 15
+      start_period: 45s
     networks:
       - agro-net
     labels:
@@ -292,17 +308,17 @@ services:
       args:
         BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
     ports:
-      - "5001:8080"   # HTTP
-      - "5011:8081"   # HTTPS (if configured)
+      - "5001:8080" # HTTP
+      - "5011:8081" # HTTPS (if configured)
     environment:
       # ASP.NET Core
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
-      
+
       # .NET Configuration - Connection Strings (built from individual values)
       - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
-      
+
       # .NET Configuration - Database (Database.Postgres.*)
       - Database__Postgres__Host=${Database__Postgres__Host}
       - Database__Postgres__Port=${Database__Postgres__Port}
@@ -314,13 +330,13 @@ services:
       - Database__Postgres__ConnectionTimeout=${Database__Postgres__ConnectionTimeout}
       - Database__Postgres__MinPoolSize=${Database__Postgres__MinPoolSize}
       - Database__Postgres__MaxPoolSize=${Database__Postgres__MaxPoolSize}
-      
+
       # .NET Configuration - Cache (Cache.Redis.*)
       - Cache__Redis__Host=${Cache__Redis__Host}
       - Cache__Redis__Port=${Cache__Redis__Port}
       - Cache__Redis__Password=${Cache__Redis__Password}
       - Cache__Redis__DefaultTTL=${Cache__Redis__DefaultTTL}
-      
+
       # .NET Configuration - Messaging (Messaging.RabbitMQ.*)
       - Messaging__RabbitMQ__Host=${Messaging__RabbitMQ__Host}
       - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
@@ -333,25 +349,25 @@ services:
       - Messaging__RabbitMQ__Durable=${Messaging__RabbitMQ__Durable}
       - Messaging__RabbitMQ__UseQuorumQueues=${Messaging__RabbitMQ__UseQuorumQueues}
       - Messaging__RabbitMQ__AutoPurgeOnStartup=${Messaging__RabbitMQ__AutoPurgeOnStartup}
-      
+
       # .NET Configuration - Services (Services.*.HttpPort)
       - Services__Identity__HttpPort=${Services__Identity__HttpPort}
       - Services__Farm__HttpPort=${Services__Farm__HttpPort}
       - Services__SensorIngest__HttpPort=${Services__SensorIngest__HttpPort}
       - Services__AnalyticsWorker__HttpPort=${Services__AnalyticsWorker__HttpPort}
       - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
-      
+
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
       - Auth__Jwt__Audience=${Auth__Jwt__Audience}
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
       - Auth__Jwt__ExpirationMinutes=${Auth__Jwt__ExpirationMinutes}
-      
+
       # .NET Configuration - Logging (Logging.LogLevel.*)
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
-      
+
       # .NET Configuration - OpenTelemetry
       - OpenTelemetry__Enabled=${OpenTelemetry__Enabled}
       - OpenTelemetry__Endpoint=${OpenTelemetry__Endpoint}
@@ -374,11 +390,15 @@ services:
       otel-collector:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
-      interval: 15s
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1",
+        ]
+      interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 40s
+      retries: 15
+      start_period: 50s
     networks:
       - agro-net
     labels:
@@ -519,7 +539,7 @@ volumes:
     name: tc-agro-rabbitmq-logs
   pgadmin_data:
     name: tc-agro-pgadmin-data
-  
+
   # Observability
   grafana_data:
     name: tc-agro-grafana-data
@@ -529,7 +549,7 @@ volumes:
     name: tc-agro-tempo-data
   prometheus_data:
     name: tc-agro-prometheus-data
-  
+
   # Services
   identity_logs:
     name: tc-agro-identity-logs
