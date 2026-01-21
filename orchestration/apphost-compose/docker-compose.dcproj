@@ -7,10 +7,13 @@
   </PropertyGroup>
   <!-- Docker Compose Files (nested under docker-compose.yml) -->
   <ItemGroup>
-    <None Include="docker-compose.yml" />
+    <None Remove="orchestration\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
+    <None Include="docker-compose.yml" />
     <None Include="docker-compose.vs.debug.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>

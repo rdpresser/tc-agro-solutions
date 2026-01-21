@@ -20,34 +20,57 @@ try {
 }
 
 # Check if .env file exists
-Write-Host "`n[2/5] Checking .env file..." -ForegroundColor Yellow
+Write-Host "`n[2/6] Checking .env file..." -ForegroundColor Yellow
 if (Test-Path ".env") {
-    Write-Host "? .env file found" -ForegroundColor Green
+    Write-Host "✅ .env file found" -ForegroundColor Green
 } else {
-    Write-Host "? .env file not found at orchestration/apphost-compose/.env" -ForegroundColor Red
+    Write-Host "❌ .env file not found at orchestration/apphost-compose/.env" -ForegroundColor Red
     exit 1
 }
 
+# Check for port conflicts and cleanup if needed
+Write-Host "`n[3/6] Checking for port conflicts..." -ForegroundColor Yellow
+$criticalPorts = @(4317, 4318, 5432, 3000, 9090)
+$portsInUse = @()
+
+foreach ($port in $criticalPorts) {
+    $connection = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | 
+                  Where-Object { $_.State -eq "Listen" }
+    if ($connection) {
+        $portsInUse += $port
+    }
+}
+
+if ($portsInUse.Count -gt 0) {
+    Write-Host "⚠️  Found containers using ports: $($portsInUse -join ', ')" -ForegroundColor Yellow
+    Write-Host "   Running cleanup..." -ForegroundColor Yellow
+    docker compose down --remove-orphans 2>&1 | Out-Null
+    Start-Sleep -Seconds 3
+    Write-Host "✅ Cleanup complete" -ForegroundColor Green
+} else {
+    Write-Host "✅ No port conflicts detected" -ForegroundColor Green
+}
+
 # Build images
-Write-Host "`n[3/5] Building Docker images..." -ForegroundColor Yellow
-docker compose build --progress=plain
+Write-Host "`n[4/6] Building Docker images..." -ForegroundColor Yellow
+docker compose build
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "? Build failed!" -ForegroundColor Red
+    Write-Host "❌ Build failed!" -ForegroundColor Red
     exit 1
 }
 
 # Start services
-Write-Host "`n[4/5] Starting services..." -ForegroundColor Yellow
+Write-Host "`n[5/6] Starting services..." -ForegroundColor Yellow
 docker compose up -d
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "? Failed to start services!" -ForegroundColor Red
+    Write-Host "❌ Failed to start services!" -ForegroundColor Red
     exit 1
 }
 
 # Wait for services to be healthy
-Write-Host "`n[5/5] Waiting for services to be healthy..." -ForegroundColor Yellow
+Write-Host "`n[6/6] Waiting for services to be healthy..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 
 # Check service status

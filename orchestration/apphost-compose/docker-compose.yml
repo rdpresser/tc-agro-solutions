@@ -103,10 +103,9 @@ services:
     restart: unless-stopped
     hostname: tc-agro-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-      RABBITMQ_DEFAULT_VHOST: /
-      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 512MB
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
     ports:
       - "${RABBITMQ_PORT}:5672" # AMQP
       - "${RABBITMQ_MANAGEMENT_PORT}:15672" # Management UI
@@ -163,9 +162,8 @@ services:
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
     ports:
-      - "${TEMPO_PORT}:3200" # HTTP
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
+      - "${TEMPO_PORT}:3200" # HTTP API
+      # OTLP ports exposed via OTEL Collector (not directly from Tempo)
     volumes:
       - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro
       - tempo_data:/var/tempo
@@ -235,19 +233,7 @@ services:
     volumes:
       - ./observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml:ro
     command: ["--config=/etc/otelcol-contrib/config.yml"]
-    depends_on:
-      tempo:
-        condition: service_healthy
-      loki:
-        condition: service_healthy
-      prometheus:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 40s
+    # No depends_on or healthcheck needed for local development
     networks:
       - agro-net
     labels:
@@ -388,7 +374,7 @@ services:
       rabbitmq:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started # No healthcheck on OTEL for local dev
     healthcheck:
       test:
         [

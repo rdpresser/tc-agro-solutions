@@ -41,10 +41,6 @@ exporters:
   # Loki exporter for logs
   loki:
     endpoint: "http://loki:3100/loki/api/v1/push"
-    labels:
-      resource:
-        service.name: "service_name"
-        service.namespace: "service_namespace"
 
   # Tempo exporter for traces
   otlp/tempo:
@@ -76,6 +72,7 @@ service:
       processors: [memory_limiter, batch, attributes]
       exporters: [loki]
 
-  extensions:
-    health_check:
-      endpoint: localhost:13133
+  # Extensions disabled for local development
+  # extensions:
+  #   - health_check
+  #   - pprof
