@@ -26,6 +26,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -45,6 +46,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: tc-agro-pgadmin
     restart: unless-stopped
+    user: root
+    entrypoint: ["/bin/sh", "/scripts/init-pgadmin.sh"]
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -55,6 +58,7 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./docker_pgadmin_servers.json:/pgadmin4/servers.json:ro
+      - ./scripts/init-pgadmin.sh:/scripts/init-pgadmin.sh:ro
     depends_on:
       postgres:
         condition: service_healthy

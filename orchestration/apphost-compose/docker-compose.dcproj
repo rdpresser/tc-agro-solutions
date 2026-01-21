@@ -24,6 +24,15 @@
   <!-- Docker Configuration -->
   <ItemGroup>
     <None Include="docker_pgadmin_servers.json" />
+    <None Include="scripts\CONSOLIDATION_SUMMARY.md" />
+    <None Include="scripts\diagnose-pgadmin.ps1" />
+    <None Include="scripts\diagnose.ps1" />
+    <None Include="scripts\docker-manager.ps1" />
+    <None Include="scripts\fix-rabbitmq.ps1" />
+    <None Include="scripts\init-pgadmin.sh" />
+    <None Include="scripts\init-postgres.sql" />
+    <None Include="scripts\pre-build-vs.ps1" />
+    <None Include="scripts\README.md" />
   </ItemGroup>
   <!-- PowerShell Scripts -->
   <ItemGroup>
