@@ -287,7 +287,7 @@ services:
   tc-agro-identity-service:
     image: ${DOCKER_REGISTRY-}tc-agro-identity-service:latest
     container_name: tc-agro-identity-service
-    restart: unless-stopped
+    restart: "no"
     build:
       context: ../../
       dockerfile: services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile

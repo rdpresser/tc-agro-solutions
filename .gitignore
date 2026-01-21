@@ -135,7 +135,7 @@ coverage/
 # ======================================================
 
 # Local docker compose overrides
-docker-compose.override.yml
+# docker-compose.override.yml
 
 # Local testing artifacts
 test-results/
