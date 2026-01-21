@@ -107,41 +107,21 @@ function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
         Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
     }
 
-    # Start process in background using Start-Job
-    # Note: Chocolatey creates a shim wrapper, so you'll see 2 processes (shim + real kubectl) - this is normal
-    $job = Start-Job -ScriptBlock {
-        param($svc, $ns, $localPort, $remotePort)
-        & kubectl port-forward "svc/$svc" -n $ns "${localPort}:${remotePort}" --address 127.0.0.1
-    } -ArgumentList $serviceName, $namespace, $port, $targetPort
-    
-    # Wait for kubectl process to start
-    Start-Sleep -Seconds 2
-    
-    # Find the kubectl process started by this job (get the REAL kubectl, not the Chocolatey shim)
-    $kubectlProcs = Get-Process -Name kubectl -ErrorAction SilentlyContinue | Where-Object {
-        try {
-            $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
-            # Look for the real kubectl (has longer path with "kubernetes-cli\tools")
-            $cmdLine -and $cmdLine -like "*port-forward*" -and $cmdLine -like "*$port`:*" -and $cmdLine -like "*kubernetes-cli*"
-        }
-        catch { $false }
-    } | Sort-Object StartTime -Descending | Select-Object -First 1
-    
-    if (-not $kubectlProcs) {
-        Write-Host "❌ Failed to find kubectl process for port-forward" -ForegroundColor $Color.Error
-        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+    # Start kubectl directly to keep track of PID
+    $proc = Start-Process -FilePath "kubectl" -ArgumentList @("port-forward", "svc/$serviceName", "-n", $namespace, "${port}:${targetPort}", "--address", "127.0.0.1") -NoNewWindow -PassThru -ErrorAction SilentlyContinue
+
+    if (-not $proc) {
+        Write-Host "❌ Failed to launch kubectl for port-forward" -ForegroundColor $Color.Error
         return $null
     }
-    
-    $process = $kubectlProcs
 
-    Write-Host "   ⏳ Process started: PID $($process.Id)" -ForegroundColor $Color.Muted
+    Write-Host "   ⏳ Process started: PID $($proc.Id)" -ForegroundColor $Color.Muted
 
     # Wait a moment to ensure port-forward is active
     Start-Sleep -Seconds 3
 
     # Check if process is still running
-    if ($process.HasExited) {
+    if ($proc.HasExited) {
         Write-Host "❌ Failed to start port-forward for $serviceName" -ForegroundColor $Color.Error
         Write-Host "   The process terminated immediately. Check if the service exists in the cluster." -ForegroundColor $Color.Warning
         return $null
@@ -151,12 +131,12 @@ function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
     $portCheck = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     if (-not $portCheck) {
         Write-Host "❌ Port-forward started but port $port is not listening" -ForegroundColor $Color.Error
-        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         return $null
     }
 
-    Write-Host "✅ Port-forward for $serviceName started (PID: $($process.Id))" -ForegroundColor $Color.Success
-    return $process
+    Write-Host "✅ Port-forward for $serviceName started (PID: $($proc.Id))" -ForegroundColor $Color.Success
+    return $proc
 }
 
 function Write-Title {
