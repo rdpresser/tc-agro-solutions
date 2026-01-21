@@ -7,8 +7,12 @@
       "Port": 5432,
       "MaintenanceDB": "postgres",
       "Username": "postgres",
+      "Password": "postgres",
       "SSLMode": "prefer",
-      "Comment": "Main PostgreSQL database with TimescaleDB extension"
+      "Databases": {
+        "tc-agro-identity-db": {}
+      },
+      "Comment": "Main PostgreSQL database (Identity service)"
     }
   }
 }
