@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: Observability
+    folder: Observability
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: true
+    updateIntervalSeconds: 30

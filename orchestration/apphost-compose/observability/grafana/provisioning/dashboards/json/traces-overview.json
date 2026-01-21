@@ -1,0 +1,32 @@
+{
+  "uid": "tc-traces",
+  "title": "TC Agro - Traces",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "traceqlSearch",
+      "title": "Recent Traces",
+      "datasource": {
+        "type": "tempo",
+        "uid": "Tempo"
+      },
+      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "queryType": "traceqlSearch",
+          "refId": "A",
+          "query": "{ service.name = * } | limit 20"
+        }
+      ],
+      "options": {
+        "showTable": true,
+        "showTraceId": true,
+        "showSpanCount": true
+      }
+    }
+  ],
+  "templating": { "list": [] }
+}
