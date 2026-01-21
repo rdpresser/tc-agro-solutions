@@ -1,6 +1,10 @@
 # =====================================================
 # TC Agro Solutions - Quick Start Script
 # =====================================================
+# Purpose: Comprehensive startup with pre-flight checks
+# Safety: Only manages TC Agro resources (preserves k3d)
+# Idempotent: Safe to run multiple times
+# =====================================================
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
 Write-Host "  TC Agro Solutions - Docker Compose Startup" -ForegroundColor Cyan
@@ -9,33 +13,41 @@ Write-Host "==================================================" -ForegroundColor
 $scriptPath = Split-Path -Parent $PSScriptRoot
 Set-Location $scriptPath
 
-# Check if Docker is running
-Write-Host "`n[1/5] Checking Docker status..." -ForegroundColor Yellow
+# =====================================================
+# 1. Check Docker Status
+# =====================================================
+Write-Host "`n[1/6] Checking Docker status..." -ForegroundColor Yellow
 try {
     docker info | Out-Null
-    Write-Host "? Docker is running" -ForegroundColor Green
-} catch {
-    Write-Host "? Docker is not running. Please start Docker Desktop." -ForegroundColor Red
+    Write-Host "✅ Docker is running" -ForegroundColor Green
+}
+catch {
+    Write-Host "❌ Docker is not running. Please start Docker Desktop." -ForegroundColor Red
     exit 1
 }
 
-# Check if .env file exists
+# =====================================================
+# 2. Check .env File
+# =====================================================
 Write-Host "`n[2/6] Checking .env file..." -ForegroundColor Yellow
 if (Test-Path ".env") {
     Write-Host "✅ .env file found" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "❌ .env file not found at orchestration/apphost-compose/.env" -ForegroundColor Red
     exit 1
 }
 
-# Check for port conflicts and cleanup if needed
+# =====================================================
+# 3. Check for Port Conflicts (TC Agro containers only)
+# =====================================================
 Write-Host "`n[3/6] Checking for port conflicts..." -ForegroundColor Yellow
 $criticalPorts = @(4317, 4318, 5432, 3000, 9090)
 $portsInUse = @()
 
 foreach ($port in $criticalPorts) {
     $connection = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | 
-                  Where-Object { $_.State -eq "Listen" }
+    Where-Object { $_.State -eq "Listen" }
     if ($connection) {
         $portsInUse += $port
     }
@@ -43,15 +55,26 @@ foreach ($port in $criticalPorts) {
 
 if ($portsInUse.Count -gt 0) {
     Write-Host "⚠️  Found containers using ports: $($portsInUse -join ', ')" -ForegroundColor Yellow
-    Write-Host "   Running cleanup..." -ForegroundColor Yellow
-    docker compose down --remove-orphans 2>&1 | Out-Null
-    Start-Sleep -Seconds 3
-    Write-Host "✅ Cleanup complete" -ForegroundColor Green
-} else {
+    Write-Host "   Checking if they are TC Agro containers..." -ForegroundColor Yellow
+    
+    $tcAgroContainers = docker ps --filter "label=tc-agro.component" --format "{{.Names}}" 2>$null
+    if ($tcAgroContainers) {
+        Write-Host "   Running cleanup of TC Agro containers..." -ForegroundColor Yellow
+        docker compose down --remove-orphans 2>&1 | Out-Null
+        Start-Sleep -Seconds 3
+        Write-Host "✅ Cleanup complete" -ForegroundColor Green
+    }
+    else {
+        Write-Host "✅ No TC Agro containers running (ports may be from k3d or other services)" -ForegroundColor Green
+    }
+}
+else {
     Write-Host "✅ No port conflicts detected" -ForegroundColor Green
 }
 
-# Build images
+# =====================================================
+# 4. Build Images
+# =====================================================
 Write-Host "`n[4/6] Building Docker images..." -ForegroundColor Yellow
 docker compose build
 
@@ -59,6 +82,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Build failed!" -ForegroundColor Red
     exit 1
 }
+Write-Host "✅ Build complete" -ForegroundColor Green
 
 # Start services
 Write-Host "`n[5/6] Starting services..." -ForegroundColor Yellow

@@ -13,6 +13,12 @@
   .\build-push-images.ps1
 #>
 
+param(
+    [ValidateSet("all", "platform", "apps")]
+    [string]$SyncTarget = "apps",
+    [switch]$SkipSync
+)
+
 $registryPort = 5000
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
@@ -34,6 +40,8 @@ Write-Host "╔═════════════════════�
 Write-Host "║           BUILD & PUSH IMAGES TO LOCAL REGISTRY           ║" -ForegroundColor $Color.Info
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Info
 Write-Host ""
+
+$successfulImages = 0
 
 foreach ($img in $images) {
     $imageName = $img.name
@@ -79,12 +87,36 @@ foreach ($img in $images) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   ✅ Pushed: $tag" -ForegroundColor $Color.Success
         Write-Host "   ℹ️  k3d cluster will pull via: $k3dTag" -ForegroundColor $Color.Muted
+        $successfulImages++
     }
     else {
         Write-Host "   ❌ Push failed" -ForegroundColor $Color.Error
     }
     
     Write-Host ""
+}
+
+if (-not $SkipSync -and $successfulImages -gt 0) {
+    $syncScript = Join-Path $PSScriptRoot "sync-argocd.ps1"
+    if (Test-Path $syncScript) {
+        Write-Host "🔄 Triggering ArgoCD sync ($SyncTarget)..." -ForegroundColor $Color.Info
+        & $syncScript $SyncTarget
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ ArgoCD sync triggered." -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "⚠️  ArgoCD sync returned exit code $LASTEXITCODE" -ForegroundColor $Color.Warning
+        }
+    }
+    else {
+        Write-Host "⚠️  sync-argocd.ps1 not found at $syncScript" -ForegroundColor $Color.Warning
+    }
+}
+elseif ($successfulImages -eq 0) {
+    Write-Host "⚠️  No images were pushed; skipping ArgoCD sync." -ForegroundColor $Color.Warning
+}
+else {
+    Write-Host "ℹ️  ArgoCD sync skipped (SkipSync flag)." -ForegroundColor $Color.Muted
 }
 
 Write-Host "✅ Build & push complete!" -ForegroundColor $Color.Success

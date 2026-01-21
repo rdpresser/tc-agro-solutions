@@ -3,6 +3,7 @@
 # =====================================================
 # Purpose: Diagnose Docker Compose health issues
 # Usage: .\scripts\diagnose.ps1
+# Safety: Only checks TC Agro resources
 # =====================================================
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
@@ -16,7 +17,7 @@ Set-Location $rootPath
 # =====================================================
 # 1. Check Docker Status
 # =====================================================
-Write-Host "`n[1/8] Checking Docker..." -ForegroundColor Yellow
+Write-Host "`n[1/9] Checking Docker..." -ForegroundColor Yellow
 try {
     $dockerVersion = docker --version
     Write-Host "✓ Docker is running" -ForegroundColor Green
@@ -84,24 +85,37 @@ catch {
 }
 
 # =====================================================
-# 5. Check for running containers
+# 5. Check for running containers (TC Agro only)
 # =====================================================
-Write-Host "`n[5/8] Checking for running containers..." -ForegroundColor Yellow
-$containers = docker compose ps -q --no-trunc 2>&1
-if ($containers) {
-    $containerCount = ($containers | Measure-Object -Line).Lines
-    Write-Host "✓ Found $containerCount running container(s)" -ForegroundColor Green
-    Write-Host "`nContainer Status:" -ForegroundColor Gray
-    docker compose ps
+Write-Host "`n[5/9] Checking for TC Agro containers..." -ForegroundColor Yellow
+$tcAgroContainers = docker ps --filter "label=tc-agro.component" --format "{{.Names}}\t{{.Status}}" 2>&1
+$allContainers = docker compose ps -q --no-trunc 2>&1
+
+if ($tcAgroContainers) {
+    $containerCount = ($tcAgroContainers | Measure-Object -Line).Lines
+    Write-Host "✓ Found $containerCount TC Agro container(s)" -ForegroundColor Green
+    Write-Host "`nTC Agro Container Status:" -ForegroundColor Gray
+    docker ps --filter "label=tc-agro.component" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 else {
-    Write-Host "✓ No containers currently running" -ForegroundColor Green
+    Write-Host "✓ No TC Agro containers currently running" -ForegroundColor Green
+}
+
+# Check for K3D containers (informational)
+Write-Host "`n[6/9] Checking for K3D containers (informational)..." -ForegroundColor Yellow
+$k3dContainers = docker ps --filter "name=k3d-" --format "{{.Names}}" 2>$null
+if ($k3dContainers) {
+    $k3dCount = ($k3dContainers | Measure-Object).Count
+    Write-Host "✓ Found $k3dCount K3D container(s) - PRESERVED by cleanup scripts" -ForegroundColor Green
+}
+else {
+    Write-Host "  No K3D containers running" -ForegroundColor Gray
 }
 
 # =====================================================
-# 6. Check container health
+# 7. Check container health
 # =====================================================
-Write-Host "`n[6/8] Checking container health status..." -ForegroundColor Yellow
+Write-Host "`n[7/9] Checking container health status..." -ForegroundColor Yellow
 $services = docker compose config --services
 foreach ($service in $services) {
     $container = docker compose ps -q $service 2>&1
@@ -128,9 +142,9 @@ foreach ($service in $services) {
 }
 
 # =====================================================
-# 7. Check specific service issues
+# 8. Check specific service issues
 # =====================================================
-Write-Host "`n[7/8] Checking for known issues..." -ForegroundColor Yellow
+Write-Host "`n[8/9] Checking for known issues..." -ForegroundColor Yellow
 
 # RabbitMQ Health Check
 $rabbitContainer = docker compose ps -q rabbitmq 2>&1
@@ -150,10 +164,21 @@ if ($dockerInfo) {
     Write-Host "  Available memory: $memGB GB" -ForegroundColor Gray
 }
 
+# Check TC Agro labels
+Write-Host "`nTC Agro labeled resources:" -ForegroundColor Gray
+$labeledContainers = docker ps -a --filter "label=tc-agro.component" --format "{{.Names}}" 2>$null
+if ($labeledContainers) {
+    Write-Host "  Containers: $(($labeledContainers | Measure-Object).Count)" -ForegroundColor Gray
+}
+$labeledVolumes = docker volume ls --filter "label=com.docker.compose.project=tc-agro-local" --quiet 2>$null
+if ($labeledVolumes) {
+    Write-Host "  Volumes: $(($labeledVolumes | Measure-Object).Count)" -ForegroundColor Gray
+}
+
 # =====================================================
-# 8. Generate full report
+# 9. Generate full report
 # =====================================================
-Write-Host "`n[8/8] Generating diagnostic report..." -ForegroundColor Yellow
+Write-Host "`n[9/9] Generating diagnostic report..." -ForegroundColor Yellow
 $reportFile = "diagnostics-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
 @"
 TC Agro Solutions - Docker Diagnostics Report
@@ -186,17 +211,23 @@ $($services | ForEach-Object {
     "--- $_  ---`n$(docker compose logs --tail=50 $_ 2>&1)`n"
 })
 "@ | Out-File $reportFile
-Write-Host "✓ Report saved to: $reportFile" -ForegroundColor Green
+Write-Host "✓ RepSpecific:  docker compose restart <service>" -ForegroundColor Cyan
+Write-Host "  3. All:       docker compose restart" -ForegroundColor Cyan
+Write-Host "  4. Nuclear:   .\scripts\cleanup.ps1 && .\scripts\start.ps1" -ForegroundColor Cyan
 
-# =====================================================
-# Summary & Recommendations
-# =====================================================
-Write-Host "`n==================================================" -ForegroundColor Cyan
-Write-Host "  Diagnostics Summary" -ForegroundColor Cyan
-Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "`nIf running from Visual Studio:" -ForegroundColor Yellow
+Write-Host "  1. Stop containers: docker compose down" -ForegroundColor Cyan
+Write-Host "  2. Cleanup: .\scripts\pre-build-vs.ps1" -ForegroundColor Cyan
+Write-Host "  3. Run via F5 (Debug Compose)" -ForegroundColor Cyan
 
-Write-Host "`nIf you see UNHEALTHY services:" -ForegroundColor Yellow
-Write-Host "  1. RabbitMQ:  .\scripts\fix-rabbitmq.ps1" -ForegroundColor Cyan
+Write-Host "`nUsing docker-manager.ps1 (recommended):" -ForegroundColor Yellow
+Write-Host "  .\scripts\docker-manager.ps1 status" -ForegroundColor Cyan
+Write-Host "  .\scripts\docker-manager.ps1 restart <service>" -ForegroundColor Cyan
+Write-Host "  .\scripts\docker-manager.ps1 fix-rabbitmq" -ForegroundColor Cyan
+Write-Host "  .\scripts\docker-manager.ps1 cleanup" -ForegroundColor Cyan
+
+Write-Host "`nSafety Note:" -ForegroundColor Green
+Write-Host "  All cleanup scripts preserve K3D containers and volumes" -ForegroundColor Gree
 Write-Host "  2. All:       .\scripts\restart-services.ps1" -ForegroundColor Cyan
 Write-Host "  3. Nuclear:   .\cleanup.ps1 && .\start.ps1" -ForegroundColor Cyan
 
