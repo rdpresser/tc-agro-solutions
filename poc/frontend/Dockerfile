@@ -11,6 +11,10 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
+# Base path for Vite build (default for k8s ingress)
+ARG VITE_BASE_PATH=/agro/
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
+
 # Set working directory
 WORKDIR /app
 
@@ -24,9 +28,8 @@ RUN npm ci --only=production=false \
 # Copy application source code
 COPY . .
 
-# Build the application for Kubernetes with base path /agro/
-# npm run build:k8s uses: cross-env VITE_BASE_PATH=/agro/ npm run build
-RUN npm run build:k8s
+# Build the application (base path driven by VITE_BASE_PATH)
+RUN npm run build
 
 # Verify build output exists
 RUN ls -la dist/

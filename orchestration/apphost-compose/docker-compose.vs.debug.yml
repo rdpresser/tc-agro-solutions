@@ -6,14 +6,19 @@
 # =====================================================
 
 services:
+  tc-agro-frontend-service:
+    # Frontend is pre-built static files - no debug needed
+    # Already configured in docker-compose.yml
+    restart: "no"
+
   tc-agro-identity-service:
     build:
       target: base
     labels:
       com.microsoft.visualstudio.debuggee.program: "dotnet"
-      com.microsoft.visualstudio.debuggee.arguments: " --additionalProbingPath /.nuget/packages \"/app/bin/Debug/net10.0/TC.Agro.Identity.Service.dll\""
+      com.microsoft.visualstudio.debuggee.arguments: ' --additionalProbingPath /.nuget/packages "/app/bin/Debug/net10.0/TC.Agro.Identity.Service.dll"'
       com.microsoft.visualstudio.debuggee.workingdirectory: "/app"
-      com.microsoft.visualstudio.debuggee.killprogram: "/bin/sh -c \"if PID=$$(pidof dotnet); then kill $$PID; fi\""
+      com.microsoft.visualstudio.debuggee.killprogram: '/bin/sh -c "if PID=$$(pidof dotnet); then kill $$PID; fi"'
       com.microsoft.visual-studio.project-name: "TC.Agro.Identity.Service"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

@@ -165,6 +165,21 @@ services:
         condition: service_healthy
 
   # =====================================================
+  # FRONTEND - Development Mode
+  # =====================================================
+  tc-agro-frontend-service:
+    restart: "no"
+    build:
+      context: ../../poc/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: /
+    ports:
+      - "5010:8080"
+    # No additional environment variables needed for static frontend
+    # Nginx serves pre-built static files
+
+  # =====================================================
   # FUTURE SERVICES - Development Placeholders
   # =====================================================
 

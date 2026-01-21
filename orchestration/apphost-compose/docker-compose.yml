@@ -288,7 +288,7 @@ services:
   tc-agro-identity-service:
     image: ${DOCKER_REGISTRY-}tc-agro-identity-service:latest
     container_name: tc-agro-identity-service
-    restart: "no"
+    restart: unless-stopped
     build:
       context: ../../
       dockerfile: services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile
@@ -392,6 +392,32 @@ services:
       - "tc-agro.component=service"
       - "tc-agro.layer=api"
       - "tc-agro.service=identity"
+
+  # =====================================================
+  # FRONTEND - Dashboard UI (HTML/CSS/JS)
+  # =====================================================
+  tc-agro-frontend-service:
+    image: ${DOCKER_REGISTRY-}tc-agro-frontend-service:latest
+    container_name: tc-agro-frontend-service
+    restart: unless-stopped
+    build:
+      context: ../../poc/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: /
+    ports:
+      - "5010:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - agro-net
+    labels:
+      - "tc-agro.component=frontend"
+      - "tc-agro.layer=ui"
 
   # =====================================================
   # FUTURE SERVICES - Placeholders (Uncomment when ready)
