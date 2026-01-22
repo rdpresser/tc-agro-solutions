@@ -1,12 +1,17 @@
 # 🌾 TC Agro Solutions - Phase 5 (Hackathon 8NETT)
 
-Agricultural monitoring platform with IoT, sensor data processing, alerts, and dashboards.
+**Agricultural IoT Platform with Microservices, Kubernetes & Observability**
 
-**Status:** 🔵 Developing locally on k3d | 🟣 Azure deployment planned post-hackathon
+Status: 🔵 Local development on k3d | 🟣 Azure AKS planned post-hackathon  
+Deadline: February 27, 2026 | Team: 4 backend developers
 
-**Deadline:** February 27, 2026  
-**Team:** 4 backend developers  
-**Architecture:** Microservices with GitOps (localhost k3d → future Azure AKS)
+---
+
+## 🚀 START HERE - Choose Your Entry Point
+
+### ⚡ **Returning Developer?**
+
+→ Use **[DEVELOPER_QUICK_REFERENCE.md](DEVELOPER_QUICK_REFERENCE.md)** _(quick commands)_
 
 ---
 
