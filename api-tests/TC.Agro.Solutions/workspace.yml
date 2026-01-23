@@ -1,0 +1,12 @@
+opencollection: 1.0.0
+info:
+  name: "TC.Agro.Solutions"
+  type: workspace
+
+collections:
+  - name: "Hackaton_Fase_05"
+    path: "collections\\Hackaton_Fase_05"
+
+specs:
+
+docs: ''

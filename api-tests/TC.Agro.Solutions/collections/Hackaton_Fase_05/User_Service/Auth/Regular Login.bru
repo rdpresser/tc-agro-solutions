@@ -1,0 +1,23 @@
+meta {
+  name: Regular Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{user_service}}/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "email": "user@user1.com",
+      "password": "User@123"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

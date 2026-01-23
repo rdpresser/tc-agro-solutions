@@ -1,0 +1,23 @@
+meta {
+  name: Admin Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{user_service}}/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "admin101@admin.com",
+    "password": "Admin@123"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
