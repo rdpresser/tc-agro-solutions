@@ -30,6 +30,8 @@ spec:
           value: Development
         - name: ASPNETCORE_URLS
           value: http://0.0.0.0:8080
+        - name: ASPNETCORE_APPL_PATH
+          value: "/identity"
         livenessProbe:
           httpGet:
             path: /health
