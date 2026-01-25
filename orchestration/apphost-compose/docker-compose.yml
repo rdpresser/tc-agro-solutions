@@ -352,7 +352,7 @@ services:
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
       - Auth__Jwt__Audience=${Auth__Jwt__Audience}
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
-      - Auth__Jwt__ExpirationMinutes=${Auth__Jwt__ExpirationMinutes}
+      - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
       # .NET Configuration - Logging (Logging.LogLevel.*)
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}

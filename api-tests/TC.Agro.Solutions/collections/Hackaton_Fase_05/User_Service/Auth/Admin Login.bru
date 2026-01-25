@@ -12,9 +12,25 @@ post {
 
 body:json {
   {
-    "email": "admin101@admin.com",
+    "email": "admin@admin.com",
     "password": "Admin@123"
   }
+}
+
+script:post-response {
+  const responseJson = res.getBody();
+  const newToken = responseJson.jwtToken;
+  
+  if (newToken) {
+      bru.setEnvVar("admin_token", newToken);
+      console.log("✅ Token atualizado com sucesso!");
+  } else {
+      throw new Error("❌ Não foi possível extrair o token da resposta");
+  }
+  
+  // Teste simples
+  assert(newToken, "Token deve existir");
+  assert(newToken.length > 0, "Token não pode ser vazio");
 }
 
 settings {
