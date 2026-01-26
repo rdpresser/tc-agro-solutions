@@ -59,6 +59,7 @@ function Show-Menu {
     Write-Host "  13) Build & push images"
     Write-Host "  14) List secrets"
     Write-Host "  15) Diagnose ArgoCD access"
+    Write-Host "  19) Import k3d env secrets/configmap"
     Write-Host ""
     Write-Host "📦 HELM CHART MANAGEMENT:" -ForegroundColor $Color.Info
     Write-Host "  16) Check Helm chart versions (read-only)"
@@ -200,6 +201,8 @@ else {
             if (-not $sync) { $sync = "all" }
             
             if (@("all", "platform", "apps") -contains $sync) {
+                # Import secrets/configmap BEFORE ArgoCD sync to ensure referenced resources exist
+                $null = Invoke-Script "import-secrets.ps1"
                 $null = Invoke-Script "sync-argocd.ps1" -Arguments @($sync)
             }
             else {
@@ -240,6 +243,8 @@ else {
     
         "13" {
             $null = Invoke-Script "build-push-images.ps1"
+            # Import secrets/configmap after image build & push
+            $null = Invoke-Script "import-secrets.ps1"
             $null = Read-Host "`nPress Enter to continue"
         }
     
@@ -335,6 +340,11 @@ else {
             else {
                 Write-Host "ℹ️  Update cancelled." -ForegroundColor $Color.Info
             }
+            $null = Read-Host "`nPress Enter to continue"
+        }
+
+        "19" {
+            $null = Invoke-Script "import-secrets.ps1"
             $null = Read-Host "`nPress Enter to continue"
         }
     

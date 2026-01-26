@@ -9,6 +9,7 @@
  * NEVER trust frontend-only security.
  */
 
+import { api } from './api.js';
 import { toast, t } from './i18n.js';
 import {
   setToken,
@@ -39,47 +40,30 @@ export async function handleLogin(email, password) {
 
   try {
     // ============================================
-    // MOCK AUTHENTICATION (for demo)
-    // Remove this block when backend is ready
+    // REAL API CALL
     // ============================================
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate network delay
+    const response = await api.post('/auth/login', { email, password });
 
-    const mockResponse = {
-      token:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJhZG1pbkBhZ3JvLmNvbSIsIm5hbWUiOiJBZG1pbiBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.demo-signature',
-      user: {
-        id: 'user-001',
-        email: email,
-        name: email
-          .split('@')[0]
-          .replace(/[._]/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase())
-      }
+    // Map backend response to frontend user model
+    // Backend returns: { jwtToken, email }
+    const { jwtToken, email: userEmail } = response.data;
+
+    const user = {
+      email: userEmail,
+      name: userEmail
+        .split('@')[0]
+        .replace(/[._]/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase())
     };
 
     // Store token and user info
-    setToken(mockResponse.token);
-    setUser(mockResponse.user);
+    setToken(jwtToken);
+    setUser(user);
 
     hideLoading();
-    toast('auth.welcome', 'success', { name: mockResponse.user.name });
+    toast('auth.welcome', 'success', { name: user.name });
 
-    return mockResponse;
-
-    // ============================================
-    // REAL API CALL (uncomment when backend ready)
-    // ============================================
-    /*
-    const response = await api.post('/auth/login', { email, password });
-    
-    setToken(response.data.token);
-    setUser(response.data.user);
-    
-    hideLoading();
-    toast('auth.welcome', 'success', { name: response.data.user.name });
-    
-    return response.data;
-    */
+    return { token: jwtToken, user };
   } catch (error) {
     hideLoading();
 

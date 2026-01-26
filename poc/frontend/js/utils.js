@@ -15,8 +15,38 @@ dayjs.locale('en');
 // APP CONFIGURATION
 // ============================================
 
+/**
+ * Detect API base URL based on context:
+ * 1. Manual override: VITE_API_BASE_URL env var (for debugging)
+ * 2. Cluster context: BASE_URL === '/agro/' → API at '/identity'
+ * 3. Dev mode: localhost:3000 → API at 'http://localhost:5001'
+ * 4. Docker Compose: default to 'http://localhost:5001' (browser access)
+ */
+function detectApiBaseUrl() {
+  // Manual override for debugging (e.g., frontend local + identity in cluster)
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+
+  const base = import.meta.env.BASE_URL || '/';
+  const currentHost = window.location.host;
+
+  // Cluster context: Vite base is '/agro/' → identity is at '/identity'
+  if (base === '/agro/') {
+    return '/identity';
+  }
+
+  // Dev mode: running on localhost:3000 → identity on localhost:5001
+  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
+    return 'http://localhost:5001';
+  }
+
+  // Docker Compose or other: default to localhost:5001 (external port)
+  return 'http://localhost:5001';
+}
+
 export const APP_CONFIG = {
-  apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  apiBaseUrl: detectApiBaseUrl(),
   tokenKey: 'agro_token',
   userKey: 'agro_user',
   signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true',

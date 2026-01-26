@@ -538,6 +538,29 @@ p {
   color: var(--color-text-muted);
 }
 
+/* Field Validation Error State */
+.form-control.is-invalid {
+  border-color: var(--color-danger);
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.form-control.is-invalid:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+/* Error icon with tooltip */
+.field-error-icon {
+  color: var(--color-danger);
+  font-weight: bold;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.field-error-icon:hover {
+  opacity: 1;
+}
+
 .form-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");

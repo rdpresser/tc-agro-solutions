@@ -58,7 +58,13 @@ api.interceptors.response.use(
     // Handle unauthorized
     if (error.response?.status === 401) {
       clearToken();
-      navigateTo('index.html');
+      // Only redirect if NOT already on login page
+      if (
+        !window.location.pathname.endsWith('index.html') &&
+        !window.location.pathname.endsWith('/')
+      ) {
+        navigateTo('index.html');
+      }
       return Promise.reject(error);
     }
 
