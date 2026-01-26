@@ -16,6 +16,11 @@ spec:
         app: identity-api
         component: auth
     spec:
+      hostAliases:
+      - ip: "192.168.65.2"
+        hostnames:
+        - "host.docker.internal"
+        - "host.k3d.internal"
       containers:
       - name: identity-api
         image: k3d-localhost:5000/agro-identity-service:latest
