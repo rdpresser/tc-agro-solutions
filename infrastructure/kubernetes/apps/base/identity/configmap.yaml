@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: identity-config
+  namespace: agro-apps
+data:
+  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_APPL_PATH: "/identity"
+  DOTNET_USE_POLLING_FILE_WATCHER: "1"
+
+  # Redis (non-sensitive)
+  Cache__Redis__Host: "host.k3d.internal"
+  Cache__Redis__Port: "6379"
+  Cache__Redis__Password: ""
+  Cache__Redis__DefaultTTL: "300"
+
+  # RabbitMQ (non-sensitive parts)
+  Messaging__RabbitMQ__Host: "host.k3d.internal"
+  Messaging__RabbitMQ__Port: "5672"
+  Messaging__RabbitMQ__ManagementPort: "15672"
+  Messaging__RabbitMQ__VirtualHost: "/"
+  Messaging__RabbitMQ__Exchange: "identity.events"
+  Messaging__RabbitMQ__AutoProvision: "true"
+  Messaging__RabbitMQ__Durable: "true"
+  Messaging__RabbitMQ__UseQuorumQueues: "false"
+  Messaging__RabbitMQ__AutoPurgeOnStartup: "false"
+
+  # Service ports
+  Services__Identity__HttpPort: "5001"
+  Services__Farm__HttpPort: "5002"
+  Services__SensorIngest__HttpPort: "5003"
+  Services__AnalyticsWorker__HttpPort: "5004"
+  Services__Dashboard__HttpPort: "5005"
+
+  # Logging
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft_AspNetCore: "Warning"
+  Logging__LogLevel__System: "Warning"
+
+  # OpenTelemetry
+  OpenTelemetry__Enabled: "true"
+  OpenTelemetry__Endpoint: "http://host.k3d.internal:4317"
+  OpenTelemetry__Protocol: "grpc"
+  OpenTelemetry__ServiceName: "identity-service"
+  OpenTelemetry__ServiceNamespace: "tc-agro"
+  OpenTelemetry__Environment: "development"
+  OpenTelemetry__ServiceVersion: "1.0.0"

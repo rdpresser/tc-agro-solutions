@@ -7,24 +7,96 @@ metadata:
     app: identity-api
     component: auth
 spec:
+        envFrom:
+        - configMapRef:
+            name: identity-config
 
   selector:
     matchLabels:
       app: identity-api
-  template:
-    metadata:
-      labels:
         app: identity-api
         component: auth
-    spec:
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: ASPNETCORE_ENVIRONMENT
       containers:
       - name: identity-api
         image: k3d-localhost:5000/agro-identity-service:latest
         imagePullPolicy: Always
+        - name: DOTNET_USE_POLLING_FILE_WATCHER
+          value: "1"
+        # Database (hierarchical .NET keys mapped from simple secret keys)
+        - name: Database__Postgres__Host
+          value: "host.k3d.internal"
+        - name: Database__Postgres__Port
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_PORT
+        - name: Database__Postgres__Database
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_DB
+        - name: Database__Postgres__UserName
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_USER
+        - name: Database__Postgres__Password
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_PASSWORD
+        - name: Database__Postgres__Schema
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_SCHEMA
+        - name: Database__Postgres__MaintenanceDatabase
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: POSTGRES_MAINTENANCE_DB
+        - name: Database__Postgres__ConnectionTimeout
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Database__Postgres__ConnectionTimeout
+        - name: Database__Postgres__MinPoolSize
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Database__Postgres__MinPoolSize
+        - name: Database__Postgres__MaxPoolSize
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Database__Postgres__MaxPoolSize
+        # Messaging (RabbitMQ) credentials remain in Secret
+        - name: Messaging__RabbitMQ__UserName
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: RABBITMQ_DEFAULT_USER
+        - name: Messaging__RabbitMQ__Password
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: RABBITMQ_DEFAULT_PASSWORD
+        - name: Auth__Jwt__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Auth__Jwt__SecretKey
         ports:
         - name: http
           containerPort: 8080
           protocol: TCP
+        envFrom:
+        - secretRef:
+            name: agro-secrets
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
@@ -32,6 +104,10 @@ spec:
           value: http://0.0.0.0:8080
         - name: ASPNETCORE_APPL_PATH
           value: "/identity"
+        - name: Database__Postgres__Host
+          value: "host.k3d.internal"
+        - name: Database__Postgres__Port
+          value: "5432"
         livenessProbe:
           httpGet:
             path: /health
