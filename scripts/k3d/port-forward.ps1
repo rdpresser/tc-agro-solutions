@@ -107,8 +107,17 @@ function Start-PortForward($serviceName, $namespace, $port, $targetPort) {
         Write-Host "   📡 Accessible at: http://localhost:$port" -ForegroundColor $Color.Success
     }
 
-    # Start kubectl directly to keep track of PID
-    $proc = Start-Process -FilePath "kubectl" -ArgumentList @("port-forward", "svc/$serviceName", "-n", $namespace, "${port}:${targetPort}", "--address", "127.0.0.1") -NoNewWindow -PassThru -ErrorAction SilentlyContinue
+    # Start kubectl directly to keep track of PID (detached + silenced)
+    $stdout = Join-Path $env:TEMP "kubectl-$serviceName-$port.log"
+    $stderr = Join-Path $env:TEMP "kubectl-$serviceName-$port.err"
+
+    $proc = Start-Process -FilePath "kubectl" `
+        -ArgumentList @("port-forward", "svc/$serviceName", "-n", $namespace, "${port}:${targetPort}", "--address", "127.0.0.1") `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -PassThru `
+        -ErrorAction SilentlyContinue
 
     if (-not $proc) {
         Write-Host "❌ Failed to launch kubectl for port-forward" -ForegroundColor $Color.Error

@@ -67,15 +67,39 @@ export async function handleLogin(email, password) {
   } catch (error) {
     hideLoading();
 
-    // Handle specific error types
-    if (error.response?.status === 401) {
-      throw new Error('Invalid email or password');
-    }
-    if (error.response?.status === 429) {
-      throw new Error('Too many attempts. Please wait a moment.');
+    // Extract meaningful error message from backend response
+    let errorMessage = 'An error occurred. Please try again.';
+
+    if (error.response?.data) {
+      const data = error.response.data;
+
+      // 1. Check for structured errors array: [{ name, reason, code }]
+      if (Array.isArray(data.errors) && data.errors.length > 0) {
+        const reasons = data.errors.map((err) => err.reason || err.message).filter(Boolean);
+
+        if (reasons.length > 0) {
+          errorMessage = reasons.join('\n');
+        }
+      }
+      // 2. Check for standard message property
+      else if (data.message) {
+        errorMessage = data.message;
+      }
+      // 3. Check for ProblemDetails (title/detail)
+      else if (data.title || data.detail) {
+        errorMessage = data.detail || data.title;
+      }
     }
 
-    throw error;
+    // Handle specific status codes with fallback messages
+    if (error.response?.status === 401 && errorMessage === 'An error occurred. Please try again.') {
+      errorMessage = 'Invalid email or password';
+    }
+    if (error.response?.status === 429) {
+      errorMessage = 'Too many attempts. Please wait a moment.';
+    }
+
+    throw new Error(errorMessage);
   }
 }
 
