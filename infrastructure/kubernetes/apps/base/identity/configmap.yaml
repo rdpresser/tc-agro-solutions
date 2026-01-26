@@ -5,8 +5,20 @@ metadata:
   namespace: agro-apps
 data:
   ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_URLS: "http://0.0.0.0:8080"
   ASPNETCORE_APPL_PATH: "/identity"
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
+
+  # Database (non-sensitive)
+  Database__Postgres__Host: "host.k3d.internal"
+  Database__Postgres__Port: "5432"
+  Database__Postgres__Database: "tc-agro-identity-db"
+  Database__Postgres__UserName: "postgres"
+  Database__Postgres__Schema: "public"
+  Database__Postgres__MaintenanceDatabase: "postgres"
+  Database__Postgres__ConnectionTimeout: "30"
+  Database__Postgres__MinPoolSize: "2"
+  Database__Postgres__MaxPoolSize: "20"
 
   # Redis (non-sensitive)
   Cache__Redis__Host: "host.k3d.internal"
