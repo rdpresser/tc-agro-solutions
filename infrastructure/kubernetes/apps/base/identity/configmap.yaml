@@ -9,7 +9,16 @@ data:
   ASPNETCORE_APPL_PATH: "/identity"
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
 
-  # Database config centralized via ConnectionStrings__DefaultConnection (Secret)
+  # Database (non-sensitive)
+  Database__Postgres__Host: "host.docker.internal"
+  Database__Postgres__Port: "5432"
+  Database__Postgres__Database: "tc-agro-identity-db"
+  Database__Postgres__UserName: "postgres"
+  Database__Postgres__Schema: "public"
+  Database__Postgres__MaintenanceDatabase: "postgres"
+  Database__Postgres__ConnectionTimeout: "30"
+  Database__Postgres__MinPoolSize: "2"
+  Database__Postgres__MaxPoolSize: "20"
 
   # Redis (non-sensitive)
   Cache__Redis__Host: "host.docker.internal"
