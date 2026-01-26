@@ -1,7 +1,4 @@
 <Solution>
-  <Folder Name="/Compose-AppHost/">
-    <Project Path="src/TC.Agro.AppHost.Compose/TC.Agro.AppHost.Compose.csproj" Id="fdbfccd1-e6ce-45ae-a015-93c2014d4e25" />
-  </Folder>
   <Folder Name="/Services/" />
   <Folder Name="/Services/Identity-Service/">
     <Project Path="../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/TC.Agro.Identity.Service.csproj" />

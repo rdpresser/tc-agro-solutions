@@ -24,7 +24,6 @@
   <!-- Docker Configuration -->
   <ItemGroup>
     <None Include="docker_pgadmin_servers.json" />
-    <None Include="scripts\CONSOLIDATION_SUMMARY.md" />
     <None Include="scripts\diagnose-pgadmin.ps1" />
     <None Include="scripts\diagnose.ps1" />
     <None Include="scripts\docker-manager.ps1" />
