@@ -19,7 +19,8 @@ import {
   isValidEmail,
   showLoading,
   hideLoading,
-  navigateTo
+  navigateTo,
+  extractUserFromToken
 } from './utils.js';
 
 // ============================================
@@ -48,15 +49,19 @@ export async function handleLogin(email, password) {
     // Backend returns: { jwtToken, email }
     const { jwtToken, email: userEmail } = response.data;
 
-    const user = {
+    // Extract user info from JWT token claims
+    const userFromToken = extractUserFromToken(jwtToken);
+
+    const user = userFromToken || {
       email: userEmail,
       name: userEmail
         .split('@')[0]
         .replace(/[._]/g, ' ')
-        .replace(/\b\w/g, (l) => l.toUpperCase())
+        .replace(/\b\w/g, (l) => l.toUpperCase()),
+      role: 'User'
     };
 
-    // Store token and user info
+    // Store token and user info in sessionStorage
     setToken(jwtToken);
     setUser(user);
 

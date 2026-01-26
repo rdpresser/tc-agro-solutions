@@ -78,6 +78,47 @@ export function getPageUrl(page) {
 }
 
 // ============================================
+// JWT DECODING HELPERS
+// ============================================
+
+/**
+ * Decode JWT token and extract claims
+ * @param {string} token - JWT token
+ * @returns {Object|null} Decoded payload or null if invalid
+ */
+export function decodeJWT(token) {
+  try {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return null;
+  }
+}
+
+/**
+ * Extract user info from JWT token
+ * @param {string} token - JWT token
+ * @returns {Object|null} User info with name, email, role, unique_name or null
+ */
+export function extractUserFromToken(token) {
+  const payload = decodeJWT(token);
+  if (!payload) return null;
+
+  return {
+    name: payload.name || payload.unique_name || payload.email || 'User',
+    email: payload.email,
+    unique_name: payload.unique_name,
+    role: payload.role || 'User',
+    sub: payload.sub
+  };
+}
+
+// ============================================
 // SESSION STORAGE HELPERS
 // ============================================
 

@@ -11,7 +11,7 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $, formatDate, formatRelativeTime, debounce } from './utils.js';
+import { $, formatDate, formatRelativeTime, debounce, getUser } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -22,6 +22,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
     // Redirect to login handled by initProtectedPage
     return;
+  }
+
+  // Update user display with JWT claim (name from token)
+  const user = getUser();
+  if (user && user.name) {
+    const userDisplay = $('#userDisplay');
+    if (userDisplay) {
+      userDisplay.textContent = user.name;
+    }
   }
 
   // Load dashboard data
