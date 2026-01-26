@@ -10,7 +10,7 @@ data:
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
 
   # Database (non-sensitive)
-  Database__Postgres__Host: "host.k3d.internal"
+  Database__Postgres__Host: "host.docker.internal"
   Database__Postgres__Port: "5432"
   Database__Postgres__Database: "tc-agro-identity-db"
   Database__Postgres__UserName: "postgres"
@@ -51,7 +51,7 @@ data:
 
   # OpenTelemetry
   OpenTelemetry__Enabled: "true"
-  OpenTelemetry__Endpoint: "http://host.k3d.internal:4317"
+  OpenTelemetry__Endpoint: "http://host.docker.internal:4317"
   OpenTelemetry__Protocol: "grpc"
   OpenTelemetry__ServiceName: "identity-service"
   OpenTelemetry__ServiceNamespace: "tc-agro"
