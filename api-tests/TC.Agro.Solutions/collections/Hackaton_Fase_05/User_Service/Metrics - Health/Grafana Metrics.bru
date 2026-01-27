@@ -1,0 +1,16 @@
+meta {
+  name: Grafana Metrics
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{identity_service_url}}/metrics
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -111,6 +111,32 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     else {
         Write-Host "⚠️  sync-argocd.ps1 not found at $syncScript" -ForegroundColor $Color.Warning
     }
+    
+    # Force pod restart to pull new images (since tag is always 'latest')
+    Write-Host ""
+    Write-Host "🔄 Forcing pod restart to pull new images..." -ForegroundColor $Color.Info
+    foreach ($img in $images) {
+        $deploymentName = $img.name -replace '^agro-', ''
+        Write-Host "   Rolling restart: $deploymentName" -ForegroundColor $Color.Muted
+        kubectl rollout restart deployment/$deploymentName -n agro-apps 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "   ✅ Restart triggered for $deploymentName" -ForegroundColor $Color.Success
+        }
+    }
+    
+    # Wait for rollouts to complete
+    Write-Host ""
+    Write-Host "⏳ Waiting for rollouts to complete..." -ForegroundColor $Color.Info
+    foreach ($img in $images) {
+        $deploymentName = $img.name -replace '^agro-', ''
+        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=60s 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "   ✅ $deploymentName rolled out successfully" -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "   ⚠️  $deploymentName rollout timeout or error" -ForegroundColor $Color.Warning
+        }
+    }
 }
 elseif ($successfulImages -eq 0) {
     Write-Host "⚠️  No images were pushed; skipping ArgoCD sync." -ForegroundColor $Color.Warning
