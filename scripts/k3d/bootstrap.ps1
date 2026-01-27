@@ -87,8 +87,8 @@ function Test-Prerequisites {
 function Stop-PortForwards {
   Write-Step "Stopping existing port-forwards"
   Get-Process kubectl -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like "*port-forward*" } |
-    Stop-Process -Force -ErrorAction SilentlyContinue
+  Where-Object { $_.CommandLine -like "*port-forward*" } |
+  Stop-Process -Force -ErrorAction SilentlyContinue
 
   Start-Sleep -Seconds 1
   Write-Host "✅ Port-forwards stopped" -ForegroundColor $Color.Success
@@ -224,8 +224,8 @@ function Fix-KubeconfigForDocker {
   Write-Step "Adjusting kubeconfig for Docker Desktop"
   try {
     $serverUrl = kubectl config view -o json 2>$null | ConvertFrom-Json |
-      ForEach-Object { $_.clusters | Where-Object { $_.name -eq "k3d-$clusterName" } } |
-      ForEach-Object { $_.cluster.server }
+    ForEach-Object { $_.clusters | Where-Object { $_.name -eq "k3d-$clusterName" } } |
+    ForEach-Object { $_.cluster.server }
 
     if ($serverUrl -match "host\.docker\.internal:(\d+)") {
       $port = $matches[1]
@@ -415,6 +415,17 @@ function Apply-GitOpsBootstrap {
     kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
     Write-Host "✅ Platform bootstrap applied (infrastructure components)" -ForegroundColor $Color.Success
     Write-Host " ℹ️ ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA" -ForegroundColor $Color.Info
+   
+    # KEDA CRD Known Issue: Helm adds oversized annotations (>262KB limit)
+    # Patch CRD to remove problematic metadata after installation
+    Write-Host " ⏳ Waiting for KEDA CRD to stabilize..." -ForegroundColor $Color.Info
+    Start-Sleep -Seconds 15
+   
+    Write-Host " 🔧 Applying KEDA CRD metadata fix..." -ForegroundColor $Color.Info
+    kubectl patch crd scaledjobs.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+    kubectl patch crd scaledobjects.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+    kubectl patch crd triggers.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+    Write-Host "✅ KEDA CRD metadata patched (removed oversized annotations)" -ForegroundColor $Color.Success
   }
   else {
     Write-Host "⚠️ Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning

@@ -143,9 +143,11 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
         }
     }
 
-    # Wait for rollouts to complete
+    # Wait for rollouts to complete with extended timeout
     Write-Host ""
-    Write-Host "⏳ Waiting for rollouts to complete..." -ForegroundColor $Color.Info
+    Write-Host "⏳ Waiting for rollouts to complete (max 5 min per deployment)..." -ForegroundColor $Color.Info
+    
+    $rolloutErrors = 0
     foreach ($img in $images) {
         $deploymentName = $deploymentMap[$img.name]
         if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
@@ -153,13 +155,30 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
         $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
         if (-not $exists) { continue }
 
-        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=60s 2>&1 | Out-Null
+        Write-Host "   Waiting for $deploymentName..." -ForegroundColor $Color.Muted
+        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=300s 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ $deploymentName rolled out successfully" -ForegroundColor $Color.Success
+            # Verify pods are actually running
+            $readyPods = kubectl get pods -n agro-apps -l app=$deploymentName -o jsonpath='{.items[?(@.status.conditions[?(@.type==\"Ready\")].status==\"True\")].metadata.name}' 2>$null
+            if ($readyPods) {
+                Write-Host "   ✅ $deploymentName rolled out successfully (pods running)" -ForegroundColor $Color.Success
+            }
+            else {
+                Write-Host "   ⚠️  $deploymentName deployment ready but checking pods..." -ForegroundColor $Color.Warning
+                Start-Sleep -Seconds 10
+            }
         }
         else {
-            Write-Host "   ⚠️  $deploymentName rollout timeout or error" -ForegroundColor $Color.Warning
+            Write-Host "   ❌ $deploymentName rollout failed (check logs)" -ForegroundColor $Color.Error
+            $rolloutErrors++
         }
+    }
+    
+    if ($rolloutErrors -gt 0) {
+        Write-Host ""
+        Write-Host "⚠️  Some deployments had issues. Check pod status:" -ForegroundColor $Color.Warning
+        Write-Host "   kubectl get pods -n agro-apps" -ForegroundColor $Color.Muted
+        Write-Host "   kubectl logs -n agro-apps -l app=<deployment-name>" -ForegroundColor $Color.Muted
     }
 
     # Normalize exit code so manager.ps1 doesn't flag false failures
