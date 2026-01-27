@@ -117,7 +117,7 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
 │  │  RESULT: Image available in localhost:5000 registry                 │       │
 │  │                                                                      │       │
 │  │  Examples:                                                           │       │
-│  │  ✅ localhost:5000/agro-frontend:latest                             │       │
+│  │  ✅ localhost:5000/tc-agro-frontend-service:latest                   │       │
 │  │  ⏳ localhost:5000/agro-identity-service:latest (when added)         │       │
 │  │  ⏳ localhost:5000/agro-farm-service:latest (when added)             │       │
 │  │  ⏳ localhost:5000/agro-sensor-ingest-service:latest (when added)    │       │
@@ -322,7 +322,7 @@ K8s Node → kubelet → Check localhost:5000 registry → Pull image → Run co
 - [x] Registry created: `k3d registry list` shows `localhost:5000`
 - [x] Registry linked to cluster: nodes can access `localhost:5000`
 - [x] ArgoCD managing platform stack: 3 Applications synced
-- [x] Images can be pushed: `docker push localhost:5000/agro-frontend:latest`
+- [x] Images can be pushed: `docker push localhost:5000/tc-agro-frontend-service:latest`
 - [x] Pods can pull images: no `ImagePullSecret` needed
 - [x] Multi-source Applications working: Helm + values repo pattern
 

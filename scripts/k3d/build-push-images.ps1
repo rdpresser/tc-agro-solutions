@@ -6,7 +6,7 @@
   Builds Docker images and pushes to localhost:5000 registry.
   
   Supports:
-  - agro-frontend (poc/frontend)
+  - tc-agro-frontend-service (poc/frontend)
   - (future: microservices when they have Dockerfiles)
 
 .EXAMPLE
@@ -23,8 +23,8 @@ $registryPort = 5000
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $images = @(
-    @{ name = "agro-frontend"; path = "poc/frontend"; dockerfile = "Dockerfile" }
-    @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
+    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+    @{ name = "tc-agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
 )
 
 $Color = @{
@@ -115,20 +115,44 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     # Force pod restart to pull new images (since tag is always 'latest')
     Write-Host ""
     Write-Host "🔄 Forcing pod restart to pull new images..." -ForegroundColor $Color.Info
+
+    # Map image names to deployment names (not always a simple replace)
+    $deploymentMap = @{
+        'tc-agro-frontend-service' = 'frontend'
+        'tc-agro-identity-service' = 'identity-service'
+    }
+
     foreach ($img in $images) {
-        $deploymentName = $img.name -replace '^agro-', ''
+        $deploymentName = $deploymentMap[$img.name]
+        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
+
+        # Check if deployment exists before attempting restart
+        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
+        if (-not $exists) {
+            Write-Host "   ⚠️  Deployment not found: $deploymentName (skipping)" -ForegroundColor $Color.Warning
+            continue
+        }
+
         Write-Host "   Rolling restart: $deploymentName" -ForegroundColor $Color.Muted
         kubectl rollout restart deployment/$deploymentName -n agro-apps 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "   ✅ Restart triggered for $deploymentName" -ForegroundColor $Color.Success
         }
+        else {
+            Write-Host "   ⚠️  Restart command returned non-zero for $deploymentName" -ForegroundColor $Color.Warning
+        }
     }
-    
+
     # Wait for rollouts to complete
     Write-Host ""
     Write-Host "⏳ Waiting for rollouts to complete..." -ForegroundColor $Color.Info
     foreach ($img in $images) {
-        $deploymentName = $img.name -replace '^agro-', ''
+        $deploymentName = $deploymentMap[$img.name]
+        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
+
+        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
+        if (-not $exists) { continue }
+
         kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=60s 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "   ✅ $deploymentName rolled out successfully" -ForegroundColor $Color.Success
@@ -137,6 +161,9 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
             Write-Host "   ⚠️  $deploymentName rollout timeout or error" -ForegroundColor $Color.Warning
         }
     }
+
+    # Normalize exit code so manager.ps1 doesn't flag false failures
+    $global:LASTEXITCODE = 0
 }
 elseif ($successfulImages -eq 0) {
     Write-Host "⚠️  No images were pushed; skipping ArgoCD sync." -ForegroundColor $Color.Warning

@@ -1,3 +1,35 @@
+# =====================================================
+# ArgoCD Application - Microservices Deployments
+# =====================================================
+# Purpose: GitOps orchestration for all microservices
+# This ApplicationSet syncs Kubernetes manifests to the cluster
+#
+# 📁 Configuration Location:
+#   - Manifests: infrastructure/kubernetes/apps/base/{service}/
+#   - Overlays:  infrastructure/kubernetes/apps/overlays/dev/
+#   - Kustomize: overlays/dev/kustomization.yaml (orchestrates all services)
+#
+# 📊 Currently Deployed Services:
+#   ✅ frontend (Dashboard UI)
+#   ✅ identity-service (Authentication & Authorization)
+#   📋 farm-service (Future - pending Dockerfile)
+#   📋 sensor-ingest-service (Future - pending Dockerfile)
+#   📋 analytics-worker (Future - pending Dockerfile)
+#   📋 dashboard-service (Future - pending Dockerfile)
+#
+# 🔄 How It Works:
+#   1. ArgoCD watches this file for changes
+#   2. Reads generators → gets path to overlays/dev
+#   3. Overlays/dev/kustomization.yaml lists all service manifests
+#   4. Kustomize merges frontend + identity + HPA configs
+#   5. ArgoCD applies merged manifests to agro-apps namespace
+#
+# 📖 See Also:
+#   - infrastructure/kubernetes/apps/README.md (detailed structure)
+#   - infrastructure/kubernetes/apps/base/{service}/ (individual configs)
+#   - infrastructure/kubernetes/apps/overlays/dev/kustomization.yaml (orchestration)
+# =====================================================
+
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -8,6 +40,8 @@ metadata:
     environment: dev
 spec:
   generators:
+    # List generator: single element pointing to Kustomize overlay
+    # (overlay orchestrates multiple services via Kustomize)
     - list:
         elements:
           - name: apps
@@ -29,16 +63,17 @@ spec:
       source:
         repoURL: https://github.com/rdpresser/tc-agro-solutions.git
         targetRevision: main
-        path: '{{path}}'
+        path: '{{path}}'  # Points to overlays/dev
       
       destination:
         server: https://kubernetes.default.svc
         namespace: agro-apps
       
       syncPolicy:
+        # Continuous reconciliation: ArgoCD syncs changes automatically
         automated:
-          prune: true
-          selfHeal: true
+          prune: true      # Delete resources removed from manifests
+          selfHeal: true   # Reconcile if cluster state drifts
           allowEmpty: false
         syncOptions:
           - CreateNamespace=true
@@ -52,13 +87,4 @@ spec:
             maxDuration: 3m
       
       revisionHistoryLimit: 3
-
-# ==============================================================================
-# Future microservices can be added to the elements list above
-# ==============================================================================
-# Example:
-# - name: identity-api
-#   path: infrastructure/kubernetes/apps/base/identity-api
-# - name: farm-api
-#   path: infrastructure/kubernetes/apps/base/farm-api
 

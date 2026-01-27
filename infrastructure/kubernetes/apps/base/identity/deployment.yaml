@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: identity-api
+  name: identity-service
   namespace: agro-apps
   labels:
-    app: identity-api
+    app: identity-service
     component: auth
 spec:
   selector:
     matchLabels:
-      app: identity-api
+      app: identity-service
   template:
     metadata:
       labels:
-        app: identity-api
+        app: identity-service
         component: auth
     spec:
       hostAliases:
@@ -21,8 +21,8 @@ spec:
         hostnames:
         - "host.docker.internal"
       containers:
-      - name: identity-api
-        image: k3d-localhost:5000/agro-identity-service:latest
+      - name: identity-service
+        image: localhost:5000/tc-agro-identity-service:latest
         imagePullPolicy: Always
         ports:
         - name: http

@@ -7,7 +7,7 @@
 # =====================================================
 
 param(
-    [Parameter(ValueFromRemainingArguments=$true)]
+    [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Service,
     [switch]$Force,
     [switch]$DryRun,
@@ -33,8 +33,8 @@ $Color = @{
 $Services = @(
     @{ name = "postgres"; description = "PostgreSQL Database"; container = "tc-agro-postgres" }
     @{ name = "pgadmin"; description = "PgAdmin Management"; container = "tc-agro-pgadmin" }
-    @{ name = "frontend"; description = "Frontend Application"; container = "tc-agro-frontend" }
-    @{ name = "identity"; description = "Identity API"; container = "tc-agro-identity" }
+    @{ name = "frontend"; description = "Frontend Application"; container = "tc-agro-frontend-service" }
+    @{ name = "identity"; description = "Identity API"; container = "tc-agro-identity-service" }
     @{ name = "redis"; description = "Redis Cache"; container = "tc-agro-redis" }
     @{ name = "rabbitmq"; description = "RabbitMQ Messaging"; container = "tc-agro-rabbitmq" }
 )
@@ -57,12 +57,12 @@ function Get-HostPathsForService {
     
     # Map services to their data directories
     $pathMap = @{
-        "postgres"  = @("postgres", "postgresql")
-        "pgadmin"   = @("pgadmin")
-        "redis"     = @("redis")
-        "rabbitmq"  = @("rabbitmq")
-        "frontend"  = @("frontend")
-        "identity"  = @("identity")
+        "postgres" = @("postgres", "postgresql")
+        "pgadmin"  = @("pgadmin")
+        "redis"    = @("redis")
+        "rabbitmq" = @("rabbitmq")
+        "frontend" = @("frontend")
+        "identity" = @("identity")
     }
     
     if ($pathMap.ContainsKey($ServiceName)) {
@@ -102,8 +102,8 @@ function Get-DanglingImages {
 function Get-UnusedImages {
     # Get all unused images (not tagged and not associated with containers)
     $unusedImages = docker image prune -a --dry-run --filter "label!=tc-agro.component" 2>$null | 
-        Select-String "would remove" | 
-        ForEach-Object { $_.Line -replace ".*would remove (.*?),.*", '$1' }
+    Select-String "would remove" | 
+    ForEach-Object { $_.Line -replace ".*would remove (.*?),.*", '$1' }
     
     return $unusedImages
 }
@@ -436,9 +436,9 @@ function Find-Service-Resources {
     )
     
     $result = @{
-        Container = $null
+        Container   = $null
         ContainerId = $null
-        Volumes = @()
+        Volumes     = @()
     }
     
     # Find container
@@ -719,18 +719,18 @@ if (-not $selectedService) {
     $choice = Read-Host "Enter your choice"
     
     switch ($choice) {
-        "1"  { $selectedService = "postgres" }
-        "2"  { $selectedService = "pgadmin" }
-        "3"  { $selectedService = "db" }
-        "4"  { $selectedService = "frontend" }
-        "5"  { $selectedService = "identity" }
-        "6"  { $selectedService = "redis" }
-        "7"  { $selectedService = "rabbitmq" }
-        "8"  { $selectedService = "all" }
-        "9"  { $selectedService = "all"; $PruneOrphaned = $true }
+        "1" { $selectedService = "postgres" }
+        "2" { $selectedService = "pgadmin" }
+        "3" { $selectedService = "db" }
+        "4" { $selectedService = "frontend" }
+        "5" { $selectedService = "identity" }
+        "6" { $selectedService = "redis" }
+        "7" { $selectedService = "rabbitmq" }
+        "8" { $selectedService = "all" }
+        "9" { $selectedService = "all"; $PruneOrphaned = $true }
         "10" { $selectedService = "all"; $Deep = $true; $PruneOrphaned = $true }
         "11" { $selectedService = "all"; $Deep = $true; $PruneOrphaned = $true; $CleanData = $true }
-        "0"  { 
+        "0" { 
             Write-Host "`n❌ Cancelled" -ForegroundColor $Color.Error
             exit 0 
         }
@@ -775,19 +775,19 @@ if ($selectedService -eq "all") {
 elseif ($selectedService -eq "db") {
     # Composite: postgres + pgadmin
     $success = Cleanup-Service -ServiceName "postgres" `
-                               -ServiceDescription "PostgreSQL Database" `
-                               -ContainerName "tc-agro-postgres" `
-                               -SkipConfirm:$Force `
-                               -IsDryRun:$DryRun `
-                               -ShouldKeepVolumes:$KeepVolumes
+        -ServiceDescription "PostgreSQL Database" `
+        -ContainerName "tc-agro-postgres" `
+        -SkipConfirm:$Force `
+        -IsDryRun:$DryRun `
+        -ShouldKeepVolumes:$KeepVolumes
     
     if ($success) {
         $success = Cleanup-Service -ServiceName "pgadmin" `
-                                   -ServiceDescription "PgAdmin Management" `
-                                   -ContainerName "tc-agro-pgadmin" `
-                                   -SkipConfirm:$Force `
-                                   -IsDryRun:$DryRun `
-                                   -ShouldKeepVolumes:$KeepVolumes
+            -ServiceDescription "PgAdmin Management" `
+            -ContainerName "tc-agro-pgadmin" `
+            -SkipConfirm:$Force `
+            -IsDryRun:$DryRun `
+            -ShouldKeepVolumes:$KeepVolumes
     }
     
     if ($success -and $CleanData) {
@@ -807,11 +807,11 @@ else {
     }
     
     $success = Cleanup-Service -ServiceName $serviceDef.name `
-                               -ServiceDescription $serviceDef.description `
-                               -ContainerName $serviceDef.container `
-                               -SkipConfirm:$Force `
-                               -IsDryRun:$DryRun `
-                               -ShouldKeepVolumes:$KeepVolumes
+        -ServiceDescription $serviceDef.description `
+        -ContainerName $serviceDef.container `
+        -SkipConfirm:$Force `
+        -IsDryRun:$DryRun `
+        -ShouldKeepVolumes:$KeepVolumes
     
     if ($success -and $CleanData) {
         Clean-HostPaths -ServiceName $selectedService -SkipConfirm:$Force -IsDryRun:$DryRun

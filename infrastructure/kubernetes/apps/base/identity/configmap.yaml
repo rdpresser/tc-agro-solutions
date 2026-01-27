@@ -10,7 +10,7 @@ data:
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
 
   # Database (non-sensitive)
-  Database__Postgres__Host: "host.docker.internal"
+    Database__Postgres__Host: "docker.host.internal"
   Database__Postgres__Port: "5432"
   Database__Postgres__Database: "tc-agro-identity-db"
   Database__Postgres__UserName: "postgres"
@@ -21,13 +21,13 @@ data:
   Database__Postgres__MaxPoolSize: "20"
 
   # Redis (non-sensitive)
-  Cache__Redis__Host: "host.docker.internal"
+    Cache__Redis__Host: "docker.host.internal"
   Cache__Redis__Port: "6379"
   Cache__Redis__Password: ""
   Cache__Redis__DefaultTTL: "300"
 
   # RabbitMQ (non-sensitive parts)
-  Messaging__RabbitMQ__Host: "host.docker.internal"
+    Messaging__RabbitMQ__Host: "docker.host.internal"
   Messaging__RabbitMQ__Port: "5672"
   Messaging__RabbitMQ__ManagementPort: "15672"
   Messaging__RabbitMQ__VirtualHost: "/"

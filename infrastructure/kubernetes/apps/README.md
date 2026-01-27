@@ -170,7 +170,7 @@ spec:
         agentpool: apps
 
       containers:
-        - name: identity-api
+        - name: identity-service
           image: localhost:5000/agro-identity-service:latest
           imagePullPolicy: IfNotPresent
 

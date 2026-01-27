@@ -116,7 +116,7 @@ VITE_API_BASE_URL=http://localhost/identity
 
 ```bash
 # Ensure identity is running in k3d
-kubectl -n agro-apps get pods -l app=identity-api
+kubectl -n agro-apps get pods -l app=identity-service
 
 # Run frontend locally
 cd poc/frontend
@@ -137,8 +137,8 @@ Rebuild frontend image:
 
 ```bash
 cd poc/frontend
-docker build -t k3d-localhost:5000/agro-frontend-service:latest .
-docker push k3d-localhost:5000/agro-frontend-service:latest
+docker build -t k3d-localhost:5000/tc-agro-frontend-service:latest .
+docker push k3d-localhost:5000/tc-agro-frontend-service:latest
 ```
 
 ---
@@ -276,7 +276,7 @@ Outputs to `dist/` with base path `/agro/`.
 
 ```bash
 cd poc/frontend
-docker build -t agro-frontend:latest .
+docker build -t tc-agro-frontend-service:latest .
 ```
 
 ---

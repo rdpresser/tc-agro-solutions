@@ -46,7 +46,7 @@ cd orchestration/apphost-compose
 docker compose ps
 
 # View logs from specific service
-docker compose logs -f identity-api
+docker compose logs -f tc-agro-identity-service
 docker compose logs -f postgres
 ```
 
@@ -342,7 +342,7 @@ docker compose down -v
 
 - → Is it running in Visual Studio or console? (`F5` or `dotnet run`)
 - → Check swagger: http://localhost:5001/swagger
-- → Check logs in console or docker: `docker compose logs identity-api`
+- → Check logs in console or docker: `docker compose logs tc-agro-identity-service`
 
 ### Getting More Help
 
@@ -380,7 +380,7 @@ Set-Alias -Name hc -Value ".\scripts\health-check.ps1"
 watch -n 1 "docker compose ps"
 
 # Watch a specific service logs
-docker compose logs -f identity-api --tail 50
+docker compose logs -f tc-agro-identity-service --tail 50
 
 # Watch database activity (advanced)
 docker exec tc-agro-postgres psql -U postgres -c "SELECT pid, query FROM pg_stat_statements ORDER BY query_time DESC LIMIT 10;"

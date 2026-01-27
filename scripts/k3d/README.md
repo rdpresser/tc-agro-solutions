@@ -245,14 +245,14 @@ This script:
 
 1. **Builds** Docker images with tag `localhost:5000/{image-name}:latest`
 2. **Pushes** to local registry
-3. Currently configured for: `agro-frontend`
+3. Currently configured for: `tc-agro-frontend-service`
 
 **To add your microservices:**
 Edit `build-push-images.ps1` and add to the `$images` array:
 
 ```powershell
 $images = @(
-    @{ name = "agro-frontend"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
     # Add your services:
     @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "Dockerfile" }
     @{ name = "agro-farm-service"; path = "services/farm-service"; dockerfile = "Dockerfile" }

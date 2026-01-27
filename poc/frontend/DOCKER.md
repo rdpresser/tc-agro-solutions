@@ -28,20 +28,20 @@ This folder contains Docker configuration for running the TC Agro Solutions fron
 
 ```bash
 # From the frontend folder
-docker build -t tc-agro-frontend:latest .
+docker build -t tc-agro-frontend-service:latest .
 
 # Or with specific tag
-docker build -t tc-agro-frontend:v1.0.0 .
+docker build -t tc-agro-frontend-service:v1.0.0 .
 ```
 
 ### Run Locally
 
 ```bash
 # Run container on port 8080
-docker run -d -p 8080:8080 --name agro-frontend tc-agro-frontend:latest
+docker run -d -p 8080:8080 --name tc-agro-frontend-service tc-agro-frontend-service:latest
 
 # View logs
-docker logs -f agro-frontend
+docker logs -f tc-agro-frontend-service
 
 # Access the application
 # Open browser: http://localhost:8080
@@ -51,13 +51,13 @@ docker logs -f agro-frontend
 
 ```bash
 # Stop container
-docker stop agro-frontend
+docker stop tc-agro-frontend-service
 
 # Remove container
-docker rm agro-frontend
+docker rm tc-agro-frontend-service
 
 # Remove image
-docker rmi tc-agro-frontend:latest
+docker rmi tc-agro-frontend-service:latest
 ```
 
 ## 🔍 Testing the Container
@@ -75,20 +75,20 @@ curl http://localhost:8080/health
 
 ```bash
 # List files in container
-docker exec agro-frontend ls -la /usr/share/nginx/html
+docker exec tc-agro-frontend-service ls -la /usr/share/nginx/html
 
 # Check nginx configuration
-docker exec agro-frontend cat /etc/nginx/conf.d/default.conf
+docker exec tc-agro-frontend-service cat /etc/nginx/conf.d/default.conf
 ```
 
 ### Check Logs
 
 ```bash
 # Nginx access logs
-docker exec agro-frontend tail -f /var/log/nginx/access.log
+docker exec tc-agro-frontend-service tail -f /var/log/nginx/access.log
 
 # Nginx error logs
-docker exec agro-frontend tail -f /var/log/nginx/error.log
+docker exec tc-agro-frontend-service tail -f /var/log/nginx/error.log
 ```
 
 ## ☁️ Azure Container Registry (ACR) Deployment
@@ -100,12 +100,12 @@ docker exec agro-frontend tail -f /var/log/nginx/error.log
 az acr login --name <your-acr-name>
 
 # Tag image for ACR
-docker tag tc-agro-frontend:latest <your-acr-name>.azurecr.io/tc-agro-frontend:latest
-docker tag tc-agro-frontend:latest <your-acr-name>.azurecr.io/tc-agro-frontend:v1.0.0
+docker tag tc-agro-frontend-service:latest <your-acr-name>.azurecr.io/tc-agro-frontend-service:latest
+docker tag tc-agro-frontend-service:latest <your-acr-name>.azurecr.io/tc-agro-frontend-service:v1.0.0
 
 # Push to ACR
-docker push <your-acr-name>.azurecr.io/tc-agro-frontend:latest
-docker push <your-acr-name>.azurecr.io/tc-agro-frontend:v1.0.0
+docker push <your-acr-name>.azurecr.io/tc-agro-frontend-service:latest
+docker push <your-acr-name>.azurecr.io/tc-agro-frontend-service:v1.0.0
 ```
 
 ### Verify in ACR
@@ -115,7 +115,7 @@ docker push <your-acr-name>.azurecr.io/tc-agro-frontend:v1.0.0
 az acr repository list --name <your-acr-name> --output table
 
 # Show tags
-az acr repository show-tags --name <your-acr-name> --repository tc-agro-frontend --output table
+az acr repository show-tags --name <your-acr-name> --repository tc-agro-frontend-service --output table
 ```
 
 ## ☸️ Kubernetes Deployment (AKS)
@@ -128,21 +128,21 @@ Create `k8s-deployment.yaml`:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tc-agro-frontend
+  name: frontend
   namespace: agro
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: tc-agro-frontend
+      app: frontend
   template:
     metadata:
       labels:
-        app: tc-agro-frontend
+        app: frontend
     spec:
       containers:
         - name: frontend
-          image: <your-acr-name>.azurecr.io/tc-agro-frontend:latest
+          image: <your-acr-name>.azurecr.io/tc-agro-frontend-service:latest
           ports:
             - containerPort: 8080
           resources:
@@ -172,7 +172,7 @@ metadata:
   namespace: agro
 spec:
   selector:
-    app: tc-agro-frontend
+    app: frontend
   ports:
     - protocol: TCP
       port: 80
@@ -182,7 +182,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: tc-agro-frontend-ingress
+  name: frontend
   namespace: agro
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -196,7 +196,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: tc-agro-frontend-svc
+                - name: frontend-svc
                 port:
                   number: 80
 ```
@@ -217,7 +217,7 @@ kubectl get svc -n agro
 kubectl get ingress -n agro
 
 # View logs
-kubectl logs -f deployment/tc-agro-frontend -n agro
+kubectl logs -f deployment/frontend -n agro
 ```
 
 ## 🔧 Troubleshooting
@@ -226,13 +226,13 @@ kubectl logs -f deployment/tc-agro-frontend -n agro
 
 ```bash
 # Check container logs
-docker logs agro-frontend
+docker logs tc-agro-frontend-service
 
 # Inspect container
-docker inspect agro-frontend
+docker inspect tc-agro-frontend-service
 
 # Run with interactive shell
-docker run -it --entrypoint /bin/sh tc-agro-frontend:latest
+docker run -it --entrypoint /bin/sh tc-agro-frontend-service:latest
 ```
 
 ### Build Failures
@@ -242,20 +242,20 @@ docker run -it --entrypoint /bin/sh tc-agro-frontend:latest
 docker builder prune -a
 
 # Build with no cache
-docker build --no-cache -t tc-agro-frontend:latest .
+docker build --no-cache -t tc-agro-frontend-service:latest .
 
 # Build with verbose output
-docker build --progress=plain -t tc-agro-frontend:latest .
+docker build --progress=plain -t tc-agro-frontend-service:latest .
 ```
 
 ### Nginx Issues
 
 ```bash
 # Test nginx configuration
-docker run --rm tc-agro-frontend:latest nginx -t
+docker run --rm tc-agro-frontend-service:latest nginx -t
 
 # Check nginx version
-docker run --rm tc-agro-frontend:latest nginx -v
+docker run --rm tc-agro-frontend-service:latest nginx -v
 ```
 
 ## 📊 Image Size Optimization
@@ -323,8 +323,8 @@ jobs:
 
       - name: Build and push
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/tc-agro-frontend:${{ github.sha }} poc/frontend
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/tc-agro-frontend:${{ github.sha }}
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/tc-agro-frontend-service:${{ github.sha }} poc/frontend
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/tc-agro-frontend-service:${{ github.sha }}
 ```
 
 ## 📚 References

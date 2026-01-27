@@ -32,7 +32,7 @@ $portForwards = @{
     loki       = @{ namespace = "monitoring"; service = "loki"; localPort = 3100; remotePort = 3100 }
     tempo      = @{ namespace = "monitoring"; service = "tempo"; localPort = 3200; remotePort = 3100 }
     frontend   = @{ namespace = "agro-apps"; service = "frontend"; localPort = 3080; remotePort = 80 }
-    identity   = @{ namespace = "agro-apps"; service = "identity-api"; localPort = 5001; remotePort = 80 }
+    identity   = @{ namespace = "agro-apps"; service = "identity-service"; localPort = 5001; remotePort = 80 }
 }
 
 $Color = @{

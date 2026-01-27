@@ -1,13 +1,13 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: identity-api
+  name: identity-service
   namespace: agro-apps
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: identity-api
+    name: identity-service
   minReplicas: 2
   maxReplicas: 5
   metrics:
