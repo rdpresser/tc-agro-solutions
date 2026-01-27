@@ -20,7 +20,7 @@ spec:
       containers:
       - name: frontend
         image: localhost:5000/tc-agro-frontend-service:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8080
