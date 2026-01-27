@@ -22,8 +22,8 @@ spec:
         - "host.docker.internal"
       containers:
       - name: identity-service
-        image: localhost:5000/tc-agro-identity-service:latest
-        imagePullPolicy: Never
+        image: k3d-localhost:5000/tc-agro-identity-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8080
