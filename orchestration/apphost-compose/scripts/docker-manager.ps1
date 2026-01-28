@@ -108,6 +108,8 @@ function Show-Help {
     Write-Host "Builds Docker images (all or specific)" -ForegroundColor $Colors.Muted
     Write-Host "    pull                " -NoNewline -ForegroundColor $Colors.Success
     Write-Host "Pulls latest base images" -ForegroundColor $Colors.Muted
+    Write-Host "    update-versions     " -NoNewline -ForegroundColor $Colors.Success
+    Write-Host "Check/update service versions in docker-compose.yml" -ForegroundColor $Colors.Muted
     Write-Host "    exec <service> <cmd>" -NoNewline -ForegroundColor $Colors.Success
     Write-Host "Executes command in container" -ForegroundColor $Colors.Muted
     Write-Host ""
@@ -248,6 +250,9 @@ function Show-Menu {
         Write-Host "  [9] Fix RabbitMQ" -ForegroundColor $Colors.Muted
         Write-Host " [10] Rebuild services" -ForegroundColor $Colors.Muted
         Write-Host ""
+        Write-Host "  🔄 MAINTENANCE" -ForegroundColor $Colors.Info
+        Write-Host " [11] Check/update service versions" -ForegroundColor $Colors.Muted
+        Write-Host ""
         Write-Host "  [0] ❌ Exit" -ForegroundColor $Colors.Error
         Write-Host ""
 
@@ -264,6 +269,7 @@ function Show-Menu {
             "8" { Invoke-Command "ps" }
             "9" { Invoke-Command "fix-rabbitmq" }
             "10" { Invoke-Command "rebuild" }
+            "11" { Invoke-Command "update-versions" }
             "0" {
                 Write-Host "`n👋 Goodbye!" -ForegroundColor $Colors.Success
                 exit 0
@@ -363,6 +369,25 @@ function Invoke-Command($cmd, $arg1 = "", $arg2 = "") {
         "pull" {
             Write-Host "`n⬇️  Pulling latest images..." -ForegroundColor $Colors.Info
             docker compose pull
+        }
+        { $_ -in "update-versions", "update", "versions" } {
+            Write-Host "`n🔄 Checking service versions..." -ForegroundColor $Colors.Info
+            & "$script:ScriptPath\update-service-versions.ps1"
+            if ($LASTEXITCODE -eq 1) {
+                Write-Host ""
+                $response = Read-Host "Updates available. Apply now? (y/N)"
+                if ($response -eq 'y' -or $response -eq 'Y') {
+                    Write-Host ""
+                    & "$script:ScriptPath\update-service-versions.ps1" -Apply
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host ""
+                        Write-Host "💡 Next steps:" -ForegroundColor $Colors.Info
+                        Write-Host "   1. Review changes: git diff docker-compose.yml" -ForegroundColor $Colors.Muted
+                        Write-Host "   2. Pull images: \"docker compose pull\"" -ForegroundColor $Colors.Muted
+                        Write-Host "   3. Restart: \"docker compose up -d\"" -ForegroundColor $Colors.Muted
+                    }
+                }
+            }
         }
         "exec" {
             if (-not $arg1) {

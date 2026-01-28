@@ -14,7 +14,7 @@ services:
   # DATABASE - PostgreSQL + TimescaleDB
   # =====================================================
   postgres:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:latest-pg17
     container_name: tc-agro-postgres
     restart: unless-stopped
     environment:
@@ -72,7 +72,7 @@ services:
   # CACHE - Redis
   # =====================================================
   redis:
-    image: redis:7-alpine
+    image: redis:8.4.0-alpine
     container_name: tc-agro-redis
     restart: unless-stopped
     command: >
@@ -102,7 +102,7 @@ services:
   # MESSAGE BROKER - RabbitMQ + Management UI
   # =====================================================
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4.2.3-management-alpine
     container_name: tc-agro-rabbitmq
     restart: unless-stopped
     hostname: tc-agro-rabbitmq

@@ -48,6 +48,7 @@ Troubleshooting:
 
 Docker Operations:
   build [service]     - Builds Docker images
+  update-versions     - Checks/updates service versions in docker-compose.yml
   pull                - Pulls latest base images
   exec <service> <cmd>- Executes command in container
 ```
@@ -364,6 +365,98 @@ docker ps --filter "label=tc-agro.component"
 
 ---
 
+## � Version Management
+
+### `update-service-versions.ps1` - Automated Version Checker
+
+Checks and updates service versions in `docker-compose.yml` using GitHub Releases and Docker Hub APIs.
+
+**Usage:**
+
+```powershell
+# Check current versions (dry-run, no changes)
+.\scripts\update-service-versions.ps1
+
+# Apply updates automatically
+.\scripts\update-service-versions.ps1 -Apply
+
+# Skip backup before updating
+.\scripts\update-service-versions.ps1 -Apply -SkipBackup
+
+# Verbose output with API details
+.\scripts\update-service-versions.ps1 -Verbose
+```
+
+**Monitored Services:**
+
+| Service            | Source          | Update Strategy            |
+| ------------------ | --------------- | -------------------------- |
+| **TimescaleDB**    | Docker Hub      | Manual Review (PG version) |
+| **pgAdmin**        | Docker Hub      | Latest                     |
+| **Redis**          | Docker Hub      | Major Version (7.x)        |
+| **RabbitMQ**       | Docker Hub      | Major Version (3.x)        |
+| **Loki**           | GitHub Releases | Auto                       |
+| **Tempo**          | GitHub Releases | Auto                       |
+| **Prometheus**     | GitHub Releases | Auto                       |
+| **OTEL Collector** | GitHub Releases | Auto                       |
+| **Grafana**        | GitHub Releases | Auto                       |
+
+**Update Strategies:**
+
+- **Auto**: Automatically update to latest (patch/minor)
+- **ManualReview**: Show available updates, require manual intervention
+- **MajorVersion**: Pin to major version (e.g., 7.x → 7.latest)
+- **Latest**: Always use `:latest` tag
+
+**Output Example:**
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║              Docker Compose Service Version Report             ║
+╚════════════════════════════════════════════════════════════════╝
+
+Service          Current         Latest          Status     Strategy
+───────────────  ──────────────  ──────────────  ─────────  ────────────
+TimescaleDB      latest-pg16     latest-pg17     ⚠ Outdated ManualReview
+Loki             3.6.4           3.6.4           ✓ Up-to-date Auto
+Tempo            2.10.0          2.10.0          ✓ Up-to-date Auto
+Prometheus       v3.9.1          v3.9.1          ✓ Up-to-date Auto
+OTEL Collector   0.144.0         0.144.0         ✓ Up-to-date Auto
+Grafana          12.3.1          12.3.1          ✓ Up-to-date Auto
+
+Summary: 5 up-to-date, 1 outdated, 0 ahead
+```
+
+**Features:**
+
+- ✅ GitHub Releases API integration (Grafana projects)
+- ✅ Docker Hub API v2 integration (base images)
+- ✅ Semantic version comparison
+- ✅ Automatic backup before updates
+- ✅ Dry-run mode (default)
+- ✅ Color-coded status output
+- ✅ CI/CD integration (exit code 0/1)
+- ✅ Error handling for API failures
+
+**Safety:**
+
+- Default mode is **dry-run** (check only, no changes)
+- `-Apply` flag required for actual updates
+- Automatic backup created before modifications
+- Manual review required for breaking changes (TimescaleDB PG version)
+
+**Integration with docker-manager.ps1:**
+
+```powershell
+# From manager menu
+.\scripts\docker-manager.ps1 update-versions
+
+# Or directly
+.\scripts\update-service-versions.ps1
+```
+
+---
+
 ## 📝 Notes
 
 - **F5 in Visual Studio** works smoothly thanks to `pre-build-vs.ps1`
@@ -371,9 +464,10 @@ docker ps --filter "label=tc-agro.component"
 - **Volumes** can be preserved with `-KeepVolumes` flag
 - **Labels** ensure safe multi-environment Docker usage
 - **Interactive menu** available via `docker-manager.ps1` (no parameters)
+- **Version updates** can be automated via `update-service-versions.ps1 -Apply`
 
 ---
 
-> **Version:** 2.0 - Consolidated and Safety-Enhanced  
+> **Version:** 2.1 - Added Automated Version Management  
 > **Last Updated:** January 21, 2026  
 > **Purpose:** Streamlined Docker management with k3d coexistence
