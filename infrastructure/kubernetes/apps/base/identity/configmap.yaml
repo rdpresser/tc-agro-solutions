@@ -50,12 +50,13 @@ data:
   Logging__LogLevel__System: "Warning"
 
   # Telemetry - Grafana Agent Configuration (non-sensitive values)
-  Telemetry__Grafana__Agent__Host: "host.k3d.internal"
+  # Application sends telemetry to OTEL Collector in k3d cluster
+  Telemetry__Grafana__Agent__Host: "platform-observability-opentelemetry-collector.monitoring.svc.cluster.local"
   Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
   Telemetry__Grafana__Agent__OtlpHttpPort: "4318"
-  Telemetry__Grafana__Agent__MetricsPort: "12345"
-  Telemetry__Grafana__Agent__Enabled: "false"
-  Telemetry__Grafana__Otlp__Endpoint: "http://host.k3d.internal:4317"
+  Telemetry__Grafana__Agent__MetricsPort: "8889"
+  Telemetry__Grafana__Agent__Enabled: "true"
+  Telemetry__Grafana__Otlp__Endpoint: "http://platform-observability-opentelemetry-collector.monitoring.svc.cluster.local:4317"
   Telemetry__Grafana__Otlp__Protocol: "grpc"
   Telemetry__Grafana__Otlp__TimeoutSeconds: "10"
   Telemetry__Grafana__Otlp__Insecure: "true"

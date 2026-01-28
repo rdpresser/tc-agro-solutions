@@ -132,7 +132,7 @@ services:
   # OBSERVABILITY - Loki (Logs)
   # =====================================================
   loki:
-    image: grafana/loki:2.9.8
+    image: grafana/loki:3.6.4
     container_name: tc-agro-loki
     restart: unless-stopped
     command: -config.file=/etc/loki/config.yml
@@ -161,7 +161,7 @@ services:
   # OBSERVABILITY - Tempo (Traces)
   # =====================================================
   tempo:
-    image: grafana/tempo:2.4.1
+    image: grafana/tempo:2.10.0
     container_name: tc-agro-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
@@ -191,7 +191,7 @@ services:
   # OBSERVABILITY - Prometheus (Metrics)
   # =====================================================
   prometheus:
-    image: prom/prometheus:v2.52.0
+    image: prom/prometheus:v3.9.1
     container_name: tc-agro-prometheus
     restart: unless-stopped
     ports:
@@ -226,7 +226,7 @@ services:
   # OBSERVABILITY - OpenTelemetry Collector
   # =====================================================
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.98.0
+    image: otel/opentelemetry-collector-contrib:0.144.0
     container_name: tc-agro-otel-collector
     restart: unless-stopped
     ports:
@@ -248,7 +248,7 @@ services:
   # OBSERVABILITY - Grafana (Dashboards UI)
   # =====================================================
   grafana:
-    image: grafana/grafana:10.4.2
+    image: grafana/grafana:12.3.1
     container_name: tc-agro-grafana
     restart: unless-stopped
     ports:
