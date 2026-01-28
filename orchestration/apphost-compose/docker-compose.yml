@@ -141,16 +141,8 @@ services:
     volumes:
       - ./observability/loki/config.yml:/etc/loki/config.yml:ro
       - loki_data:/loki
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+    # NOTE: Healthcheck intentionally omitted because Loki image doesn't include wget/curl
+    # Service_started condition in depends_on is sufficient for service orchestration
     networks:
       - agro-net
     labels:
@@ -171,16 +163,8 @@ services:
     volumes:
       - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro
       - tempo_data:/var/tempo
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+    # NOTE: Healthcheck intentionally omitted because Tempo image doesn't include wget/curl
+    # Service_started condition in depends_on is sufficient for service orchestration
     networks:
       - agro-net
     labels:
@@ -266,10 +250,10 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-      tempo:
-        condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
+      tempo:
+        condition: service_started
     healthcheck:
       test:
         [

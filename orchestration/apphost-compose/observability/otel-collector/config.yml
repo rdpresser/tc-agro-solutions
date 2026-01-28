@@ -38,19 +38,19 @@ exporters:
     const_labels:
       environment: development
 
-  # Loki exporter for logs
-  loki:
-    endpoint: "http://loki:3100/loki/api/v1/push"
-
-  # Tempo exporter for traces
+  # Tempo exporter for traces (via gRPC OTLP)
   otlp/tempo:
     endpoint: "tempo:4317"
     tls:
       insecure: true
 
-  # Debug exporter (optional - for troubleshooting)
-  # logging:
-  #   loglevel: debug
+  # Loki exporter for logs (via OTLP HTTP)
+  otlphttp/loki:
+    endpoint: "http://loki:3100/otlp"
+    headers:
+      Content-Type: "application/protobuf"
+    compression: gzip
+    timeout: 10s
 
 service:
   pipelines:
@@ -66,11 +66,11 @@ service:
       processors: [memory_limiter, batch, attributes]
       exporters: [prometheus]
 
-    # Logs pipeline
+    # Logs pipeline - send to Loki via OTLP HTTP
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch, attributes]
-      exporters: [loki]
+      exporters: [otlphttp/loki]
 
   # Extensions disabled for local development
   # extensions:

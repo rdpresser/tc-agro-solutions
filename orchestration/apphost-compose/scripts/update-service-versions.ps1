@@ -48,8 +48,8 @@ $Services = @(
     },
     @{
         Name           = "Redis"
-        ImagePattern   = "redis:(\d+)-alpine"
-        CurrentTag     = "7-alpine"
+        ImagePattern   = "redis:([\d\.]+)-alpine"
+        CurrentTag     = "8.4.0-alpine"
         Type           = "DockerHub"
         Repo           = "library/redis"
         TagFilter      = "*-alpine"
@@ -57,8 +57,8 @@ $Services = @(
     },
     @{
         Name           = "RabbitMQ"
-        ImagePattern   = "rabbitmq:(\d+)-management-alpine"
-        CurrentTag     = "3-management-alpine"
+        ImagePattern   = "rabbitmq:([\d\.]+)-management-alpine"
+        CurrentTag     = "4.2.3-management-alpine"
         Type           = "DockerHub"
         Repo           = "library/rabbitmq"
         TagFilter      = "*-management-alpine"
@@ -142,15 +142,54 @@ function Write-Error {
 function Get-GitHubLatestRelease {
     param([string]$Repo)
     
-    try {
-        $url = "https://api.github.com/repos/$Repo/releases/latest"
-        $response = Invoke-RestMethod -Uri $url -Headers @{ "User-Agent" = "PowerShell" }
-        return $response.tag_name -replace '^v', ''
+    $maxRetries = 3
+    $retryDelaySeconds = 1
+    
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            $url = "https://api.github.com/repos/$Repo/releases/latest"
+            
+            $headers = @{
+                "User-Agent" = "PowerShell-VersionChecker/1.0"
+                "Accept"     = "application/vnd.github.v3+json"
+            }
+            
+            # Add GitHub token if available (increases rate limit from 60 to 5000 req/hour)
+            $ghToken = $env:GITHUB_TOKEN
+            if ($ghToken) {
+                $headers["Authorization"] = "token $ghToken"
+            }
+            
+            $response = Invoke-RestMethod -Uri $url -Headers $headers -TimeoutSec 10
+            $tagName = $response.tag_name
+            
+            if ([string]::IsNullOrWhiteSpace($tagName)) {
+                Write-Verbose "Empty tag_name for $Repo (attempt $attempt/$maxRetries)"
+                if ($attempt -lt $maxRetries) {
+                    Start-Sleep -Seconds $retryDelaySeconds
+                    $retryDelaySeconds = $retryDelaySeconds * 2
+                    continue
+                }
+                return $null
+            }
+            
+            # Remove leading 'v' if present
+            $version = $tagName -replace '^v', ''
+            return $version
+        }
+        catch {
+            $errorMsg = $_.Exception.Message
+            Write-Verbose "GitHub API error for $Repo (attempt $attempt/$maxRetries): $errorMsg"
+            
+            if ($attempt -lt $maxRetries) {
+                Start-Sleep -Seconds $retryDelaySeconds
+                $retryDelaySeconds = $retryDelaySeconds * 2
+            }
+        }
     }
-    catch {
-        Write-Verbose "Failed to get GitHub release for $Repo`: $($_.Exception.Message)"
-        return $null
-    }
+    
+    Write-Verbose "Failed to get GitHub release for $Repo after $maxRetries attempts"
+    return $null
 }
 
 function Get-DockerHubLatestTag {
@@ -236,13 +275,31 @@ function Get-LatestVersion {
     
     if ($Service.Type -eq "GitHub") {
         $version = Get-GitHubLatestRelease -Repo $Service.Repo
-        if ($version -match '^v') {
-            return $version
-        }
-        return "v$version"
+        return $version
     }
     elseif ($Service.Type -eq "DockerHub") {
         return Get-DockerHubLatestTag -Repo $Service.Repo -TagFilter $Service.TagFilter
+    }
+    
+    return $null
+}
+
+function Get-CurrentTagFromCompose {
+    param([string]$ImagePattern)
+    
+    try {
+        $content = Get-Content $ComposeFile -Raw
+        
+        # Extract the repository from the image pattern (e.g., "timescale/timescaledb" from "timescale/timescaledb:latest-pg(\d+)")
+        $repo = $ImagePattern -replace ':.*$', ''
+        
+        # Find the line with this repository
+        if ($content -match "image:\s+$([regex]::Escape($repo)):([^\s]+)") {
+            return $matches[1]
+        }
+    }
+    catch {
+        Write-Verbose "Error reading current tag from compose file: $($_.Exception.Message)"
     }
     
     return $null
@@ -288,6 +345,16 @@ if (-not (Test-Path $ComposeFile)) {
 Write-Step "Scanning docker-compose.yml..."
 Write-Host ""
 
+# Show GitHub token status
+if ($env:GITHUB_TOKEN) {
+    Write-Host "ℹ GitHub token detected (rate limit: 5000 req/hour)" -ForegroundColor Cyan
+}
+else {
+    Write-Host "ℹ No GitHub token found (rate limit: 60 req/hour). To increase: set \$env:GITHUB_TOKEN" -ForegroundColor Yellow
+}
+
+Write-Host ""
+
 # Results tracking
 $results = @()
 $updatesAvailable = $false
@@ -296,22 +363,40 @@ $updatesAvailable = $false
 foreach ($service in $Services) {
     Write-Host "Checking $($service.Name)..." -NoNewline
     
+    # Read current tag from docker-compose.yml (dynamic)
+    $currentTag = Get-CurrentTagFromCompose -ImagePattern $service.ImagePattern
+    if ($null -eq $currentTag) {
+        $currentTag = $service.CurrentTag  # Fallback to default if not found
+    }
+    
     $latest = Get-LatestVersion -Service $service
     
     if ($null -eq $latest) {
         Write-Host " [SKIP - API Error]" -ForegroundColor Gray
+        
+        # Still add to results for visibility
+        $result = [PSCustomObject]@{
+            Service      = $service.Name
+            Current      = $currentTag
+            Latest       = "N/A (API Error)"
+            Status       = "Unknown"
+            Strategy     = $service.UpdateStrategy
+            ImagePattern = $service.ImagePattern
+        }
+        
+        $results += $result
         continue
     }
     
     # Normalize versions for comparison
-    $currentVersion = $service.CurrentTag -replace '^v', '' -replace '-.*$', ''
+    $currentVersion = $currentTag -replace '^v', '' -replace '-.*$', ''
     $latestVersion = $latest -replace '^v', '' -replace '-.*$', ''
     
     $status = Compare-Versions -Current $currentVersion -Latest $latestVersion -ServiceName $service.Name
     
     $result = [PSCustomObject]@{
         Service      = $service.Name
-        Current      = $service.CurrentTag
+        Current      = $currentTag
         Latest       = $latest
         Status       = $status
         Strategy     = $service.UpdateStrategy
@@ -322,14 +407,14 @@ foreach ($service in $Services) {
     
     switch ($status) {
         "UpToDate" {
-            Write-Host " ✓ Up to date ($($service.CurrentTag))" -ForegroundColor Green
+            Write-Host " ✓ Up to date ($currentTag)" -ForegroundColor Green
         }
         "Outdated" {
-            Write-Host " ⚠ Update available: $($service.CurrentTag) → $latest" -ForegroundColor Yellow
+            Write-Host " ⚠ Update available: $currentTag → $latest" -ForegroundColor Yellow
             $updatesAvailable = $true
         }
         "Ahead" {
-            Write-Host " ℹ Using newer version ($($service.CurrentTag) > $latest)" -ForegroundColor Cyan
+            Write-Host " ℹ Using newer version ($currentTag > $latest)" -ForegroundColor Cyan
         }
         default {
             Write-Host " ? Unable to compare versions" -ForegroundColor Gray
