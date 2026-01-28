@@ -132,8 +132,8 @@ services:
       # Console output for debugging
       - Serilog__WriteTo__0__Name=Console
 
-      # Disable OpenTelemetry by default for development
-      - OpenTelemetry__Enabled=false
+      # Disable Telemetry (Grafana Agent) by default for development
+      - Telemetry__Grafana__Agent__Enabled=false
 
     # Enable hot-reload: map source code as volume
     volumes:
@@ -152,10 +152,10 @@ services:
     # restart: on-failure:3
 
     # Override: Remove otel-collector dependency for development
-    # Reason: OpenTelemetry is optional for development
+    # Reason: Telemetry (Grafana Agent) is optional for development
     #
-    # To enable OTEL Collector dependency when needed:
-    # Set environment variable OpenTelemetry__Enabled=true
+    # To enable Grafana Agent dependency when needed:
+    # Set environment variable Telemetry__Grafana__Agent__Enabled=true
     depends_on:
       postgres:
         condition: service_healthy

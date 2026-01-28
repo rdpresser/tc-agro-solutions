@@ -49,11 +49,13 @@ data:
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
   Logging__LogLevel__System: "Warning"
 
-  # OpenTelemetry
-  OpenTelemetry__Enabled: "true"
-  OpenTelemetry__Endpoint: "http://host.k3d.internal:4317"
-  OpenTelemetry__Protocol: "grpc"
-  OpenTelemetry__ServiceName: "identity-service"
-  OpenTelemetry__ServiceNamespace: "tc-agro"
-  OpenTelemetry__Environment: "development"
-  OpenTelemetry__ServiceVersion: "1.0.0"
+  # Telemetry - Grafana Agent Configuration (non-sensitive values)
+  Telemetry__Grafana__Agent__Host: "host.k3d.internal"
+  Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
+  Telemetry__Grafana__Agent__OtlpHttpPort: "4318"
+  Telemetry__Grafana__Agent__MetricsPort: "12345"
+  Telemetry__Grafana__Agent__Enabled: "false"
+  Telemetry__Grafana__Otlp__Endpoint: "http://host.k3d.internal:4317"
+  Telemetry__Grafana__Otlp__Protocol: "grpc"
+  Telemetry__Grafana__Otlp__TimeoutSeconds: "10"
+  Telemetry__Grafana__Otlp__Insecure: "true"

@@ -359,14 +359,16 @@ services:
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
-      # .NET Configuration - OpenTelemetry
-      - OpenTelemetry__Enabled=${OpenTelemetry__Enabled}
-      - OpenTelemetry__Endpoint=${OpenTelemetry__Endpoint}
-      - OpenTelemetry__Protocol=${OpenTelemetry__Protocol}
-      - OpenTelemetry__ServiceName=${OpenTelemetry__ServiceName}
-      - OpenTelemetry__ServiceNamespace=${OpenTelemetry__ServiceNamespace}
-      - OpenTelemetry__Environment=${OpenTelemetry__Environment}
-      - OpenTelemetry__ServiceVersion=${OpenTelemetry__ServiceVersion}
+      # .NET Configuration - Telemetry (Grafana Agent)
+      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
+      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
+      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort}
+      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort}
+      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled}
+      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint}
+      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol}
+      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds}
+      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure}
     volumes:
       # Hot reload support (optional - comment if not needed)
       # - ../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service:/app:ro

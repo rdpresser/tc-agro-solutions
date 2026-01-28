@@ -43,6 +43,7 @@ package-lock.json
 .env.production.local
 # Allow tracking of the env template specifically (apphost-compose)
 !orchestration/apphost-compose/.env.example
+!orchestration/apphost-compose/.env.k3d.example
 # Global exception: allow any .env.example files
 !.env.example
 !**/.env.example
