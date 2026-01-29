@@ -132,8 +132,8 @@ services:
       # Console output for debugging
       - Serilog__WriteTo__0__Name=Console
 
-      # Disable Telemetry (Grafana Agent) by default for development
-      - Telemetry__Grafana__Agent__Enabled=false
+      # Telemetry (Grafana Agent) - Use value from .env
+      - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
 
     # Enable hot-reload: map source code as volume
     volumes:

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: identity-service
+  namespace: agro-apps
+  labels:
+    app: identity-service
+    project: tc-agro-solutions
+spec:
+  selector:
+    matchLabels:
+      app: identity-service
+  namespaceSelector:
+    matchNames:
+      - agro-apps
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
