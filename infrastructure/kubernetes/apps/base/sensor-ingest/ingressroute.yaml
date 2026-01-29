@@ -1,0 +1,32 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sensor-ingest-api
+  namespace: agro-apps
+  labels:
+    app: sensor-ingest-api
+  annotations:
+    kubernetes.io/description: "Path-based routing for Sensor Ingest API service"
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/sensor-ingest`)
+      kind: Rule
+      services:
+        - name: sensor-ingest-api
+          port: 80
+      middlewares:
+        - name: sensor-ingest-stripprefix
+          namespace: agro-apps
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: sensor-ingest-stripprefix
+  namespace: agro-apps
+spec:
+  stripPrefix:
+    prefixes:
+      - /sensor-ingest

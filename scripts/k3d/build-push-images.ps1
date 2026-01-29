@@ -6,7 +6,7 @@
   Builds Docker images and pushes to localhost:5000 registry.
   
   Supports:
-  - tc-agro-frontend-service (poc/frontend)
+  - agro-frontend (poc/frontend)
   - (future: microservices when they have Dockerfiles)
 
 .EXAMPLE
@@ -23,8 +23,9 @@ $registryPort = 5000
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $images = @(
-    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
-    @{ name = "tc-agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
+    @{ name = "agro-frontend"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+    @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
+    @{ name = "agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
 )
 
 $Color = @{
@@ -115,74 +116,28 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     # Force pod restart to pull new images (since tag is always 'latest')
     Write-Host ""
     Write-Host "🔄 Forcing pod restart to pull new images..." -ForegroundColor $Color.Info
-
-    # Map image names to deployment names (not always a simple replace)
-    $deploymentMap = @{
-        'tc-agro-frontend-service' = 'frontend'
-        'tc-agro-identity-service' = 'identity-service'
-    }
-
     foreach ($img in $images) {
-        $deploymentName = $deploymentMap[$img.name]
-        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
-
-        # Check if deployment exists before attempting restart
-        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
-        if (-not $exists) {
-            Write-Host "   ⚠️  Deployment not found: $deploymentName (skipping)" -ForegroundColor $Color.Warning
-            continue
-        }
-
+        $deploymentName = $img.name -replace '^agro-', ''
         Write-Host "   Rolling restart: $deploymentName" -ForegroundColor $Color.Muted
         kubectl rollout restart deployment/$deploymentName -n agro-apps 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "   ✅ Restart triggered for $deploymentName" -ForegroundColor $Color.Success
         }
-        else {
-            Write-Host "   ⚠️  Restart command returned non-zero for $deploymentName" -ForegroundColor $Color.Warning
-        }
     }
-
-    # Wait for rollouts to complete with extended timeout
+    
+    # Wait for rollouts to complete
     Write-Host ""
-    Write-Host "⏳ Waiting for rollouts to complete (max 5 min per deployment)..." -ForegroundColor $Color.Info
-    
-    $rolloutErrors = 0
+    Write-Host "⏳ Waiting for rollouts to complete..." -ForegroundColor $Color.Info
     foreach ($img in $images) {
-        $deploymentName = $deploymentMap[$img.name]
-        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
-
-        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
-        if (-not $exists) { continue }
-
-        Write-Host "   Waiting for $deploymentName..." -ForegroundColor $Color.Muted
-        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=300s 2>&1 | Out-Null
+        $deploymentName = $img.name -replace '^agro-', ''
+        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=60s 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            # Verify pods are actually running
-            $readyPods = kubectl get pods -n agro-apps -l app=$deploymentName -o jsonpath='{.items[?(@.status.conditions[?(@.type==\"Ready\")].status==\"True\")].metadata.name}' 2>$null
-            if ($readyPods) {
-                Write-Host "   ✅ $deploymentName rolled out successfully (pods running)" -ForegroundColor $Color.Success
-            }
-            else {
-                Write-Host "   ⚠️  $deploymentName deployment ready but checking pods..." -ForegroundColor $Color.Warning
-                Start-Sleep -Seconds 10
-            }
+            Write-Host "   ✅ $deploymentName rolled out successfully" -ForegroundColor $Color.Success
         }
         else {
-            Write-Host "   ❌ $deploymentName rollout failed (check logs)" -ForegroundColor $Color.Error
-            $rolloutErrors++
+            Write-Host "   ⚠️  $deploymentName rollout timeout or error" -ForegroundColor $Color.Warning
         }
     }
-    
-    if ($rolloutErrors -gt 0) {
-        Write-Host ""
-        Write-Host "⚠️  Some deployments had issues. Check pod status:" -ForegroundColor $Color.Warning
-        Write-Host "   kubectl get pods -n agro-apps" -ForegroundColor $Color.Muted
-        Write-Host "   kubectl logs -n agro-apps -l app=<deployment-name>" -ForegroundColor $Color.Muted
-    }
-
-    # Normalize exit code so manager.ps1 doesn't flag false failures
-    $global:LASTEXITCODE = 0
 }
 elseif ($successfulImages -eq 0) {
     Write-Host "⚠️  No images were pushed; skipping ArgoCD sync." -ForegroundColor $Color.Warning

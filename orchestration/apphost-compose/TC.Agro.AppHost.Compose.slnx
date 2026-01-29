@@ -6,6 +6,12 @@
     <Project Path="../../services/identity-service/src/Core/TC.Agro.Identity.Application/TC.Agro.Identity.Application.csproj" />
     <Project Path="../../services/identity-service/src/Core/TC.Agro.Identity.Domain/TC.Agro.Identity.Domain.csproj" />
   </Folder>
+  <Folder Name="/Services/SensorIngest-Service/">
+    <Project Path="../../services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service/TC.Agro.SensorIngest.Service.csproj" />
+    <Project Path="../../services/sensor-ingest-service/src/Adapters/Outbound/TC.Agro.SensorIngest.Infrastructure/TC.Agro.SensorIngest.Infrastructure.csproj" />
+    <Project Path="../../services/sensor-ingest-service/src/Core/TC.Agro.SensorIngest.Application/TC.Agro.SensorIngest.Application.csproj" />
+    <Project Path="../../services/sensor-ingest-service/src/Core/TC.Agro.SensorIngest.Domain/TC.Agro.SensorIngest.Domain.csproj" />
+  </Folder>
   <Folder Name="/Shared/">
     <Project Path="../../common/src/TC.Agro.Contracts/TC.Agro.Contracts.csproj" />
     <Project Path="../../common/src/TC.Agro.SharedKernel/TC.Agro.SharedKernel.csproj" />
