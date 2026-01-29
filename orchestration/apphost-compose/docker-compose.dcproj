@@ -11,6 +11,8 @@
     <None Remove="services\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".env.example" />
+    <None Include=".env.k3d.example" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
