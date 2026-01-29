@@ -232,7 +232,7 @@ services:
   # OBSERVABILITY - Grafana (Dashboards UI)
   # =====================================================
   grafana:
-    image: grafana/grafana:12.3.1
+    image: grafana/grafana:12.3.2
     container_name: tc-agro-grafana
     restart: unless-stopped
     ports:
