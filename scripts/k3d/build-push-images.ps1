@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Builds Docker images and pushes to localhost:5000 registry.
-  
+
   Supports:
   - tc-agro-frontend-service (poc/frontend)
   - (future: microservices when they have Dockerfiles)
@@ -25,6 +25,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $images = @(
     @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
     @{ name = "tc-agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
+    @{ name = "tc-agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
 )
 
 $Color = @{
@@ -47,18 +48,18 @@ foreach ($img in $images) {
     $imageName = $img.name
     $imagePath = Join-Path $repoRoot $img.path
     $dockerfilePath = Join-Path $imagePath $img.dockerfile
-    
+
     Write-Host "=== Building $imageName ===" -ForegroundColor $Color.Info
     Write-Host "   Path: $imagePath" -ForegroundColor $Color.Muted
-    
+
     if (-not (Test-Path $dockerfilePath)) {
         Write-Host "   ⚠️  Dockerfile not found: $dockerfilePath" -ForegroundColor $Color.Warning
         continue
     }
-    
+
     $tag = "localhost:$registryPort/${imageName}:latest"
     $k3dTag = "k3d-localhost:$registryPort/${imageName}:latest"
-    
+
     # Determine build context: nested Dockerfiles build from repo root
     if ($img.dockerfile -like "*/*") {
         $buildContext = $repoRoot
@@ -71,19 +72,19 @@ foreach ($img in $images) {
 
     # Build with both tags (for local docker and k3d cluster reference)
     docker build -t $tag -t $k3dTag -f $dockerfilePath $buildContext
-    
+
     if ($LASTEXITCODE -ne 0) {
         Write-Host "   ❌ Build failed" -ForegroundColor $Color.Error
         continue
     }
-    
+
     Write-Host "   ✅ Built: $tag" -ForegroundColor $Color.Success
     Write-Host "   ✅ Tagged: $k3dTag (for in-cluster pulls)" -ForegroundColor $Color.Success
-    
+
     # Push only to localhost:5000 (k3d registry mirrors this internally as k3d-localhost:5000)
     Write-Host "   Pushing to registry..." -ForegroundColor $Color.Muted
     docker push $tag
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   ✅ Pushed: $tag" -ForegroundColor $Color.Success
         Write-Host "   ℹ️  k3d cluster will pull via: $k3dTag" -ForegroundColor $Color.Muted
@@ -92,7 +93,7 @@ foreach ($img in $images) {
     else {
         Write-Host "   ❌ Push failed" -ForegroundColor $Color.Error
     }
-    
+
     Write-Host ""
 }
 
@@ -111,7 +112,7 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     else {
         Write-Host "⚠️  sync-argocd.ps1 not found at $syncScript" -ForegroundColor $Color.Warning
     }
-    
+
     # Force pod restart to pull new images (since tag is always 'latest')
     Write-Host ""
     Write-Host "🔄 Forcing pod restart to pull new images..." -ForegroundColor $Color.Info
@@ -120,6 +121,7 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     $deploymentMap = @{
         'tc-agro-frontend-service' = 'frontend'
         'tc-agro-identity-service' = 'identity-service'
+        'tc-agro-sensor-ingest-service' = 'sensor-ingest-service'
     }
 
     foreach ($img in $images) {
@@ -146,7 +148,7 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
     # Wait for rollouts to complete with extended timeout
     Write-Host ""
     Write-Host "⏳ Waiting for rollouts to complete (max 5 min per deployment)..." -ForegroundColor $Color.Info
-    
+
     $rolloutErrors = 0
     foreach ($img in $images) {
         $deploymentName = $deploymentMap[$img.name]
@@ -173,7 +175,7 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
             $rolloutErrors++
         }
     }
-    
+
     if ($rolloutErrors -gt 0) {
         Write-Host ""
         Write-Host "⚠️  Some deployments had issues. Check pod status:" -ForegroundColor $Color.Warning
@@ -193,4 +195,3 @@ else {
 
 Write-Host "✅ Build & push complete!" -ForegroundColor $Color.Success
 Write-Host ""
-
