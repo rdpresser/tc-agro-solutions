@@ -77,7 +77,7 @@ npm run build
 |---------|------|--------------|
 | identity-service | 5001 | `services/identity-service/src/Agro.Identity.Api` |
 | farm-service | 5002 | `services/farm-service/src/Agro.Farm.Api` |
-| sensor-ingest-service | 5003 | `services/sensor-ingest-service/src/Agro.Sensor.Ingest.Api` |
+| sensor-ingest-service | 5003 | `services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service` |
 | analytics-worker | (internal) | `services/analytics-worker/src/Agro.Analytics.Worker` |
 | dashboard-service | 5004 | `services/dashboard-service/src/Agro.Dashboard.Api` |
 
@@ -142,14 +142,12 @@ public async Task<Guid> Handle(CreateSensorReadingCommand command, CancellationT
 ### Project Structure per Service
 ```
 src/
-├── Agro.{ServiceName}.Api/
-│   ├── Endpoints/
-│   ├── Features/           # Commands/Queries handlers
-│   ├── Domain/
-│   ├── Infrastructure/     # DbContext, Repositories
-│   └── Program.cs
-├── Agro.{ServiceName}.Domain/
-└── Agro.{ServiceName}.Tests/
+├── Adapters/
+│   ├── Inbound/TC.Agro.{ServiceName}.Service/
+│   └── Outbound/TC.Agro.{ServiceName}.Infrastructure/
+├── Core/
+│   ├── TC.Agro.{ServiceName}.Application/
+│   └── TC.Agro.{ServiceName}.Domain/
 ```
 
 ## Technology Stack

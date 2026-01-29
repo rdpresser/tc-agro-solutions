@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sensor-ingest-api
+  name: sensor-ingest-service
   namespace: agro-apps
   labels:
-    app: sensor-ingest-api
+    app: sensor-ingest-service
     component: ingest
 spec:
   selector:
     matchLabels:
-      app: sensor-ingest-api
+      app: sensor-ingest-service
   template:
     metadata:
       labels:
-        app: sensor-ingest-api
+        app: sensor-ingest-service
         component: ingest
     spec:
       hostAliases:
@@ -21,9 +21,9 @@ spec:
         hostnames:
         - "host.docker.internal"
       containers:
-      - name: sensor-ingest-api
+      - name: sensor-ingest-service
         image: k3d-localhost:5000/tc-agro-sensor-ingest-service:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8080

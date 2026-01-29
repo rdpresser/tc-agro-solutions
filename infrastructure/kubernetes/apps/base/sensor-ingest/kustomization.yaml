@@ -5,6 +5,7 @@ namespace: agro-apps
 
 resources:
   - deployment.yaml
+  - configmap.yaml
   - service.yaml
   - ingressroute.yaml
 
