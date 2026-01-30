@@ -44,13 +44,17 @@ exporters:
     tls:
       insecure: true
 
-  # Loki exporter for logs (via OTLP HTTP)
+  # Loki exporter for logs (via OTLP HTTP endpoint - Loki 2.9+ supports OTLP)
   otlphttp/loki:
     endpoint: "http://loki:3100/otlp"
+    tls:
+      insecure: true
     headers:
-      Content-Type: "application/protobuf"
-    compression: gzip
-    timeout: 10s
+      X-Scope-OrgID: "1"
+
+  # Debug exporter for development troubleshooting
+  debug:
+    verbosity: detailed
 
 service:
   pipelines:
@@ -66,11 +70,11 @@ service:
       processors: [memory_limiter, batch, attributes]
       exporters: [prometheus]
 
-    # Logs pipeline - send to Loki via OTLP HTTP
+    # Logs pipeline - OTLP → Loki (centralized via OTLP HTTP endpoint)
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch, attributes]
-      exporters: [otlphttp/loki]
+      exporters: [otlphttp/loki, debug]
 
   # Extensions disabled for local development
   # extensions:

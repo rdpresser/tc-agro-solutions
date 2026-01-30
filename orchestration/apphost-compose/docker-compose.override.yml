@@ -129,9 +129,6 @@ services:
       - Serilog__MinimumLevel__Override__Microsoft=Information
       - Serilog__MinimumLevel__Override__System=Information
 
-      # Console output for debugging
-      - Serilog__WriteTo__0__Name=Console
-
       # Telemetry (Grafana Agent) - Use value from .env
       - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
 

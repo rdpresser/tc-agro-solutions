@@ -24,12 +24,15 @@ datasources:
     editable: true
     jsonData:
       maxLines: 1000
+      httpHeaderName1: X-Scope-OrgID
       derivedFields:
         - datasourceUid: tempo
           matcherRegex: "traceID=(\\w+)"
           name: TraceID
           url: "$${__value.raw}"
-    version: 1
+    secureJsonData:
+      httpHeaderValue1: "1"
+    version: 2
 
   # Tempo - Traces
   - name: Tempo

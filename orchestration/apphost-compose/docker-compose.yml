@@ -344,15 +344,15 @@ services:
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
       # .NET Configuration - Telemetry (Grafana Agent)
-      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
-      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
-      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort}
-      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort}
-      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled}
-      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint}
-      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol}
-      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds}
-      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure}
+      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
+      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
+      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
+      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
+      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
+      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
+      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
+      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
+      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
     volumes:
       # Hot reload support (optional - comment if not needed)
       # - ../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service:/app:ro
