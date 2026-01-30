@@ -26,9 +26,16 @@ datasources:
       maxLines: 1000
       httpHeaderName1: X-Scope-OrgID
       derivedFields:
+        # Extract trace_id from Serilog JSON output (WithSpan() enricher)
+        # Matches: "trace_id":"0af7651916cd43dd8448eb211c80319c"
         - datasourceUid: tempo
-          matcherRegex: "traceID=(\\w+)"
+          matcherRegex: '"trace_id":"([a-f0-9]+)"'
           name: TraceID
+          url: "$${__value.raw}"
+          # Optional: extract by span_id if trace not found
+        - datasourceUid: tempo
+          matcherRegex: '"span_id":"([a-f0-9]+)"'
+          name: SpanID
           url: "$${__value.raw}"
     secureJsonData:
       httpHeaderValue1: "1"
