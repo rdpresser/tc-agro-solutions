@@ -25,6 +25,14 @@ scrape_configs:
           service: 'identity-service'
     metrics_path: '/metrics'
 
+  # Tempo metrics_generator (for Service Map, Rate, Drilldown)
+  - job_name: 'tempo-metrics'
+    static_configs:
+      - targets: ['tempo:3200']
+        labels:
+          service: 'tempo'
+    metrics_path: '/metrics'
+
   # PostgreSQL exporter (if enabled in future)
   # - job_name: 'postgres'
   #   static_configs:

@@ -158,7 +158,7 @@ services:
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
     ports:
-      - "${TEMPO_PORT}:3200" # HTTP API
+      - "${TEMPO_PORT}:3200" # HTTP API + metrics_generator (/metrics endpoint)
       # OTLP ports exposed via OTEL Collector (not directly from Tempo)
     volumes:
       - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro

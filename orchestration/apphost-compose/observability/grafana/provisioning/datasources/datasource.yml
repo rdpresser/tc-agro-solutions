@@ -51,16 +51,16 @@ datasources:
         spanEndTimeShift: '1h'
         filterByTraceID: false
         filterBySpanID: false
-      # serviceMap disabled - requires metrics_generator
-      # serviceMap:
-      #   datasourceUid: prometheus
+      # serviceMap enabled - metrics_generator now active
+      serviceMap:
+        datasourceUid: prometheus
       search:
         hide: false
       nodeGraph:
         enabled: true
-      # Disable metrics queries that require metrics_generator
+      # Enable metrics queries (metrics_generator active)
       tracesToMetrics:
-        datasourceUid: null
+        datasourceUid: prometheus
       lokiSearch:
-        datasourceUid: null
+        datasourceUid: loki
     version: 1

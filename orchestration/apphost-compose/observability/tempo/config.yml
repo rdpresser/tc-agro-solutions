@@ -41,6 +41,25 @@ compactor:
 querier:
   max_concurrent_queries: 20
 
+# ==============================
+# 🔥 METRICS GENERATOR (for Drilldown, Service Map, Rate queries)
+# ==============================
+metrics_generator:
+  ring:
+    kvstore:
+      store: inmemory
+  processor:
+    service_graphs:
+      dimensions: []
+    span_metrics:
+      dimensions: []
+  registry:
+    external_labels:
+      cluster: tc-agro-local
+      environment: development
+  storage:
+    path: /var/tempo/metrics
+
 storage:
   trace:
     backend: local
