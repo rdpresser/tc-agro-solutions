@@ -38,7 +38,7 @@ platform/
 │       └── platform-observability.yaml  # Installs: Prometheus, Grafana, Loki, Tempo, OTel
 ├── base/                                # Kustomize base (namespaces, ingress)
 │   ├── namespaces/
-│       └── namespaces.yaml              # argocd, monitoring, agro-apps
+│       └── namespaces.yaml              # argocd, observability, agro-apps
 │   ├── ingress/
 │   │   └── argocd-ingressroute.yaml     # Traefik IngressRoute → localhost/argocd
 │   └── kustomization.yaml
@@ -186,7 +186,7 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring
+    namespace: observability
 
   syncPolicy:
     automated:
@@ -220,12 +220,12 @@ git push origin main
 
 ## 📊 Platform Components
 
-| Component                   | Purpose                             | Namespace  | Helm Chart                                 |
-| --------------------------- | ----------------------------------- | ---------- | ------------------------------------------ |
-| **kube-prometheus-stack**   | Prometheus + Grafana + AlertManager | monitoring | prometheus-community/kube-prometheus-stack |
-| **Loki**                    | Log aggregation                     | monitoring | grafana/loki                               |
-| **Tempo**                   | Distributed tracing                 | monitoring | grafana/tempo                              |
-| **OpenTelemetry Collector** | Telemetry hub (OTLP)                | monitoring | open-telemetry/opentelemetry-collector     |
+| Component                   | Purpose                             | Namespace     | Helm Chart                                 |
+| --------------------------- | ----------------------------------- | ------------- | ------------------------------------------ |
+| **kube-prometheus-stack**   | Prometheus + Grafana + AlertManager | observability | prometheus-community/kube-prometheus-stack |
+| **Loki**                    | Log aggregation                     | observability | grafana/loki                               |
+| **Tempo**                   | Distributed tracing                 | observability | grafana/tempo                              |
+| **OpenTelemetry Collector** | Telemetry hub (OTLP)                | observability | open-telemetry/opentelemetry-collector     |
 
 ---
 

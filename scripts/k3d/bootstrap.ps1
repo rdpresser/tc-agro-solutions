@@ -14,7 +14,9 @@
   - Loki
   - Tempo
   - OpenTelemetry Collector
-  - KEDA
+
+  Optional (disabled by default):
+  - KEDA (event-driven autoscaling) - NOT USED in current project
 
   Note: Traefik is k3s built-in (no Helm install needed)
 
@@ -48,6 +50,9 @@ $appsAgentMemory = "7g"      # agent-2: .NET microservices (business logic)
 $argocdNamespace = "argocd"
 $argocdAdminPassword = "Argo@123!"
 
+# Optional components (disabled by default)
+$script:installKeda = $false  # KEDA is NOT USED in current project - kept for future reference
+
 # Colors
 $Color = @{
   Success = "Green"
@@ -64,6 +69,31 @@ function Write-Step {
   param([string]$Message)
   Write-Host ""
   Write-Host "=== $Message ===" -ForegroundColor $Color.Info
+}
+
+function Prompt-OptionalComponents {
+  Write-Step "Optional Components Configuration"
+  
+  Write-Host ""
+  Write-Host " ╔══════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Warning
+  Write-Host " ║  KEDA (Kubernetes Event-Driven Autoscaling)                   ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Status: NOT USED in current project                         ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Purpose: Scale pods based on events (RabbitMQ queue, etc.)  ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Note: Can be added later if needed                          ║" -ForegroundColor $Color.Warning
+  Write-Host " ╚══════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Warning
+  Write-Host ""
+  
+  $response = Read-Host " Install KEDA? (y/N - default: N)"
+  if ($response -match "^[Yy](es)?$") {
+    $script:installKeda = $true
+    Write-Host " ✓ KEDA will be installed" -ForegroundColor $Color.Success
+  }
+  else {
+    $script:installKeda = $false
+    Write-Host " ✓ KEDA will NOT be installed (recommended)" -ForegroundColor $Color.Muted
+  }
+  
+  Write-Host ""
 }
 
 function Test-Prerequisites {
@@ -414,18 +444,38 @@ function Apply-GitOpsBootstrap {
   if (Test-Path $bootstrapPlatformFile) {
     kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
     Write-Host "✅ Platform bootstrap applied (infrastructure components)" -ForegroundColor $Color.Success
-    Write-Host " ℹ️ ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA" -ForegroundColor $Color.Info
-   
-    # KEDA CRD Known Issue: Helm adds oversized annotations (>262KB limit)
-    # Patch CRD to remove problematic metadata after installation
-    Write-Host " ⏳ Waiting for KEDA CRD to stabilize..." -ForegroundColor $Color.Info
-    Start-Sleep -Seconds 15
-   
-    Write-Host " 🔧 Applying KEDA CRD metadata fix..." -ForegroundColor $Color.Info
-    kubectl patch crd scaledjobs.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    kubectl patch crd scaledobjects.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    kubectl patch crd triggers.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    Write-Host "✅ KEDA CRD metadata patched (removed oversized annotations)" -ForegroundColor $Color.Success
+    Write-Host " ℹ️ ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel" -ForegroundColor $Color.Info
+    
+    # Optional: Install KEDA if user requested
+    if ($script:installKeda) {
+      Write-Host " ℹ️ Installing KEDA (user requested)..." -ForegroundColor $Color.Info
+      
+      # Create KEDA namespace
+      kubectl create namespace keda --dry-run=client -o yaml | kubectl apply -f - 2>&1 | Out-Null
+      
+      # Install KEDA via Helm
+      helm repo add kedacore https://kedacore.github.io/charts 2>$null
+      helm repo update 2>&1 | Out-Null
+      helm upgrade --install keda kedacore/keda -n keda --wait --timeout=3m 2>&1 | Out-Null
+      
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ KEDA installed successfully" -ForegroundColor $Color.Success
+        
+        # KEDA CRD Known Issue: Helm adds oversized annotations (>262KB limit)
+        Write-Host " 🔧 Applying KEDA CRD metadata fix..." -ForegroundColor $Color.Info
+        Start-Sleep -Seconds 5
+        kubectl patch crd scaledjobs.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        kubectl patch crd scaledobjects.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        kubectl patch crd triggerauthentications.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        Write-Host "✅ KEDA CRD metadata patched" -ForegroundColor $Color.Success
+      }
+      else {
+        Write-Host "⚠️ KEDA installation had issues (non-critical)" -ForegroundColor $Color.Warning
+      }
+    }
+    else {
+      Write-Host " ℹ️ KEDA skipped (not installed - use bootstrap prompt to enable)" -ForegroundColor $Color.Muted
+    }
   }
   else {
     Write-Host "⚠️ Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning
@@ -477,6 +527,7 @@ Write-Host "║ GITOPS BOOTSTRAP - K3D CLUSTER + ARGOCD ║" -ForegroundColor $C
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
 
 Test-Prerequisites
+Prompt-OptionalComponents
 Stop-PortForwards
 New-LocalRegistry
 Remove-ExistingCluster
@@ -521,7 +572,20 @@ Write-Host " Password: $argocdAdminPassword" -ForegroundColor $Color.Muted
 Write-Host " URL: http://argocd.local (after updating hosts file)" -ForegroundColor $Color.Muted
 
 Write-Host ""
-Write-Host "🔗 NEXT STEPS" -ForegroundColor $Color.Info
+Write-Host "� INSTALLED COMPONENTS" -ForegroundColor $Color.Info
+Write-Host " ✅ Prometheus + Grafana (monitoring)" -ForegroundColor $Color.Success
+Write-Host " ✅ Loki (logs)" -ForegroundColor $Color.Success
+Write-Host " ✅ Tempo (traces)" -ForegroundColor $Color.Success
+Write-Host " ✅ OpenTelemetry Collector (telemetry)" -ForegroundColor $Color.Success
+if ($script:installKeda) {
+  Write-Host " ✅ KEDA (event-driven autoscaling)" -ForegroundColor $Color.Success
+}
+else {
+  Write-Host " ⏭️ KEDA (skipped - not used in current project)" -ForegroundColor $Color.Muted
+}
+
+Write-Host ""
+Write-Host "�� NEXT STEPS" -ForegroundColor $Color.Info
 Write-Host " 1) Watch ArgoCD sync platform stack" -ForegroundColor $Color.Muted
 Write-Host "    kubectl get applications -n argocd --watch" -ForegroundColor $Color.Success
 Write-Host ""

@@ -6,7 +6,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: monitoring
+  name: observability
 ---
 apiVersion: v1
 kind: Namespace

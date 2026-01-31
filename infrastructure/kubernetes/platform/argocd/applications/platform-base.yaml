@@ -26,6 +26,6 @@ spec:
       - CreateNamespace=true
   
   # This Application manages:
-  # - Namespaces (agro-apps, monitoring)
+  # - Namespaces (agro-apps, observability)
   # - ArgoCD IngressRoute (http://localhost/argocd/)
   # - Middlewares (strip-argocd-prefix, compress)
