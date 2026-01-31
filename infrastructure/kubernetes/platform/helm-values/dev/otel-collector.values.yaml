@@ -43,17 +43,18 @@ config:
     debug:
       verbosity: detailed
     
-    # Export to Docker Compose observability stack via host.k3d.internal
+    # Export to Docker Compose observability stack via Docker bridge gateway (172.19.0.1)
+    # IMPORTANT: k3d pods cannot resolve host.k3d.internal - must use bridge IP
     otlp/tempo:
-      endpoint: host.k3d.internal:3200
+      endpoint: 172.19.0.1:3200
       tls:
         insecure: true
     
     loki:
-      endpoint: http://host.k3d.internal:3100/loki/api/v1/push
+      endpoint: http://172.19.0.1:3100/loki/api/v1/push
     
     prometheus:
-      endpoint: host.k3d.internal:9090
+      endpoint: 172.19.0.1:9090
       namespace: tc_agro
       send_timestamps: true
       metric_expiration: 10m
