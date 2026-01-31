@@ -11,9 +11,4 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: keda
----
-apiVersion: v1
-kind: Namespace
-metadata:
   name: agro-apps

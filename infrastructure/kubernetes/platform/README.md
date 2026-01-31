@@ -11,7 +11,6 @@ This folder contains Kubernetes manifests for platform infrastructure components
 - Loki (logs)
 - Tempo (traces)
 - OpenTelemetry Collector (telemetry hub)
-- KEDA (autoscaling)
 - ArgoCD (GitOps controller)
 
 🟣 **Note:** For Azure production deployment (future), see [terraform/](../../terraform/) directory.
@@ -27,8 +26,7 @@ platform/
 │       ├── kube-prometheus-stack.values.yaml
 │       ├── loki.values.yaml
 │       ├── tempo.values.yaml
-│       ├── otel-collector.values.yaml
-│       └── keda.values.yaml
+│       └── otel-collector.values.yaml
 │
 ├── argocd/                              # ArgoCD manifests
 │   ├── bootstrap/
@@ -37,11 +35,10 @@ platform/
 │   ├── projects/
 │   │   └── project-platform.yaml        # Platform Project
 │   └── applications/
-│       ├── platform-observability.yaml  # Installs: Prometheus, Grafana, Loki, Tempo, OTel
-│       └── platform-autoscaling.yaml    # Installs: KEDA
+│       └── platform-observability.yaml  # Installs: Prometheus, Grafana, Loki, Tempo, OTel
 ├── base/                                # Kustomize base (namespaces, ingress)
 │   ├── namespaces/
-│       └── namespaces.yaml              # argocd, monitoring, keda, agro-apps
+│       └── namespaces.yaml              # argocd, monitoring, agro-apps
 │   ├── ingress/
 │   │   └── argocd-ingressroute.yaml     # Traefik IngressRoute → localhost/argocd
 │   └── kustomization.yaml
@@ -64,10 +61,8 @@ scripts/k3d/bootstrap.ps1
   └── Applies: argocd/bootstrap/bootstrap-apps.yaml (applications)
 
 ArgoCD reads: argocd/applications/
-  ├── platform-observability.yaml
-  │   └── Installs: Prometheus, Grafana, Loki, Tempo, OTel
-  └── platform-autoscaling.yaml
-      └── Installs: KEDA
+  └── platform-observability.yaml
+      └── Installs: Prometheus, Grafana, Loki, Tempo, OTel
 ```
 
 ---
@@ -231,7 +226,6 @@ git push origin main
 | **Loki**                    | Log aggregation                     | monitoring | grafana/loki                               |
 | **Tempo**                   | Distributed tracing                 | monitoring | grafana/tempo                              |
 | **OpenTelemetry Collector** | Telemetry hub (OTLP)                | monitoring | open-telemetry/opentelemetry-collector     |
-| **KEDA**                    | Event-driven autoscaling            | keda       | kedacore/keda                              |
 
 ---
 
