@@ -9,6 +9,12 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  otlp/from-k3d:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:14317
+      http:
+        endpoint: 0.0.0.0:14318
 
 processors:
   batch:
@@ -60,19 +66,19 @@ service:
   pipelines:
     # Traces pipeline
     traces:
-      receivers: [otlp]
+      receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes]
       exporters: [otlp/tempo]
 
     # Metrics pipeline
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes]
       exporters: [prometheus]
 
     # Logs pipeline - OTLP → Loki (centralized via OTLP HTTP endpoint)
     logs:
-      receivers: [otlp]
+      receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes]
       exporters: [otlphttp/loki, debug]
 

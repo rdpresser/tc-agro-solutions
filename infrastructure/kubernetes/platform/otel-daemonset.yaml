@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-agent-config
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 256
+        spike_limit_mib: 64
+
+      attributes:
+        actions:
+          - key: environment
+            value: development
+            action: insert
+          - key: cluster
+            value: tc-agro-local
+            action: insert
+
+    exporters:
+      otlphttp/docker:
+        endpoint: "http://host.k3d.internal:14318"
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          exporters: [otlphttp/docker]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          exporters: [otlphttp/docker]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          exporters: [otlphttp/docker]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector-agent
+  template:
+    metadata:
+      labels:
+        app: otel-collector-agent
+        component: observability
+        tier: collector
+        strategy: daemonset
+    spec:
+      containers:
+        - name: otel-collector-agent
+          image: otel/opentelemetry-collector-contrib:0.144.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--config=/etc/otelcol-contrib/otel-collector-config.yaml"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol-contrib
+      volumes:
+        - name: otel-config
+          configMap:
+            name: otel-collector-agent-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+spec:
+  selector:
+    app: otel-collector-agent
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+  type: ClusterIP

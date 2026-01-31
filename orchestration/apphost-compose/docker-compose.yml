@@ -216,6 +216,8 @@ services:
     ports:
       - "${OTEL_COLLECTOR_PORT}:4317" # OTLP gRPC
       - "${OTEL_COLLECTOR_HTTP_PORT}:4318" # OTLP HTTP
+      - "0.0.0.0:14317:4317" # k3d DaemonSet → Docker OTEL (gRPC)
+      - "0.0.0.0:14318:4318" # k3d DaemonSet → Docker OTEL (HTTP)
       - "8889:8889" # Prometheus metrics exporter
       - "13133:13133" # Health check
     volumes:
@@ -349,6 +351,11 @@ services:
       - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
       - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
       - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
+      # =====================================================
+      # ESTRATÉGIA DAEMONSET: Apps k3d usam DaemonSet agent
+      # - Antigo (Docker direto): http://otel-collector:4318
+      # - Novo (k3d DaemonSet): http://otel-collector.observability:4318 (definido em .env)
+      # =====================================================
       - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
       - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
       - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
