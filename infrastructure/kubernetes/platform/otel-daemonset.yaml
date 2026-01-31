@@ -41,7 +41,7 @@ data:
 
     exporters:
       otlphttp/docker:
-        endpoint: "http://host.k3d.internal:14318"
+        endpoint: "http://172.19.0.1:14318"
         tls:
           insecure: true
 

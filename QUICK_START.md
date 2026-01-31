@@ -66,9 +66,9 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 
 ### Backend Services Accessible (Inside Pods)
 
-- ✅ **PostgreSQL** (host.k3d.internal:5432)
-- ✅ **Redis** (host.k3d.internal:6379)
-- ✅ **RabbitMQ** (host.k3d.internal:5672)
+- ✅ **PostgreSQL** (172.19.0.1:5432) - Docker bridge gateway
+- ✅ **Redis** (172.19.0.1:6379) - Docker bridge gateway
+- ✅ **RabbitMQ** (172.19.0.1:5672) - Docker bridge gateway
 
 ### ArgoCD Applications
 
@@ -164,9 +164,9 @@ kubectl logs <pod-name> -n agro-apps
 ### Database not accessible from pod?
 
 ```powershell
-# Verify host.k3d.internal resolves inside pod
-kubectl exec <pod-name> -n agro-apps -- sh -c 'getent hosts host.k3d.internal'
-# Expected: 192.168.65.254  host.k3d.internal
+# Verify Docker bridge gateway is reachable from pod
+kubectl exec <pod-name> -n agro-apps -- sh -c 'timeout 2 bash -c "cat < /dev/null > /dev/tcp/172.19.0.1/5432" && echo "OK" || echo "FAIL"'
+# Expected: OK
 
 # Test connection to PostgreSQL
 kubectl exec <pod-name> -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/5432" && echo "PostgreSQL: OPEN"'

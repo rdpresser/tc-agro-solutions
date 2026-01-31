@@ -262,8 +262,8 @@ function Test-ConfigMap {
     try {
         $hostValue = kubectl get configmap identity-config -n agro-apps -o jsonpath='{.data.Database__Postgres__Host}' 2>&1
         
-        if ($hostValue -eq "host.k3d.internal") {
-            Write-Test "ConfigMap: Database__Postgres__Host = host.k3d.internal" "PASS"
+        if ($hostValue -eq "172.19.0.1") {
+            Write-Test "ConfigMap: Database__Postgres__Host = 172.19.0.1 (Docker bridge)" "PASS"
         }
         else {
             Write-Test "ConfigMap: Database__Postgres__Host = $hostValue" "FAIL"
