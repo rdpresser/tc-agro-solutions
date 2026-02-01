@@ -40,7 +40,7 @@ data:
             action: insert
 
     exporters:
-      otlphttp/docker:
+      otlp_http/docker:
         endpoint: "http://host.k3d.internal:4318"
         tls:
           insecure: true
@@ -50,15 +50,15 @@ data:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlphttp/docker]
+          exporters: [otlp_http/docker]
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlphttp/docker]
+          exporters: [otlp_http/docker]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlphttp/docker]
+          exporters: [otlp_http/docker]
 ---
 apiVersion: apps/v1
 kind: DaemonSet
