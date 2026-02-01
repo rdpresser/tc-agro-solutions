@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: agro-apps
 
 resources:
+  - configmap.yaml
   - deployment.yaml
   - service.yaml
   - servicemonitor.yaml
