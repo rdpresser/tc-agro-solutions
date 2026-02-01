@@ -2,7 +2,22 @@
 
 **Location:** `scripts/`  
 **Purpose:** Automated Helm chart version checking and updating  
-**Date:** January 17, 2026
+**Date:** February 1, 2026
+
+---
+
+## ⚠️ Current Status
+
+**Important:** The full observability stack (Prometheus, Grafana, Loki, Tempo) now runs in **Docker Compose**, not in the k3d cluster.
+
+**In k3d cluster:**
+
+- OTEL DaemonSet (OpenTelemetry Collector) - collects from pods, exports to Docker Compose
+- KEDA (optional) - event-driven autoscaling
+
+**In Docker Compose:**
+
+- Prometheus, Grafana, Loki, Tempo, OTEL Collector (central)
 
 ---
 
@@ -39,10 +54,10 @@ Check if newer versions of Helm charts are available without making any changes.
 ### Output Example
 
 ```
-📊 Checking: kube-prometheus-stack
-   Current version:  65.0.0
-   Latest version:   81.0.0
-   App version:      v0.88.0
+📊 Checking: opentelemetry-collector
+   Current version:  0.105.0
+   Latest version:   0.143.0
+   App version:      v0.140.0
    ⚠️  UPDATE AVAILABLE
 ```
 
@@ -87,19 +102,16 @@ Automatically update `targetRevision` values in ArgoCD application manifests.
 
 ---
 
-## 📊 Current Versions (as of January 17, 2026)
+## 📊 Current Versions (as of February 1, 2026)
 
-| Chart                       | Current | Latest  | Gap | Priority |
-| --------------------------- | ------- | ------- | --- | -------- |
-| **kube-prometheus-stack**   | 65.0.0  | 81.0.0  | +16 | Medium   |
-| **loki**                    | 6.16.0  | 6.49.0  | +33 | Medium   |
-| **tempo**                   | 1.10.3  | 1.24.3  | +14 | Low      |
-| **opentelemetry-collector** | 0.105.0 | 0.143.0 | +38 | Low      |
-| **keda**                    | 2.15.1  | 2.18.3  | +3  | Low      |
+| Chart                       | Current | Latest  | Status   | Notes                      |
+| --------------------------- | ------- | ------- | -------- | -------------------------- |
+| **opentelemetry-collector** | 0.105.0 | 0.143.0 | Optional | DaemonSet in k3d           |
+| **keda**                    | 2.15.1  | 2.18.3  | Optional | Future autoscaling support |
 
 ### Analysis
 
-All charts have updates available, but these are **minor/patch updates** within the same major version (no breaking changes expected).
+Only two charts are managed in k3d. The full observability stack (Prometheus, Grafana, Loki, Tempo) now runs in Docker Compose.
 
 ---
 
@@ -123,10 +135,10 @@ All charts have updates available, but these are **minor/patch updates** within 
 
 **After February 27, 2026:**
 
-1. ✅ Update all charts to latest minor versions
-2. ✅ Test in staging environment
-3. ✅ Review release notes for breaking changes
-4. ✅ Apply to production
+1. ✅ Update OTEL DaemonSet to latest version
+2. ✅ Update KEDA if using autoscaling
+3. ✅ Test in staging environment
+4. ✅ Review release notes for breaking changes
 
 ---
 
@@ -145,13 +157,13 @@ All charts have updates available, but these are **minor/patch updates** within 
 .\scripts\update-helm-versions.ps1 -Apply
 
 # 4. Review changes
-git diff infrastructure/kubernetes/platform/argocd/applications/
+git diff infrastructure/kubernetes/platform/
 
 # 5. Test locally (if cluster is running)
 kubectl get applications -n argocd
 
 # 6. Commit if satisfied
-git add infrastructure/kubernetes/platform/argocd/applications/
+git add infrastructure/kubernetes/platform/
 git commit -m "chore: update Helm chart versions to latest releases"
 git push
 
@@ -159,15 +171,14 @@ git push
 kubectl get applications -n argocd -w
 
 # 8. Verify pods
-kubectl get pods -n monitoring
-kubectl get pods -n keda
+kubectl get pods -n observability
 ```
 
 ### Rollback if Needed
 
 ```powershell
 # Option 1: Restore from backup
-Copy-Item infrastructure/kubernetes/platform/argocd/applications/platform-observability.yaml.backup-* infrastructure/kubernetes/platform/argocd/applications/platform-observability.yaml -Force
+Copy-Item *.backup-* . -Force
 
 # Option 2: Git revert
 git revert <commit-hash>
@@ -181,20 +192,22 @@ git push
 ### ArgoCD Application Manifests
 
 ```
-infrastructure/kubernetes/platform/argocd/applications/
-├── platform-observability.yaml  ← 4 charts (Prometheus, Loki, Tempo, OTel)
-└── platform-autoscaling.yaml    ← 1 chart (KEDA)
+infrastructure/kubernetes/platform/
+├── helm-values/dev/
+│   └── otel-collector.values.yaml    ← OTEL DaemonSet config
+└── argocd/applications/
+    └── platform-base.yaml            ← OTEL DaemonSet + namespaces
 ```
 
-### Backup Files (created by update script)
+### Note on Architecture Change
 
-```
-infrastructure/kubernetes/platform/argocd/applications/
-├── platform-observability.yaml.backup-20260117-145030
-└── platform-autoscaling.yaml.backup-20260117-145030
-```
+Previously, the scripts managed 5 charts (Prometheus, Grafana, Loki, Tempo, OTEL, KEDA) installed in-cluster.
 
-**Note:** Backup files are safe to delete after verifying updates work correctly.
+**Current architecture:**
+
+- Full observability runs in **Docker Compose** (orchestration/apphost-compose/)
+- Only **OTEL DaemonSet** runs in k3d (collects from pods → exports to Docker)
+- **KEDA** is optional for future autoscaling
 
 ---
 
@@ -225,7 +238,7 @@ helm repo update
 
 ```powershell
 kubectl get applications -n argocd
-kubectl describe application platform-observability -n argocd
+kubectl describe application platform-base -n argocd
 ```
 
 ### ArgoCD stuck in "OutOfSync"
@@ -233,7 +246,7 @@ kubectl describe application platform-observability -n argocd
 **Solution:** Force refresh
 
 ```powershell
-kubectl patch application platform-observability -n argocd \
+kubectl patch application platform-base -n argocd \
   --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
 ```
 
@@ -243,6 +256,7 @@ kubectl patch application platform-observability -n argocd \
 
 - [HELM_VERSIONS.md](../docs/HELM_VERSIONS.md) - Detailed version management guide
 - [Local Setup Guide](../docs/development/local-setup.md) - k3d cluster setup
+- [Docker Compose Observability](../orchestration/apphost-compose/OBSERVABILITY_STACK_SETUP.md) - Full stack setup
 - [ArgoCD Documentation](https://argo-cd.readthedocs.io/en/stable/)
 
 ---
@@ -253,8 +267,7 @@ kubectl patch application platform-observability -n argocd \
 2. **Always dry run first** - See what would change before applying
 3. **Read release notes** - Especially for major version changes
 4. **Test locally** - Use k3d cluster before pushing to shared environments
-5. **One chart at a time** - Update charts individually to isolate issues
-6. **Monitor after updates** - Watch pod status for 10-15 minutes
+5. **Monitor after updates** - Watch pod status for 10-15 minutes
 
 ---
 
@@ -270,6 +283,6 @@ kubectl patch application platform-observability -n argocd \
 
 ---
 
-> **Last Updated:** January 17, 2026  
-> **Status:** ✅ Scripts working, 5 updates available  
-> **Recommendation:** Keep current versions for Phase 5, update post-hackathon
+> **Last Updated:** February 1, 2026  
+> **Status:** ✅ Scripts updated for new architecture  
+> **Note:** Observability stack runs in Docker Compose, only OTEL DaemonSet in k3d

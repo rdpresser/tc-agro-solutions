@@ -66,9 +66,9 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 
 ### Backend Services Accessible (Inside Pods)
 
-- ✅ **PostgreSQL** (host.k3d.internal:5432) - k3d DNS resolution
-- ✅ **Redis** (host.k3d.internal:6379) - k3d DNS resolution
-- ✅ **RabbitMQ** (host.k3d.internal:5672) - k3d DNS resolution
+- ✅ **PostgreSQL** (tc-agro-postgres:5432) - Docker container name
+- ✅ **Redis** (tc-agro-redis:6379) - Docker container name
+- ✅ **RabbitMQ** (tc-agro-rabbitmq:5672) - Docker container name
 - ✅ **OTEL Collector** (otel-collector-agent.observability:4317) - DaemonSet in cluster
 
 ### ArgoCD Applications
@@ -163,12 +163,12 @@ kubectl logs <pod-name> -n agro-apps
 ### Database not accessible from pod?
 
 ```powershell
-# Verify host.k3d.internal DNS resolves from pod
-kubectl exec <pod-name> -n agro-apps -- sh -c 'nslookup host.k3d.internal'
-# Expected: DNS resolution to Docker bridge IP
+# Verify container name resolves from pod (k3d shares Docker network)
+kubectl exec <pod-name> -n agro-apps -- sh -c 'getent hosts tc-agro-postgres'
+# Expected: IP address of the PostgreSQL container
 
-# Test connection to PostgreSQL
-kubectl exec <pod-name> -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/5432" && echo "PostgreSQL: OPEN"'
+# Test connection to PostgreSQL using container name
+kubectl exec <pod-name> -n agro-apps -- sh -c 'nc -zv tc-agro-postgres 5432'
 ```
 
 ### Services not communicating?
@@ -205,12 +205,12 @@ All critical configuration files are documented below. **DO NOT** modify these u
 Controls database and service connections:
 
 ```yaml
-Database__Postgres__Host: "host.k3d.internal" # ← k3d specific
-Cache__Redis__Host: "host.k3d.internal" # ← k3d specific
-Messaging__RabbitMQ__Host: "host.k3d.internal" # ← k3d specific
+Database__Postgres__Host: "tc-agro-postgres" # ← Docker container name
+Cache__Redis__Host: "tc-agro-redis" # ← Docker container name
+Messaging__RabbitMQ__Host: "tc-agro-rabbitmq" # ← Docker container name
 ```
 
-⚠️ **Critical:** These hostnames are k3d-specific. If migrating to Docker Desktop, change to `host.docker.internal`. If migrating to Azure AKS, change to Azure service endpoints.
+⚠️ **Critical:** These hostnames are Docker container names. k3d cluster joins the `tc-agro-network` Docker network, allowing pods to resolve container names directly. If migrating to Azure AKS, change to Azure service endpoints.
 
 ### Deployment: identity-service
 
@@ -374,7 +374,7 @@ Your system is working correctly if:
 
 ## 📝 Notes
 
-- **k3d Specifics:** `host.k3d.internal` is the standard way to reach host services from k3d pods (Windows/WSL2). This is NOT `localhost` or `host.docker.internal`.
+- **k3d Networking:** k3d cluster joins the `tc-agro-network` Docker network, allowing pods to resolve Docker Compose container names directly (e.g., `tc-agro-postgres`, `tc-agro-redis`). This approach avoids the unreliable `host.k3d.internal` DNS.
 
 - **Port 5010 & 5001:** Pre-configured for frontend and identity-service respectively. These ports should already be forwarded from the bootstrap script.
 

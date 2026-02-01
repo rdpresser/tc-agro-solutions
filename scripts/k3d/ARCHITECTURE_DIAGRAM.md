@@ -1,6 +1,9 @@
 # 🏗️ GitOps Infrastructure Architecture - TC Agro Solutions
 
-Complete visual overview of the new GitOps infrastructure setup with registry configuration.
+Complete visual overview of the GitOps infrastructure setup with Docker network integration.
+
+**Updated:** February 1, 2026  
+**Key Change:** Observability runs in Docker Compose, k3d joins `tc-agro-network`
 
 ---
 
@@ -19,30 +22,30 @@ Complete visual overview of the new GitOps infrastructure setup with registry co
 │  │ k3d registry create localhost --port 5000                           │       │
 │  │ ↓                                                                    │       │
 │  │ 🐳 localhost:5000 (registry)                                        │       │
-│  │   Ready for images                                                 │       │
+│  │   Ready for microservice images                                     │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 2️⃣ Create K3D Cluster (18GB RAM)                                     │       │
+│  │ 2️⃣ Create K3D Cluster (joins tc-agro-network)                        │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
 │  │                                                                      │       │
-│  │  🖥️ Server (2GB)                                                    │       │
+│  │  🖥️ Server                                                           │       │
 │  │  ├─ kube-apiserver                                                 │       │
 │  │  ├─ etcd                                                           │       │
 │  │  └─ Controller Manager                                            │       │
 │  │                                                                      │       │
-│  │  🖥️ Agent - SYSTEM (6GB) [agentpool=system, taint:NoSchedule]       │       │
-│  │  ├─ Prometheus + Grafana                                           │       │
-│  │  ├─ Loki + Tempo                                                   │       │
-│  │  ├─ OpenTelemetry Collector                                        │       │
-│  │  └─ AlertManager                                                   │       │
+│  │  🖥️ Agent - SYSTEM [agentpool=system]                               │       │
+│  │  ├─ Traefik Ingress (k3s built-in)                                 │       │
+│  │  └─ OTEL DaemonSet (telemetry collection)                          │       │
 │  │                                                                      │       │
-│  │  🖥️ Agent - APPS (10GB) [agentpool=apps]                            │       │
-│  │  ├─ KEDA Operator                                                  │       │
-│  │  └─ (Microservices & apps deployed via ArgoCD)                    │       │
+│  │  🖥️ Agent - PLATFORM [agentpool=platform]                           │       │
+│  │  └─ ArgoCD components                                              │       │
 │  │                                                                      │       │
-│  │  Registry Integration: --registry-use localhost:5000                │       │
-│  │  ↓ All nodes auto-configured to access localhost:5000              │       │
+│  │  🖥️ Agent - APPS [agentpool=apps]                                   │       │
+│  │  └─ Microservices (frontend, identity-service, etc.)               │       │
+│  │                                                                      │       │
+│  │  🔗 Network: --network tc-agro-network                              │       │
+│  │  ↓ Pods resolve Docker container names directly                    │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
@@ -56,14 +59,13 @@ Complete visual overview of the new GitOps infrastructure setup with registry co
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 4️⃣ Apply ArgoCD Bootstrap Application (App-of-apps)                 │       │
+│  │ 4️⃣ Apply ArgoCD Bootstrap Applications                              │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
-│  │ kubectl apply -f bootstrap/bootstrap-platform.yaml
-kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
+│  │ kubectl apply -f bootstrap/bootstrap-platform.yaml                 │       │
+│  │ kubectl apply -f bootstrap/bootstrap-apps.yaml                     │       │
 │  │ ↓                                                                    │       │
-│  │ 🎯 Application: "platform-bootstrap" (App-of-apps)                  │       │
-│  │    source: infrastructure/kubernetes/platform/argocd/applications/ │       │
-│  │    syncs: true                                                      │       │
+│  │ 🎯 App: "platform-base" → observability namespace + OTEL DaemonSet │       │
+│  │ 🎯 App: "apps-dev" → agro-apps namespace + microservices           │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │                                                                                  │
@@ -71,33 +73,26 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
 │  ════════════════════════════════════════════════════════════════════════════  │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 5️⃣ ArgoCD Syncs Platform Applications                               │       │
+│  │ 5️⃣ ArgoCD Syncs Applications                                        │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
 │  │                                                                      │       │
-│  │  📊 Application: platform-observability                            │       │
-│  │     Sources:                                                        │       │
-│  │     ├─ Helm: prometheus-community/kube-prometheus-stack (65.0.0)   │       │
-│  │     │  valueFiles: $values/.../kube-prometheus-stack.values.yaml   │       │
-│  │     │  ↓ Installs: Prometheus + Grafana + AlertManager             │       │
-│  │     │                                                               │       │
-│  │     ├─ Helm: grafana/loki (6.21.0)                                │       │
-│  │     │  valueFiles: $values/.../loki.values.yaml                    │       │
-│  │     │  ↓ Installs: Loki (log aggregation)                          │       │
-│  │     │                                                               │       │
-│  │     ├─ Helm: grafana/tempo (1.11.0)                               │       │
-│  │     │  valueFiles: $values/.../tempo.values.yaml                   │       │
-│  │     │  ↓ Installs: Tempo (distributed tracing)                     │       │
-│  │     │                                                               │       │
-│  │     └─ Helm: open-telemetry/opentelemetry-collector (0.95.0)      │       │
-│  │        valueFiles: $values/.../otel-collector.values.yaml          │       │
-│  │        ↓ Installs: OTEL Collector (telemetry hub)                  │       │
+│  │  📦 Application: platform-base                                      │       │
+│  │     ├─ Namespace: observability                                    │       │
+│  │     └─ OTEL DaemonSet (collects from pods)                        │       │
+│  │        Exports to: tc-agro-otel-collector:4318 (Docker)            │       │
 │  │                                                                      │       │
-│  │  ⚡ Application: platform-autoscaling                               │       │
-│  │     Source: Helm: kedacore/keda (2.14.0)                           │       │
-│  │     valueFiles: $values/.../keda.values.yaml                       │       │
-│  │     ↓ Installs: KEDA (event-driven autoscaling)                    │       │
+│  │  🚀 Application: apps-dev                                           │       │
+│  │     ├─ Namespace: agro-apps                                        │       │
+│  │     ├─ frontend-service                                            │       │
+│  │     ├─ identity-service                                            │       │
+│  │     ├─ farm-service                                                │       │
+│  │     ├─ sensor-ingest-service                                       │       │
+│  │     └─ dashboard-service                                           │       │
 │  │                                                                      │       │
-│  │  Namespace: monitoring, keda                                        │       │
+│  │  ⚡ Optional: KEDA (kedacore/keda) for autoscaling                  │       │
+│  │                                                                      │       │
+│  │  NOTE: Full observability stack (Prometheus, Grafana, Loki, Tempo) │       │
+│  │        runs in Docker Compose, NOT in k3d cluster!                  │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │                                                                                  │
@@ -156,12 +151,17 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
 │  NETWORKING & ACCESS                                                            │
 │  ════════════════════════════════════════════════════════════════════════════  │
 │                                                                                  │
-│  🌐 Ingress Routing (via Ingress NGINX):                                        │
-│     http://argocd.local   → ArgoCD Server (80:80@loadbalancer)                 │
-│     http://agro.local     → (future) Microservices                              │
+│  🌐 K3D Cluster joins Docker network: tc-agro-network                          │
+│     ↓ Pods resolve Docker container names directly                             │
 │                                                                                  │
-│  🔌 Port-Forwards (optional):                                                   │
-│     localhost:3000        → Grafana                                             │
+│  🔌 Services (Docker Compose - tc-agro-network):                               │
+│     tc-agro-postgres:5432   → PostgreSQL                                       │
+│     tc-agro-redis:6379      → Redis                                            │
+│     tc-agro-rabbitmq:5672   → RabbitMQ                                         │
+│     tc-agro-otel-collector:4317/4318 → OTEL Collector                          │
+│                                                                                  │
+│  📊 Observability UIs (Docker Compose):                                        │
+│     localhost:3000        → Grafana (admin/admin)                              │
 │     localhost:9090        → Prometheus                                          │
 │     localhost:3100        → Loki                                                │
 │     localhost:3200        → Tempo                                               │
@@ -184,23 +184,24 @@ kubectl apply -f bootstrap/bootstrap-apps.yaml              │       │
          │
          ├─ 1️⃣ Create registry (localhost:5000)
          │
-         ├─ 2️⃣ Create k3d cluster (18GB)
+         ├─ 2️⃣ Create k3d cluster (joins tc-agro-network)
          │      └─ Auto-link registry to all nodes
          │
          ├─ 3️⃣ Install ArgoCD via Helm
          │
-         └─ 4️⃣ Apply bootstrap Application
+         └─ 4️⃣ Apply bootstrap Applications
                  │
-                 └─ ArgoCD reads: infrastructure/kubernetes/platform/argocd/applications/
+                 └─ ArgoCD reads Git repository
                     │
-                    ├─ platform-observability.yaml
-                    │  ├─ kube-prometheus-stack (Prometheus + Grafana + AlertManager)
-                    │  ├─ loki (Loki)
-                    │  ├─ tempo (Tempo)
-                    │  └─ otel-collector (OpenTelemetry)
+                    ├─ platform-base
+                    │  ├─ observability namespace
+                    │  └─ OTEL DaemonSet (exports to tc-agro-otel-collector)
                     │
-                    └─ platform-autoscaling.yaml
-                       └─ keda (KEDA)
+                    └─ apps-dev
+                       └─ Microservices in agro-apps namespace
+
+  📊 Observability stack runs in Docker Compose (NOT in k3d):
+     Prometheus, Grafana, Loki, Tempo, OTEL Collector
 ```
 
 ---
@@ -212,27 +213,23 @@ tc-agro-solutions/
 │
 ├─ infrastructure/kubernetes/
 │  │
-│  ├─ platform/                           # Platform components (Prometheus, Grafana, etc)
+│  ├─ platform/                           # Platform components (ArgoCD, OTEL DaemonSet)
 │  │  ├─ helm-values/dev/
-│  │  │  ├─ kube-prometheus-stack.values.yaml    (Prometheus, Grafana config)
-│  │  │  ├─ loki.values.yaml                     (Loki config)
-│  │  │  ├─ tempo.values.yaml                    (Tempo config)
-│  │  │  ├─ otel-collector.values.yaml           (OTEL config)
-│  │  │  └─ keda.values.yaml                     (KEDA config)
+│  │  │  ├─ otel-collector.values.yaml           (OTEL DaemonSet config)
+│  │  │  └─ keda.values.yaml                     (KEDA config - optional)
 │  │  │
 │  │  ├─ argocd/
 │  │  │  ├─ bootstrap/
-│  │  │  │  ├─ bootstrap-platform.yaml           (Platform infrastructure)
-│  │  │  │  └─ bootstrap-apps.yaml               (Applications)
+│  │  │  │  ├─ bootstrap-platform.yaml           (platform-base app)
+│  │  │  │  └─ bootstrap-apps.yaml               (apps-dev app)
 │  │  │  ├─ projects/
-│  │  │  │  └─ project-platform.yaml             (Platform Project)
+│  │  │  │  └─ project-platform.yaml
 │  │  │  └─ applications/
-│  │  │     ├─ platform-observability.yaml       (Multi-source: 4 Helm + values repo)
-│  │  │     └─ platform-autoscaling.yaml         (Helm + values repo)
+│  │  │     └─ platform-base.yaml                (OTEL DaemonSet)
 │  │  │
 │  │  ├─ base/
 │  │  │  ├─ namespaces/
-│  │  │  │  └─ namespaces.yaml                   (4 namespaces)
+│  │  │  │  └─ namespaces.yaml                   (observability, agro-apps)
 │  │  │  ├─ ingress/
 │  │  │  │  └─ argocd-ingressroute.yaml         (Traefik IngressRoute)
 │  │  │  └─ kustomization.yaml
@@ -240,33 +237,40 @@ tc-agro-solutions/
 │  │  └─ overlays/dev/
 │  │     └─ kustomization.yaml
 │  │
-│  └─ apps/                               # Microservices (future)
+│  └─ apps/                               # Microservices
 │     ├─ argocd/
-│     │  ├─ projects/                     (Managed by platform; see platform/argocd/projects/)
 │     │  └─ applications/
-│     │     └─ apps-dev.yaml                     (ApplicationSet placeholder)
+│     │     └─ apps-dev.yaml                     (ApplicationSet)
 │     │
 │     ├─ base/
+│     │  ├─ identity/
+│     │  │  ├─ deployment.yaml
+│     │  │  ├─ service.yaml
+│     │  │  └─ configmap.yaml
 │     │  └─ kustomization.yaml
 │     │
 │     └─ overlays/dev/
 │        └─ kustomization.yaml
 │
+├─ orchestration/apphost-compose/         # Docker Compose + Observability
+│  ├─ docker-compose.yml                  (PostgreSQL, Redis, RabbitMQ, OTEL stack)
+│  ├─ observability/                      (Prometheus, Grafana, Loki, Tempo configs)
+│  └─ scripts/
+│
 ├─ scripts/k3d/                           # Bootstrap & management scripts
-│  ├─ bootstrap.ps1                       (Main bootstrap)
+│  ├─ bootstrap.ps1                       (Main bootstrap - joins tc-agro-network)
 │  ├─ build-push-images.ps1               (Build & push to localhost:5000)
 │  ├─ manager.ps1                         (Interactive menu)
 │  ├─ status.ps1                          (Cluster status)
 │  ├─ cleanup.ps1                         (Delete cluster)
-│  ├─ README.md                           (This guide)
-│  └─ REGISTRY_CONFIGURATION.md           (Registry details)
+│  └─ README.md                           (This guide)
 │
-├─ services/                              # Microservices (future: add k8s/)
-│  ├─ identity-service/                   (todo: k8s/base + k8s/overlays/dev)
-│  ├─ farm-service/                       (todo: k8s/base + k8s/overlays/dev)
-│  ├─ sensor-ingest-service/              (todo: k8s/base + k8s/overlays/dev)
-│  ├─ analytics-worker/                   (todo: k8s/base + k8s/overlays/dev)
-│  └─ dashboard-service/                  (todo: k8s/base + k8s/overlays/dev)
+├─ services/                              # Microservices source code
+│  ├─ identity-service/
+│  ├─ farm-service/
+│  ├─ sensor-ingest-service/
+│  ├─ analytics-worker/
+│  └─ dashboard-service/
 │
 └─ poc/frontend/                          # Frontend POC
    └─ Dockerfile                          (Build & push to localhost:5000)
@@ -274,45 +278,43 @@ tc-agro-solutions/
 
 ---
 
-## 🎯 Registry Integration Points
+## 🎯 Network Integration Points
 
-### 1. **Bootstrap Creates & Links Registry**
+### 1. **Bootstrap Creates Cluster in Docker Network**
 
 ```powershell
 # bootstrap.ps1
-$registryName = "localhost"
-$registryPort = 5000
+$networkName = "tc-agro-network"
 
-# Creates registry
-k3d registry create $registryName --port $registryPort
-
-# Links to cluster
-k3d cluster create ... --registry-use "$registryName:$registryPort"
+# Creates cluster in Docker network
+k3d cluster create ... --network $networkName
 ```
 
-### 2. **Build Script Pushes to Registry**
-
-```powershell
-# build-push-images.ps1
-docker build -t localhost:5000/{image}:latest ...
-docker push localhost:5000/{image}:latest
-```
-
-### 3. **K8s Deployments Pull from Registry**
+### 2. **Pods Access Docker Compose Services**
 
 ```yaml
-# k8s/base/deployment.yaml (in microservice repos)
-containers:
-  - name: service
-    image: localhost:5000/{image}:latest
-    imagePullPolicy: IfNotPresent
+# configmap.yaml (environment)
+ConnectionStrings__PostgreSQL: Host=tc-agro-postgres;Port=5432;...
+ConnectionStrings__Redis: tc-agro-redis:6379
+RabbitMQ__Host: tc-agro-rabbitmq
+OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector-agent.observability:4317
 ```
 
-### 4. **kubelet Resolves & Runs**
+### 3. **OTEL DaemonSet Exports to Docker Collector**
+
+```yaml
+# otel-collector.values.yaml
+exporters:
+  otlphttp/docker:
+    endpoint: http://tc-agro-otel-collector:4318
+```
+
+### 4. **Observability Stack (Docker Compose)**
 
 ```
-K8s Node → kubelet → Check localhost:5000 registry → Pull image → Run container
-↑ Already configured by k3d! No auth, auto-linked
+Prometheus, Grafana, Loki, Tempo run in Docker Compose
+↑ Accessed via localhost:3000 (Grafana), localhost:9090 (Prometheus), etc.
+↑ Receives telemetry from tc-agro-otel-collector
 ```
 
 ---
@@ -320,14 +322,17 @@ K8s Node → kubelet → Check localhost:5000 registry → Pull image → Run co
 ## ✅ Verification Checklist
 
 - [x] Registry created: `k3d registry list` shows `localhost:5000`
-- [x] Registry linked to cluster: nodes can access `localhost:5000`
-- [x] ArgoCD managing platform stack: 3 Applications synced
+- [x] Cluster in network: `docker network inspect tc-agro-network` shows k3d nodes
+- [x] ArgoCD managing apps: platform-base and apps-dev synced
+- [x] Pods resolve container names: `kubectl exec ... -- getent hosts tc-agro-postgres`
 - [x] Images can be pushed: `docker push localhost:5000/tc-agro-frontend-service:latest`
 - [x] Pods can pull images: no `ImagePullSecret` needed
-- [x] Multi-source Applications working: Helm + values repo pattern
+- [x] OTEL DaemonSet running: `kubectl get pods -n observability`
+- [x] Observability stack in Docker Compose: `docker compose ps`
 
 ---
 
-> **Architecture Version:** 1.0 (GitOps with Registry Integration)  
-> **Date:** January 15, 2026  
+> **Architecture Version:** 2.0 (Docker Network Integration)  
+> **Date:** February 1, 2026  
+> **Key Change:** Observability in Docker Compose, k3d joins tc-agro-network  
 > **Status:** ✅ Complete and Tested

@@ -18,12 +18,14 @@ We standardize on **DaemonSet** for in-cluster telemetry collection. Each k3d no
 
 ```
 Apps in k3d
-   → DaemonSet Agent (otel-collector.observability:4318)
-   → Docker OTEL Collector (host.k3d.internal:14318)
+   → DaemonSet Agent (otel-collector-agent.observability:4318)
+   → Docker OTEL Collector (tc-agro-otel-collector:4318)
    → Grafana Stack (Tempo/Loki/Prometheus)
 ```
 
 Docker Compose apps continue to send to `http://otel-collector:4318` and remain fully supported.
+
+**Note:** k3d cluster joins the `tc-agro-network` Docker network, allowing pods to resolve Docker container names directly.
 
 ---
 
@@ -54,7 +56,7 @@ Files:
 Set the active endpoint to:
 
 ```
-Telemetry__Grafana__Otlp__Endpoint=http://otel-collector.observability:4318
+Telemetry__Grafana__Otlp__Endpoint=http://otel-collector-agent.observability:4318
 ```
 
 The old Docker-only endpoint remains commented for quick rollback.
@@ -68,7 +70,7 @@ To return to 100% Docker Compose (no k3d DaemonSet), edit `.env`:
 1. Comment the DaemonSet endpoint:
 
 ```
-# Telemetry__Grafana__Otlp__Endpoint=http://otel-collector.observability:4318
+# Telemetry__Grafana__Otlp__Endpoint=http://otel-collector-agent.observability:4318
 ```
 
 2. Re-enable Docker endpoint:
@@ -92,8 +94,10 @@ File: infrastructure/kubernetes/platform/otel-daemonset.yaml
 The agent exports to:
 
 ```
-http://host.k3d.internal:14318
+http://tc-agro-otel-collector:4318
 ```
+
+**Note:** k3d cluster joins `tc-agro-network`, so pods resolve Docker container names directly.
 
 ---
 

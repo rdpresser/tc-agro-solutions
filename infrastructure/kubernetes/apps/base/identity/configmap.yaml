@@ -54,7 +54,7 @@ data:
 
   # Telemetry - OTEL DaemonSet Configuration (non-sensitive values)
   # Application sends telemetry to OTEL DaemonSet agent in k3d cluster
-  # The DaemonSet forwards to Grafana Stack in Docker Compose via host.k3d.internal
+  # The DaemonSet forwards to Grafana Stack in Docker Compose via container name (tc-agro-otel-collector)
   Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
   Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
   Telemetry__Grafana__Agent__OtlpHttpPort: "4318"

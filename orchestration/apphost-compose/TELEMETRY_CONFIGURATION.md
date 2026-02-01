@@ -79,82 +79,80 @@ curl http://localhost:5001/health
 
 ## Scenario 2: 100% k3d (Full in-cluster observability)
 
+> **⚠️ DEPRECATED:** This scenario is no longer used. We now use Scenario 3 (k3d + Docker Compose).
+> The `platform-observability` ArgoCD application was removed to simplify the stack.
+
 Flow:
 
 ```
 .NET App (k3d)
   -> OTEL SDK (OTLP gRPC 4317)
-  -> OTEL Collector (k3d)
-  -> Loki / Tempo / Prometheus (k3d)
-  -> Grafana (k3d)
+  -> OTEL Collector DaemonSet (k3d)
+  -> Docker Compose Stack (Loki / Tempo / Prometheus)
+  -> Grafana (Docker Compose)
 ```
 
-App configuration (cluster DNS):
+App configuration (DaemonSet in observability namespace):
 
 ```yaml
-Telemetry__Grafana__Agent__Host: "platform-observability-opentelemetry-collector.monitoring.svc.cluster.local"
-Telemetry__Grafana__Otlp__Endpoint: "http://platform-observability-opentelemetry-collector.monitoring.svc.cluster.local:4317"
+Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
+Telemetry__Grafana__Otlp__Endpoint: "http://otel-collector-agent.observability.svc.cluster.local:4317"
 Telemetry__Grafana__Otlp__Protocol: "grpc"
 Telemetry__Grafana__Agent__Enabled: "true"
 ```
 
-Port-forward Grafana (if needed):
-
-```powershell
-kubectl port-forward svc/platform-observability-grafana 3000:80 -n monitoring
-```
-
 ---
 
-## Scenario 3: k3d App + Docker Compose Observability
+## Scenario 3: k3d App + Docker Compose Observability (CURRENT)
+
+> **✅ RECOMMENDED:** This is the current production configuration.
 
 Flow:
 
 ```
 .NET App (k3d)
   -> OTEL SDK (OTLP gRPC 4317)
-  -> OTEL Collector (k3d)
-  -> Loki / Tempo / Prometheus (Docker Compose)
-  -> Grafana (Docker Compose)
+  -> OTEL DaemonSet Agent (k3d)
+  -> Docker Compose OTEL Collector (tc-agro-otel-collector)
+  -> Grafana Stack (Tempo/Loki/Prometheus in Docker Compose)
 ```
 
-Collector export targets (k3d -> host):
+DaemonSet exports to Docker Compose using container name:
 
 ```yaml
 exporters:
-  otlp/tempo:
-    endpoint: host.k3d.internal:3200
+  otlphttp/docker:
+    endpoint: "http://tc-agro-otel-collector:4318"
     tls:
       insecure: true
-  loki:
-    endpoint: http://host.k3d.internal:3100/loki/api/v1/push
-  prometheus:
-    endpoint: host.k3d.internal:9090
 ```
 
 Notes:
 
-- `/loki/api/v1/push` is the Loki ingestion route. Loki is the listener.
-- Grafana reads from Loki, not the other way around.
-- If `host.k3d.internal` does not resolve from pods, use the host IP.
+- k3d cluster joins `tc-agro-network` Docker network via `--network` flag.
+- Pods can resolve Docker container names directly (e.g., `tc-agro-otel-collector`).
+- No need for `host.k3d.internal` or bridge IPs.
 
 ---
 
-## Scenario 4: Docker Compose App + k3d Collector
+## Scenario 4: Docker Compose App + k3d Collector (Alternative)
+
+> **⚠️ NOT RECOMMENDED:** This scenario is rarely needed. Use Scenario 1 or 3 instead.
+> Documented for reference only.
 
 Flow:
 
 ```
 .NET App (Docker Compose)
   -> OTEL SDK (OTLP gRPC 4317)
-  -> OTEL Collector (k3d)
-  -> Loki / Tempo / Prometheus (k3d or Docker Compose)
+  -> OTEL DaemonSet (k3d)
+  -> Docker Compose Stack (Loki / Tempo / Prometheus)
 ```
 
-Expose the Collector:
+If needed, expose the Collector from k3d:
 
 ```powershell
-kubectl port-forward svc/platform-observability-opentelemetry-collector 4317:4317 4318:4318 -n monitoring
+kubectl port-forward svc/otel-collector-agent 4317:4317 4318:4318 -n observability
 ```
 
 App configuration (compose -> host):
@@ -165,6 +163,8 @@ Telemetry__Grafana__Otlp__Endpoint=http://host.docker.internal:4317
 Telemetry__Grafana__Otlp__Protocol=grpc
 Telemetry__Grafana__Agent__Enabled=true
 ```
+
+> **Note:** In most cases, Scenario 1 (100% Docker Compose) is simpler and sufficient for local development.
 
 ---
 
