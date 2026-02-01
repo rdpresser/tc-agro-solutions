@@ -40,8 +40,10 @@ data:
             action: insert
 
     exporters:
+      # Export to Docker Compose OTEL Collector using container name
+      # k3d shares the Docker network, so we use the container name directly
       otlp_http/docker:
-        endpoint: "http://host.k3d.internal:4318"
+        endpoint: "http://tc-agro-otel-collector:4318"
         tls:
           insecure: true
 
