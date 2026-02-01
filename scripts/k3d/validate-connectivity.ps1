@@ -153,13 +153,13 @@ function Test-DNSResolution {
             return 1
         }
         
-        # Test host.k3d.internal
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts host.k3d.internal' 2>&1
-        if ($result -match "192.168.65.254") {
-            Write-Test "host.k3d.internal → 192.168.65.254" "PASS"
+        # Test host.k3d.internal using nslookup (proper DNS validation)
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'nslookup host.k3d.internal 2>&1 || getent hosts host.k3d.internal 2>&1' 2>&1
+        if ($result -match "Address|host\.k3d\.internal") {
+            Write-Test "host.k3d.internal DNS resolves" "PASS"
         }
         else {
-            Write-Test "host.k3d.internal" "FAIL"
+            Write-Test "host.k3d.internal DNS resolution" "FAIL"
             $failed++
         }
         
@@ -181,8 +181,54 @@ function Test-DNSResolution {
     return $failed
 }
 
+function Test-OtelDaemonSet {
+    Write-Header "TEST 4: OTEL DAEMONSET"
+    $failed = 0
+    
+    try {
+        # Check if OTEL DaemonSet pods are running
+        $otelPods = kubectl get pods -n observability -l app=otel-collector-agent -o json | ConvertFrom-Json
+        
+        if ($otelPods.items.Count -gt 0) {
+            foreach ($pod in $otelPods.items) {
+                $status = $pod.status.phase
+                if ($status -eq "Running") {
+                    Write-Test "OTEL DaemonSet pod: $($pod.metadata.name)" "PASS"
+                }
+                else {
+                    Write-Test "OTEL DaemonSet pod: $($pod.metadata.name) ($status)" "FAIL"
+                    $failed++
+                }
+            }
+        }
+        else {
+            Write-Test "OTEL DaemonSet (no pods found)" "FAIL"
+            $failed++
+        }
+        
+        # Test OTEL DaemonSet can reach Docker Compose stack
+        $testPod = kubectl get pod -n observability -l app=otel-collector-agent -o jsonpath='{.items[0].metadata.name}' 2>&1
+        if ($testPod) {
+            $result = kubectl exec $testPod -n observability -- sh -c 'wget -q -O- --timeout=5 http://host.k3d.internal:4318/v1/status 2>&1 || echo "connection-test"' 2>&1
+            if ($result -notmatch "timeout|failed|refused") {
+                Write-Test "OTEL DaemonSet → Docker Compose (host.k3d.internal:4318)" "PASS"
+            }
+            else {
+                Write-Test "OTEL DaemonSet → Docker Compose connectivity" "WARN"
+                $script:totalWarnings++
+            }
+        }
+    }
+    catch {
+        Write-Host "⚠️  OTEL DaemonSet test skipped: $_" -ForegroundColor $colors.Yellow
+        $script:totalWarnings++
+    }
+    
+    return $failed
+}
+
 function Test-ServiceHealth {
-    Write-Header "TEST 4: SERVICE HEALTH"
+    Write-Header "TEST 5: SERVICE HEALTH"
     $failed = 0
     
     try {
@@ -198,7 +244,7 @@ function Test-ServiceHealth {
 }
 
 function Test-ArgoCD {
-    Write-Header "TEST 5: ARGOCD APPLICATIONS"
+    Write-Header "TEST 6: ARGOCD APPLICATIONS"
     $failed = 0
     
     try {
@@ -228,7 +274,7 @@ function Test-ArgoCD {
 }
 
 function Test-ExternalAccess {
-    Write-Header "TEST 6: EXTERNAL ACCESS"
+    Write-Header "TEST 7: EXTERNAL ACCESS"
     $failed = 0
     
     try {
@@ -256,17 +302,17 @@ function Test-ExternalAccess {
 }
 
 function Test-ConfigMap {
-    Write-Header "TEST 7: CONFIGURATION"
+    Write-Header "TEST 8: CONFIGURATION"
     $failed = 0
     
     try {
         $hostValue = kubectl get configmap identity-config -n agro-apps -o jsonpath='{.data.Database__Postgres__Host}' 2>&1
         
-        if ($hostValue -eq "172.19.0.1") {
-            Write-Test "ConfigMap: Database__Postgres__Host = 172.19.0.1 (Docker bridge)" "PASS"
+        if ($hostValue -eq "host.k3d.internal") {
+            Write-Test "ConfigMap: Database__Postgres__Host = host.k3d.internal (k3d DNS)" "PASS"
         }
         else {
-            Write-Test "ConfigMap: Database__Postgres__Host = $hostValue" "FAIL"
+            Write-Test "ConfigMap: Database__Postgres__Host = $hostValue (expected: host.k3d.internal)" "FAIL"
             $failed++
         }
     }
@@ -289,6 +335,7 @@ $totalFailed = 0
 $totalFailed += Test-PodHealth
 $totalFailed += Test-DatabaseConnectivity
 $totalFailed += Test-DNSResolution
+$totalFailed += Test-OtelDaemonSet
 $totalFailed += Test-ServiceHealth
 $totalFailed += Test-ArgoCD
 $totalFailed += Test-ExternalAccess

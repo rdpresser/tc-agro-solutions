@@ -66,18 +66,17 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 
 ### Backend Services Accessible (Inside Pods)
 
-- ✅ **PostgreSQL** (172.19.0.1:5432) - Docker bridge gateway
-- ✅ **Redis** (172.19.0.1:6379) - Docker bridge gateway
-- ✅ **RabbitMQ** (172.19.0.1:5672) - Docker bridge gateway
+- ✅ **PostgreSQL** (host.k3d.internal:5432) - k3d DNS resolution
+- ✅ **Redis** (host.k3d.internal:6379) - k3d DNS resolution
+- ✅ **RabbitMQ** (host.k3d.internal:5672) - k3d DNS resolution
+- ✅ **OTEL Collector** (otel-collector-agent.observability:4317) - DaemonSet in cluster
 
 ### ArgoCD Applications
 
 - ✅ apps-bootstrap (Synced + Healthy)
 - ✅ apps-dev (Synced + Healthy)
-- ✅ platform-autoscaling (Synced + Healthy)
 - ✅ platform-base (Synced + Healthy)
 - ✅ platform-bootstrap (Synced + Healthy)
-- ✅ platform-observability (Synced + Progressing - OK)
 
 ---
 
@@ -164,9 +163,9 @@ kubectl logs <pod-name> -n agro-apps
 ### Database not accessible from pod?
 
 ```powershell
-# Verify Docker bridge gateway is reachable from pod
-kubectl exec <pod-name> -n agro-apps -- sh -c 'timeout 2 bash -c "cat < /dev/null > /dev/tcp/172.19.0.1/5432" && echo "OK" || echo "FAIL"'
-# Expected: OK
+# Verify host.k3d.internal DNS resolves from pod
+kubectl exec <pod-name> -n agro-apps -- sh -c 'nslookup host.k3d.internal'
+# Expected: DNS resolution to Docker bridge IP
 
 # Test connection to PostgreSQL
 kubectl exec <pod-name> -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/5432" && echo "PostgreSQL: OPEN"'

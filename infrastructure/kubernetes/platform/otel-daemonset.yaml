@@ -41,7 +41,7 @@ data:
 
     exporters:
       otlphttp/docker:
-        endpoint: "http://172.19.0.1:14318"
+        endpoint: "http://host.k3d.internal:4318"
         tls:
           insecure: true
 
@@ -111,7 +111,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: otel-collector
+  name: otel-collector-agent
   namespace: observability
   labels:
     app: otel-collector-agent
