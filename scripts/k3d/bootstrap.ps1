@@ -46,6 +46,11 @@ $systemAgentMemory = "4g"    # agent-0: kube-system, CoreDNS, CNI, CSI
 $platformAgentMemory = "6g"  # agent-1: ArgoCD, Ingress, cert-manager
 $appsAgentMemory = "7g"      # agent-2: .NET microservices (business logic)
 
+# Docker Compose network (k3d will join this network to access compose services)
+# This allows pods to resolve Docker Compose container names like:
+# - tc-agro-postgres, tc-agro-redis, tc-agro-rabbitmq, tc-agro-otel-collector
+$composeNetworkName = "tc-agro-network"
+
 # ArgoCD config
 $argocdNamespace = "argocd"
 $argocdAdminPassword = "Argo@123!"
@@ -137,6 +142,34 @@ function New-LocalRegistry {
   }
 }
 
+function Ensure-ComposeNetwork {
+  Write-Step "Ensuring Docker Compose network exists ($composeNetworkName)"
+  
+  $networkExists = docker network ls --format "{{.Name}}" 2>$null | Where-Object { $_ -eq $composeNetworkName }
+  
+  if ($networkExists) {
+    Write-Host " Network '$composeNetworkName' already exists" -ForegroundColor $Color.Muted
+  }
+  else {
+    Write-Host " Creating network '$composeNetworkName'..." -ForegroundColor $Color.Info
+    docker network create $composeNetworkName 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "✅ Network created" -ForegroundColor $Color.Success
+    }
+    else {
+      Write-Host "⚠️ Network creation failed (may already exist)" -ForegroundColor $Color.Warning
+    }
+  }
+  
+  Write-Host ""
+  Write-Host " 💡 k3d will join this network to access Docker Compose services:" -ForegroundColor $Color.Info
+  Write-Host "    • tc-agro-postgres (PostgreSQL)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-redis (Redis)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-rabbitmq (RabbitMQ)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-otel-collector (OpenTelemetry)" -ForegroundColor $Color.Muted
+  Write-Host ""
+}
+
 function Remove-ExistingCluster {
   Write-Step "Checking for existing cluster"
   $clusterExists = k3d cluster list 2>$null | Select-String -Pattern "^$clusterName\s"
@@ -182,9 +215,12 @@ function New-K3dCluster {
   Write-Host " Apps:     $appsAgentMemory (agent-apps)" -ForegroundColor $Color.Muted
   Write-Host " Total:    20GB (3+4+6+7)" -ForegroundColor $Color.Success
   Write-Host ""
+  Write-Host " 🔗 Network: $composeNetworkName (shared with Docker Compose)" -ForegroundColor $Color.Info
+  Write-Host ""
 
   # Step 1: Create cluster WITHOUT agents (we'll add them individually)
-  Write-Host " Step 1/2: Creating server node..." -ForegroundColor $Color.Info
+  # Using --network to join Docker Compose network for service discovery
+  Write-Host " Step 1/2: Creating server node on $composeNetworkName network..." -ForegroundColor $Color.Info
 
   $ok = Invoke-Retry -Retries 3 -DelaySeconds 2 -ErrorMessage "Failed to create cluster server node" -Action {
     k3d cluster create $clusterName `
@@ -193,6 +229,7 @@ function New-K3dCluster {
       --port "80:80@loadbalancer" `
       --port "443:443@loadbalancer" `
       --servers-memory $serverMemory `
+      --network $composeNetworkName `
       --registry-use "$registryName`:$registryPort" 2>&1 | Out-Null
   }
 
@@ -530,6 +567,7 @@ Test-Prerequisites
 Prompt-OptionalComponents
 Stop-PortForwards
 New-LocalRegistry
+Ensure-ComposeNetwork
 Remove-ExistingCluster
 New-K3dCluster
 Fix-KubeconfigForDocker
@@ -564,6 +602,7 @@ Write-Host " System: 4GB (kube-system, CoreDNS, CNI)" -ForegroundColor $Color.Su
 Write-Host " Platform: 6GB (ArgoCD, Ingress, cert-manager)" -ForegroundColor $Color.Success
 Write-Host " Apps: 7GB (.NET microservices)" -ForegroundColor $Color.Success
 Write-Host " Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
+Write-Host " Network: $composeNetworkName (shared with Docker Compose)" -ForegroundColor $Color.Success
 
 Write-Host ""
 Write-Host "🔐 ARGOCD" -ForegroundColor $Color.Info

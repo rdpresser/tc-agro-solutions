@@ -92,7 +92,7 @@ function Test-PodHealth {
 }
 
 function Test-DatabaseConnectivity {
-    Write-Header "TEST 2: DATABASE CONNECTIVITY"
+    Write-Header "TEST 2: DATABASE CONNECTIVITY (via Docker network)"
     $failed = 0
     
     try {
@@ -102,34 +102,36 @@ function Test-DatabaseConnectivity {
             Write-Host "❌ No identity-service pod found" -ForegroundColor $colors.Red
             return 1
         }
+
+        Write-Host " Testing connectivity to Docker Compose services..." -ForegroundColor $colors.Gray
         
-        # Test PostgreSQL
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/5432" 2>&1 && echo "OK"'
+        # Test PostgreSQL via container name
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/tc-agro-postgres/5432" 2>&1 && echo "OK"'
         if ($result -like "*OK*" -or $result -notmatch "connect") {
-            Write-Test "PostgreSQL (host.k3d.internal:5432)" "PASS"
+            Write-Test "PostgreSQL (tc-agro-postgres:5432)" "PASS"
         }
         else {
-            Write-Test "PostgreSQL (host.k3d.internal:5432)" "FAIL"
+            Write-Test "PostgreSQL (tc-agro-postgres:5432)" "FAIL"
             $failed++
         }
         
-        # Test Redis
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/6379" 2>&1 && echo "OK"'
+        # Test Redis via container name
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/tc-agro-redis/6379" 2>&1 && echo "OK"'
         if ($result -like "*OK*" -or $result -notmatch "connect") {
-            Write-Test "Redis (host.k3d.internal:6379)" "PASS"
+            Write-Test "Redis (tc-agro-redis:6379)" "PASS"
         }
         else {
-            Write-Test "Redis (host.k3d.internal:6379)" "FAIL"
+            Write-Test "Redis (tc-agro-redis:6379)" "FAIL"
             $failed++
         }
         
-        # Test RabbitMQ
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/host.k3d.internal/5672" 2>&1 && echo "OK"'
+        # Test RabbitMQ via container name
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'timeout 5 bash -c "cat < /dev/null > /dev/tcp/tc-agro-rabbitmq/5672" 2>&1 && echo "OK"'
         if ($result -like "*OK*" -or $result -notmatch "connect") {
-            Write-Test "RabbitMQ (host.k3d.internal:5672)" "PASS"
+            Write-Test "RabbitMQ (tc-agro-rabbitmq:5672)" "PASS"
         }
         else {
-            Write-Test "RabbitMQ (host.k3d.internal:5672)" "FAIL"
+            Write-Test "RabbitMQ (tc-agro-rabbitmq:5672)" "FAIL"
             $failed++
         }
     }
@@ -142,7 +144,7 @@ function Test-DatabaseConnectivity {
 }
 
 function Test-DNSResolution {
-    Write-Header "TEST 3: DNS RESOLUTION"
+    Write-Header "TEST 3: DNS RESOLUTION (Docker Compose containers)"
     $failed = 0
     
     try {
@@ -153,23 +155,55 @@ function Test-DNSResolution {
             return 1
         }
         
-        # Test host.k3d.internal using nslookup (proper DNS validation)
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'nslookup host.k3d.internal 2>&1 || getent hosts host.k3d.internal 2>&1' 2>&1
-        if ($result -match "Address|host\.k3d\.internal") {
-            Write-Test "host.k3d.internal DNS resolves" "PASS"
+        Write-Host " Testing Docker Compose container DNS resolution..." -ForegroundColor $colors.Gray
+        
+        # Test PostgreSQL container name resolution
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts tc-agro-postgres 2>&1' 2>&1
+        if ($result -match "tc-agro-postgres") {
+            Write-Test "tc-agro-postgres DNS resolves" "PASS"
         }
         else {
-            Write-Test "host.k3d.internal DNS resolution" "FAIL"
+            Write-Test "tc-agro-postgres DNS resolution" "FAIL"
             $failed++
         }
         
-        # Test service DNS
-        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts identity-service.agro-apps.svc.cluster.local' 2>&1
-        if ($result -match "10.43") {
-            Write-Test "identity-service.agro-apps.svc.cluster.local" "PASS"
+        # Test Redis container name resolution
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts tc-agro-redis 2>&1' 2>&1
+        if ($result -match "tc-agro-redis") {
+            Write-Test "tc-agro-redis DNS resolves" "PASS"
         }
         else {
-            Write-Test "identity-service.agro-apps.svc.cluster.local" "FAIL"
+            Write-Test "tc-agro-redis DNS resolution" "FAIL"
+            $failed++
+        }
+        
+        # Test RabbitMQ container name resolution
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts tc-agro-rabbitmq 2>&1' 2>&1
+        if ($result -match "tc-agro-rabbitmq") {
+            Write-Test "tc-agro-rabbitmq DNS resolves" "PASS"
+        }
+        else {
+            Write-Test "tc-agro-rabbitmq DNS resolution" "FAIL"
+            $failed++
+        }
+        
+        # Test OTEL Collector container name resolution
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts tc-agro-otel-collector 2>&1' 2>&1
+        if ($result -match "tc-agro-otel-collector") {
+            Write-Test "tc-agro-otel-collector DNS resolves" "PASS"
+        }
+        else {
+            Write-Test "tc-agro-otel-collector DNS resolution" "FAIL"
+            $failed++
+        }
+        
+        # Test internal Kubernetes service DNS
+        $result = kubectl exec $pod -n agro-apps -- sh -c 'getent hosts identity-service.agro-apps.svc.cluster.local' 2>&1
+        if ($result -match "10.43") {
+            Write-Test "identity-service.agro-apps.svc.cluster.local (k8s internal)" "PASS"
+        }
+        else {
+            Write-Test "identity-service.agro-apps.svc.cluster.local (k8s internal)" "FAIL"
             $failed++
         }
     }
@@ -302,17 +336,32 @@ function Test-ExternalAccess {
 }
 
 function Test-ConfigMap {
-    Write-Header "TEST 8: CONFIGURATION"
+    Write-Header "TEST 8: CONFIGURATION (Container Names)"
     $failed = 0
     
     try {
+        # Check PostgreSQL host (should be Docker container name)
         $hostValue = kubectl get configmap identity-config -n agro-apps -o jsonpath='{.data.Database__Postgres__Host}' 2>&1
         
-        if ($hostValue -eq "host.k3d.internal") {
-            Write-Test "ConfigMap: Database__Postgres__Host = host.k3d.internal (k3d DNS)" "PASS"
+        if ($hostValue -eq "tc-agro-postgres") {
+            Write-Test "ConfigMap: Database__Postgres__Host = tc-agro-postgres" "PASS"
         }
         else {
-            Write-Test "ConfigMap: Database__Postgres__Host = $hostValue (expected: host.k3d.internal)" "FAIL"
+            Write-Test "ConfigMap: Database__Postgres__Host = $hostValue (expected: tc-agro-postgres)" "FAIL"
+            $failed++
+        }
+        
+        # Check Redis host
+        $redisHost = kubectl get configmap identity-config -n agro-apps -o jsonpath='{.data.Redis__Host}' 2>&1
+        
+        if ($redisHost -eq "tc-agro-redis") {
+            Write-Test "ConfigMap: Redis__Host = tc-agro-redis" "PASS"
+        }
+        elseif (-not $redisHost) {
+            Write-Test "ConfigMap: Redis__Host (not configured)" "SKIP"
+        }
+        else {
+            Write-Test "ConfigMap: Redis__Host = $redisHost (expected: tc-agro-redis)" "FAIL"
             $failed++
         }
     }
