@@ -194,10 +194,12 @@ git push
 ```
 infrastructure/kubernetes/platform/
 ├── helm-values/dev/
-│   └── otel-collector.values.yaml    ← OTEL DaemonSet config
+│   └── keda.values.yaml              ← KEDA config (optional)
 └── argocd/applications/
-    └── platform-base.yaml            ← OTEL DaemonSet + namespaces
+  └── platform-base.yaml            ← Namespaces + OTEL DaemonSet
 ```
+
+**Note:** OTEL DaemonSet is a manual manifest (`platform/otel-daemonset.yaml`), not a Helm chart.
 
 ### Note on Architecture Change
 

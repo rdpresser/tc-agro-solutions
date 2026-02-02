@@ -31,9 +31,10 @@ This folder contains Kubernetes manifests for platform infrastructure components
 
 ```
 platform/
+├── otel-daemonset.yaml                  # OTEL DaemonSet manifest (manual)
 ├── helm-values/
 │   └── dev/                             # DEV environment Helm values
-│       └── otel-collector.values.yaml   # OTEL DaemonSet config
+│       └── keda.values.yaml             # KEDA config (optional)
 │
 ├── argocd/                              # ArgoCD manifests
 │   ├── bootstrap/
@@ -82,24 +83,23 @@ Docker Compose (separate):
 
 The OTEL DaemonSet runs in k3d to collect telemetry from pods and exports to the Docker Compose OTEL Collector.
 
-**Example (`otel-collector.values.yaml`):**
+**Example (`otel-daemonset.yaml` - ConfigMap section):**
 
 ```yaml
-mode: daemonset
+data:
+  otel-collector-config.yaml: |
+    exporters:
+      otlp_http/docker:
+        endpoint: http://tc-agro-otel-collector:4318
 
-config:
-  exporters:
-    otlphttp/docker:
-      endpoint: http://tc-agro-otel-collector:4318
-
-  service:
-    pipelines:
-      traces:
-        exporters: [otlphttp/docker]
-      metrics:
-        exporters: [otlphttp/docker]
-      logs:
-        exporters: [otlphttp/docker]
+    service:
+      pipelines:
+        traces:
+          exporters: [otlp_http/docker]
+        metrics:
+          exporters: [otlp_http/docker]
+        logs:
+          exporters: [otlp_http/docker]
 ```
 
 **Why this architecture?**
@@ -128,29 +128,34 @@ config:
 
 ## 🔧 Configuration
 
-### OTEL DaemonSet Values (`helm-values/dev/otel-collector.values.yaml`)
+### OTEL DaemonSet Manifest (`otel-daemonset.yaml`)
 
 ```yaml
-mode: daemonset
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-agent-config
+  namespace: observability
 
-config:
-  receivers:
-    otlp:
-      protocols:
-        grpc:
-          endpoint: 0.0.0.0:4317
-        http:
-          endpoint: 0.0.0.0:4318
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
 
-  exporters:
-    otlphttp/docker:
-      endpoint: http://tc-agro-otel-collector:4318
+    exporters:
+      otlp_http/docker:
+        endpoint: http://tc-agro-otel-collector:4318
 
-  service:
-    pipelines:
-      traces:
-        receivers: [otlp]
-        exporters: [otlphttp/docker]
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlp_http/docker]
 ```
 
 **Key:** The DaemonSet exports to `tc-agro-otel-collector` (Docker container name).
@@ -161,16 +166,16 @@ config:
 
 ### Change Flow
 
-1. **Edit values:**
+1. **Edit manifest:**
 
-   ```powershell
-   notepad platform\helm-values\dev\otel-collector.values.yaml
-   ```
+```powershell
+notepad platform\otel-daemonset.yaml
+```
 
 2. **Commit and push:**
 
    ```powershell
-   git add platform/helm-values/dev/otel-collector.values.yaml
+   git add platform/otel-daemonset.yaml
    git commit -m "feat: update OTEL DaemonSet config"
    git push origin main
    ```

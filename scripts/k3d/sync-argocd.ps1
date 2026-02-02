@@ -76,8 +76,6 @@ switch ($Target) {
         $applications = @(
             "platform-bootstrap",
             "platform-base",
-            "platform-observability",
-            "platform-autoscaling",
             "apps-bootstrap",
             "apps-dev"
         )
@@ -86,9 +84,7 @@ switch ($Target) {
         Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
         $applications = @(
             "platform-bootstrap",
-            "platform-base",
-            "platform-observability",
-            "platform-autoscaling"
+            "platform-base"
         )
     }
     "apps" {

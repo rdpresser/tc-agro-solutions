@@ -51,7 +51,7 @@ function Show-Menu {
     Write-Host "   9) Force sync ArgoCD applications (after Git changes)"
     Write-Host ""
     Write-Host "🌐 NETWORKING & ACCESS:" -ForegroundColor $Color.Info
-    Write-Host "  10) Start port-forward (ArgoCD, Grafana, etc.)"
+    Write-Host "  10) Start port-forward (ArgoCD, Frontend, Identity)"
     Write-Host "  11) List active port-forwards"
     Write-Host "  12) Stop port-forwards"
     Write-Host ""
@@ -61,6 +61,7 @@ function Show-Menu {
     Write-Host "  15) Diagnose ArgoCD access"
     Write-Host "  19) Import k3d env secrets/configmap"
     Write-Host "  20) Full rebuild: stop PF → cleanup → prune tc-agro images → bootstrap → build/push → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Warning
+    Write-Host "  21) Verify image sync (registry vs nodes vs pods)" -ForegroundColor $Color.Info
     Write-Host ""
     Write-Host "📦 HELM CHART MANAGEMENT:" -ForegroundColor $Color.Info
     Write-Host "  16) Check Helm chart versions (read-only)"
@@ -168,8 +169,8 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-19 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20") -notcontains $choice -and $choice -ne "q")
+        $choice = Read-Host "Enter command (1-21 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21") -notcontains $choice -and $choice -ne "q")
 
     if ($choice -eq "q") {
         Write-Host "`n👋 Goodbye!" -ForegroundColor $Color.Success
@@ -243,10 +244,6 @@ else {
             Write-Host ""
             Write-Host "Port-forward to services:" -ForegroundColor $Color.Info
             Write-Host "  - argocd (default)" -ForegroundColor $Color.Muted
-            Write-Host "  - grafana" -ForegroundColor $Color.Muted
-            Write-Host "  - prometheus" -ForegroundColor $Color.Muted
-            Write-Host "  - loki" -ForegroundColor $Color.Muted
-            Write-Host "  - tempo" -ForegroundColor $Color.Muted
             Write-Host "  - frontend" -ForegroundColor $Color.Muted
             Write-Host "  - identity" -ForegroundColor $Color.Muted
             Write-Host "  - all" -ForegroundColor $Color.Muted
@@ -383,7 +380,7 @@ else {
                     Write-Host "   1. Review changes: git diff" -ForegroundColor $Color.Muted
                     Write-Host "   2. Commit and push to trigger ArgoCD sync" -ForegroundColor $Color.Muted
                     Write-Host "   3. Monitor: kubectl get applications -n argocd -w" -ForegroundColor $Color.Muted
-                    Write-Host "   4. Verify pods: kubectl get pods -n monitoring" -ForegroundColor $Color.Muted
+                    Write-Host "   4. Verify pods: kubectl get pods -n observability" -ForegroundColor $Color.Muted
                 }
                 else {
                     Write-Host "❌ Script not found: $helmUpdateScript" -ForegroundColor $Color.Error
@@ -425,6 +422,11 @@ else {
 
         "19" {
             $null = Invoke-Script "import-secrets.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+
+        "21" {
+            $null = Invoke-Script "verify-image-sync.ps1"
             $null = Read-Host "`nPress Enter to continue"
         }
     

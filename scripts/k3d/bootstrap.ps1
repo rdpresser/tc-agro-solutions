@@ -5,15 +5,17 @@
 .DESCRIPTION
   Minimal bootstrap script that ONLY:
   1. Creates k3d cluster (1 server + 3 agents with AKS-like node pools)
-  2. Installs ArgoCD via Helm
-  3. Applies ArgoCD bootstrap Application (App-of-apps)
-  4. Applies platform Project
+  2. Joins cluster to tc-agro-network for Docker container name resolution
+  3. Installs ArgoCD via Helm
+  4. Applies ArgoCD bootstrap Application (App-of-apps)
+  5. Applies platform Project
 
   After this, ArgoCD installs automatically:
-  - kube-prometheus-stack (Prometheus + Grafana)
-  - Loki
-  - Tempo
-  - OpenTelemetry Collector
+  - OpenTelemetry Collector DaemonSet (exports to Docker Compose OTEL Collector)
+
+  Observability Stack (Docker Compose - NOT k3d):
+  - Prometheus, Grafana, Loki, Tempo run in Docker Compose
+  - OTEL DaemonSet in k3d exports to tc-agro-otel-collector container
 
   Optional (disabled by default):
   - KEDA (event-driven autoscaling) - NOT USED in current project
@@ -481,7 +483,7 @@ function Apply-GitOpsBootstrap {
   if (Test-Path $bootstrapPlatformFile) {
     kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
     Write-Host "✅ Platform bootstrap applied (infrastructure components)" -ForegroundColor $Color.Success
-    Write-Host " ℹ️ ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel" -ForegroundColor $Color.Info
+    Write-Host " ℹ️ ArgoCD will now install: OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Info
     
     # Optional: Install KEDA if user requested
     if ($script:installKeda) {
@@ -612,10 +614,8 @@ Write-Host " URL: http://argocd.local (after updating hosts file)" -ForegroundCo
 
 Write-Host ""
 Write-Host "� INSTALLED COMPONENTS" -ForegroundColor $Color.Info
-Write-Host " ✅ Prometheus + Grafana (monitoring)" -ForegroundColor $Color.Success
-Write-Host " ✅ Loki (logs)" -ForegroundColor $Color.Success
-Write-Host " ✅ Tempo (traces)" -ForegroundColor $Color.Success
-Write-Host " ✅ OpenTelemetry Collector (telemetry)" -ForegroundColor $Color.Success
+Write-Host " ✅ OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Success
+Write-Host " ✅ Docker Compose Observability Stack (Grafana/Prometheus/Loki/Tempo)" -ForegroundColor $Color.Success
 if ($script:installKeda) {
   Write-Host " ✅ KEDA (event-driven autoscaling)" -ForegroundColor $Color.Success
 }
@@ -634,6 +634,6 @@ Write-Host ""
 Write-Host " 3) Access ArgoCD via Ingress (no port-forward needed)" -ForegroundColor $Color.Muted
 Write-Host "    http://argocd.local" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 4) Optional: Port-forward Grafana" -ForegroundColor $Color.Muted
-Write-Host "    .\port-forward.ps1 grafana" -ForegroundColor $Color.Success
+Write-Host " 4) Optional: Start Docker Compose observability stack" -ForegroundColor $Color.Muted
+Write-Host "    (Grafana at http://localhost:3000)" -ForegroundColor $Color.Success
 Write-Host ""

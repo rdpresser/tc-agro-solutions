@@ -19,7 +19,7 @@ spec:
       containers:
       - name: identity-service
         image: k3d-localhost:5000/tc-agro-identity-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080

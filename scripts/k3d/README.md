@@ -64,7 +64,7 @@ create-all-from-zero.ps1
 
 ```
 1. .\bootstrap.ps1
-   └─ Create k3d cluster (18GB: 2+6+10)
+   └─ Create k3d cluster (20GB: 3+4+6+7)
    └─ Install ArgoCD via Helm
    └─ Apply bootstrap-platform.yaml (Infrastructure)
    └─ Apply bootstrap-apps.yaml (Applications)
@@ -88,7 +88,7 @@ create-all-from-zero.ps1
 
 ### 🏗️ By Bootstrap Script
 
-- k3d cluster (3 nodes: 1 server + 2 agents)
+- k3d cluster (4 nodes: 1 server + 3 agents)
 - Local registry (localhost:5000)
 - ArgoCD (via Helm)
 - Platform Project
@@ -490,9 +490,10 @@ Active k3d components use **versioned Helm values** in:
 
 ```
 infrastructure/kubernetes/platform/helm-values/dev/
-├── otel-collector.values.yaml    # OTEL DaemonSet (exports to Docker Compose)
 └── keda.values.yaml              # Optional autoscaling (future)
 ```
+
+**Note:** OTEL DaemonSet is deployed as a manual Kubernetes manifest (`platform/otel-daemonset.yaml`), not via Helm chart.
 
 Archived values (for reference, observability moved to Docker Compose):
 

@@ -59,41 +59,16 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $ArgocdAppsPath = Join-Path $ProjectRoot "infrastructure" "kubernetes" "platform" "argocd" "applications"
 
 # Chart definitions
+# NOTE: platform-observability was removed - observability stack runs in Docker Compose
+# KEDA is kept as optional/future reference only
 $charts = @(
-    @{
-        Name        = "kube-prometheus-stack"
-        Repo        = "https://prometheus-community.github.io/helm-charts"
-        RepoName    = "prometheus-community"
-        File        = Join-Path $ArgocdAppsPath "platform-observability.yaml"
-        LinePattern = "chart: kube-prometheus-stack"
-    },
-    @{
-        Name        = "loki"
-        Repo        = "https://grafana.github.io/helm-charts"
-        RepoName    = "grafana"
-        File        = Join-Path $ArgocdAppsPath "platform-observability.yaml"
-        LinePattern = "chart: loki"
-    },
-    @{
-        Name        = "tempo"
-        Repo        = "https://grafana.github.io/helm-charts"
-        RepoName    = "grafana"
-        File        = Join-Path $ArgocdAppsPath "platform-observability.yaml"
-        LinePattern = "chart: tempo"
-    },
-    @{
-        Name        = "opentelemetry-collector"
-        Repo        = "https://open-telemetry.github.io/opentelemetry-helm-charts"
-        RepoName    = "opentelemetry"
-        File        = Join-Path $ArgocdAppsPath "platform-observability.yaml"
-        LinePattern = "chart: opentelemetry-collector"
-    },
     @{
         Name        = "keda"
         Repo        = "https://kedacore.github.io/charts"
         RepoName    = "kedacore"
         File        = Join-Path $ArgocdAppsPath "platform-autoscaling.yaml"
         LinePattern = "chart: keda"
+        Optional    = $true  # KEDA is optional - not currently deployed
     }
 )
 
@@ -280,7 +255,7 @@ if ($Apply) {
     Write-Host "     kubectl get applications -n argocd -w" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  5. Verify pods are healthy:" -ForegroundColor DarkGray
-    Write-Host "     kubectl get pods -n monitoring" -ForegroundColor DarkGray
+    Write-Host "     kubectl get pods -n observability" -ForegroundColor DarkGray
     Write-Host "     kubectl get pods -n keda" -ForegroundColor DarkGray
     Write-Host ""
     

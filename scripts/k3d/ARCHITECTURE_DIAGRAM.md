@@ -214,8 +214,8 @@ tc-agro-solutions/
 ├─ infrastructure/kubernetes/
 │  │
 │  ├─ platform/                           # Platform components (ArgoCD, OTEL DaemonSet)
+│  │  ├─ otel-daemonset.yaml                      (OTEL DaemonSet manifest)
 │  │  ├─ helm-values/dev/
-│  │  │  ├─ otel-collector.values.yaml           (OTEL DaemonSet config)
 │  │  │  └─ keda.values.yaml                     (KEDA config - optional)
 │  │  │
 │  │  ├─ argocd/
@@ -303,9 +303,9 @@ OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector-agent.observability:4317
 ### 3. **OTEL DaemonSet Exports to Docker Collector**
 
 ```yaml
-# otel-collector.values.yaml
+# otel-daemonset.yaml (ConfigMap)
 exporters:
-  otlphttp/docker:
+  otlp_http/docker:
     endpoint: http://tc-agro-otel-collector:4318
 ```
 

@@ -12,8 +12,9 @@
 
 **Helm charts still in k3d:**
 
-- **opentelemetry-collector** - OTEL DaemonSet (collects from pods)
 - **keda** - Kubernetes Event Driven Autoscaling (optional)
+
+**Note:** OTEL DaemonSet is deployed via a manual manifest (`infrastructure/kubernetes/platform/otel-daemonset.yaml`), not a Helm chart.
 
 **Moved to Docker Compose:**
 
@@ -37,9 +38,9 @@ The `targetRevision` property in ArgoCD applications specifies **which version**
 
 ```yaml
 sources:
-  - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
-    chart: opentelemetry-collector
-    targetRevision: 0.105.0 # ← Helm chart version
+   - repoURL: https://kedacore.github.io/charts
+      chart: keda
+      targetRevision: 2.15.1 # ← Helm chart version
 ```
 
 ### Two Types of `targetRevision`
@@ -55,10 +56,9 @@ sources:
 
 ### Active Charts
 
-| Chart                       | Current Version | Repository    | Purpose                  |
-| --------------------------- | --------------- | ------------- | ------------------------ |
-| **opentelemetry-collector** | 0.105.0         | opentelemetry | OTEL DaemonSet in k3d    |
-| **keda**                    | 2.15.1          | kedacore      | Event-driven autoscaling |
+| Chart    | Current Version | Repository | Purpose                  |
+| -------- | --------------- | ---------- | ------------------------ |
+| **keda** | 2.15.1          | kedacore   | Event-driven autoscaling |
 
 ### Archived (now in Docker Compose)
 
@@ -85,7 +85,7 @@ We provide a PowerShell script to check for latest versions:
 
 **Output:**
 
-- Shows current vs latest versions for OTEL and KEDA
+- Shows current vs latest versions for KEDA
 - Indicates which charts have updates available
 - Provides links to release notes
 
@@ -93,13 +93,13 @@ We provide a PowerShell script to check for latest versions:
 
 ```bash
 # Add repository
-helm repo add opentelemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo add kedacore https://kedacore.github.io/charts
 
 # Update repository index
 helm repo update
 
 # Search for latest version
-helm search repo opentelemetry/opentelemetry-collector
+helm search repo kedacore/keda
 ```
 
 ---
@@ -129,13 +129,13 @@ helm search repo opentelemetry/opentelemetry-collector
 
    ```
    infrastructure/kubernetes/platform/helm-values/dev/
-   └── otel-collector.values.yaml   # OTEL DaemonSet
+   └── keda.values.yaml   # KEDA (optional)
    ```
 
 2. **Check latest version:**
 
    ```bash
-   helm search repo opentelemetry/opentelemetry-collector --versions | head -5
+   helm search repo kedacore/keda --versions | head -5
    ```
 
 3. **Edit the values file or ArgoCD application:**
@@ -144,7 +144,7 @@ helm search repo opentelemetry/opentelemetry-collector
 
    ```bash
    git add infrastructure/kubernetes/platform/
-   git commit -m "chore: update otel-collector chart"
+   git commit -m "chore: update keda chart"
    git push
    ```
 
@@ -158,13 +158,9 @@ helm search repo opentelemetry/opentelemetry-collector
 
 Always check release notes for **breaking changes**:
 
-| Chart                   | Release Notes URL                                                    |
-| ----------------------- | -------------------------------------------------------------------- |
-| kube-prometheus-stack   | https://github.com/prometheus-community/helm-charts/releases         |
-| loki                    | https://github.com/grafana/loki/releases                             |
-| tempo                   | https://github.com/grafana/tempo/releases                            |
-| opentelemetry-collector | https://github.com/open-telemetry/opentelemetry-helm-charts/releases |
-| keda                    | https://github.com/kedacore/charts/releases                          |
+| Chart | Release Notes URL                           |
+| ----- | ------------------------------------------- |
+| keda  | https://github.com/kedacore/charts/releases |
 
 ### 2. Check for Breaking Changes
 
@@ -252,13 +248,12 @@ git log --oneline --follow infrastructure/kubernetes/apps/argocd/applications/ap
 ### 3. Document Upgrade Reasons
 
 ```
-chore: update opentelemetry-collector to 0.106.0
+chore: update keda to 2.17.0
 
-- Performance improvements for trace batching
-- Fixes memory leak in logs exporter
-- Requires no configuration changes
+- CRD fixes and stability improvements
+- No breaking changes in configuration
 
-Release notes: https://github.com/open-telemetry/opentelemetry-helm-charts/releases/
+Release notes: https://github.com/kedacore/charts/releases
 ```
 
 ### 4. Monitor After Updates
@@ -292,10 +287,10 @@ helm list -n observability
 
 ```bash
 # Show chart information
-helm show chart opentelemetry/opentelemetry-collector --version 0.105.0
+helm show chart kedacore/keda --version 2.15.1
 
 # Show default values
-helm show values opentelemetry/opentelemetry-collector --version 0.105.0
+helm show values kedacore/keda --version 2.15.1
 
 # Show README
 helm show readme kedacore/keda --version 2.15.1

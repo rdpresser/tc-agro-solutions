@@ -3,36 +3,29 @@
   Sets up background port-forwards for Kubernetes services.
 
 .DESCRIPTION
-  Manages background kubectl port-forward processes for:
-  - argocd (8090:80)
-  - grafana (3000:80)
-  - prometheus (9090:9090)
-  - loki (3100:3100)
-  - tempo (3200:3100)
-  - frontend (3080:80)
+    Manages background kubectl port-forward processes for:
+    - argocd (8090:80)
+    - frontend (3080:80)
+    - identity (5001:80)
 
 .EXAMPLE
-  .\port-forward.ps1 argocd
-  .\port-forward.ps1 grafana
-  .\port-forward.ps1 frontend
-  .\port-forward.ps1 all
+    .\port-forward.ps1 argocd
+    .\port-forward.ps1 frontend
+    .\port-forward.ps1 identity
+    .\port-forward.ps1 all
 #>
 
 param(
-    [ValidateSet("argocd", "grafana", "prometheus", "loki", "tempo", "frontend", "identity", "all")]
-    [string]$Service = "grafana"
+    [ValidateSet("argocd", "frontend", "identity", "all")]
+    [string]$Service = "argocd"
 )
 
 $ErrorActionPreference = "Stop"
 
 $portForwards = @{
-    argocd     = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8090; remotePort = 80 }
-    grafana    = @{ namespace = "monitoring"; service = "kube-prom-stack-grafana"; localPort = 3000; remotePort = 80 }
-    prometheus = @{ namespace = "monitoring"; service = "kube-prom-stack-kube-prome-prometheus"; localPort = 9090; remotePort = 9090 }
-    loki       = @{ namespace = "monitoring"; service = "loki"; localPort = 3100; remotePort = 3100 }
-    tempo      = @{ namespace = "monitoring"; service = "tempo"; localPort = 3200; remotePort = 3100 }
-    frontend   = @{ namespace = "agro-apps"; service = "frontend"; localPort = 3080; remotePort = 80 }
-    identity   = @{ namespace = "agro-apps"; service = "identity-service"; localPort = 5001; remotePort = 80 }
+    argocd   = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8090; remotePort = 80 }
+    frontend = @{ namespace = "agro-apps"; service = "frontend"; localPort = 3080; remotePort = 80 }
+    identity = @{ namespace = "agro-apps"; service = "identity-service"; localPort = 5001; remotePort = 80 }
 }
 
 $Color = @{

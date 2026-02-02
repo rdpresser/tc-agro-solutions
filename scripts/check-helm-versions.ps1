@@ -5,10 +5,11 @@
 
 .DESCRIPTION
     This script queries Helm repositories to find the latest versions of charts
-    used in the platform-observability and platform-autoscaling applications.
+    used in optional KEDA applications.
     
-    It compares current versions with latest available versions and provides
-    recommendations for updates.
+    NOTE: Full observability stack (Prometheus, Grafana, Loki, Tempo) runs
+    in Docker Compose, not in k3d. The OTEL DaemonSet is a manual manifest
+    (platform/otel-daemonset.yaml) and is not managed via Helm.
 
 .EXAMPLE
     .\check-helm-versions.ps1
@@ -29,47 +30,17 @@ $ColorWarning = "Yellow"
 $ColorError = "Red"
 $ColorHeader = "Magenta"
 
-# Chart definitions with current versions from our ArgoCD applications
+# Chart definitions - only charts that are still deployed via Helm in k3d
+# NOTE: kube-prometheus-stack, loki, tempo were moved to Docker Compose
+# NOTE: OTEL DaemonSet is a manual manifest (not a Helm chart)
 $charts = @(
-    @{
-        Name           = "kube-prometheus-stack"
-        Repo           = "https://prometheus-community.github.io/helm-charts"
-        RepoName       = "prometheus-community"
-        CurrentVersion = "65.0.0"
-        File           = "platform-observability.yaml"
-        Description    = "Prometheus, Grafana, AlertManager"
-    },
-    @{
-        Name           = "loki"
-        Repo           = "https://grafana.github.io/helm-charts"
-        RepoName       = "grafana"
-        CurrentVersion = "6.16.0"
-        File           = "platform-observability.yaml"
-        Description    = "Log aggregation"
-    },
-    @{
-        Name           = "tempo"
-        Repo           = "https://grafana.github.io/helm-charts"
-        RepoName       = "grafana"
-        CurrentVersion = "1.10.3"
-        File           = "platform-observability.yaml"
-        Description    = "Distributed tracing"
-    },
-    @{
-        Name           = "opentelemetry-collector"
-        Repo           = "https://open-telemetry.github.io/opentelemetry-helm-charts"
-        RepoName       = "opentelemetry"
-        CurrentVersion = "0.105.0"
-        File           = "platform-observability.yaml"
-        Description    = "OpenTelemetry Collector"
-    },
     @{
         Name           = "keda"
         Repo           = "https://kedacore.github.io/charts"
         RepoName       = "kedacore"
         CurrentVersion = "2.15.1"
-        File           = "platform-autoscaling.yaml"
-        Description    = "Kubernetes Event Driven Autoscaling"
+        File           = "keda.values.yaml"
+        Description    = "Kubernetes Event Driven Autoscaling (optional)"
     }
 )
 
@@ -176,7 +147,7 @@ else {
         Write-Host "     Current:         $($update.Current)" -ForegroundColor $ColorWarning
         Write-Host "     Latest:          $($update.Latest)" -ForegroundColor $ColorSuccess
         Write-Host "     App Version:     $($update.AppVersion)" -ForegroundColor DarkGray
-        Write-Host "     File:            infrastructure/kubernetes/platform/argocd/applications/$($update.File)" -ForegroundColor DarkGray
+        Write-Host "     File:            infrastructure/kubernetes/platform/helm-values/dev/$($update.File)" -ForegroundColor DarkGray
         Write-Host ""
     }
     
@@ -195,18 +166,6 @@ else {
     Write-Host "Option 2 - Check release notes:" -ForegroundColor $ColorInfo
     foreach ($update in $updates) {
         switch ($update.Chart) {
-            "kube-prometheus-stack" {
-                Write-Host "  • $($update.Chart): https://github.com/prometheus-community/helm-charts/releases" -ForegroundColor DarkGray
-            }
-            "loki" {
-                Write-Host "  • $($update.Chart): https://github.com/grafana/loki/releases" -ForegroundColor DarkGray
-            }
-            "tempo" {
-                Write-Host "  • $($update.Chart): https://github.com/grafana/tempo/releases" -ForegroundColor DarkGray
-            }
-            "opentelemetry-collector" {
-                Write-Host "  • $($update.Chart): https://github.com/open-telemetry/opentelemetry-helm-charts/releases" -ForegroundColor DarkGray
-            }
             "keda" {
                 Write-Host "  • $($update.Chart): https://github.com/kedacore/charts/releases" -ForegroundColor DarkGray
             }
@@ -222,7 +181,7 @@ Write-Host ""
 Write-Host "  • Always review CHANGELOG before updating major versions" -ForegroundColor DarkGray
 Write-Host "  • Test updates in development environment first" -ForegroundColor DarkGray
 Write-Host "  • ArgoCD will automatically apply updates after git push" -ForegroundColor DarkGray
-Write-Host "  • Use 'kubectl get pods -n monitoring' to verify deployment" -ForegroundColor DarkGray
+Write-Host "  • Use 'kubectl get pods -n observability' to verify OTEL DaemonSet" -ForegroundColor DarkGray
 Write-Host "  • Use 'kubectl get pods -n keda' for KEDA verification" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "🔗 USEFUL COMMANDS:" -ForegroundColor $ColorInfo

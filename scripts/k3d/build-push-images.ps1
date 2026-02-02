@@ -113,14 +113,30 @@ if (-not $SkipSync -and $successfulImages -gt 0) {
         Write-Host "⚠️  sync-argocd.ps1 not found at $syncScript" -ForegroundColor $Color.Warning
     }
 
+    # Delete cached images from k3d nodes to force fresh pull from registry
+    Write-Host ""
+    Write-Host "🧹 Removing cached images from k3d nodes..." -ForegroundColor $Color.Info
+    
+    $k3dNodes = @("k3d-tc-agro-gitops-server-0", "k3d-tc-agro-gitops-agent-0", "k3d-tc-agro-gitops-agent-1", "k3d-tc-agro-gitops-agent-2")
+    
+    foreach ($img in $images) {
+        $imageName = "k3d-localhost:5000/$($img.name):latest"
+        Write-Host "   Removing $imageName from all nodes..." -ForegroundColor $Color.Muted
+        
+        foreach ($node in $k3dNodes) {
+            docker exec $node crictl rmi $imageName 2>$null | Out-Null
+        }
+        Write-Host "   ✅ Image removed from nodes: $($img.name)" -ForegroundColor $Color.Success
+    }
+
     # Force pod restart to pull new images (since tag is always 'latest')
     Write-Host ""
-    Write-Host "🔄 Forcing pod restart to pull new images..." -ForegroundColor $Color.Info
+    Write-Host "🔄 Forcing pod restart to pull fresh images from registry..." -ForegroundColor $Color.Info
 
     # Map image names to deployment names (not always a simple replace)
     $deploymentMap = @{
-        'tc-agro-frontend-service' = 'frontend'
-        'tc-agro-identity-service' = 'identity-service'
+        'tc-agro-frontend-service'      = 'frontend'
+        'tc-agro-identity-service'      = 'identity-service'
         'tc-agro-sensor-ingest-service' = 'sensor-ingest-service'
     }
 
