@@ -40,11 +40,12 @@ data:
             action: insert
 
     exporters:
-      # Export to Docker Compose OTEL Collector via host bridge
-      # k3d reaches Docker containers using host.k3d.internal (bridge DNS)
-      # Port 14318 is exposed on host from container port 4318
+      # Export to Docker Compose OTEL Collector via shared Docker network
+      # k3d cluster is connected to tc-agro-network (same network as Docker Compose)
+      # Pods can resolve Docker Compose container names directly: otel-collector:4318
+      # No need for host.k3d.internal bridge (avoids reliability issues)
       otlp_http/docker:
-        endpoint: "http://host.k3d.internal:14318"
+        endpoint: "http://otel-collector:4318"
         tls:
           insecure: true
 
