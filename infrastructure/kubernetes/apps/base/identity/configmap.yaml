@@ -4,7 +4,7 @@ metadata:
   name: identity-config
   namespace: agro-apps
 data:
-  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://0.0.0.0:8080"
   ASPNETCORE_APPL_PATH: "/identity"
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
