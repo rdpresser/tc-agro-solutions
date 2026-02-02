@@ -40,10 +40,11 @@ data:
             action: insert
 
     exporters:
-      # Export to Docker Compose OTEL Collector using container name
-      # k3d shares the Docker network, so we use the container name directly
+      # Export to Docker Compose OTEL Collector via host bridge
+      # k3d reaches Docker containers using host.k3d.internal (bridge DNS)
+      # Port 14318 is exposed on host from container port 4318
       otlp_http/docker:
-        endpoint: "http://tc-agro-otel-collector:4318"
+        endpoint: "http://host.k3d.internal:14318"
         tls:
           insecure: true
 
@@ -87,7 +88,7 @@ spec:
       containers:
         - name: otel-collector-agent
           image: otel/opentelemetry-collector-contrib:0.144.0
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - "--config=/etc/otelcol-contrib/otel-collector-config.yaml"
           ports:
