@@ -38,6 +38,123 @@ $Color = @{
     Muted   = "Gray"
 }
 
+function Update-GitOpsManifest {
+    param(
+        [string]$ServiceName,
+        [string]$ImageTag,
+        [string]$RepoRoot
+    )
+
+    $manifestMap = @{
+        "frontend-service" = "infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
+        "identity-service" = "infrastructure/kubernetes/apps/base/identity/deployment.yaml"
+    }
+
+    $manifestPath = $manifestMap[$ServiceName]
+    if (-not $manifestPath) {
+        Write-Host "   ⚠️  No manifest mapping for $ServiceName" -ForegroundColor $Color.Warning
+        return $false
+    }
+
+    $fullManifestPath = Join-Path $RepoRoot $manifestPath
+    if (-not (Test-Path $fullManifestPath)) {
+        Write-Host "   ⚠️  Manifest not found: $manifestPath" -ForegroundColor $Color.Warning
+        return $false
+    }
+
+    Write-Host "   🔄 Updating GitOps manifest..." -ForegroundColor $Color.Info
+    Write-Host "      File: $manifestPath" -ForegroundColor $Color.Muted
+
+    # Read, update, and write manifest
+    $content = Get-Content $fullManifestPath -Raw
+    $newImage = "rdpresser/${ServiceName}:${ImageTag}"
+    $pattern = "image:\s+rdpresser/${ServiceName}:\S+"
+    $replacement = "image: $newImage"
+    
+    if ($content -match $pattern) {
+        $updatedContent = $content -replace $pattern, $replacement
+        Set-Content -Path $fullManifestPath -Value $updatedContent -NoNewline
+        Write-Host "      ✅ Updated image to: $newImage" -ForegroundColor $Color.Success
+    }
+    else {
+        Write-Host "      ⚠️  Could not find image line to update" -ForegroundColor $Color.Warning
+        return $false
+    }
+
+    # Git commit and push
+    Write-Host "      📝 Committing changes..." -ForegroundColor $Color.Muted
+    
+    Push-Location $RepoRoot
+    try {
+        git config user.name "Local Build Script" 2>&1 | Out-Null
+        git config user.email "build-script@local" 2>&1 | Out-Null
+        
+        git add $manifestPath 2>&1 | Out-Null
+        
+        $commitMsg = @"
+ci($ServiceName): update image to $ImageTag
+
+Automated commit from local build-push-images.ps1
+Tag: $ImageTag
+"@
+        
+        git commit -m $commitMsg 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "      ✅ Changes committed" -ForegroundColor $Color.Success
+            
+            Write-Host "      🔄 Pulling latest changes..." -ForegroundColor $Color.Muted
+            $pullOutput = git pull --rebase origin main 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "      ✅ Pull successful" -ForegroundColor $Color.Success
+                Write-Host "      📤 Pushing to remote..." -ForegroundColor $Color.Muted
+                $pushOutput = git push origin main 2>&1
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "      ✅ GitOps manifest updated successfully!" -ForegroundColor $Color.Success
+                    return $true
+                }
+                else {
+                    Write-Host "      ❌ Failed to push to remote" -ForegroundColor $Color.Error
+                    Write-Host "      💡 Error: $($pushOutput -join ' ')" -ForegroundColor $Color.Muted
+                    return $false
+                }
+            }
+            else {
+                # Check if it's "Already up to date"
+                if ($pullOutput -match "Already up to date|Current branch .* is up to date") {
+                    Write-Host "      ✅ Already up to date, pushing..." -ForegroundColor $Color.Success
+                    $pushOutput = git push origin main 2>&1
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "      ✅ GitOps manifest updated successfully!" -ForegroundColor $Color.Success
+                        return $true
+                    }
+                    else {
+                        Write-Host "      ❌ Failed to push to remote" -ForegroundColor $Color.Error
+                        Write-Host "      💡 Error: $($pushOutput -join ' ')" -ForegroundColor $Color.Muted
+                        return $false
+                    }
+                }
+                else {
+                    Write-Host "      ❌ Failed to pull/rebase" -ForegroundColor $Color.Error
+                    Write-Host "      💡 Error: $($pullOutput -join ' ')" -ForegroundColor $Color.Muted
+                    Write-Host "      💡 Try: git pull --rebase origin main (manually resolve conflicts)" -ForegroundColor $Color.Warning
+                    return $false
+                }
+            }
+        }
+        else {
+            Write-Host "      ℹ️  No changes to commit (already up to date)" -ForegroundColor $Color.Muted
+            return $true
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 Write-Host ""
 Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Info
 Write-Host "║         BUILD & PUSH IMAGES TO DOCKER HUB                 ║" -ForegroundColor $Color.Info
@@ -95,12 +212,28 @@ foreach ($img in $images) {
         Write-Host "   Context: Service directory" -ForegroundColor $Color.Muted
     }
 
-    # Build with both tags
+    # Build with both tags (with retry on network errors)
     Write-Host "   Building with tags: latest, $gitSha" -ForegroundColor $Color.Muted
-    docker build -t $tag_latest -t $tag_sha -f $dockerfilePath $buildContext
+    
+    $buildSuccess = $false
+    $maxRetries = 2
+    for ($i = 0; $i -lt $maxRetries; $i++) {
+        if ($i -gt 0) {
+            Write-Host "   🔄 Retry attempt $($i + 1)/$maxRetries..." -ForegroundColor $Color.Warning
+            Start-Sleep -Seconds 5
+        }
+        
+        docker build -t $tag_latest -t $tag_sha -f $dockerfilePath $buildContext
+        
+        if ($LASTEXITCODE -eq 0) {
+            $buildSuccess = $true
+            break
+        }
+    }
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "   ❌ Build FAILED" -ForegroundColor $Color.Error
+    if (-not $buildSuccess) {
+        Write-Host "   ❌ Build FAILED after $maxRetries attempts" -ForegroundColor $Color.Error
+        Write-Host "   💡 Run: .\fix-docker-mcr.ps1" -ForegroundColor $Color.Warning
         continue
     }
 
@@ -124,6 +257,13 @@ foreach ($img in $images) {
     Write-Host "   ✅ Pushed: $tag_sha" -ForegroundColor $Color.Success
 
     Write-Host "   📍 Docker Hub: https://hub.docker.com/r/$repoUrl" -ForegroundColor $Color.Muted
+    
+    # Update GitOps manifest (fallback when CI is not used)
+    $gitopsSuccess = Update-GitOpsManifest -ServiceName $imageName -ImageTag $gitSha -RepoRoot $repoRoot
+    if (-not $gitopsSuccess) {
+        Write-Host "   ⚠️  GitOps manifest update failed, but image was pushed successfully" -ForegroundColor $Color.Warning
+    }
+    
     $successfulImages++
 }
 
@@ -136,14 +276,15 @@ if ($successfulImages -eq 0) {
     exit 1
 }
 
-if (-not $SkipSync) {
-    Write-Host ""
-    Write-Host "✅ GitOps mode: no ArgoCD force sync." -ForegroundColor $Color.Info
-    Write-Host "   CI pipelines update manifests; ArgoCD will reconcile automatically." -ForegroundColor $Color.Muted
-}
-else {
-    Write-Host "ℹ️  GitOps sync skipped (SkipSync flag)." -ForegroundColor $Color.Muted
-}
-
-Write-Host "✅ Build & push complete!" -ForegroundColor $Color.Success
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host "🎯 GitOps Fallback Strategy:" -ForegroundColor $Color.Info
+Write-Host "   ✅ Manifests updated locally with new tags" -ForegroundColor $Color.Success
+Write-Host "   ✅ Changes committed and pushed to main branch" -ForegroundColor $Color.Success
+Write-Host "   🔄 ArgoCD will detect changes and reconcile automatically" -ForegroundColor $Color.Muted
+Write-Host ""
+Write-Host "   💡 Prefer using CI pipelines (frontend-ci.yml, identity-ci.yml)" -ForegroundColor $Color.Muted
+Write-Host "      This script serves as local fallback/testing tool" -ForegroundColor $Color.Muted
+Write-Host ""
+Write-Host "✅ Build, push & GitOps update complete!" -ForegroundColor $Color.Success
 Write-Host ""
