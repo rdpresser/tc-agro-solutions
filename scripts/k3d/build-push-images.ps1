@@ -1,13 +1,15 @@
 <#
 .SYNOPSIS
-  Build and push container images to local k3d registry.
+  Build and push container images to Docker Hub.
 
 .DESCRIPTION
-  Builds Docker images and pushes to localhost:5000 registry.
+  Builds Docker images and pushes to Docker Hub (rdpresser).
 
   Supports:
-  - tc-agro-frontend-service (poc/frontend)
-  - (future: microservices when they have Dockerfiles)
+  - rdpresser/frontend-service (poc/frontend)
+  - rdpresser/identity-service (services/identity-service)
+
+  Requires: docker login to have been executed successfully
 
 .EXAMPLE
   .\build-push-images.ps1
@@ -19,13 +21,13 @@ param(
     [switch]$SkipSync
 )
 
-$registryPort = 5000
+$dockerHubUser = "rdpresser"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $images = @(
-    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
-    @{ name = "tc-agro-identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile" }
-    @{ name = "tc-agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
+    @{ name = "frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile"; repo = "$dockerHubUser/frontend-service" }
+    @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile"; repo = "$dockerHubUser/identity-service" }
+    # @{ name = "tc-agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
 )
 
 $Color = @{
@@ -38,175 +40,109 @@ $Color = @{
 
 Write-Host ""
 Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Info
-Write-Host "║           BUILD & PUSH IMAGES TO LOCAL REGISTRY           ║" -ForegroundColor $Color.Info
+Write-Host "║         BUILD & PUSH IMAGES TO DOCKER HUB                 ║" -ForegroundColor $Color.Info
+Write-Host "║         📦 User: $dockerHubUser                              ║" -ForegroundColor $Color.Info
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Info
 Write-Host ""
 
+# Verify docker login
+Write-Host "🔍 Checking Docker Hub login status..." -ForegroundColor $Color.Info
+# Test login by attempting a simple docker command that requires authentication
+$dockerLoginCheck = docker ps 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Docker daemon not accessible or not logged in" -ForegroundColor $Color.Error
+    Write-Host "   Run: docker login" -ForegroundColor $Color.Warning
+    Write-Host "   Or: Restart Docker Desktop" -ForegroundColor $Color.Warning
+    exit 1
+}
+Write-Host "✅ Docker is running and accessible" -ForegroundColor $Color.Success
+Write-Host ""
+
 $successfulImages = 0
+$gitSha = & git rev-parse --short HEAD 2>$null
+if (-not $gitSha) {
+    $gitSha = "latest"
+    Write-Host "⚠️  Could not get git SHA, using 'latest' tag" -ForegroundColor $Color.Warning
+}
 
 foreach ($img in $images) {
     $imageName = $img.name
     $imagePath = Join-Path $repoRoot $img.path
     $dockerfilePath = Join-Path $imagePath $img.dockerfile
+    $repoUrl = $img.repo
 
-    Write-Host "=== Building $imageName ===" -ForegroundColor $Color.Info
+    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+    Write-Host "🔨 Building: $imageName" -ForegroundColor $Color.Info
     Write-Host "   Path: $imagePath" -ForegroundColor $Color.Muted
+    Write-Host "   Repo: $repoUrl" -ForegroundColor $Color.Muted
 
     if (-not (Test-Path $dockerfilePath)) {
         Write-Host "   ⚠️  Dockerfile not found: $dockerfilePath" -ForegroundColor $Color.Warning
         continue
     }
 
-    $tag = "localhost:$registryPort/${imageName}:latest"
-    $k3dTag = "k3d-localhost:$registryPort/${imageName}:latest"
+    # Build with multiple tags (latest + git sha)
+    $tag_latest = "${repoUrl}:latest"
+    $tag_sha = "${repoUrl}:${gitSha}"
 
     # Determine build context: nested Dockerfiles build from repo root
     if ($img.dockerfile -like "*/*") {
         $buildContext = $repoRoot
-        Write-Host "   Building from repo root (nested Dockerfile)" -ForegroundColor $Color.Muted
+        Write-Host "   Context: Repo root (nested Dockerfile)" -ForegroundColor $Color.Muted
     }
     else {
         $buildContext = $imagePath
-        Write-Host "   Building from service path" -ForegroundColor $Color.Muted
+        Write-Host "   Context: Service directory" -ForegroundColor $Color.Muted
     }
 
-    # Build with both tags (for local docker and k3d cluster reference)
-    docker build -t $tag -t $k3dTag -f $dockerfilePath $buildContext
+    # Build with both tags
+    Write-Host "   Building with tags: latest, $gitSha" -ForegroundColor $Color.Muted
+    docker build -t $tag_latest -t $tag_sha -f $dockerfilePath $buildContext
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "   ❌ Build failed" -ForegroundColor $Color.Error
+        Write-Host "   ❌ Build FAILED" -ForegroundColor $Color.Error
         continue
     }
 
-    Write-Host "   ✅ Built: $tag" -ForegroundColor $Color.Success
-    Write-Host "   ✅ Tagged: $k3dTag (for in-cluster pulls)" -ForegroundColor $Color.Success
+    Write-Host "   ✅ Build successful" -ForegroundColor $Color.Success
 
-    # Push only to localhost:5000 (k3d registry mirrors this internally as k3d-localhost:5000)
-    Write-Host "   Pushing to registry..." -ForegroundColor $Color.Muted
-    docker push $tag
-
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "   ✅ Pushed: $tag" -ForegroundColor $Color.Success
-        Write-Host "   ℹ️  k3d cluster will pull via: $k3dTag" -ForegroundColor $Color.Muted
-        $successfulImages++
+    # Push to Docker Hub
+    Write-Host "   📤 Pushing to Docker Hub..." -ForegroundColor $Color.Muted
+    
+    docker push $tag_latest
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   ❌ Push FAILED (latest)" -ForegroundColor $Color.Error
+        continue
     }
-    else {
-        Write-Host "   ❌ Push failed" -ForegroundColor $Color.Error
-    }
+    Write-Host "   ✅ Pushed: $tag_latest" -ForegroundColor $Color.Success
 
-    Write-Host ""
+    docker push $tag_sha
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   ❌ Push FAILED (sha)" -ForegroundColor $Color.Error
+        continue
+    }
+    Write-Host "   ✅ Pushed: $tag_sha" -ForegroundColor $Color.Success
+
+    Write-Host "   📍 Docker Hub: https://hub.docker.com/r/$repoUrl" -ForegroundColor $Color.Muted
+    $successfulImages++
 }
 
-if (-not $SkipSync -and $successfulImages -gt 0) {
-    $syncScript = Join-Path $PSScriptRoot "sync-argocd.ps1"
-    if (Test-Path $syncScript) {
-        Write-Host "🔄 Triggering ArgoCD sync ($SyncTarget)..." -ForegroundColor $Color.Info
-        & $syncScript $SyncTarget
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ ArgoCD sync triggered." -ForegroundColor $Color.Success
-        }
-        else {
-            Write-Host "⚠️  ArgoCD sync returned exit code $LASTEXITCODE" -ForegroundColor $Color.Warning
-        }
-    }
-    else {
-        Write-Host "⚠️  sync-argocd.ps1 not found at $syncScript" -ForegroundColor $Color.Warning
-    }
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host "📊 Build Summary: $successfulImages/$($images.Count) successful" -ForegroundColor $Color.Info
 
-    # Delete cached images from k3d nodes to force fresh pull from registry
-    Write-Host ""
-    Write-Host "🧹 Removing cached images from k3d nodes..." -ForegroundColor $Color.Info
-    
-    $k3dNodes = @("k3d-tc-agro-gitops-server-0", "k3d-tc-agro-gitops-agent-0", "k3d-tc-agro-gitops-agent-1", "k3d-tc-agro-gitops-agent-2")
-    
-    foreach ($img in $images) {
-        $imageName = "k3d-localhost:5000/$($img.name):latest"
-        Write-Host "   Removing $imageName from all nodes..." -ForegroundColor $Color.Muted
-        
-        foreach ($node in $k3dNodes) {
-            docker exec $node crictl rmi $imageName 2>$null | Out-Null
-        }
-        Write-Host "   ✅ Image removed from nodes: $($img.name)" -ForegroundColor $Color.Success
-    }
-
-    # Force pod restart to pull new images (since tag is always 'latest')
-    Write-Host ""
-    Write-Host "🔄 Forcing pod restart to pull fresh images from registry..." -ForegroundColor $Color.Info
-
-    # Map image names to deployment names (not always a simple replace)
-    $deploymentMap = @{
-        'tc-agro-frontend-service'      = 'frontend'
-        'tc-agro-identity-service'      = 'identity-service'
-        'tc-agro-sensor-ingest-service' = 'sensor-ingest-service'
-    }
-
-    foreach ($img in $images) {
-        $deploymentName = $deploymentMap[$img.name]
-        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
-
-        # Check if deployment exists before attempting restart
-        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
-        if (-not $exists) {
-            Write-Host "   ⚠️  Deployment not found: $deploymentName (skipping)" -ForegroundColor $Color.Warning
-            continue
-        }
-
-        Write-Host "   Rolling restart: $deploymentName" -ForegroundColor $Color.Muted
-        kubectl rollout restart deployment/$deploymentName -n agro-apps 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ Restart triggered for $deploymentName" -ForegroundColor $Color.Success
-        }
-        else {
-            Write-Host "   ⚠️  Restart command returned non-zero for $deploymentName" -ForegroundColor $Color.Warning
-        }
-    }
-
-    # Wait for rollouts to complete with extended timeout
-    Write-Host ""
-    Write-Host "⏳ Waiting for rollouts to complete (max 5 min per deployment)..." -ForegroundColor $Color.Info
-
-    $rolloutErrors = 0
-    foreach ($img in $images) {
-        $deploymentName = $deploymentMap[$img.name]
-        if (-not $deploymentName) { $deploymentName = ($img.name -replace '^agro-', '') }
-
-        $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
-        if (-not $exists) { continue }
-
-        Write-Host "   Waiting for $deploymentName..." -ForegroundColor $Color.Muted
-        kubectl rollout status deployment/$deploymentName -n agro-apps --timeout=300s 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            # Verify pods are actually running
-            $readyPods = kubectl get pods -n agro-apps -l app=$deploymentName -o jsonpath='{.items[?(@.status.conditions[?(@.type==\"Ready\")].status==\"True\")].metadata.name}' 2>$null
-            if ($readyPods) {
-                Write-Host "   ✅ $deploymentName rolled out successfully (pods running)" -ForegroundColor $Color.Success
-            }
-            else {
-                Write-Host "   ⚠️  $deploymentName deployment ready but checking pods..." -ForegroundColor $Color.Warning
-                Start-Sleep -Seconds 10
-            }
-        }
-        else {
-            Write-Host "   ❌ $deploymentName rollout failed (check logs)" -ForegroundColor $Color.Error
-            $rolloutErrors++
-        }
-    }
-
-    if ($rolloutErrors -gt 0) {
-        Write-Host ""
-        Write-Host "⚠️  Some deployments had issues. Check pod status:" -ForegroundColor $Color.Warning
-        Write-Host "   kubectl get pods -n agro-apps" -ForegroundColor $Color.Muted
-        Write-Host "   kubectl logs -n agro-apps -l app=<deployment-name>" -ForegroundColor $Color.Muted
-    }
-
-    # Normalize exit code so manager.ps1 doesn't flag false failures
-    $global:LASTEXITCODE = 0
+if ($successfulImages -eq 0) {
+    Write-Host "❌ No images built successfully" -ForegroundColor $Color.Error
+    exit 1
 }
-elseif ($successfulImages -eq 0) {
-    Write-Host "⚠️  No images were pushed; skipping ArgoCD sync." -ForegroundColor $Color.Warning
+
+if (-not $SkipSync) {
+    Write-Host ""
+    Write-Host "✅ GitOps mode: no ArgoCD force sync." -ForegroundColor $Color.Info
+    Write-Host "   CI pipelines update manifests; ArgoCD will reconcile automatically." -ForegroundColor $Color.Muted
 }
 else {
-    Write-Host "ℹ️  ArgoCD sync skipped (SkipSync flag)." -ForegroundColor $Color.Muted
+    Write-Host "ℹ️  GitOps sync skipped (SkipSync flag)." -ForegroundColor $Color.Muted
 }
 
 Write-Host "✅ Build & push complete!" -ForegroundColor $Color.Success

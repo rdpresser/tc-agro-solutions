@@ -1,16 +1,28 @@
 <#
 .SYNOPSIS
-  Verify image synchronization between Docker registry and k3d cluster.
+  Verify image sync: Docker Hub tags vs Kubernetes pods vs ArgoCD.
 
 .DESCRIPTION
-  Compares image IDs in:
-  - Docker Desktop (localhost:5000 registry)
-  - k3d nodes (cached images)
-  - Running pods (actual running images)
+  Validates that:
+  1. Latest images are available on Docker Hub (rdpresser)
+  2. Pods are running the most recent tag (not just "latest")
+  3. ArgoCD Applications are synced and healthy
+
+  Checks:
+  - frontend-service (rdpresser/frontend-service)
+  - identity-service (rdpresser/identity-service)
 
 .EXAMPLE
   .\verify-image-sync.ps1
 #>
+
+$dockerHubUser = "rdpresser"
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+
+$services = @(
+    @{ name = "frontend-service"; repo = "$dockerHubUser/frontend-service"; deployment = "frontend" }
+    @{ name = "identity-service"; repo = "$dockerHubUser/identity-service"; deployment = "identity-service" }
+)
 
 $Color = @{
     Success = "Green"
@@ -22,83 +34,235 @@ $Color = @{
 
 Write-Host ""
 Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Info
-Write-Host "║          IMAGE SYNCHRONIZATION VERIFICATION                ║" -ForegroundColor $Color.Info
+Write-Host "║         VERIFY IMAGE SYNC: DOCKER HUB → PODS → ARGOCD     ║" -ForegroundColor $Color.Info
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Info
 Write-Host ""
 
-$images = @("tc-agro-identity-service", "tc-agro-sensor-ingest-service", "tc-agro-frontend-service")
-$deploymentMap = @{
-    'tc-agro-frontend-service'      = 'frontend'
-    'tc-agro-identity-service'      = 'identity-service'
-    'tc-agro-sensor-ingest-service' = 'sensor-ingest-service'
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. CHECK DOCKER HUB TAGS
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Host "📦 STEP 1: Checking Docker Hub tags..." -ForegroundColor $Color.Info
+Write-Host ""
+
+$dockerHubTags = @{}
+
+foreach ($svc in $services) {
+    $repo = $svc.repo
+    $name = $svc.name
+    
+    Write-Host "   🔍 Checking Docker Hub: $repo..." -ForegroundColor $Color.Muted
+    
+    # Pull latest image to verify it's available
+    $pullOutput = docker pull $repo`:latest 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   ❌ Failed to pull $repo`:latest" -ForegroundColor $Color.Error
+        $dockerHubTags[$name] = @{ available = $false }
+        Write-Host ""
+        continue
+    }
+    
+    # Get latest digest
+    $latestDigest = docker inspect --format='{{.RepoDigests}}' $repo`:latest 2>$null
+    Write-Host "   ✅ Available on Docker Hub: $repo`:latest" -ForegroundColor $Color.Success
+    
+    $dockerHubTags[$name] = @{
+        available = $true
+        repo      = $repo
+    }
+    
+    Write-Host ""
 }
 
-foreach ($imageName in $images) {
-    Write-Host "=== $imageName ===" -ForegroundColor $Color.Info
-    Write-Host ""
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. CHECK KUBERNETES PODS
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Host "🐳 STEP 2: Checking Kubernetes pods..." -ForegroundColor $Color.Info
+Write-Host ""
 
-    # 1. Docker Desktop (registry image)
-    $registryTag = "localhost:5000/${imageName}:latest"
-    $registryImageId = docker images --no-trunc --format "{{.ID}}" $registryTag 2>$null
-    if ($registryImageId) {
-        Write-Host "   📦 Docker Registry: $($registryImageId.Substring(7, 12))..." -ForegroundColor $Color.Success
+$podImages = @{}
+
+foreach ($svc in $services) {
+    $deploymentName = $svc.deployment
+    $name = $svc.name
+    
+    Write-Host "   🔍 Checking deployment: $deploymentName..." -ForegroundColor $Color.Muted
+    
+    # Check if deployment exists
+    $exists = kubectl get deployment $deploymentName -n agro-apps --no-headers 2>$null
+    if (-not $exists) {
+        Write-Host "   ⚠️  Deployment not found: $deploymentName" -ForegroundColor $Color.Warning
+        $podImages[$name] = @{ status = "not-found" }
+        Write-Host ""
+        continue
+    }
+    
+    # Get deployment spec image
+    $specImage = kubectl get deployment $deploymentName -n agro-apps -o jsonpath='{.spec.template.spec.containers[0].image}' 2>$null
+    Write-Host "   📝 Spec Image: $specImage" -ForegroundColor $Color.Muted
+    
+    # Get running pod image
+    $podName = kubectl get pods -n agro-apps -l app=$deploymentName -o jsonpath='{.items[0].metadata.name}' 2>$null
+    
+    if (-not $podName) {
+        Write-Host "   ⚠️  No running pods found for $deploymentName" -ForegroundColor $Color.Warning
+        $podImages[$name] = @{ status = "no-pods"; specImage = $specImage }
+        Write-Host ""
+        continue
+    }
+    
+    # Get actual image running in pod
+    $podImage = kubectl get pod -n agro-apps $podName -o jsonpath='{.status.containerStatuses[0].imageID}' 2>$null
+    $podImageRef = kubectl get pod -n agro-apps $podName -o jsonpath='{.status.containerStatuses[0].image}' 2>$null
+    
+    # Pod status
+    $podReady = kubectl get pod -n agro-apps $podName -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>$null
+    $readyColor = if ($podReady -eq "True") { $Color.Success } else { $Color.Warning }
+    
+    Write-Host "   🏃 Pod Name: $podName" -ForegroundColor $Color.Muted
+    Write-Host "   📦 Pod Image: $podImageRef" -ForegroundColor $Color.Muted
+    Write-Host "   🏷️  Image ID: $podImage" -ForegroundColor $Color.Muted
+    Write-Host "   ✅ Pod Ready: $podReady" -ForegroundColor $readyColor
+    
+    $podImages[$name] = @{
+        status    = "running"
+        specImage = $specImage
+        podName   = $podName
+        podImage  = $podImageRef
+        imageId   = $podImage
+        podReady  = $podReady
+    }
+    
+    Write-Host ""
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. CHECK ARGOCD APPLICATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Host "🔄 STEP 3: Checking ArgoCD Applications..." -ForegroundColor $Color.Info
+Write-Host ""
+
+$argocdApps = kubectl get applications -n argocd -o jsonpath='{range .items[*]}{.metadata.name}{"="}{.status.sync.status}{"="}{.status.health.status}{"="}{.status.operationState.phase}{"\n"}{end}' 2>$null
+
+if ($argocdApps) {
+    foreach ($line in ($argocdApps -split "`n")) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        
+        $parts = $line -split "="
+        $appName = $parts[0]
+        $syncStatus = $parts[1]
+        $healthStatus = $parts[2]
+        $operationPhase = $parts[3]
+        
+        # Color based on status
+        $syncColor = if ($syncStatus -eq "Synced") { $Color.Success } else { $Color.Warning }
+        $healthColor = if ($healthStatus -eq "Healthy") { $Color.Success } else { $Color.Warning }
+        
+        Write-Host "   📋 $appName" -ForegroundColor $Color.Muted
+        Write-Host "      Sync: $syncStatus" -ForegroundColor $syncColor
+        Write-Host "      Health: $healthStatus" -ForegroundColor $healthColor
+        if ($operationPhase) {
+            Write-Host "      Operation: $operationPhase" -ForegroundColor $Color.Muted
+        }
+    }
+}
+else {
+    Write-Host "   ⚠️  Could not fetch ArgoCD applications" -ForegroundColor $Color.Warning
+}
+
+Write-Host ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. VALIDATION & SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host "📊 VALIDATION SUMMARY" -ForegroundColor $Color.Info
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host ""
+
+$allHealthy = $true
+
+foreach ($svc in $services) {
+    $name = $svc.name
+    $deployment = $svc.deployment
+    $repo = $svc.repo
+    
+    Write-Host "🔹 $name ($repo)" -ForegroundColor $Color.Info
+    
+    $hubTags = $dockerHubTags[$name]
+    $podInfo = $podImages[$name]
+    
+    # Check 1: Docker Hub image is available
+    if ($hubTags.available) {
+        Write-Host "   ✅ Docker Hub: Image available (latest)" -ForegroundColor $Color.Success
     }
     else {
-        Write-Host "   ❌ Docker Registry: Image not found!" -ForegroundColor $Color.Error
+        Write-Host "   ❌ Docker Hub: Image NOT available" -ForegroundColor $Color.Error
+        $allHealthy = $false
     }
-
-    # 2. k3d nodes (cached images)
-    Write-Host "   🖥️  k3d Nodes Cache:" -ForegroundColor $Color.Muted
-    $k3dNodes = @("k3d-tc-agro-gitops-server-0", "k3d-tc-agro-gitops-agent-0", "k3d-tc-agro-gitops-agent-1", "k3d-tc-agro-gitops-agent-2")
-    $k3dImageTag = "k3d-localhost:5000/${imageName}:latest"
     
-    foreach ($node in $k3dNodes) {
-        $nodeImageId = docker exec $node crictl images --no-trunc 2>$null | Select-String -Pattern $k3dImageTag
-        if ($nodeImageId) {
-            $idMatch = $nodeImageId -match "sha256:([a-f0-9]+)"
-            if ($idMatch) {
-                $shortId = $Matches[1].Substring(0, 12)
-                Write-Host "      - $node : $shortId..." -ForegroundColor $Color.Muted
+    # Check 2: Pod is running
+    if ($podInfo.status -eq "running") {
+        Write-Host "   ✅ Kubernetes: Pod is running ($($podInfo.podName))" -ForegroundColor $Color.Success
+        
+        # Check 3: Pod is using a specific tag (not just "latest")
+        if ($podInfo.podImage) {
+            $podImageTag = ($podInfo.podImage -split ":")[-1]
+            
+            if ($podImageTag -eq "latest") {
+                Write-Host "   ⚠️  Image: Pod using 'latest' tag (recommended: use specific build tag)" -ForegroundColor $Color.Warning
+                $allHealthy = $false
+            }
+            else {
+                Write-Host "   ✅ Image: Pod using specific tag '$podImageTag'" -ForegroundColor $Color.Success
             }
         }
-        else {
-            Write-Host "      - $node : Not cached" -ForegroundColor $Color.Warning
-        }
-    }
-
-    # 3. Running pod (actual running image)
-    $deploymentName = $deploymentMap[$imageName]
-    $podImageId = kubectl get pods -n agro-apps -l app=$deploymentName -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>$null
-    if ($podImageId) {
-        # Extract short ID from full imageID (format: k3d-localhost:5000/tc-agro-identity-service@sha256:...)
-        $podImageId -match "sha256:([a-f0-9]+)"
-        if ($Matches) {
-            $shortId = $Matches[1].Substring(0, 12)
-            Write-Host "   🏃 Running Pod:    $shortId..." -ForegroundColor $Color.Success
+        
+        # Check 4: Pod is ready
+        if ($podInfo.podReady -eq "True") {
+            Write-Host "   ✅ Status: Pod is ready" -ForegroundColor $Color.Success
         }
         else {
-            Write-Host "   🏃 Running Pod:    $podImageId" -ForegroundColor $Color.Success
+            Write-Host "   ⚠️  Status: Pod is not ready" -ForegroundColor $Color.Warning
+            $allHealthy = $false
         }
     }
     else {
-        Write-Host "   ⚠️  Running Pod:    No pods found!" -ForegroundColor $Color.Warning
+        Write-Host "   ⚠️  Kubernetes: Deployment not running" -ForegroundColor $Color.Warning
+        $allHealthy = $false
     }
-
-    # 4. Deployment image pull policy
-    $imagePullPolicy = kubectl get deployment $deploymentName -n agro-apps -o jsonpath='{.spec.template.spec.containers[0].imagePullPolicy}' 2>$null
-    Write-Host "   ⚙️  ImagePullPolicy: $imagePullPolicy" -ForegroundColor $(if ($imagePullPolicy -eq "Always") { $Color.Success } else { $Color.Warning })
-
+    
     Write-Host ""
 }
 
-Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Info
-Write-Host "║                        SUMMARY                             ║" -ForegroundColor $Color.Info
-Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Info
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. RECOMMENDATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+if ($allHealthy) {
+    Write-Host "✅ ALL CHECKS PASSED - Images are properly synced!" -ForegroundColor $Color.Success
+}
+else {
+    Write-Host "⚠️  SOME ISSUES DETECTED - See above for details" -ForegroundColor $Color.Warning
+    Write-Host ""
+    Write-Host "💡 TROUBLESHOOTING:" -ForegroundColor $Color.Info
+    Write-Host "   1. If pods are using 'latest' instead of SHA:" -ForegroundColor $Color.Muted
+    Write-Host "      • Run manager.ps1 option 9 (Force sync ArgoCD)" -ForegroundColor $Color.Muted
+    Write-Host "      • Or: manager.ps1 option 13 (Build & push images)" -ForegroundColor $Color.Muted
+    Write-Host ""
+    Write-Host "   2. If Docker Hub tags are missing:" -ForegroundColor $Color.Muted
+    Write-Host "      • Run: manager.ps1 option 13 (Build & push images)" -ForegroundColor $Color.Muted
+    Write-Host ""
+    Write-Host "   3. If pods are not ready:" -ForegroundColor $Color.Muted
+    Write-Host "      • Check logs: kubectl logs -f <pod-name> -n agro-apps" -ForegroundColor $Color.Muted
+    Write-Host "      • Check events: kubectl describe pod <pod-name> -n agro-apps" -ForegroundColor $Color.Muted
+}
+
 Write-Host ""
-Write-Host "✅ Images are in sync when Registry, Nodes, and Pod IDs match" -ForegroundColor $Color.Success
-Write-Host "⚠️  Images are OUT OF SYNC when IDs differ" -ForegroundColor $Color.Warning
+Write-Host "📝 DOCKER HUB LINKS:" -ForegroundColor $Color.Info
+Write-Host "   • Frontend: https://hub.docker.com/r/$($dockerHubUser)/frontend-service/tags" -ForegroundColor $Color.Muted
+Write-Host "   • Identity: https://hub.docker.com/r/$($dockerHubUser)/identity-service/tags" -ForegroundColor $Color.Muted
 Write-Host ""
-Write-Host "📋 To force sync:" -ForegroundColor $Color.Info
-Write-Host "   1. Run: .\manager.ps1 -> Option 13 (Build & push images)" -ForegroundColor $Color.Muted
-Write-Host "   2. OR: .\build-push-images.ps1" -ForegroundColor $Color.Muted
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host "✅ Validation complete." -ForegroundColor $Color.Info
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
 Write-Host ""

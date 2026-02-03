@@ -56,7 +56,7 @@ function Show-Menu {
     Write-Host "  12) Stop port-forwards"
     Write-Host ""
     Write-Host "🛠️  UTILITIES:" -ForegroundColor $Color.Info
-    Write-Host "  13) Build & push images"
+    Write-Host "  13) Build & push images (to Docker Hub rdpresser)"
     Write-Host "  14) List secrets"
     Write-Host "  15) Diagnose ArgoCD access"
     Write-Host "  19) Import k3d env secrets/configmap"
@@ -267,7 +267,22 @@ else {
         }
     
         "13" {
-            Write-Host ""; Write-Host "🚀 BUILD & PUSH IMAGES (with rollout restart)" -ForegroundColor $Color.Info
+            Write-Host ""
+            Write-Host "🚀 BUILD & PUSH IMAGES TO DOCKER HUB" -ForegroundColor $Color.Info
+            Write-Host "   📦 Registry: Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
+            Write-Host "   🔐 Login status: check via docker info or 'docker login'" -ForegroundColor $Color.Muted
+            Write-Host ""
+            
+            $confirm = Read-Host "   Did you run 'docker login' already? (y/n - default: y)"
+            if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = "y" }
+            
+            if ($confirm.ToLower() -notin @("y", "yes")) {
+                Write-Host ""; Write-Host "📝 Please run: docker login" -ForegroundColor $Color.Warning
+                Write-Host "   Then come back and select option 13 again." -ForegroundColor $Color.Muted
+                $null = Read-Host "`nPress Enter to continue"
+                continue
+            }
+            
             $null = Invoke-Script "build-push-images.ps1"
             
             # Print per-deployment rollout summary for quick visibility
@@ -393,14 +408,37 @@ else {
         }
 
         "20" {
-            Write-Host ""; Write-Host "🧭 Full rebuild: stop PF → cleanup → prune images → bootstrap → build/push → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Info
+            Write-Host ""; Write-Host "🧭 Full rebuild: stop PF → cleanup → prune images → bootstrap → build/push (Docker Hub) → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Info
+
+            # Check docker login first
+            Write-Host ""
+            $dockerInfo = docker info 2>&1
+            if ($dockerInfo -match "ERROR|Cannot connect") {
+                Write-Host "❌ Docker daemon is not running. Please start Docker Desktop." -ForegroundColor $Color.Error
+                $null = Read-Host "`nPress Enter to continue"
+                continue
+            }
+            
+            $loginInfo = docker info | Select-String -Pattern "Username:"
+            if ($null -eq $loginInfo) {
+                Write-Host "⚠️  You don't appear to be logged into Docker Hub." -ForegroundColor $Color.Warning
+                $confirm = Read-Host "   Continue anyway? (y/n - default: n)"
+                if ($confirm.ToLower() -ne "y") {
+                    Write-Host "❌ Aborted. Please run 'docker login' first." -ForegroundColor $Color.Warning
+                    $null = Read-Host "`nPress Enter to continue"
+                    continue
+                }
+            }
+            else {
+                Write-Host "✅ Docker Hub login detected" -ForegroundColor $Color.Success
+            }
 
             $steps = @(
                 @{ name = "Stop port-forwards"; action = { Invoke-Script "stop-port-forward.ps1" -Arguments @("all") } },
                 @{ name = "Cleanup cluster/registry"; action = { Invoke-Script "cleanup.ps1" } },
                 @{ name = "Remove local tc-agro images"; action = { Remove-TcAgroImages } },
                 @{ name = "Bootstrap cluster"; action = { Invoke-Script "bootstrap.ps1" } },
-                @{ name = "Build & push images"; action = { Invoke-Script "build-push-images.ps1" } },
+                @{ name = "Build & push images (Docker Hub)"; action = { Invoke-Script "build-push-images.ps1" } },
                 @{ name = "Import secrets/configmap"; action = { Invoke-Script "import-secrets.ps1" } },
                 @{ name = "Sync ArgoCD (all)"; action = { Invoke-Script "sync-argocd.ps1" -Arguments @("all") } },
                 @{ name = "Port-forward ArgoCD"; action = { Invoke-Script "port-forward.ps1" -Arguments @("argocd") } }
