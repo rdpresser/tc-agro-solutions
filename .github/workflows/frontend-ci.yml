@@ -220,13 +220,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
           git add infrastructure/kubernetes/apps/base/frontend/deployment.yaml
           git commit -m "ci(frontend): update image to ${{ steps.get-tag.outputs.tag }}
           
           Automated commit from frontend CI pipeline
           Commit: ${{ github.sha }}
-          Workflow: ${{ github.workflow }}"
-          git push
+          Workflow: ${{ github.workflow }}" || true
+          git push origin main
 
       - name: ✅ GitOps Update Complete
         run: |
