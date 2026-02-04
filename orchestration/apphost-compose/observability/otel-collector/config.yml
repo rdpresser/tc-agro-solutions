@@ -29,11 +29,19 @@ processors:
 
   attributes:
     actions:
-      - key: environment
+      - key: deployment.environment
         value: development
         action: insert
-      - key: cluster
+      - key: cluster.name
         value: tc-agro-local
+        action: insert
+
+      # Normalize correlation_id from common variants
+      - key: correlation_id
+        from_attribute: correlationId
+        action: insert
+      - key: correlation_id
+        from_attribute: CorrelationId
         action: insert
 
   # ============================================================
@@ -80,8 +88,11 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: tc_agro
-    const_labels:
-      environment: development
+    # CRITICAL: Disable resource_to_telemetry conversion
+    # This prevents resource attributes from being added as metric labels
+    # which causes duplicate label name errors in Prometheus
+    resource_to_telemetry_conversion:
+      enabled: false
 
   # Tempo exporter for traces (via gRPC OTLP)
   otlp/tempo:
@@ -112,7 +123,7 @@ service:
     # Metrics pipeline
     metrics:
       receivers: [otlp, otlp/from-k3d]
-      processors: [memory_limiter, batch, attributes]
+      processors: [memory_limiter, batch]
       exporters: [prometheus]
 
     # Logs pipeline - CRITICAL: Use attributes_to_labels/logs to promote correlation_id to Loki label

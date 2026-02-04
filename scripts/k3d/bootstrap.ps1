@@ -648,6 +648,21 @@ Write-Host "╚═════════════════════�
 Test-Prerequisites
 Prompt-OptionalComponents
 Stop-PortForwards
+
+# Ensure Docker Compose infrastructure stack is ready BEFORE k3d cluster creation
+# This ensures Prometheus, Grafana, OTEL, and other services are on tc-agro-network
+Write-Step "Ensuring Docker Compose Infrastructure"
+$infrastructureScript = Join-Path $PSScriptRoot "ensure-compose-infrastructure.ps1"
+if (Test-Path $infrastructureScript) {
+  & $infrastructureScript
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️  Infrastructure script failed, but continuing with k3d bootstrap..." -ForegroundColor $Color.Warning
+  }
+}
+else {
+  Write-Host "ℹ️  Infrastructure script not found: $infrastructureScript" -ForegroundColor $Color.Warning
+}
+
 Ensure-ComposeNetwork
 Remove-ExistingCluster
 New-K3dCluster
