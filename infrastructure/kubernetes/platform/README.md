@@ -31,7 +31,6 @@ This folder contains Kubernetes manifests for platform infrastructure components
 
 ```
 platform/
-├── otel-daemonset.yaml                  # OTEL DaemonSet manifest (manual)
 ├── helm-values/
 │   └── dev/                             # DEV environment Helm values
 │       └── keda.values.yaml             # KEDA config (optional)
@@ -49,6 +48,7 @@ platform/
 │       └── namespaces.yaml              # argocd, observability, agro-apps
 │   ├── ingress/
 │   │   └── argocd-ingressroute.yaml     # Traefik IngressRoute → localhost/argocd
+│   ├── otel-daemonset.yaml              # OTEL DaemonSet manifest (kustomize)
 │   └── kustomization.yaml
 │
 └── overlays/
@@ -83,7 +83,7 @@ Docker Compose (separate):
 
 The OTEL DaemonSet runs in k3d to collect telemetry from pods and exports to the Docker Compose OTEL Collector.
 
-**Example (`otel-daemonset.yaml` - ConfigMap section):**
+**Example (`base/otel-daemonset.yaml` - ConfigMap section):**
 
 ```yaml
 data:
@@ -128,7 +128,7 @@ data:
 
 ## 🔧 Configuration
 
-### OTEL DaemonSet Manifest (`otel-daemonset.yaml`)
+### OTEL DaemonSet Manifest (`base/otel-daemonset.yaml`)
 
 ```yaml
 apiVersion: v1
@@ -169,13 +169,13 @@ data:
 1. **Edit manifest:**
 
 ```powershell
-notepad platform\otel-daemonset.yaml
+notepad platform\base\otel-daemonset.yaml
 ```
 
 2. **Commit and push:**
 
    ```powershell
-   git add platform/otel-daemonset.yaml
+   git add platform/base/otel-daemonset.yaml
    git commit -m "feat: update OTEL DaemonSet config"
    git push origin main
    ```

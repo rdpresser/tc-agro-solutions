@@ -4,4 +4,4 @@ kind: Kustomization
 resources:
   - namespaces/namespaces.yaml
   - ingress/argocd-ingressroute.yaml  # Traefik IngressRoute (k3s built-in)
-  - ../otel-daemonset.yaml             # OTEL DaemonSet + ConfigMap (Observability)
+  - otel-daemonset.yaml                # OTEL DaemonSet + ConfigMap (Observability)

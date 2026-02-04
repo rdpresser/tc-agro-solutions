@@ -85,7 +85,7 @@ No C# code changes required.
 
 ## 5) DaemonSet Manifest
 
-File: infrastructure/kubernetes/platform/otel-daemonset.yaml
+File: infrastructure/kubernetes/platform/base/otel-daemonset.yaml
 
 - ConfigMap for agent config
 - DaemonSet (1 pod per node)
@@ -106,7 +106,7 @@ http://tc-agro-otel-collector:4318
 1. Apply the DaemonSet:
 
 ```
-kubectl apply -f infrastructure/kubernetes/platform/otel-daemonset.yaml
+kubectl apply -f infrastructure/kubernetes/platform/base/otel-daemonset.yaml
 ```
 
 2. Confirm the DaemonSet is running:

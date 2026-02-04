@@ -464,7 +464,7 @@ infrastructure/kubernetes/platform/helm-values/dev/
 └── keda.values.yaml              # Optional autoscaling (future)
 ```
 
-**Note:** OTEL DaemonSet is deployed as a manual Kubernetes manifest (`platform/otel-daemonset.yaml`), not via Helm chart.
+**Note:** OTEL DaemonSet is deployed as a manual Kubernetes manifest (`platform/base/otel-daemonset.yaml`), not via Helm chart.
 
 **Why?**
 

@@ -483,13 +483,20 @@ function Create-AgroSecrets {
     return
   }
 
+  # Ensure target namespace exists before creating secrets
+  kubectl get namespace agro-apps 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    kubectl create namespace agro-apps --dry-run=client -o yaml | kubectl apply -f - 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0
+  }
+
   # Delete existing secret if present (to allow updates)
-  kubectl delete secret agro-secrets -n agro-apps --ignore-not-found=true 2>&1 | Out-Null
+  & kubectl @("delete", "secret", "agro-secrets", "-n", "agro-apps", "--ignore-not-found=true") 2>&1 | Out-Null
 
   # Create secret in agro-apps namespace
   Write-Host " Creating secret 'agro-secrets' in namespace 'agro-apps'..." -ForegroundColor $Color.Info
-  $createCmd = "kubectl create secret generic agro-secrets -n agro-apps $($secretArgs -join ' ')"
-  Invoke-Expression $createCmd 2>&1 | Out-Null
+  $kubectlArgs = @("create", "secret", "generic", "agro-secrets", "-n", "agro-apps") + $secretArgs
+  $createOutput = & kubectl @kubectlArgs 2>&1
 
   if ($LASTEXITCODE -eq 0) {
     Write-Host "✅ Secret 'agro-secrets' created successfully" -ForegroundColor $Color.Success
@@ -498,10 +505,34 @@ function Create-AgroSecrets {
   }
   else {
     Write-Host "❌ Failed to create secret 'agro-secrets'" -ForegroundColor $Color.Error
+    if ($createOutput) {
+      Write-Host "    kubectl error: $createOutput" -ForegroundColor $Color.Muted
+    }
     Write-Host " Applications will fail to start without secrets" -ForegroundColor $Color.Warning
   }
 
   $global:LASTEXITCODE = 0  # Reset exit code
+}
+
+function Test-KustomizeBuild {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][string]$Label
+  )
+
+  Write-Host " Preflight: kustomize build $Label" -ForegroundColor $Color.Info
+  $output = & kubectl @("kustomize", $Path) 2>&1
+
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Kustomize build failed for $Label" -ForegroundColor $Color.Error
+    if ($output) {
+      Write-Host "    $output" -ForegroundColor $Color.Muted
+    }
+    return $false
+  }
+
+  Write-Host "✅ Kustomize build OK: $Label" -ForegroundColor $Color.Success
+  return $true
 }
 
 function Apply-GitOpsBootstrap {
@@ -528,6 +559,10 @@ function Apply-GitOpsBootstrap {
 
   $baseKustomization = Join-Path $platformPath "base"
   if (Test-Path $baseKustomization) {
+    if (-not (Test-KustomizeBuild -Path $baseKustomization -Label "platform/base")) {
+      return
+    }
+
     kubectl apply -k $baseKustomization 2>&1 | Out-Null
     Write-Host "✅ Base manifests applied (namespaces, ingress)" -ForegroundColor $Color.Success
   }
@@ -596,6 +631,10 @@ function Apply-LocalManifests {
 
   if (Test-Path $platformOverlay) {
     Write-Host " Applying platform overlay (namespaces, ingress, ArgoCD projects)..." -ForegroundColor $Color.Info
+    if (-not (Test-KustomizeBuild -Path $platformOverlay -Label "platform/overlays/dev")) {
+      return
+    }
+
     kubectl apply -k $platformOverlay 2>&1 | Out-Null
     $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Platform overlay applied" -ForegroundColor $Color.Success
@@ -606,6 +645,10 @@ function Apply-LocalManifests {
 
   if (Test-Path $appsOverlay) {
     Write-Host " Applying apps overlay (frontend ingress/deployment)..." -ForegroundColor $Color.Info
+    if (-not (Test-KustomizeBuild -Path $appsOverlay -Label "apps/overlays/dev")) {
+      return
+    }
+
     kubectl apply -k $appsOverlay 2>&1 | Out-Null
     $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Apps overlay applied" -ForegroundColor $Color.Success

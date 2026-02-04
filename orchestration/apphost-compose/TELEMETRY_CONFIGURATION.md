@@ -210,4 +210,4 @@ start http://localhost:9090/targets
 
 - orchestration/apphost-compose/docker-compose.yml
 - infrastructure/kubernetes/apps/base/identity/configmap.yaml
-- infrastructure/kubernetes/platform/otel-daemonset.yaml
+- infrastructure/kubernetes/platform/base/otel-daemonset.yaml

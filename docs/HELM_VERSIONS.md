@@ -14,7 +14,7 @@
 
 - **keda** - Kubernetes Event Driven Autoscaling (optional)
 
-**Note:** OTEL DaemonSet is deployed via a manual manifest (`infrastructure/kubernetes/platform/otel-daemonset.yaml`), not a Helm chart.
+**Note:** OTEL DaemonSet is deployed via a manual manifest (`infrastructure/kubernetes/platform/base/otel-daemonset.yaml`), not a Helm chart.
 
 ---
 

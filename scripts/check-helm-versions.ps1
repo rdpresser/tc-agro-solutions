@@ -9,7 +9,7 @@
     
     NOTE: Full observability stack (Prometheus, Grafana, Loki, Tempo) runs
     in Docker Compose, not in k3d. The OTEL DaemonSet is a manual manifest
-    (platform/otel-daemonset.yaml) and is not managed via Helm.
+    (platform/base/otel-daemonset.yaml) and is not managed via Helm.
 
 .EXAMPLE
     .\check-helm-versions.ps1

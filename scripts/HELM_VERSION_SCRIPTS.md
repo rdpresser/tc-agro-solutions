@@ -199,7 +199,7 @@ infrastructure/kubernetes/platform/
   └── platform-base.yaml            ← Namespaces + OTEL DaemonSet
 ```
 
-**Note:** OTEL DaemonSet is a manual manifest (`platform/otel-daemonset.yaml`), not a Helm chart.
+**Note:** OTEL DaemonSet is a manual manifest (`platform/base/otel-daemonset.yaml`), not a Helm chart.
 
 ### Note on Architecture Change
 
