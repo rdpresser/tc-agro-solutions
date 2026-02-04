@@ -597,7 +597,7 @@ Write-Host ""
 Write-Host "🔐 ARGOCD" -ForegroundColor $Color.Info
 Write-Host " Username: admin" -ForegroundColor $Color.Muted
 Write-Host " Password: $argocdAdminPassword" -ForegroundColor $Color.Muted
-Write-Host " URL: http://argocd.local (after updating hosts file)" -ForegroundColor $Color.Muted
+Write-Host " URL: http://localhost:8090/argocd (start port-forward: .\port-forward.ps1 argocd)" -ForegroundColor $Color.Muted
 
 Write-Host ""
 Write-Host "� INSTALLED COMPONENTS" -ForegroundColor $Color.Info
@@ -615,11 +615,11 @@ Write-Host "�� NEXT STEPS" -ForegroundColor $Color.Info
 Write-Host " 1) Watch ArgoCD sync platform stack" -ForegroundColor $Color.Muted
 Write-Host "    kubectl get applications -n argocd --watch" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 2) Update Windows hosts file for Ingress access" -ForegroundColor $Color.Muted
-Write-Host "    .\update-hosts-file.ps1" -ForegroundColor $Color.Success
+Write-Host " 2) Start ArgoCD port-forward" -ForegroundColor $Color.Muted
+Write-Host "    .\port-forward.ps1 argocd" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 3) Access ArgoCD via Ingress (no port-forward needed)" -ForegroundColor $Color.Muted
-Write-Host "    http://argocd.local" -ForegroundColor $Color.Success
+Write-Host " 3) Access ArgoCD via port-forward" -ForegroundColor $Color.Muted
+Write-Host "    http://localhost:8090/argocd" -ForegroundColor $Color.Success
 Write-Host ""
 Write-Host " 4) Optional: Start Docker Compose observability stack" -ForegroundColor $Color.Muted
 Write-Host "    (Grafana at http://localhost:3000)" -ForegroundColor $Color.Success

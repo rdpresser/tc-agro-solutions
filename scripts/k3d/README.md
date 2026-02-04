@@ -146,32 +146,24 @@ Expected applications:
 
 ---
 
-### 3. Update Hosts File (for Ingress access)
+### 3. Start ArgoCD Port-Forward
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds to `C:\Windows\System32\drivers\etc\hosts`:
+This exposes ArgoCD at `http://localhost:8090/argocd`.
 
-```
-127.0.0.1 argocd.local
-127.0.0.1 agro.local
-```
+**Note:** Port-forward is the recommended way to access ArgoCD in k3d.
 
 ---
 
 ### 4. Access ArgoCD
 
 ```powershell
-# Option 1: Port-Forward (Recommended for development)
+# Port-Forward (Recommended - working solution)
 .\port-forward.ps1 argocd
 # Then access: http://localhost:8090/argocd/
-
-# Option 2: Via Ingress (requires hosts file configuration)
-# Edit C:\Windows\System32\drivers\etc\hosts and add:
-#   127.0.0.1 argocd.local
-# Then access: http://argocd.local/
 
 # Credentials
 Username: admin
@@ -297,24 +289,21 @@ apps-dev                  Synced        Healthy
 
 ---
 
-### 3. **Update Hosts File (Windows)**
+### 3. **Start ArgoCD Port-Forward**
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds:
-
-- `127.0.0.1 argocd.local`
-- `127.0.0.1 agro.local`
+Exposes ArgoCD at `http://localhost:8090/argocd`.
 
 ---
 
-### 4. **Access ArgoCD (Native Ingress)**
+### 4. **Access ArgoCD**
 
 ```powershell
-# No port-forward needed! Native ingress on port 80.
-http://argocd.local
+# Access via port-forward (recommended)
+http://localhost:8090/argocd
 ```
 
 **Credentials:**
@@ -383,23 +372,20 @@ Expected applications:
 
 ---
 
-### 3. Update Hosts File (for Ingress)
+### 3. Start ArgoCD Port-Forward
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds:
-
-- `127.0.0.1 argocd.local`
-- `127.0.0.1 agro.local`
+Exposes ArgoCD at `http://localhost:8090/argocd`.
 
 ---
 
 ### 4. Access ArgoCD
 
 ```
-http://argocd.local
+http://localhost:8090/argocd
 ```
 
 **Credentials:**
@@ -504,11 +490,10 @@ Archived values (for reference, observability moved to Docker Compose):
 
 ## 🌐 Access Methods
 
-| Service      | Method       | URL                             | Notes                                 |
-| ------------ | ------------ | ------------------------------- | ------------------------------------- |
-| **ArgoCD**   | Port-Forward | `http://localhost:8090/argocd/` | Recommended: works immediately        |
-| **ArgoCD**   | Ingress      | `http://argocd.local/`          | Requires hosts file setup (see below) |
-| **Frontend** | Port-Forward | `http://localhost:3080`         | Frontend POC app                      |
+| Service      | Method       | URL                             | Notes                            |
+| ------------ | ------------ | ------------------------------- | -------------------------------- |
+| **ArgoCD**   | Port-Forward | `http://localhost:8090/argocd/` | Run: `.\port-forward.ps1 argocd` |
+| **Frontend** | Port-Forward | `http://localhost:3080`         | Frontend POC app                 |
 
 ### Port-Forward Method (Quick & Easy)
 
@@ -532,10 +517,10 @@ Edit `C:\Windows\System32\drivers\etc\hosts` and add:
 Then access:
 
 ```
-http://argocd.local/   (if Ingress configured)
+http://localhost:8090/argocd/  (ArgoCD via port-forward)
 ```
 
-**Note:** Traefik Ingress for ArgoCD requires additional configuration due to k3d networking. Port-forward is the reliable method for local development.
+**Note:** Port-forward is the reliable method for accessing ArgoCD in k3d. Run `.\port-forward.ps1 argocd` first.
 
 ---
 
