@@ -24,7 +24,6 @@
 #>
 
 $clusterName = "dev"
-$registryName = "localhost"
 
 $Color = @{
     Success = "Green"
@@ -69,24 +68,6 @@ if ($confirmCluster -eq "yes") {
 }
 else {
     Write-Host "❌ Cluster deletion cancelled" -ForegroundColor $Color.Muted
-}
-
-# Delete registry
-Write-Host ""
-Write-Host "=== Delete registry '$registryName'? ===" -ForegroundColor $Color.Warning
-$confirmRegistry = Read-Host "Type 'yes' to confirm"
-
-if ($confirmRegistry -eq "yes") {
-    k3d registry delete $registryName 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Registry deleted" -ForegroundColor $Color.Success
-    }
-    else {
-        Write-Host "⚠️  Registry not found or already deleted" -ForegroundColor $Color.Muted
-    }
-}
-else {
-    Write-Host "❌ Registry deletion cancelled" -ForegroundColor $Color.Muted
 }
 
 # Docker cleanup (SAFE)

@@ -11,7 +11,6 @@
 #>
 
 $clusterName = "dev"
-$registryName = "localhost"
 
 $Color = @{
     Success = "Green"
@@ -50,46 +49,7 @@ if (-not $clusterExists) {
 }
 Write-Host "   ✅ Cluster exists" -ForegroundColor $Color.Success
 
-# Ensure registry is running (needed for image pulls)
-Write-Host "   Ensuring registry k3d-$registryName is running..." -ForegroundColor $Color.Muted
-$registryInfo = k3d registry list 2>&1 | Select-String "k3d-$registryName"
-if ($registryInfo) {
-    $regStatus = ($registryInfo.Line -split "\s+")[2]
-    if ($regStatus -ne "running") {
-        Write-Host "   Registry is $regStatus, starting..." -ForegroundColor $Color.Warning
-        $regStart = k3d registry start $registryName 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Failed to start registry k3d-$registryName" -ForegroundColor $Color.Error
-            Write-Host "   Output: $regStart" -ForegroundColor $Color.Muted
-            exit 1
-        }
-        Write-Host "   ✅ Registry started" -ForegroundColor $Color.Success
-    }
-    else {
-        Write-Host "   ✅ Registry already running" -ForegroundColor $Color.Success
-    }
-}
-else {
-    Write-Host "⚠️  Registry k3d-$registryName not found (create with bootstrap if needed)" -ForegroundColor $Color.Warning
-}
 
-# Docker fallback: ensure registry container is running if it exists
-$regContainer = docker ps -a --filter "name=k3d-$registryName" --format "{{.ID}} {{.Status}}" 2>$null
-if ($regContainer) {
-    $parts = $regContainer.Trim() -split "\s+"
-    $cid = $parts[0]
-    $cstatus = ($parts[1..($parts.Length-1)] -join " ")
-    if ($cstatus -notlike "Up*") {
-        Write-Host "   Starting registry container (docker start $cid)..." -ForegroundColor $Color.Muted
-        docker start $cid 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ Registry container started" -ForegroundColor $Color.Success
-        }
-        else {
-            Write-Host "   ⚠️  Failed to start registry container $cid" -ForegroundColor $Color.Warning
-        }
-    }
-}
 
 # Start cluster with verbose output
 Write-Host ""

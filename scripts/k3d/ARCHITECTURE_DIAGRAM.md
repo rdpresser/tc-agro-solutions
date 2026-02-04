@@ -17,12 +17,11 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │  ════════════════════════════════════════════════════════════════════════════  │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 1️⃣ Create Local Registry                                             │       │
+│  │ 1️⃣ Use Docker Hub (public)                                          │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
-│  │ k3d registry create localhost --port 5000                           │       │
+│  │ 🐳 rdpresser/* images                                                │       │
 │  │ ↓                                                                    │       │
-│  │ 🐳 localhost:5000 (registry)                                        │       │
-│  │   Ready for microservice images                                     │       │
+│  │ Public images available for pulls                                   │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
@@ -100,27 +99,27 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │  ════════════════════════════════════════════════════════════════════════════  │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 🛠️ Build & Push Images to localhost:5000                            │       │
+│  │ 🛠️ Build & Push Images to Docker Hub                               │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
 │  │                                                                      │       │
 │  │  .\build-push-images.ps1                                           │       │
 │  │                                                                      │       │
 │  │  FOR EACH IMAGE IN $images ARRAY:                                   │       │
-│  │    1️⃣ docker build -t localhost:5000/{image-name}:latest            │       │
-│  │    2️⃣ docker push localhost:5000/{image-name}:latest                │       │
+│  │    1️⃣ docker build -t rdpresser/{image-name}:latest                 │       │
+│  │    2️⃣ docker push rdpresser/{image-name}:latest                     │       │
 │  │                                                                      │       │
-│  │  RESULT: Image available in localhost:5000 registry                 │       │
+│  │  RESULT: Image available on Docker Hub                              │       │
 │  │                                                                      │       │
 │  │  Examples:                                                           │       │
-│  │  ✅ localhost:5000/tc-agro-frontend-service:latest                   │       │
-│  │  ⏳ localhost:5000/agro-identity-service:latest (when added)         │       │
-│  │  ⏳ localhost:5000/agro-farm-service:latest (when added)             │       │
-│  │  ⏳ localhost:5000/agro-sensor-ingest-service:latest (when added)    │       │
-│  │  ⏳ localhost:5000/agro-dashboard-service:latest (when added)        │       │
+│  │  ✅ rdpresser/frontend-service:latest                               │       │
+│  │  ✅ rdpresser/identity-service:latest                               │       │
+│  │  ⏳ rdpresser/farm-service:latest (when added)                       │       │
+│  │  ⏳ rdpresser/sensor-ingest-service:latest (when added)              │       │
+│  │  ⏳ rdpresser/dashboard-service:latest (when added)                  │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
-│  │ 🚀 Deploy Pods Using Images from localhost:5000                     │       │
+│  │ 🚀 Deploy Pods Using Images from Docker Hub                         │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
 │  │                                                                      │       │
 │  │  Deployment YAML:                                                   │       │
@@ -134,16 +133,15 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │  │  │     spec:                                                    │  │       │
 │  │  │       containers:                                            │  │       │
 │  │  │       - name: api                                            │  │       │
-│  │  │         image: localhost:5000/agro-identity-service:latest  │  │       │
-│  │  │         imagePullPolicy: IfNotPresent                       │  │       │
+│  │  │         image: rdpresser/identity-service:latest            │  │       │
+│  │  │         imagePullPolicy: Always                             │  │       │
 │  │  │                                                              │  │       │
-│  │  │  ↓ K8s kubelet pulls from localhost:5000 (already linked)   │  │       │
+│  │  │  ↓ K8s kubelet pulls from Docker Hub                         │  │       │
 │  │  │  ↓ Pod container starts                                      │  │       │
 │  │  └──────────────────────────────────────────────────────────────┘  │       │
 │  │                                                                      │       │
-│  │  NO AUTH NEEDED:                                                    │       │
-│  │  - bootstrap.ps1 auto-configures all nodes                         │       │
-│  │  - k3d handles registry linking                                    │       │
+│  │  PUBLIC IMAGES:                                                     │       │
+│  │  - Docker Hub public images                                        │       │
 │  │  - No ImagePullSecret required                                     │       │
 │  └──────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
@@ -167,8 +165,8 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │     localhost:3200        → Tempo                                               │
 │                                                                                  │
 │  📦 Registry Access:                                                            │
-│     localhost:5000        → Docker Registry API (pull/push)                     │
-│     curl http://localhost:5000/v2/_catalog   (list images)                     │
+│     Docker Hub (rdpresser) → Public image pulls                                 │
+│     https://hub.docker.com/u/rdpresser                                          │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -182,10 +180,9 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │  bootstrap.ps1  │
 └────────┬────────┘
          │
-         ├─ 1️⃣ Create registry (localhost:5000)
+         ├─ 1️⃣ Use Docker Hub (public images)
          │
          ├─ 2️⃣ Create k3d cluster (joins tc-agro-network)
-         │      └─ Auto-link registry to all nodes
          │
          ├─ 3️⃣ Install ArgoCD via Helm
          │
@@ -194,8 +191,6 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
                  └─ ArgoCD reads Git repository
                     │
                     ├─ platform-base
-                    │  ├─ observability namespace
-                    │  └─ OTEL DaemonSet (exports to tc-agro-otel-collector)
                     │
                     └─ apps-dev
                        └─ Microservices in agro-apps namespace
@@ -259,7 +254,7 @@ tc-agro-solutions/
 │
 ├─ scripts/k3d/                           # Bootstrap & management scripts
 │  ├─ bootstrap.ps1                       (Main bootstrap - joins tc-agro-network)
-│  ├─ build-push-images.ps1               (Build & push to localhost:5000)
+│  ├─ build-push-images.ps1               (Build & push to Docker Hub)
 │  ├─ manager.ps1                         (Interactive menu)
 │  ├─ status.ps1                          (Cluster status)
 │  ├─ cleanup.ps1                         (Delete cluster)
@@ -273,7 +268,7 @@ tc-agro-solutions/
 │  └─ dashboard-service/
 │
 └─ poc/frontend/                          # Frontend POC
-   └─ Dockerfile                          (Build & push to localhost:5000)
+   └─ Dockerfile                          (Build & push to Docker Hub)
 ```
 
 ---
@@ -321,11 +316,11 @@ Prometheus, Grafana, Loki, Tempo run in Docker Compose
 
 ## ✅ Verification Checklist
 
-- [x] Registry created: `k3d registry list` shows `localhost:5000`
+- [x] Docker Hub access: `docker pull rdpresser/frontend-service:latest`
 - [x] Cluster in network: `docker network inspect tc-agro-network` shows k3d nodes
 - [x] ArgoCD managing apps: platform-base and apps-dev synced
 - [x] Pods resolve container names: `kubectl exec ... -- getent hosts tc-agro-postgres`
-- [x] Images can be pushed: `docker push localhost:5000/tc-agro-frontend-service:latest`
+- [x] Images can be pushed: `docker push rdpresser/frontend-service:latest`
 - [x] Pods can pull images: no `ImagePullSecret` needed
 - [x] OTEL DaemonSet running: `kubectl get pods -n observability`
 - [x] Observability stack in Docker Compose: `docker compose ps`

@@ -66,7 +66,7 @@ cd scripts\k3d
 **What you get:**
 
 - ✅ k3d cluster (4 nodes: 1 server + 3 agents)
-- ✅ 🐳 Local registry at `localhost:5000` (auto-configured!)
+- ✅ 🐳 Docker Hub images (public, rdpresser/\*)
 - ✅ **Traefik** (k3s built-in ingress controller)
 - ✅ ArgoCD (GitOps controller)
 - ✅ **Auto-installed via GitOps:**
@@ -251,7 +251,7 @@ tc-agro-solutions/
 - **Orchestration:** k3d (lightweight Kubernetes)
 - **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA)
 - **Cluster:** 18GB total (1 server 2GB + 2 agents: system 6GB + apps 10GB)
-- **Registry:** localhost:5000 (local image registry)
+- **Registry:** Docker Hub (rdpresser)
 
 **Choose your mode:**
 

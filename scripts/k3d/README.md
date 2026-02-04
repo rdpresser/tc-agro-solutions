@@ -89,7 +89,7 @@ create-all-from-zero.ps1
 ### 🏗️ By Bootstrap Script
 
 - k3d cluster (4 nodes: 1 server + 3 agents)
-- Local registry (localhost:5000)
+- Docker Hub images (public, rdpresser/\*)
 - ArgoCD (via Helm)
 - Platform Project
 - Bootstrap Application (App-of-apps)
@@ -215,7 +215,7 @@ This single command:
 - ✅ Creates k3d cluster (18GB: 2GB server + 6GB system + 10GB apps)
 - ✅ Installs ArgoCD via Helm
 - ✅ Applies GitOps bootstrap (App-of-apps)
-- ✅ **Creates local registry at localhost:5000** ⭐ **NEW**
+- ✅ Uses Docker Hub images (public, rdpresser/\*)
 - ✅ ArgoCD auto-installs: Prometheus, Grafana, Loki, Tempo, OTel, KEDA
 
 ⏱️ **Time:** ~3-4 minutes
@@ -224,25 +224,15 @@ This single command:
 
 ## 🐳 Container Registry Configuration
 
-### Registry Automatically Configured ✅
+### Docker Hub (Public) ✅
 
-The local registry `localhost:5000` is **automatically configured** during bootstrap:
-
-```powershell
-# bootstrap.ps1 (line 32-33, 158):
-$registryName = "localhost"
-$registryPort = 5000
-
-# bootstrap.ps1 (line 200):
---registry-use "$registryName`:$registryPort"
-```
+Images are pulled from Docker Hub under the **rdpresser** account.
 
 **What bootstrap.ps1 does:**
 
-- ✅ Creates k3d registry at `localhost:5000`
-- ✅ Connects cluster nodes to registry (auto-configured, no auth)
-- ✅ Nodes can pull/push images without credentials
-- ✅ Ready for your microservices
+- ✅ Sets up cluster networking for Docker Compose services
+- ✅ ArgoCD installs platform/apps from GitOps
+- ✅ Images are pulled from Docker Hub (public)
 
 ### Build & Push Images
 
@@ -252,19 +242,19 @@ $registryPort = 5000
 
 This script:
 
-1. **Builds** Docker images with tag `localhost:5000/{image-name}:latest`
-2. **Pushes** to local registry
-3. Currently configured for: `tc-agro-frontend-service`
+1. **Builds** Docker images with tag `rdpresser/{image-name}:latest`
+2. **Pushes** to Docker Hub
+3. Currently configured for: `frontend-service`, `identity-service`
 
 **To add your microservices:**
 Edit `build-push-images.ps1` and add to the `$images` array:
 
 ```powershell
 $images = @(
-    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+   @{ name = "frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
     # Add your services:
-    @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "Dockerfile" }
-    @{ name = "agro-farm-service"; path = "services/farm-service"; dockerfile = "Dockerfile" }
+   @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "Dockerfile" }
+   @{ name = "farm-service"; path = "services/farm-service"; dockerfile = "Dockerfile" }
     # ... etc
 )
 ```
@@ -275,17 +265,17 @@ $images = @(
 # 1️⃣ Build your microservices
 .\build-push-images.ps1
 
-# 2️⃣ Verify images in registry
-curl http://localhost:5000/v2/_catalog
+# 2️⃣ Verify images in Docker Hub
+# https://hub.docker.com/u/rdpresser
 
 # 3️⃣ Deploy pods using the images
-# image: localhost:5000/agro-identity-service:latest
+# image: rdpresser/identity-service:latest
 
 # 4️⃣ K8s pulls automatically (already configured)
 kubectl get pods  # Shows running pods
 ```
 
-📖 **Complete registry guide:** See **[REGISTRY_CONFIGURATION.md](REGISTRY_CONFIGURATION.md)**
+📖 **Image registry:** Docker Hub (public)
 
 ---
 
@@ -341,7 +331,7 @@ http://argocd.local
 | **Cluster Name** | dev                                               |
 | **Nodes**        | 1 server (2GB) + 2 agents (system 6GB, apps 10GB) |
 | **Total RAM**    | 18GB                                              |
-| **Registry**     | localhost:5000                                    |
+| **Registry**     | Docker Hub (rdpresser)                            |
 | **Port Mapping** | 80:80, 443:443 (native LoadBalancer)              |
 
 ### Node Pools (AKS-like)
@@ -432,12 +422,12 @@ http://argocd.local
 | Command                       | Description                                   |
 | ----------------------------- | --------------------------------------------- |
 | `.\status.ps1`                | Cluster status (nodes, services, ArgoCD apps) |
-| `.\cleanup.ps1`               | Delete cluster and registry                   |
+| `.\cleanup.ps1`               | Delete cluster                                |
 | `.\start-cluster.ps1`         | Start stopped cluster                         |
 | `.\port-forward.ps1 grafana`  | Access Grafana at `http://localhost:3000`     |
 | `.\port-forward.ps1 all`      | Port-forward all services                     |
 | `.\stop-port-forward.ps1 all` | Stop all port-forwards                        |
-| `.\build-push-images.ps1`     | Build and push images to local registry       |
+| `.\build-push-images.ps1`     | Build and push images to Docker Hub           |
 | `.\list-secrets.ps1`          | Debug tool for secrets                        |
 
 ---

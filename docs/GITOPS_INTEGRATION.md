@@ -221,9 +221,9 @@ kubectl describe application apps-dev -n argocd | grep -A 5 "Sync Status"
 ### Check Pod Image Source
 
 ```bash
-# Verify pulling from Docker Hub (not k3d local registry)
+# Verify pulling from Docker Hub
 kubectl describe pod -n agro-apps | grep -i "image:"
-# Should show: rdpresser/... NOT k3d-localhost:5000/...
+# Should show: rdpresser/...
 ```
 
 ### Force ArgoCD Sync (Manual)
@@ -272,7 +272,7 @@ kubectl patch application apps-dev -n argocd \
 
 ---
 
-### Issue: k3d still using local images
+### Issue: Deployments using wrong image registry
 
 **Symptom:** Old behavior, builds locally
 
@@ -285,9 +285,6 @@ kubectl get deployment -n agro-apps -o yaml | grep "image:"
 # Should show:
 # image: rdpresser/identity-service:xxxxxxxx
 # image: rdpresser/frontend-service:xxxxxxxx
-
-# NOT:
-# image: k3d-localhost:5000/...
 
 # If wrong, the manifests weren't updated correctly
 ```

@@ -171,7 +171,7 @@ spec:
 
       containers:
         - name: identity-service
-          image: localhost:5000/agro-identity-service:latest
+          image: rdpresser/identity-service:latest
           imagePullPolicy: IfNotPresent
 
           ports:

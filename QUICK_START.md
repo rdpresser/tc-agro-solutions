@@ -216,8 +216,8 @@ Messaging__RabbitMQ__Host: "tc-agro-rabbitmq" # ← Docker container name
 
 **File:** `infrastructure/kubernetes/apps/base/identity/deployment.yaml`
 
-- **Image:** `k3d-localhost:5000/tc-agro-identity-service:latest`
-- **ImagePullPolicy:** `IfNotPresent` (uses locally imported image)
+- **Image:** `rdpresser/identity-service:latest`
+- **ImagePullPolicy:** `Always` (pulls from Docker Hub)
 - **Replicas:** 2
 - **Health Probes:**
   - Readiness: `/health` endpoint, 5s initial delay
@@ -227,8 +227,8 @@ Messaging__RabbitMQ__Host: "tc-agro-rabbitmq" # ← Docker container name
 
 **File:** `infrastructure/kubernetes/apps/base/frontend/deployment.yaml`
 
-- **Image:** `k3d-localhost:5000/tc-agro-frontend-service:latest`
-- **ImagePullPolicy:** `IfNotPresent`
+- **Image:** `rdpresser/frontend-service:latest`
+- **ImagePullPolicy:** `Always`
 - **Replicas:** 1
 - **Port:** 80
 

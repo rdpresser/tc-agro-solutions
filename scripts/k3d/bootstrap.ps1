@@ -28,7 +28,7 @@
 .NOTES
   Requirements: k3d v5.x+, kubectl, helm, docker
   Cluster name: "dev"
-  Registry: localhost:5000
+  Registry: Docker Hub (rdpresser)
 
 .EXAMPLE
   .\bootstrap.ps1
@@ -38,8 +38,6 @@
 # === Configuration
 # =====================================================
 $clusterName = "dev"
-$registryName = "localhost"
-$registryPort = 5000
 
 # Node resource allocation (20GB total)
 # Creating agents individually allows different memory per node pool
@@ -131,19 +129,6 @@ function Stop-PortForwards {
   Write-Host "✅ Port-forwards stopped" -ForegroundColor $Color.Success
 }
 
-function New-LocalRegistry {
-  Write-Step "Creating local registry ($registryName`:$registryPort)"
-  $regList = k3d registry list 2>&1 | Out-String
-
-  if ($regList -match "k3d-$registryName") {
-    Write-Host " Registry already exists. Skipping." -ForegroundColor $Color.Muted
-  }
-  else {
-    k3d registry create $registryName --port $registryPort 2>&1 | Out-Null
-    Write-Host "✅ Registry created" -ForegroundColor $Color.Success
-  }
-}
-
 function Ensure-ComposeNetwork {
   Write-Step "Ensuring Docker Compose network exists ($composeNetworkName)"
   
@@ -231,8 +216,7 @@ function New-K3dCluster {
       --port "80:80@loadbalancer" `
       --port "443:443@loadbalancer" `
       --servers-memory $serverMemory `
-      --network $composeNetworkName `
-      --registry-use "$registryName`:$registryPort" 2>&1 | Out-Null
+      --network $composeNetworkName 2>&1 | Out-Null
   }
 
   if (-not $ok) { exit 1 }
@@ -449,6 +433,10 @@ function Set-ArgocdPassword {
   Write-Host " Delegating to reset-argocd-password.ps1 (standardized password change)..." -ForegroundColor $Color.Muted
   Write-Host ""
   & $scriptPath -NewPassword $argocdAdminPassword
+  
+  # Ignore exit code from reset script - it may return 1 even on success
+  # We'll validate ArgoCD is ready in next steps instead
+  $null = $LASTEXITCODE
 }
 
 function Apply-GitOpsBootstrap {
@@ -568,7 +556,6 @@ Write-Host "╚═════════════════════�
 Test-Prerequisites
 Prompt-OptionalComponents
 Stop-PortForwards
-New-LocalRegistry
 Ensure-ComposeNetwork
 Remove-ExistingCluster
 New-K3dCluster
@@ -603,7 +590,7 @@ Write-Host " Server: 3GB (control plane)" -ForegroundColor $Color.Success
 Write-Host " System: 4GB (kube-system, CoreDNS, CNI)" -ForegroundColor $Color.Success
 Write-Host " Platform: 6GB (ArgoCD, Ingress, cert-manager)" -ForegroundColor $Color.Success
 Write-Host " Apps: 7GB (.NET microservices)" -ForegroundColor $Color.Success
-Write-Host " Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
+Write-Host " Registry: Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
 Write-Host " Network: $composeNetworkName (shared with Docker Compose)" -ForegroundColor $Color.Success
 
 Write-Host ""

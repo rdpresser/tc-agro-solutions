@@ -153,9 +153,9 @@
 
 ## Key Differences: Before vs After
 
-| Aspect              | BEFORE (k3d local)        | NOW (GitOps + Docker Hub)  |
+| Aspect              | BEFORE (local images)     | NOW (GitOps + Docker Hub)  |
 | ------------------- | ------------------------- | -------------------------- |
-| **Image Source**    | k3d-localhost:5000/...    | rdpresser/... (Docker Hub) |
+| **Image Source**    | Local images              | rdpresser/... (Docker Hub) |
 | **Build Location**  | Developer's machine       | GitHub Actions CI          |
 | **Deploy Trigger**  | Manual `kubectl apply`    | ArgoCD auto-sync           |
 | **Version Control** | No Git history            | Git commits = deployments  |

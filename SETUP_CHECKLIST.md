@@ -263,10 +263,10 @@ Use este checklist para garantir que seu ambiente está completamente configurad
 
 ### Step 3: Access Services
 
-- [ ] Local registry available
+- [ ] Docker Hub access available
 
   ```powershell
-  curl -X GET http://localhost:5000/v2/_catalog
+  docker pull rdpresser/frontend-service:latest
   ```
 
 - [ ] ArgoCD via port-forward

@@ -144,7 +144,7 @@ kubectl get deployment frontend -n agro-apps \
 - [ ] ArgoCD synced with new manifests
 - [ ] Identity CI can commit to solutions repo
 - [ ] Frontend CI can commit to same repo
-- [ ] Pods pulling from Docker Hub (not k3d registry)
+- [ ] Pods pulling from Docker Hub
 - [ ] New commits trigger ArgoCD auto-sync
 - [ ] No ImagePullBackOff errors
 
@@ -160,7 +160,7 @@ kubectl get deployment frontend -n agro-apps \
 │  Build local Docker          →  CI builds & pushes         │
 │  k3d cache                   →  Docker Hub public          │
 │  Manual apply                →  ArgoCD auto-sync           │
-│  k3d-localhost:5000/...      →  rdpresser/...              │
+│  Previous local images       →  rdpresser/...              │
 │  imagePullPolicy: Never      →  imagePullPolicy: Always    │
 │  No version control          →  Git = source of truth      │
 │                                                             │

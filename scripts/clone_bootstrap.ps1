@@ -134,76 +134,222 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
 }
 
 function Ensure-DotEnv($rootPath) {
-    $envPath = Join-Path $rootPath ".env"
+    $envPath = Join-Path $rootPath "orchestration\apphost-compose\.env"
     
     if (-not (Test-Path $envPath)) {
-        Write-Step "Creating .env file"
+        Write-Step "Creating .env file (apphost-compose)"
         
         $envContent = @"
 # =====================================================
-# TC Agro Solutions - Local Configuration
+# TC Agro Solutions - Unified Environment Configuration
+# =====================================================
+# This file contains ALL configuration for:
+#   1. Docker Compose infrastructure services (simple names)
+#   2. .NET applications (hierarchical IOptions pattern)
+#
+# Hierarchy Format (based on appsettings.Development.json):
+#   appsettings.json: "Section": { "SubSection": { "Key": "value" } }
+#   Environment: Section__SubSection__Key=value
 # =====================================================
 
-# Environment
+# =====================================================
+# CORE ENVIRONMENT
+# =====================================================
 ASPNETCORE_ENVIRONMENT=Development
-ASPNETCORE_URLS=http://0.0.0.0:5000
+ASPNETCORE_URLS=http://0.0.0.0:8080
+BUILD_CONFIGURATION=Debug
 
 # =====================================================
-# PostgreSQL
+# INFRASTRUCTURE - PostgreSQL (simple names for Docker)
 # =====================================================
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=agro
+POSTGRES_DB=tc-agro-identity-db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-
-# Connection String for .NET (optional, built by services)
-# DefaultConnection=Host=postgres;Port=5432;Database=agro;Username=postgres;Password=postgres
+POSTGRES_SCHEMA=public
+POSTGRES_MAINTENANCE_DB=postgres
+POSTGRES_INIT_ARGS=-c log_statement=all -c log_duration=on
 
 # =====================================================
-# Redis
+# INFRASTRUCTURE - Redis (simple names for Docker)
 # =====================================================
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
+REDIS_MAXMEMORY=256mb
+REDIS_MAXMEMORY_POLICY=allkeys-lru
 
 # =====================================================
-# RabbitMQ / Azure Service Bus
+# INFRASTRUCTURE - RabbitMQ (simple names for Docker)
 # =====================================================
 RABBITMQ_HOST=rabbitmq
 RABBITMQ_PORT=5672
 RABBITMQ_MANAGEMENT_PORT=15672
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
+RABBITMQ_DEFAULT_USER=guest
+RABBITMQ_DEFAULT_PASSWORD=guest
+RABBITMQ_DEFAULT_VHOST=/
+RABBITMQ_VM_MEMORY_HIGH_WATERMARK=512MB
 
 # =====================================================
-# Services - HTTP Ports
+# INFRASTRUCTURE - OBSERVABILITY
 # =====================================================
-IDENTITY_HTTP_PORT=5001
-FARM_HTTP_PORT=5002
-SENSOR_INGEST_HTTP_PORT=5003
-ANALYTICS_WORKER_HTTP_PORT=5004
-DASHBOARD_HTTP_PORT=5005
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=admin
+GRAFANA_PORT=3000
+
+PROMETHEUS_PORT=9090
+PROMETHEUS_RETENTION=15d
+PROMETHEUS_CONFIG_FILE=prometheus.yml
+# To disable Identity monitoring, use this alternative config file or stop container in docker desktop to avoid duplicate scrape targets on /metrics
+# PROMETHEUS_CONFIG_FILE=prometheus.no-identity.yml
+
+LOKI_PORT=3100
+TEMPO_PORT=3200
+OTEL_COLLECTOR_PORT=4317
+OTEL_COLLECTOR_HTTP_PORT=4318
 
 # =====================================================
-# JWT / Authentication
+# .NET APPLICATION - DATABASE (Database.Postgres.*)
 # =====================================================
-JWT_ISSUER=http://localhost:5001
-JWT_AUDIENCE=http://localhost:5000
-JWT_SECRET_KEY=your-256-bit-secret-key-change-in-production-12345678
-JWT_EXPIRATION_MINUTES=480
+# Hierarchy: Database > Postgres > Key
+# Maps to appsettings.json: "Database": { "Postgres": { ... } }
+Database__Postgres__Host=${POSTGRES_HOST}
+Database__Postgres__Port=${POSTGRES_PORT}
+Database__Postgres__Database=${POSTGRES_DB}
+Database__Postgres__UserName=${POSTGRES_USER}
+Database__Postgres__Password=${POSTGRES_PASSWORD}
+Database__Postgres__Schema=${POSTGRES_SCHEMA}
+Database__Postgres__MaintenanceDatabase=${POSTGRES_MAINTENANCE_DB}
+Database__Postgres__ConnectionTimeout=30
+Database__Postgres__MinPoolSize=2
+Database__Postgres__MaxPoolSize=20
+
+# .NET Connection String (built from above variables)
+# This is a convenience variable, apps can build it from individual values
+ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=true
 
 # =====================================================
-# Logging
+# .NET APPLICATION - CACHE (Cache.Redis.*)
 # =====================================================
-LOG_LEVEL=Information
+# Hierarchy: Cache > Redis > Key
+# Maps to appsettings.json: "Cache": { "Redis": { ... } }
+Cache__Redis__Host=${REDIS_HOST}
+Cache__Redis__Port=${REDIS_PORT}
+Cache__Redis__Password=${REDIS_PASSWORD}
+Cache__Redis__DefaultTTL=300
+
+# =====================================================
+# .NET APPLICATION - MESSAGING (Messaging.RabbitMQ.*)
+# =====================================================
+# Hierarchy: Messaging > RabbitMQ > Key
+# Maps to appsettings.json: "Messaging": { "RabbitMQ": { ... } }
+Messaging__RabbitMQ__Host=${RABBITMQ_HOST}
+Messaging__RabbitMQ__Port=${RABBITMQ_PORT}
+Messaging__RabbitMQ__ManagementPort=${RABBITMQ_MANAGEMENT_PORT}
+Messaging__RabbitMQ__VirtualHost=${RABBITMQ_DEFAULT_VHOST}
+Messaging__RabbitMQ__Exchange=identity.events
+Messaging__RabbitMQ__UserName=${RABBITMQ_DEFAULT_USER}
+Messaging__RabbitMQ__Password=${RABBITMQ_DEFAULT_PASSWORD}
+Messaging__RabbitMQ__AutoProvision=true
+Messaging__RabbitMQ__Durable=true
+Messaging__RabbitMQ__UseQuorumQueues=false
+Messaging__RabbitMQ__AutoPurgeOnStartup=false
+
+# =====================================================
+# .NET APPLICATION - TELEMETRY (Telemetry.Grafana.*)
+# =====================================================
+# Hierarchy: Telemetry > Grafana > Agent/Otlp > Key
+# Maps to appsettings.json: "Telemetry": { "Grafana": { ... } }
+# 
+# IMPORTANTE: Esta configuração é para aplicações DENTRO do Docker Compose!
+# Para rodar com "dotnet run" no host, use localhost em vez de otel-collector
+#
+# NOTA: Endpoint vs LogsEndpoint
+#   - Endpoint (sem path): OpenTelemetry SDK adiciona automaticamente /v1/traces, /v1/metrics
+#   - LogsEndpoint (com /v1/logs): Serilog.Sinks.OpenTelemetry requer path completo
+# =====================================================
+
+# Simple vars (for Docker Compose readability)
+TELEMETRY_GRAFANA_AGENT_HOST=otel-collector
+TELEMETRY_GRAFANA_AGENT_OTLP_GRPC_PORT=4317
+TELEMETRY_GRAFANA_AGENT_OTLP_HTTP_PORT=4318
+TELEMETRY_GRAFANA_AGENT_METRICS_PORT=12345
+TELEMETRY_GRAFANA_AGENT_ENABLED=true
+# =====================================================
+# ESTRATÉGIA DE ENDPOINT POR AMBIENTE
+# =====================================================
+# Docker Compose (este arquivo .env): Apps Docker → OTEL Collector Docker
+#   - Endpoint: http://otel-collector:4318 (nome do container)
+#
+# k3d Cluster (configmap.yaml): Apps k3d → DaemonSet Agent → OTEL Collector Docker
+#   - Endpoint: http://otel-collector-agent.observability.svc.cluster.local:4317
+#   - DaemonSet encaminha para Docker via host.k3d.internal:14318
+# =====================================================
+TELEMETRY_GRAFANA_OTLP_ENDPOINT=http://otel-collector:4318
+TELEMETRY_GRAFANA_OTLP_PROTOCOL=http/protobuf
+TELEMETRY_GRAFANA_OTLP_TIMEOUT_SECONDS=10
+TELEMETRY_GRAFANA_OTLP_INSECURE=true
+
+# Hierarchical vars (for .NET IOptions binding)
+Telemetry__Grafana__Agent__Host=${TELEMETRY_GRAFANA_AGENT_HOST}
+Telemetry__Grafana__Agent__OtlpGrpcPort=${TELEMETRY_GRAFANA_AGENT_OTLP_GRPC_PORT}
+Telemetry__Grafana__Agent__OtlpHttpPort=${TELEMETRY_GRAFANA_AGENT_OTLP_HTTP_PORT}
+Telemetry__Grafana__Agent__MetricsPort=${TELEMETRY_GRAFANA_AGENT_METRICS_PORT}
+Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
+Telemetry__Grafana__Otlp__Endpoint=${TELEMETRY_GRAFANA_OTLP_ENDPOINT}
+Telemetry__Grafana__Otlp__Protocol=${TELEMETRY_GRAFANA_OTLP_PROTOCOL}
+Telemetry__Grafana__Otlp__TimeoutSeconds=${TELEMETRY_GRAFANA_OTLP_TIMEOUT_SECONDS}
+Telemetry__Grafana__Otlp__Insecure=${TELEMETRY_GRAFANA_OTLP_INSECURE}
+
+# =====================================================
+# .NET APPLICATION - SERVICES (Services.{Service}.*)
+# =====================================================
+# Hierarchy: Services > ServiceName > Key
+# Maps to appsettings.json: "Services": { "Identity": { "HttpPort": ... } }
+Services__Identity__HttpPort=5001
+Services__Farm__HttpPort=5002
+Services__SensorIngest__HttpPort=5003
+Services__AnalyticsWorker__HttpPort=5004
+Services__Dashboard__HttpPort=5005
+
+# =====================================================
+# .NET APPLICATION - JWT / AUTHENTICATION (Auth.Jwt.*)
+# =====================================================
+# Hierarchy: Auth > Jwt > Key
+# Maps to appsettings.json: "Auth": { "Jwt": { ... } }
+Auth__Jwt__Issuer=http://localhost:5001
+Auth__Jwt__Audience=http://localhost:5000
+Auth__Jwt__SecretKey=your-256-bit-secret-key-change-in-production-12345678901234567890
+Auth__Jwt__ExpirationInMinutes=480
+
+# =====================================================
+# .NET APPLICATION - LOGGING (Logging.LogLevel.*)
+# =====================================================
+# Hierarchy: Logging > LogLevel > Key
+# Maps to appsettings.json: "Logging": { "LogLevel": { ... } }
+# Note: Keys with dots are preserved in the name (e.g., Microsoft.AspNetCore)
+Logging__LogLevel__Default=Information
+Logging__LogLevel__Microsoft_AspNetCore=Warning
+Logging__LogLevel__System=Warning
+
+# =====================================================
+# .NET APPLICATION - TELEMETRY (Telemetry.Grafana.*)
+# =====================================================
+# See section above for Telemetry__Grafana__* variables
+# (defined above in "TELEMETRY (Telemetry.Grafana.*)" section)
 "@
         
+        $envDir = Split-Path -Parent $envPath
+        if (-not (Test-Path $envDir)) {
+            New-Item -ItemType Directory -Path $envDir -Force | Out-Null
+        }
+
         Set-Content -Path $envPath -Value $envContent -Encoding UTF8
         Write-Success ".env created: $envPath"
     }
     else {
-        Write-Info ".env already exists"
+        Write-Warning ".env already exists at $envPath - skipping generation"
     }
 }
 

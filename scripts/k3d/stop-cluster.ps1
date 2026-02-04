@@ -11,7 +11,6 @@
 #>
 
 $clusterName = "dev"
-$registryName = "localhost"
 
 $Color = @{
     Success = "Green"
@@ -71,42 +70,6 @@ Write-Host "✅ Cluster stopped successfully" -ForegroundColor $Color.Success
 # Give Docker time to stop containers
 Start-Sleep -Seconds 2
 
-# Stop registry as well (best effort)
-Write-Host "   Stopping registry k3d-$registryName (if running)..." -ForegroundColor $Color.Muted
-$regStop = k3d registry stop $registryName 2>&1
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "   ✅ Registry stop issued" -ForegroundColor $Color.Success
-} else {
-    Write-Host "   ⚠️  Could not stop registry (may already be stopped or not present)" -ForegroundColor $Color.Warning
-    Write-Host "      Output: $regStop" -ForegroundColor $Color.Muted
-}
-
-# Fallback: directly stop any registry containers matching name k3d-localhost
-Write-Host "   Checking registry containers in Docker..." -ForegroundColor $Color.Muted
-$registryContainers = docker ps -a --filter "name=k3d-$registryName" --format "{{.ID}} {{.Names}} {{.Status}}" 2>$null
-if ($registryContainers) {
-    $registryContainers.Trim() | ForEach-Object {
-        $parts = $_ -split "\s+"
-        $cid = $parts[0]
-        $cname = $parts[1]
-        $cstatus = ($parts[2..($parts.Length-1)] -join " ")
-        if ($cstatus -like "Up*") {
-            Write-Host "   🔧 Stopping registry container $cname ($cid)..." -ForegroundColor $Color.Warning
-            docker stop $cid 2>&1 | Out-Null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "   ✅ Stopped $cname" -ForegroundColor $Color.Success
-            }
-            else {
-                Write-Host "   ⚠️  Failed to stop $cname" -ForegroundColor $Color.Warning
-            }
-        }
-        else {
-            Write-Host "   ℹ️  Registry container $cname already stopped ($cstatus)" -ForegroundColor $Color.Muted
-        }
-    }
-} else {
-    Write-Host "   ℹ️  No registry containers named k3d-$registryName found" -ForegroundColor $Color.Muted
-}
 Write-Host ""
 Write-Host "💡 To restart the cluster:" -ForegroundColor $Color.Info
 Write-Host "   .\start-cluster.ps1" -ForegroundColor $Color.Success

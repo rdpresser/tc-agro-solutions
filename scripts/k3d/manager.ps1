@@ -107,7 +107,7 @@ function Remove-TcAgroImages {
         return $true
     }
 
-    $confirm = Read-Host "   This will delete ALL local tc-agro images (including localhost:5000). Proceed? [Y/n]"
+    $confirm = Read-Host "   This will delete ALL local tc-agro images (including Docker Hub tags). Proceed? [Y/n]"
     if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = "y" }
     if ($confirm.ToLower() -notin @("y", "yes")) {
         Write-Host "   ❌ Skipped removing tc-agro images" -ForegroundColor $Color.Warning
