@@ -45,6 +45,21 @@ processors:
         action: insert
 
   # ============================================================
+  # CRITICAL: Metrics label normalization for Prometheus
+  # ============================================================
+  # Prevents duplicate label name errors caused by otel.scope.*
+  attributes_to_labels/metrics:
+    actions:
+      - key: otel.scope.name
+        action: delete
+      - key: otel.scope.version
+        action: delete
+      - key: deployment.environment
+        action: delete
+      - key: cluster.name
+        action: delete
+
+  # ============================================================
   # CRITICAL: Attributes to Labels processor for Loki
   # ============================================================
   # Converts Serilog properties → OTLP attributes → Loki labels
@@ -123,7 +138,7 @@ service:
     # Metrics pipeline
     metrics:
       receivers: [otlp, otlp/from-k3d]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, batch, attributes_to_labels/metrics]
       exporters: [prometheus]
 
     # Logs pipeline - CRITICAL: Use attributes_to_labels/logs to promote correlation_id to Loki label
