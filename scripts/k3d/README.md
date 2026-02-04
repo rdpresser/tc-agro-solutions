@@ -28,11 +28,6 @@ This folder contains scripts and documentation for running the complete TC Agro 
 create-all-from-zero.ps1
   ├─ Create k3d cluster
   ├── Install ArgoCD via Helm
-  ├── Install Prometheus via Helm
-  ├── Install Grafana via Helm
-  ├── Install Loki via Helm
-  ├── Install Tempo via Helm
-  ├── Install OTel via Helm
   └── Install KEDA via Helm
 
 ❌ Problems:
@@ -470,14 +465,6 @@ infrastructure/kubernetes/platform/helm-values/dev/
 ```
 
 **Note:** OTEL DaemonSet is deployed as a manual Kubernetes manifest (`platform/otel-daemonset.yaml`), not via Helm chart.
-
-Archived values (for reference, observability moved to Docker Compose):
-
-```
-├── kube-prometheus-stack.values.yaml  # Archived - Docker Compose
-├── loki.values.yaml                   # Archived - Docker Compose
-└── tempo.values.yaml                  # Archived - Docker Compose
-```
 
 **Why?**
 

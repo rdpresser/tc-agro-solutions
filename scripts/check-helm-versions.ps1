@@ -31,7 +31,7 @@ $ColorError = "Red"
 $ColorHeader = "Magenta"
 
 # Chart definitions - only charts that are still deployed via Helm in k3d
-# NOTE: kube-prometheus-stack, loki, tempo were moved to Docker Compose
+# NOTE: Observability stack runs in Docker Compose
 # NOTE: OTEL DaemonSet is a manual manifest (not a Helm chart)
 $charts = @(
     @{

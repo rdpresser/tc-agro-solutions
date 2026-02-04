@@ -7,7 +7,6 @@ resources:
   - configmap.yaml
   - deployment.yaml
   - service.yaml
-  - servicemonitor.yaml
   - ingressroute.yaml
 
 commonLabels:

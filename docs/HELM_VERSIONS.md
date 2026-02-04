@@ -16,12 +16,6 @@
 
 **Note:** OTEL DaemonSet is deployed via a manual manifest (`infrastructure/kubernetes/platform/otel-daemonset.yaml`), not a Helm chart.
 
-**Moved to Docker Compose:**
-
-- kube-prometheus-stack (Prometheus, Grafana, AlertManager)
-- loki
-- tempo
-
 ---
 
 ## 📋 Overview
@@ -59,16 +53,6 @@ sources:
 | Chart    | Current Version | Repository | Purpose                  |
 | -------- | --------------- | ---------- | ------------------------ |
 | **keda** | 2.15.1          | kedacore   | Event-driven autoscaling |
-
-### Archived (now in Docker Compose)
-
-The following charts are no longer deployed via Helm in k3d:
-
-| Chart                 | Status         | Location                       |
-| --------------------- | -------------- | ------------------------------ |
-| kube-prometheus-stack | Docker Compose | orchestration/apphost-compose/ |
-| loki                  | Docker Compose | orchestration/apphost-compose/ |
-| tempo                 | Docker Compose | orchestration/apphost-compose/ |
 
 ---
 

@@ -258,7 +258,7 @@ Use este checklist para garantir que seu ambiente está completamente configurad
 - [ ] Platform stack deployed
   ```powershell
   kubectl get pods -n observability
-  # Should show Prometheus, Grafana, Loki, Tempo
+  # Should show otel-collector-agent DaemonSet pods
   ```
 
 ### Step 3: Access Services
@@ -274,19 +274,19 @@ Use este checklist para garantir que seu ambiente está completamente configurad
   ```powershell
   cd scripts\k3d
   .\port-forward.ps1 argocd
-  # Then visit: http://localhost:9000
+  # Then visit: http://localhost:8090/argocd
   ```
 
 - [ ] Grafana via port-forward
 
   ```powershell
-  .\port-forward.ps1 grafana
+  # Grafana runs in Docker Compose
   # Then visit: http://localhost:3000
   ```
 
 - [ ] Prometheus accessible
   ```powershell
-  .\port-forward.ps1 prometheus
+  # Prometheus runs in Docker Compose
   # Then visit: http://localhost:9090
   ```
 
