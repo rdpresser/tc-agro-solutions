@@ -115,6 +115,19 @@ if ($confirmDocker -eq "yes") {
         Write-Host "No k3d networks found" -ForegroundColor $Color.Muted
     }
 
+    # Remove tc-agro-network (shared with Docker Compose)
+    $tcAgroNet = docker network ls --format "{{.Name}}" | Where-Object { $_ -eq "tc-agro-network" }
+    if ($tcAgroNet) {
+        Write-Host "Removing tc-agro-network (shared network)..." -ForegroundColor $Color.Info
+        docker network rm tc-agro-network 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ tc-agro-network removed" -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "⚠️  tc-agro-network in use or already removed" -ForegroundColor $Color.Warning
+        }
+    }
+
     # --------------------------------------------------
     # Remove k3d volumes (safe: only volumes mounted by k3d cluster containers)
     # --------------------------------------------------

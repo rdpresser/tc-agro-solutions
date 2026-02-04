@@ -124,6 +124,68 @@ function Remove-TcAgroImages {
     return $true
 }
 
+# =====================================================
+# === Unified Bootstrap Pipeline (Shared Logic)
+# =====================================================
+function Invoke-BootstrapPipeline {
+    <#
+    .SYNOPSIS
+        Unified bootstrap pipeline with configurable steps.
+    
+    .DESCRIPTION
+        Handles both "Bootstrap" (menu 1) and "Full Rebuild" (menu 20) scenarios
+        without code duplication.
+    
+    .PARAMETER Steps
+        Array of step hashtables: @{ name, action }
+    
+    .PARAMETER CheckDocker
+        Validate Docker login before proceeding (for build/push workflows)
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Steps,
+        
+        [switch]$CheckDocker
+    )
+    
+    # Docker login validation
+    if ($CheckDocker) {
+        Write-Host ""
+        $dockerInfo = docker info 2>&1
+        if ($dockerInfo -match "ERROR|Cannot connect") {
+            Write-Host "❌ Docker daemon is not running. Please start Docker Desktop." -ForegroundColor $Color.Error
+            return $false
+        }
+        
+        $loginInfo = docker info | Select-String -Pattern "Username:"
+        if ($null -eq $loginInfo) {
+            Write-Host "⚠️  You don't appear to be logged into Docker Hub." -ForegroundColor $Color.Warning
+            $confirm = Read-Host "   Continue anyway? (y/n - default: n)"
+            if ($confirm.ToLower() -ne "y") {
+                Write-Host "❌ Aborted. Please run 'docker login' first." -ForegroundColor $Color.Warning
+                return $false
+            }
+        }
+        else {
+            Write-Host "✅ Docker Hub login detected" -ForegroundColor $Color.Success
+        }
+    }
+    
+    # Execute steps
+    foreach ($step in $Steps) {
+        Write-Host ""; Write-Host "➡️  $($step.name)" -ForegroundColor $Color.Info
+        $ok = & $step.action
+        if (-not $ok) {
+            Write-Host "❌ Step failed: $($step.name). Aborting pipeline." -ForegroundColor $Color.Error
+            return $false
+        }
+        Start-Sleep -Seconds 2
+    }
+    
+    return $true
+}
+
 function Invoke-Script {
     param(
         [string]$ScriptName,
@@ -179,7 +241,21 @@ else {
 
     switch ($choice) {
         "1" {
-            $null = Invoke-Script "bootstrap.ps1"
+            Write-Host ""; Write-Host "🚀 BOOTSTRAP: create cluster + ArgoCD + GitOps + secrets" -ForegroundColor $Color.Info
+            
+            $bootstrapSteps = @(
+                @{ name = "Bootstrap cluster (k3d + ArgoCD + manifests + secrets)"; action = { Invoke-Script "bootstrap.ps1" } },
+                @{ name = "Sync ArgoCD applications"; action = { Invoke-Script "sync-argocd.ps1" -Arguments @("all") } },
+                @{ name = "Port-forward ArgoCD"; action = { Invoke-Script "port-forward.ps1" -Arguments @("argocd") } }
+            )
+            
+            $result = Invoke-BootstrapPipeline -Steps $bootstrapSteps
+            if ($result) {
+                Write-Host ""; Write-Host "✅ Bootstrap completed successfully!" -ForegroundColor $Color.Success
+                Write-Host "   🌐 ArgoCD: http://localhost:8080" -ForegroundColor $Color.Muted
+                Write-Host "   📋 Default credentials: admin / (reset via manager menu option 7)" -ForegroundColor $Color.Muted
+            }
+            
             $null = Read-Host "`nPress Enter to continue"
         }
     
@@ -408,53 +484,27 @@ else {
         }
 
         "20" {
-            Write-Host ""; Write-Host "🧭 Full rebuild: stop PF → cleanup → prune images → bootstrap → build/push (Docker Hub) → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Info
-
-            # Check docker login first
-            Write-Host ""
-            $dockerInfo = docker info 2>&1
-            if ($dockerInfo -match "ERROR|Cannot connect") {
-                Write-Host "❌ Docker daemon is not running. Please start Docker Desktop." -ForegroundColor $Color.Error
-                $null = Read-Host "`nPress Enter to continue"
-                continue
-            }
+            Write-Host ""; Write-Host "🧭 FULL REBUILD: stop PF → cleanup → prune → bootstrap → build/push → import → sync → PF" -ForegroundColor $Color.Info
             
-            $loginInfo = docker info | Select-String -Pattern "Username:"
-            if ($null -eq $loginInfo) {
-                Write-Host "⚠️  You don't appear to be logged into Docker Hub." -ForegroundColor $Color.Warning
-                $confirm = Read-Host "   Continue anyway? (y/n - default: n)"
-                if ($confirm.ToLower() -ne "y") {
-                    Write-Host "❌ Aborted. Please run 'docker login' first." -ForegroundColor $Color.Warning
-                    $null = Read-Host "`nPress Enter to continue"
-                    continue
-                }
-            }
-            else {
-                Write-Host "✅ Docker Hub login detected" -ForegroundColor $Color.Success
-            }
-
-            $steps = @(
+            $fullRebuildSteps = @(
                 @{ name = "Stop port-forwards"; action = { Invoke-Script "stop-port-forward.ps1" -Arguments @("all") } },
                 @{ name = "Cleanup cluster/registry"; action = { Invoke-Script "cleanup.ps1" } },
                 @{ name = "Remove local tc-agro images"; action = { Remove-TcAgroImages } },
-                @{ name = "Bootstrap cluster"; action = { Invoke-Script "bootstrap.ps1" } },
-                @{ name = "Build & push images (Docker Hub)"; action = { Invoke-Script "build-push-images.ps1" } },
+                @{ name = "Bootstrap cluster (k3d + ArgoCD + manifests + secrets)"; action = { Invoke-Script "bootstrap.ps1" } },
+                @{ name = "Build & push images (Docker Hub rdpresser)"; action = { Invoke-Script "build-push-images.ps1" } },
                 @{ name = "Import secrets/configmap"; action = { Invoke-Script "import-secrets.ps1" } },
                 @{ name = "Sync ArgoCD (all)"; action = { Invoke-Script "sync-argocd.ps1" -Arguments @("all") } },
                 @{ name = "Port-forward ArgoCD"; action = { Invoke-Script "port-forward.ps1" -Arguments @("argocd") } }
             )
-
-            foreach ($step in $steps) {
-                Write-Host ""; Write-Host "➡️  $($step.name)" -ForegroundColor $Color.Info
-                $ok = & $step.action
-                if (-not $ok) {
-                    Write-Host "❌ Step failed: $($step.name). Aborting pipeline." -ForegroundColor $Color.Error
-                    break
-                }
-                Start-Sleep -Seconds 3
+            
+            $result = Invoke-BootstrapPipeline -Steps $fullRebuildSteps -CheckDocker
+            if ($result) {
+                Write-Host ""; Write-Host "✅ Full rebuild pipeline completed successfully!" -ForegroundColor $Color.Success
+                Write-Host "   🌐 ArgoCD: http://localhost:8080" -ForegroundColor $Color.Muted
+                Write-Host "   📦 Images pushed to Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
+                Write-Host "   📋 Next: verify pods are running: kubectl get pods -n agro-apps -w" -ForegroundColor $Color.Muted
             }
-
-            Write-Host ""; Write-Host "✅ Full rebuild pipeline finished." -ForegroundColor $Color.Success
+            
             $null = Read-Host "`nPress Enter to continue"
         }
 

@@ -233,7 +233,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-system" `
       --cluster $clusterName `
       --role agent `
-      --memory $systemAgentMemory 2>&1 | Out-Null
+      --memory $systemAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okSystem) { Write-Host " ✅ System agent created ($systemAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -243,7 +244,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-platform" `
       --cluster $clusterName `
       --role agent `
-      --memory $platformAgentMemory 2>&1 | Out-Null
+      --memory $platformAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okPlatform) { Write-Host " ✅ Platform agent created ($platformAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -253,7 +255,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-apps" `
       --cluster $clusterName `
       --role agent `
-      --memory $appsAgentMemory 2>&1 | Out-Null
+      --memory $appsAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okApps) { Write-Host " ✅ Apps agent created ($appsAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -434,9 +437,71 @@ function Set-ArgocdPassword {
   Write-Host ""
   & $scriptPath -NewPassword $argocdAdminPassword
   
-  # Ignore exit code from reset script - it may return 1 even on success
-  # We'll validate ArgoCD is ready in next steps instead
-  $null = $LASTEXITCODE
+  # Reset exit code - password reset may return 1 even on success
+  $global:LASTEXITCODE = 0
+}
+
+function Create-AgroSecrets {
+  Write-Step "Creating agro-secrets from .env.k3d"
+
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+  $envFilePath = Join-Path $repoRoot "orchestration\apphost-compose\.env.k3d"
+
+  if (-not (Test-Path $envFilePath)) {
+    Write-Host "❌ .env.k3d not found at $envFilePath" -ForegroundColor $Color.Error
+    Write-Host " Secret 'agro-secrets' will NOT be created" -ForegroundColor $Color.Warning
+    Write-Host " Applications may fail to start without secrets" -ForegroundColor $Color.Warning
+    return
+  }
+
+  Write-Host " Reading secrets from .env.k3d..." -ForegroundColor $Color.Info
+
+  # Read .env.k3d and extract key=value pairs (skip comments and empty lines)
+  $envContent = Get-Content $envFilePath |
+  Where-Object { $_ -match '^[^#].*=.*$' } |
+  ForEach-Object { $_.Trim() }
+
+  if (-not $envContent -or $envContent.Count -eq 0) {
+    Write-Host "⚠️ .env.k3d is empty or has no valid key=value pairs" -ForegroundColor $Color.Warning
+    return
+  }
+
+  Write-Host " Found $($envContent.Count) secret key(s)" -ForegroundColor $Color.Muted
+
+  # Build kubectl create secret command with all key-value pairs
+  $secretArgs = @()
+  foreach ($line in $envContent) {
+    if ($line -match '^([^=]+)=(.*)$') {
+      $key = $matches[1].Trim()
+      $value = $matches[2].Trim()
+      $secretArgs += "--from-literal=$key=$value"
+    }
+  }
+
+  if ($secretArgs.Count -eq 0) {
+    Write-Host "⚠️ No valid secrets extracted from .env.k3d" -ForegroundColor $Color.Warning
+    return
+  }
+
+  # Delete existing secret if present (to allow updates)
+  kubectl delete secret agro-secrets -n agro-apps --ignore-not-found=true 2>&1 | Out-Null
+
+  # Create secret in agro-apps namespace
+  Write-Host " Creating secret 'agro-secrets' in namespace 'agro-apps'..." -ForegroundColor $Color.Info
+  $createCmd = "kubectl create secret generic agro-secrets -n agro-apps $($secretArgs -join ' ')"
+  Invoke-Expression $createCmd 2>&1 | Out-Null
+
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Secret 'agro-secrets' created successfully" -ForegroundColor $Color.Success
+    Write-Host "    Namespace: agro-apps" -ForegroundColor $Color.Muted
+    Write-Host "    Keys: $($secretArgs.Count)" -ForegroundColor $Color.Muted
+  }
+  else {
+    Write-Host "❌ Failed to create secret 'agro-secrets'" -ForegroundColor $Color.Error
+    Write-Host " Applications will fail to start without secrets" -ForegroundColor $Color.Warning
+  }
+
+  $global:LASTEXITCODE = 0  # Reset exit code
 }
 
 function Apply-GitOpsBootstrap {
@@ -466,6 +531,9 @@ function Apply-GitOpsBootstrap {
     kubectl apply -k $baseKustomization 2>&1 | Out-Null
     Write-Host "✅ Base manifests applied (namespaces, ingress)" -ForegroundColor $Color.Success
   }
+
+  # Create agro-secrets from .env.k3d (must happen AFTER namespaces are created)
+  Create-AgroSecrets
 
   $bootstrapPlatformFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-platform.yaml"
   if (Test-Path $bootstrapPlatformFile) {
@@ -529,6 +597,7 @@ function Apply-LocalManifests {
   if (Test-Path $platformOverlay) {
     Write-Host " Applying platform overlay (namespaces, ingress, ArgoCD projects)..." -ForegroundColor $Color.Info
     kubectl apply -k $platformOverlay 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Platform overlay applied" -ForegroundColor $Color.Success
   }
   else {
@@ -538,6 +607,7 @@ function Apply-LocalManifests {
   if (Test-Path $appsOverlay) {
     Write-Host " Applying apps overlay (frontend ingress/deployment)..." -ForegroundColor $Color.Info
     kubectl apply -k $appsOverlay 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Apps overlay applied" -ForegroundColor $Color.Success
   }
   else {
@@ -600,6 +670,12 @@ Write-Host " Password: $argocdAdminPassword" -ForegroundColor $Color.Muted
 Write-Host " URL: http://localhost:8090/argocd (start port-forward: .\port-forward.ps1 argocd)" -ForegroundColor $Color.Muted
 
 Write-Host ""
+Write-Host "🔑 SECRETS" -ForegroundColor $Color.Info
+Write-Host " Secret: agro-secrets (from .env.k3d)" -ForegroundColor $Color.Muted
+Write-Host " Namespace: agro-apps" -ForegroundColor $Color.Muted
+Write-Host " Source: orchestration/apphost-compose/.env.k3d" -ForegroundColor $Color.Muted
+
+Write-Host ""
 Write-Host "� INSTALLED COMPONENTS" -ForegroundColor $Color.Info
 Write-Host " ✅ OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Success
 Write-Host " ✅ Docker Compose Observability Stack (Grafana/Prometheus/Loki/Tempo)" -ForegroundColor $Color.Success
@@ -624,3 +700,6 @@ Write-Host ""
 Write-Host " 4) Optional: Start Docker Compose observability stack" -ForegroundColor $Color.Muted
 Write-Host "    (Grafana at http://localhost:3000)" -ForegroundColor $Color.Success
 Write-Host ""
+
+# Explicit success exit
+exit 0

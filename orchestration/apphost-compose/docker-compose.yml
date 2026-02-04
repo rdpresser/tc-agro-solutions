@@ -533,6 +533,8 @@ networks:
     driver: bridge
     labels:
       - "tc-agro.network=main"
+      - "com.docker.compose.network=agro-net"
+      - "com.docker.compose.project=tc-agro-local"
 
 # =====================================================
 # VOLUMES - Persistent Storage
