@@ -61,8 +61,7 @@ create-all-from-zero.ps1
 1. .\bootstrap.ps1
    └─ Create k3d cluster (20GB: 3+4+6+7)
    └─ Install ArgoCD via Helm
-   └─ Apply bootstrap-platform.yaml (Infrastructure)
-   └─ Apply bootstrap-apps.yaml (Applications)
+   └─ Apply bootstrap-all.yaml (projects + platform/apps)
 
 2. ArgoCD takes over and installs:
    ├─ platform-base (namespaces, ingress config)
@@ -447,8 +446,7 @@ tc-agro-solutions/
    └── Apply bootstrap Application
        └── ArgoCD reads: infrastructure/kubernetes/platform/argocd/
            ├── bootstrap/
-           │   ├── bootstrap-platform.yaml (platform App-of-apps)
-           │   └── bootstrap-apps.yaml (microservices App-of-apps)
+         │   └── bootstrap-all.yaml (projects + platform/apps)
            └── applications/
                └── platform-base.yaml (namespaces, ingress)
 ```

@@ -545,18 +545,6 @@ function Apply-GitOpsBootstrap {
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
   $platformPath = Join-Path $repoRoot "infrastructure\kubernetes\platform"
 
-  $projectFile = Join-Path $platformPath "argocd\projects\project-platform.yaml"
-  if (Test-Path $projectFile) {
-    kubectl apply -f $projectFile 2>&1 | Out-Null
-    Write-Host "✅ Platform project created" -ForegroundColor $Color.Success
-  }
-
-  $appsProjectFile = Join-Path $platformPath "argocd\projects\project-apps.yaml"
-  if (Test-Path $appsProjectFile) {
-    kubectl apply -f $appsProjectFile 2>&1 | Out-Null
-    Write-Host "✅ Apps project created" -ForegroundColor $Color.Success
-  }
-
   $baseKustomization = Join-Path $platformPath "base"
   if (Test-Path $baseKustomization) {
     if (-not (Test-KustomizeBuild -Path $baseKustomization -Label "platform/base")) {
@@ -570,12 +558,13 @@ function Apply-GitOpsBootstrap {
   # Create agro-secrets from .env.k3d (must happen AFTER namespaces are created)
   Create-AgroSecrets
 
-  $bootstrapPlatformFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-platform.yaml"
-  if (Test-Path $bootstrapPlatformFile) {
-    kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
-    Write-Host "✅ Platform bootstrap applied (infrastructure components)" -ForegroundColor $Color.Success
+  $bootstrapAllFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-all.yaml"
+  if (Test-Path $bootstrapAllFile) {
+    kubectl apply -f $bootstrapAllFile 2>&1 | Out-Null
+    Write-Host "✅ ArgoCD bootstrap applied (projects + platform/apps)" -ForegroundColor $Color.Success
     Write-Host " ℹ️ ArgoCD will now install: OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Info
-    
+    Write-Host " ℹ️ ArgoCD will now install: Frontend and future microservices" -ForegroundColor $Color.Info
+
     # Optional: Install KEDA if user requested
     if ($script:installKeda) {
       Write-Host " ℹ️ Installing KEDA (user requested)..." -ForegroundColor $Color.Info
@@ -608,17 +597,7 @@ function Apply-GitOpsBootstrap {
     }
   }
   else {
-    Write-Host "⚠️ Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning
-  }
-
-  $bootstrapAppsFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-apps.yaml"
-  if (Test-Path $bootstrapAppsFile) {
-    kubectl apply -f $bootstrapAppsFile 2>&1 | Out-Null
-    Write-Host "✅ Apps bootstrap applied (application components)" -ForegroundColor $Color.Success
-    Write-Host " ℹ️ ArgoCD will now install: Frontend and future microservices" -ForegroundColor $Color.Info
-  }
-  else {
-    Write-Host "⚠️ Apps bootstrap file not found: $bootstrapAppsFile" -ForegroundColor $Color.Warning
+    Write-Host "⚠️ Bootstrap file not found: $bootstrapAllFile" -ForegroundColor $Color.Warning
   }
 }
 

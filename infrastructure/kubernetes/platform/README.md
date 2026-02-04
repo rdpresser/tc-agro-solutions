@@ -37,10 +37,7 @@ platform/
 │
 ├── argocd/                              # ArgoCD manifests
 │   ├── bootstrap/
-│   │   ├── bootstrap-platform.yaml      # Platform infrastructure bootstrap
-│   │   └── bootstrap-apps.yaml          # Applications bootstrap
-│   ├── projects/
-│   │   └── project-platform.yaml        # Platform Project
+│   │   ├── bootstrap-all.yaml           # Single entrypoint (projects + apps + platform)
 │   └── applications/
 │       └── platform-base.yaml           # Namespaces + OTEL DaemonSet
 ├── base/                                # Kustomize base (namespaces, ingress)
@@ -66,8 +63,7 @@ platform/
 scripts/k3d/bootstrap.ps1
   └── Creates cluster (joins tc-agro-network)
   └── Installs ArgoCD
-  └── Applies: argocd/bootstrap/bootstrap-platform.yaml
-  └── Applies: argocd/bootstrap/bootstrap-apps.yaml
+  └── Applies: argocd/bootstrap/bootstrap-all.yaml
 
 ArgoCD syncs:
   └── platform-base (namespaces + OTEL DaemonSet)

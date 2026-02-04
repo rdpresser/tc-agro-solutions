@@ -60,8 +60,7 @@ Complete visual overview of the GitOps infrastructure setup with Docker network 
 │  ┌──────────────────────────────────────────────────────────────────────┐       │
 │  │ 4️⃣ Apply ArgoCD Bootstrap Applications                              │       │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │       │
-│  │ kubectl apply -f bootstrap/bootstrap-platform.yaml                 │       │
-│  │ kubectl apply -f bootstrap/bootstrap-apps.yaml                     │       │
+│  │ kubectl apply -f bootstrap/bootstrap-all.yaml                      │       │
 │  │ ↓                                                                    │       │
 │  │ 🎯 App: "platform-base" → observability namespace + OTEL DaemonSet │       │
 │  │ 🎯 App: "apps-dev" → agro-apps namespace + microservices           │       │
@@ -214,10 +213,7 @@ tc-agro-solutions/
 │  │  │
 │  │  ├─ argocd/
 │  │  │  ├─ bootstrap/
-│  │  │  │  ├─ bootstrap-platform.yaml           (platform-base app)
-│  │  │  │  └─ bootstrap-apps.yaml               (apps-dev app)
-│  │  │  ├─ projects/
-│  │  │  │  └─ project-platform.yaml
+│  │  │  │  └─ bootstrap-all.yaml                (projects + platform/apps)
 │  │  │  └─ applications/
 │  │  │     └─ platform-base.yaml                (OTEL DaemonSet)
 │  │  │

@@ -49,21 +49,17 @@ if (-not $argocdCheck) {
 Write-Host "✅ ArgoCD found in cluster" -ForegroundColor $Color.Success
 Write-Host ""
 
-# Ensure ArgoCD projects exist before syncing applications
-Write-Host "Ensuring ArgoCD projects exist..." -ForegroundColor $Color.Info
+# Ensure ArgoCD projects and bootstrap apps exist before syncing applications
+Write-Host "Ensuring ArgoCD bootstrap is applied..." -ForegroundColor $Color.Info
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$projectsPath = Join-Path $repoRoot "infrastructure\kubernetes\platform\argocd\projects"
+$bootstrapAllPath = Join-Path $repoRoot "infrastructure\kubernetes\platform\argocd\bootstrap\bootstrap-all.yaml"
 
-$projectPlatform = Join-Path $projectsPath "project-platform.yaml"
-$projectApps = Join-Path $projectsPath "project-apps.yaml"
-
-if (Test-Path $projectPlatform) {
-    kubectl apply -f $projectPlatform 2>&1 | Out-Null
-    Write-Host "  ✅ Platform project applied" -ForegroundColor $Color.Success
+if (Test-Path $bootstrapAllPath) {
+    kubectl apply -f $bootstrapAllPath 2>&1 | Out-Null
+    Write-Host "  ✅ ArgoCD bootstrap applied" -ForegroundColor $Color.Success
 }
-if (Test-Path $projectApps) {
-    kubectl apply -f $projectApps 2>&1 | Out-Null
-    Write-Host "  ✅ Apps project applied" -ForegroundColor $Color.Success
+else {
+    Write-Host "  ⚠️  Bootstrap file not found: $bootstrapAllPath" -ForegroundColor $Color.Warning
 }
 Write-Host ""
 
