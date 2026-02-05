@@ -1,11 +1,11 @@
 meta {
-  name: GetList
+  name: GetSensor - List
   type: http
   seq: 2
 }
 
 get {
-  url: {{farm_service_url}}/api/property?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter&plotId&propertyId&type&status
+  url: {{farm_service_url}}/api/sensor?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter&plotId&propertyId&type&status
   body: none
   auth: inherit
 }
