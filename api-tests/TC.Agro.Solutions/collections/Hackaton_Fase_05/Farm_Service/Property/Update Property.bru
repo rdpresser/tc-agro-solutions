@@ -1,0 +1,29 @@
+meta {
+  name: Update Property
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{farm_service_url}}/api/property/197435dd-23bd-46e0-830d-fc9d0cc71f09
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Fazenda Boa Vista Updated",
+    "address": "Estrada Rural Km 20",
+    "city": "Ribeirão Preto",
+    "state": "SP",
+    "country": "Brazil",
+    "areaHectares": 300,
+    "latitude": -21.18,
+    "longitude": -47.825
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Create Plot
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{farm_service_url}}/api/plot
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "propertyId": "197435dd-23bd-46e0-830d-fc9d0cc71f09",
+    "name": "Talhão Norte",
+    "cropType": "Soja",
+    "areaHectares": 50
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
