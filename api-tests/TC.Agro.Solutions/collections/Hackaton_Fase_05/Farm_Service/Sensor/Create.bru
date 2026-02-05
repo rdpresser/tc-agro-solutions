@@ -1,0 +1,24 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{farm_service_url}}/api/sensor
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "plotId": "24e44b59-bc73-4788-b255-1821d3267f2d",
+    "type": "SoilMoisture",
+    "label": "Sensor Norte 1"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

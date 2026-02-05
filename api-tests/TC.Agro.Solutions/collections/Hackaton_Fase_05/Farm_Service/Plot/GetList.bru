@@ -1,0 +1,26 @@
+meta {
+  name: GetList
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{farm_service_url}}/api/plot?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter&propertyId&cropType
+  body: none
+  auth: inherit
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 10
+  sortBy: name
+  sortDirection: asc
+  filter: 
+  propertyId: 
+  cropType: 
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
