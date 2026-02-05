@@ -20,7 +20,7 @@ distributor:
           endpoint: 0.0.0.0:4318
 
 ingester:
-  max_block_duration: 1m
+  max_block_duration: 30s
   max_block_bytes: 1073741824
   trace_idle_period: 10s
   lifecycler:
