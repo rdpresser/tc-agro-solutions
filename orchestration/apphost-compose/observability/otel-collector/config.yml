@@ -45,58 +45,29 @@ processors:
         action: insert
 
   # ============================================================
-  # CRITICAL: Metrics label normalization for Prometheus
+  # Resource processor: Manage resource attributes
   # ============================================================
-  # Prevents duplicate label name errors caused by otel.scope.*
-  attributes_to_labels/metrics:
+  # Used to promote log/trace attributes for better correlation
+  resource:
+    attributes:
+      - key: service.name
+        action: upsert
+        from_attribute: service.name
+      - key: deployment.environment
+        action: upsert
+        from_attribute: deployment.environment
+
+  # ============================================================
+  # Metrics-specific attributes processor
+  # ============================================================
+  # Remove problematic scope attributes that cause Prometheus duplicate label errors
+  # These attributes are added by .NET OpenTelemetry instrumentations (AspNetCore, Runtime, etc.)
+  attributes/metrics:
     actions:
       - key: otel.scope.name
         action: delete
       - key: otel.scope.version
         action: delete
-      - key: deployment.environment
-        action: delete
-      - key: cluster.name
-        action: delete
-
-  # ============================================================
-  # CRITICAL: Attributes to Labels processor for Loki
-  # ============================================================
-  # Converts Serilog properties → OTLP attributes → Loki labels
-  # 
-  # Flow:
-  # 1. Serilog enricher adds correlation_id to LogEvent.Properties
-  # 2. Serilog OTLP sink exports as LogRecord.Attributes["correlation_id"]
-  # 3. This processor promotes attributes to labels (Loki semantic)
-  # 4. Loki receives as structured metadata label → appears in UI
-  #
-  # Labels: MUST be string, number, or boolean (no objects)
-  # These become clickable filters in Grafana Explore → Loki
-  attributes_to_labels/logs:
-    actions:
-      # Correlation ID: Essential for cross-service tracing
-      - key: correlation_id
-        action: upsert  # Create or update if exists
-      
-      # Trace ID: OpenTelemetry semantic (Serilog WithSpan adds this)
-      - key: trace_id
-        action: upsert
-      
-      # Span ID: OpenTelemetry semantic (Serilog WithSpan adds this)
-      - key: span_id
-        action: upsert
-      
-      # Service name: From resource attributes (always present)
-      - key: service.name
-        action: upsert
-      
-      # Service version: From Serilog enricher
-      - key: service.version
-        action: upsert
-      
-      # Environment: From resource attributes
-      - key: deployment.environment
-        action: upsert
 
 exporters:
   # Prometheus exporter for metrics
@@ -136,15 +107,16 @@ service:
       exporters: [otlp/tempo]
 
     # Metrics pipeline
+    # CRITICAL: attributes/metrics removes otel.scope.* attributes to prevent Prometheus duplicate labels
     metrics:
       receivers: [otlp, otlp/from-k3d]
-      processors: [memory_limiter, batch, attributes_to_labels/metrics]
+      processors: [memory_limiter, attributes/metrics, batch, attributes]
       exporters: [prometheus]
 
-    # Logs pipeline - CRITICAL: Use attributes_to_labels/logs to promote correlation_id to Loki label
+    # Logs pipeline - attributes processor normalizes correlation_id variants
     logs:
       receivers: [otlp, otlp/from-k3d]
-      processors: [memory_limiter, batch, attributes, attributes_to_labels/logs]
+      processors: [memory_limiter, batch, attributes, resource]
       exporters: [otlphttp/loki, debug]
 
   # Extensions disabled for local development

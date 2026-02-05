@@ -43,16 +43,9 @@ limits_config:
 # Structured Metadata (OTLP labels)
 # ============================================================
 # Loki 2.9+ supports receiving logs via OTLP HTTP endpoint.
-# OTEL Collector converts log attributes → Loki structured metadata.
+# OTEL Collector sends log attributes which Loki automatically converts
+# to structured metadata when allow_structured_metadata: true is set.
 #
-# For correlation_id (and other attributes) to appear in Explore label filters:
-# 1. OTEL Collector's attributes_to_labels processor must convert to labels
-# 2. Loki must accept them as structured metadata (allow_structured_metadata: true)
-# 3. Attributes MUST be string, number, or boolean (primitive types)
-#
-# This config automatically handles attributes sent via OTLP endpoint.
-# No additional label mappings needed if OTEL does conversion.
-structured_metadata:
-  # This section is optional in Loki 2.9+; OTLP native support is automatic
-  # If needed for additional transformations, add mappings here
-  # For now, rely on OTEL Collector's attributes_to_labels/logs processor
+# Attributes like correlation_id, trace_id, span_id are automatically
+# available as labels in Grafana Explore.
+# ============================================================
