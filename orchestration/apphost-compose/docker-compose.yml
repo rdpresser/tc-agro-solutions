@@ -477,120 +477,120 @@ services:
   # =====================================================
   # SERVICE - Analytics Worker (Background Processing & Alerts)
   # =====================================================
-  tc-agro-analytics-worker:
-    image: ${DOCKER_REGISTRY-}tc-agro-analytics-worker:latest
-    container_name: tc-agro-analytics-worker
-    restart: unless-stopped
-    build:
-      context: ../../
-      dockerfile: services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/Dockerfile
-      args:
-        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
-    ports:
-      - "5004:8080" # HTTP
-      - "5014:8081" # HTTPS (if configured)
-    environment:
-      # ASP.NET Core
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080
-      - DOTNET_USE_POLLING_FILE_WATCHER=1
+  # tc-agro-analytics-worker:
+  #   image: ${DOCKER_REGISTRY-}tc-agro-analytics-worker:latest
+  #   container_name: tc-agro-analytics-worker
+  #   restart: unless-stopped
+  #   build:
+  #     context: ../../
+  #     dockerfile: services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/Dockerfile
+  #     args:
+  #       BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
+  #   ports:
+  #     - "5004:8080" # HTTP
+  #     - "5014:8081" # HTTPS (if configured)
+  #   environment:
+  #     # ASP.NET Core
+  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+  #     - ASPNETCORE_URLS=http://+:8080
+  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
 
-      # .NET Configuration - Connection Strings (built from individual values)
-      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+  #     # .NET Configuration - Connection Strings (built from individual values)
+  #     - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
 
-      # .NET Configuration - Database (Database.Postgres.*)
-      - Database__Postgres__Host=${Database__Postgres__Host}
-      - Database__Postgres__Port=${Database__Postgres__Port}
-      - Database__Postgres__Database=${Database__Postgres__Database}
-      - Database__Postgres__UserName=${Database__Postgres__UserName}
-      - Database__Postgres__Password=${Database__Postgres__Password}
-      - Database__Postgres__Schema=${Database__Postgres__Schema}
-      - Database__Postgres__MaintenanceDatabase=${Database__Postgres__MaintenanceDatabase}
-      - Database__Postgres__ConnectionTimeout=${Database__Postgres__ConnectionTimeout}
-      - Database__Postgres__MinPoolSize=${Database__Postgres__MinPoolSize}
-      - Database__Postgres__MaxPoolSize=${Database__Postgres__MaxPoolSize}
+  #     # .NET Configuration - Database (Database.Postgres.*)
+  #     - Database__Postgres__Host=${Database__Postgres__Host}
+  #     - Database__Postgres__Port=${Database__Postgres__Port}
+  #     - Database__Postgres__Database=${Database__Postgres__Database}
+  #     - Database__Postgres__UserName=${Database__Postgres__UserName}
+  #     - Database__Postgres__Password=${Database__Postgres__Password}
+  #     - Database__Postgres__Schema=${Database__Postgres__Schema}
+  #     - Database__Postgres__MaintenanceDatabase=${Database__Postgres__MaintenanceDatabase}
+  #     - Database__Postgres__ConnectionTimeout=${Database__Postgres__ConnectionTimeout}
+  #     - Database__Postgres__MinPoolSize=${Database__Postgres__MinPoolSize}
+  #     - Database__Postgres__MaxPoolSize=${Database__Postgres__MaxPoolSize}
 
-      # .NET Configuration - Cache (Cache.Redis.*)
-      - Cache__Redis__Host=${Cache__Redis__Host}
-      - Cache__Redis__Port=${Cache__Redis__Port}
-      - Cache__Redis__Password=${Cache__Redis__Password}
-      - Cache__Redis__DefaultTTL=${Cache__Redis__DefaultTTL}
+  #     # .NET Configuration - Cache (Cache.Redis.*)
+  #     - Cache__Redis__Host=${Cache__Redis__Host}
+  #     - Cache__Redis__Port=${Cache__Redis__Port}
+  #     - Cache__Redis__Password=${Cache__Redis__Password}
+  #     - Cache__Redis__DefaultTTL=${Cache__Redis__DefaultTTL}
 
-      # .NET Configuration - Messaging (Messaging.RabbitMQ.*)
-      - Messaging__RabbitMQ__Host=${Messaging__RabbitMQ__Host}
-      - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
-      - Messaging__RabbitMQ__ManagementPort=${Messaging__RabbitMQ__ManagementPort}
-      - Messaging__RabbitMQ__VirtualHost=${Messaging__RabbitMQ__VirtualHost}
-      - Messaging__RabbitMQ__Exchange=${Messaging__RabbitMQ__Exchange}
-      - Messaging__RabbitMQ__UserName=${Messaging__RabbitMQ__UserName}
-      - Messaging__RabbitMQ__Password=${Messaging__RabbitMQ__Password}
-      - Messaging__RabbitMQ__AutoProvision=${Messaging__RabbitMQ__AutoProvision}
-      - Messaging__RabbitMQ__Durable=${Messaging__RabbitMQ__Durable}
-      - Messaging__RabbitMQ__UseQuorumQueues=${Messaging__RabbitMQ__UseQuorumQueues}
-      - Messaging__RabbitMQ__AutoPurgeOnStartup=${Messaging__RabbitMQ__AutoPurgeOnStartup}
+  #     # .NET Configuration - Messaging (Messaging.RabbitMQ.*)
+  #     - Messaging__RabbitMQ__Host=${Messaging__RabbitMQ__Host}
+  #     - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
+  #     - Messaging__RabbitMQ__ManagementPort=${Messaging__RabbitMQ__ManagementPort}
+  #     - Messaging__RabbitMQ__VirtualHost=${Messaging__RabbitMQ__VirtualHost}
+  #     - Messaging__RabbitMQ__Exchange=${Messaging__RabbitMQ__Exchange}
+  #     - Messaging__RabbitMQ__UserName=${Messaging__RabbitMQ__UserName}
+  #     - Messaging__RabbitMQ__Password=${Messaging__RabbitMQ__Password}
+  #     - Messaging__RabbitMQ__AutoProvision=${Messaging__RabbitMQ__AutoProvision}
+  #     - Messaging__RabbitMQ__Durable=${Messaging__RabbitMQ__Durable}
+  #     - Messaging__RabbitMQ__UseQuorumQueues=${Messaging__RabbitMQ__UseQuorumQueues}
+  #     - Messaging__RabbitMQ__AutoPurgeOnStartup=${Messaging__RabbitMQ__AutoPurgeOnStartup}
 
-      # .NET Configuration - Services (Services.*.HttpPort)
-      - Services__Identity__HttpPort=${Services__Identity__HttpPort}
-      - Services__Farm__HttpPort=${Services__Farm__HttpPort}
-      - Services__SensorIngest__HttpPort=${Services__SensorIngest__HttpPort}
-      - Services__AnalyticsWorker__HttpPort=${Services__AnalyticsWorker__HttpPort}
-      - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
+  #     # .NET Configuration - Services (Services.*.HttpPort)
+  #     - Services__Identity__HttpPort=${Services__Identity__HttpPort}
+  #     - Services__Farm__HttpPort=${Services__Farm__HttpPort}
+  #     - Services__SensorIngest__HttpPort=${Services__SensorIngest__HttpPort}
+  #     - Services__AnalyticsWorker__HttpPort=${Services__AnalyticsWorker__HttpPort}
+  #     - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
 
-      # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
-      - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
-      - Auth__Jwt__Audience=${Auth__Jwt__Audience}
-      - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
-      - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
+  #     # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
+  #     - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
+  #     - Auth__Jwt__Audience=${Auth__Jwt__Audience}
+  #     - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
+  #     - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
-      # .NET Configuration - Logging (Logging.LogLevel.*)
-      - Logging__LogLevel__Default=${Logging__LogLevel__Default}
-      - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
-      - Logging__LogLevel__System=${Logging__LogLevel__System}
+  #     # .NET Configuration - Logging (Logging.LogLevel.*)
+  #     - Logging__LogLevel__Default=${Logging__LogLevel__Default}
+  #     - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
+  #     - Logging__LogLevel__System=${Logging__LogLevel__System}
 
-      # .NET Configuration - Telemetry (Grafana Agent)
-      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
-      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
-      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
-      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
-      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
-      # =====================================================
-      # ESTRATÉGIA DAEMONSET: Apps k3d usam DaemonSet agent
-      # - Antigo (Docker direto): http://otel-collector:4318
-      # - Novo (k3d DaemonSet): http://otel-collector.observability:4318 (definido em .env)
-      # =====================================================
-      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
-      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
-      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
-      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
-    volumes:
-      # Hot reload support (optional - comment if not needed)
-      # - ../../services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service:/app:ro
-      - analytics_logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      otel-collector:
-        condition: service_started # No healthcheck on OTEL for local dev
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 15
-      start_period: 50s
-    networks:
-      - agro-net
-    labels:
-      - "tc-agro.component=service"
-      - "tc-agro.layer=worker"
-      - "tc-agro.service=analytics-worker"
+  #     # .NET Configuration - Telemetry (Grafana Agent)
+  #     - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
+  #     - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
+  #     - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
+  #     - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
+  #     - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
+  #     # =====================================================
+  #     # ESTRATÉGIA DAEMONSET: Apps k3d usam DaemonSet agent
+  #     # - Antigo (Docker direto): http://otel-collector:4318
+  #     # - Novo (k3d DaemonSet): http://otel-collector.observability:4318 (definido em .env)
+  #     # =====================================================
+  #     - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
+  #     - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
+  #     - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
+  #     - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
+  #   volumes:
+  #     # Hot reload support (optional - comment if not needed)
+  #     # - ../../services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service:/app:ro
+  #     - analytics_logs:/app/logs
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     otel-collector:
+  #       condition: service_started # No healthcheck on OTEL for local dev
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 15
+  #     start_period: 50s
+  #   networks:
+  #     - agro-net
+  #   labels:
+  #     - "tc-agro.component=service"
+  #     - "tc-agro.layer=worker"
+  #     - "tc-agro.service=analytics-worker"
 
   # # Dashboard Service - Read-Optimized API
   # tc-agro-dashboard-service:
