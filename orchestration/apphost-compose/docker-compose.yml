@@ -273,6 +273,22 @@ services:
       - "tc-agro.layer=visualization"
 
   # =====================================================
+  # OBSERVABILITY - .NET Aspire Dashboard
+  # =====================================================
+  # MOVED TO: docker-compose.aspire.yml
+  #
+  # The Aspire Dashboard has been moved to a separate compose file
+  # to avoid VS2026 image validation issues when MCR is not accessible.
+  #
+  # To use Aspire Dashboard:
+  #   Option 1 (CLI): docker compose -f docker-compose.yml -f docker-compose.aspire.yml up -d
+  #   Option 2 (VS): Use "Docker Compose + Aspire" profile in launchSettings.json
+  #
+  # Access: http://localhost:18888
+  # Official docs: https://aspire.dev/dashboard/standalone/
+  # =====================================================
+
+  # =====================================================
   # SERVICE - Identity Service (Authentication & Authorization)
   # =====================================================
   tc-agro-identity-service:

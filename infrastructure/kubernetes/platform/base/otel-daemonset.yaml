@@ -49,27 +49,30 @@ data:
         tls:
           insecure: true
 
-      # Export directly to Aspire Dashboard (OTLP HTTP)
+      # Export directly to Aspire Dashboard (OTLP HTTP) - DISABLED: Using Grafana Stack
       # Requires aspire-dashboard to be reachable from k3d network
-      otlp_http/aspire:
-        endpoint: "http://aspire-dashboard:18890"
-        tls:
-          insecure: true
+      # otlp_http/aspire:
+      #   endpoint: "http://aspire-dashboard:18890"
+      #   tls:
+      #     insecure: true
 
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlp_http/docker, otlp_http/aspire]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlp_http/docker, otlp_http/aspire]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, batch, attributes]
-          exporters: [otlp_http/docker, otlp_http/aspire]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
 ---
 apiVersion: apps/v1
 kind: DaemonSet

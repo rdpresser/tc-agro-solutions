@@ -86,6 +86,12 @@ exporters:
     tls:
       insecure: true
 
+  # Aspire Dashboard exporter (OTLP gRPC) - DISABLED: Using Grafana Stack instead
+  # otlp/aspire:
+  #   endpoint: "aspire-dashboard-ui:18889"
+  #   tls:
+  #     insecure: true
+
   # Loki exporter for logs (via OTLP HTTP endpoint - Loki 2.9+ supports OTLP)
   otlphttp/loki:
     endpoint: "http://loki:3100/otlp"
@@ -104,6 +110,7 @@ service:
     traces:
       receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes]
+      # exporters: [otlp/tempo, otlp/aspire]  # DISABLED: Using Grafana Stack
       exporters: [otlp/tempo]
 
     # Metrics pipeline
@@ -111,12 +118,14 @@ service:
     metrics:
       receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, attributes/metrics, batch, attributes]
+      # exporters: [prometheus, otlp/aspire]  # DISABLED: Using Grafana Stack
       exporters: [prometheus]
 
     # Logs pipeline - attributes processor normalizes correlation_id variants
     logs:
       receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes, resource]
+      # exporters: [otlphttp/loki, otlp/aspire, debug]  # DISABLED: Using Grafana Stack
       exporters: [otlphttp/loki, debug]
 
   # Extensions disabled for local development
