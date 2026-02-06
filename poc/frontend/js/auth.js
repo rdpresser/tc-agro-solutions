@@ -9,7 +9,7 @@
  * NEVER trust frontend-only security.
  */
 
-import { api } from './api.js';
+import { identityApi } from './api.js';
 import { toast, t } from './i18n.js';
 import {
   setToken,
@@ -43,7 +43,7 @@ export async function handleLogin(email, password) {
     // ============================================
     // REAL API CALL
     // ============================================
-    const response = await api.post('/auth/login', { email, password });
+    const response = await identityApi.post('/auth/login', { email, password });
 
     // Map backend response to frontend user model
     // Backend returns: { jwtToken, email }

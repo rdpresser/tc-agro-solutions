@@ -13,13 +13,18 @@ import { APP_CONFIG, getToken, clearToken, navigateTo } from './utils.js';
 // AXIOS INSTANCE WITH INTERCEPTORS
 // ============================================
 
-export const api = axios.create({
-  baseURL: APP_CONFIG.apiBaseUrl,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+function createApiClient(baseURL) {
+  return axios.create({
+    baseURL,
+    timeout: 30000,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+export const api = createApiClient(APP_CONFIG.apiBaseUrl);
+export const identityApi = createApiClient(APP_CONFIG.identityApiBaseUrl);
 
 // Simple helpers for retry policy
 function isIdempotent(method) {
@@ -39,54 +44,57 @@ function getRetryDelay(retryCount) {
   return Math.min(base * Math.pow(2, retryCount), 5000);
 }
 
-// Request interceptor - Add JWT token to all requests
-api.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor - Handle 401 unauthorized
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle unauthorized
-    if (error.response?.status === 401) {
-      clearToken();
-      // Only redirect if NOT already on login page
-      if (
-        !window.location.pathname.endsWith('index.html') &&
-        !window.location.pathname.endsWith('/')
-      ) {
-        navigateTo('index.html');
+function attachInterceptors(client) {
+  // Request interceptor - Add JWT token to all requests
+  client.interceptors.request.use(
+    (config) => {
+      const token = getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response interceptor - Handle 401 unauthorized
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        clearToken();
+        if (
+          !window.location.pathname.endsWith('index.html') &&
+          !window.location.pathname.endsWith('/')
+        ) {
+          navigateTo('index.html');
+        }
+        return Promise.reject(error);
+      }
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return Promise.reject(error);
+      }
+
+      const config = error.config || {};
+      const maxRetries = 2;
+      const attempt = config.__retryCount || 0;
+
+      if (isIdempotent(config.method) && shouldRetry(error) && attempt < maxRetries) {
+        config.__retryCount = attempt + 1;
+        const delay = getRetryDelay(attempt);
+        return new Promise((resolve) => setTimeout(resolve, delay)).then(() =>
+          client.request(config)
+        );
+      }
+
       return Promise.reject(error);
     }
+  );
+}
 
-    // Fast-fail when offline
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return Promise.reject(error);
-    }
-
-    // Lightweight retry for idempotent requests on network/5xx errors
-    const config = error.config || {};
-    const maxRetries = 2; // keep small to avoid overengineering
-    const attempt = config.__retryCount || 0;
-
-    if (isIdempotent(config.method) && shouldRetry(error) && attempt < maxRetries) {
-      config.__retryCount = attempt + 1;
-      const delay = getRetryDelay(attempt);
-      return new Promise((resolve) => setTimeout(resolve, delay)).then(() => api.request(config));
-    }
-
-    return Promise.reject(error);
-  }
-);
+attachInterceptors(api);
+attachInterceptors(identityApi);
 
 // ============================================
 // DASHBOARD API
@@ -612,6 +620,48 @@ export function resolveAlert(_alertId) {
   await api.post(`/alerts/${alertId}/resolve`);
   return true;
   */
+}
+
+// ============================================
+// IDENTITY API - USERS
+// ============================================
+
+export async function fetchIdentitySwagger() {
+  const { data } = await identityApi.get('/swagger/v1/swagger.json');
+  return data;
+}
+
+export async function registerUser(payload) {
+  const { data } = await identityApi.post('/auth/register', payload);
+  return data;
+}
+
+export async function getUsers({
+  pageNumber = 1,
+  pageSize = 10,
+  sortBy = 'id',
+  sortDirection = 'asc',
+  filter = ''
+} = {}) {
+  const { data } = await identityApi.get('/api/user', {
+    params: { pageNumber, pageSize, sortBy, sortDirection, filter }
+  });
+  return data;
+}
+
+export async function getUserByEmail(email) {
+  const { data } = await identityApi.get(`/api/user/by-email/${encodeURIComponent(email)}`);
+  return data;
+}
+
+export async function updateUser(id, payload) {
+  const { data } = await identityApi.put(`/api/user/${encodeURIComponent(id)}`, payload);
+  return data;
+}
+
+export async function deleteUser(id) {
+  const { data } = await identityApi.delete(`/api/user/${encodeURIComponent(id)}`);
+  return data;
 }
 
 // ============================================

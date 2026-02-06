@@ -1,0 +1,209 @@
+/**
+ * Users Form Page - TC Agro Solutions
+ * Entry point script for user create/edit
+ */
+
+import { initProtectedPage } from './common.js';
+import { toast } from './i18n.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+import {
+  fetchIdentitySwagger,
+  registerUser,
+  getUserByEmail,
+  updateUser,
+  normalizeError
+} from './api.js';
+
+// ============================================
+// Page State
+// ============================================
+
+const editId = getQueryParam('id');
+const editEmail = getQueryParam('email');
+const isEditMode = !!editId || !!editEmail;
+
+// ============================================
+// Page Initialization
+// ============================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!initProtectedPage()) return;
+
+  await checkIdentityApi();
+
+  if (isEditMode) {
+    await setupEditMode();
+  }
+
+  setupPasswordToggle();
+  setupFormHandler();
+});
+
+async function checkIdentityApi() {
+  try {
+    await fetchIdentitySwagger();
+  } catch (error) {
+    const { message } = normalizeError(error);
+    toast(message || 'Identity API is not reachable', 'warning');
+  }
+}
+
+// ============================================
+// Edit Mode Setup
+// ============================================
+
+async function setupEditMode() {
+  const pageTitle = $id('pageTitle');
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+
+  if (pageTitle) pageTitle.textContent = 'Edit User';
+  if (formTitle) formTitle.textContent = 'Edit User';
+  if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
+
+  if (!editEmail) {
+    showFormError('Unable to load user. Email parameter is required.');
+    return;
+  }
+
+  try {
+    const user = await getUserByEmail(editEmail);
+    populateForm(user);
+  } catch (error) {
+    const { message } = normalizeError(error);
+    showFormError(message || 'User not found');
+  }
+}
+
+// ============================================
+// Populate Form
+// ============================================
+
+function populateForm(user) {
+  const fields = {
+    userId: user.id || user.userId || '',
+    name: user.name || user.fullName || '',
+    email: user.email || '',
+    username: user.username || user.userName || '',
+    role: user.role || user.roles?.[0] || 'User'
+  };
+
+  Object.entries(fields).forEach(([id, value]) => {
+    const element = $id(id);
+    if (element) element.value = value;
+  });
+}
+
+// ============================================
+// Password Toggle
+// ============================================
+
+function setupPasswordToggle() {
+  const toggleBtn = $id('togglePassword');
+  const passwordInput = $id('password');
+
+  if (!toggleBtn || !passwordInput) return;
+
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = passwordInput.type === 'password';
+    passwordInput.type = isHidden ? 'text' : 'password';
+    toggleBtn.textContent = isHidden ? '🙈' : '👁️';
+  });
+}
+
+// ============================================
+// Form Handler
+// ============================================
+
+function setupFormHandler() {
+  const form = $id('userForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    clearFormErrors();
+
+    const payload = {
+      name: $id('name')?.value?.trim(),
+      email: $id('email')?.value?.trim(),
+      username: $id('username')?.value?.trim(),
+      password: $id('password')?.value,
+      role: $id('role')?.value
+    };
+
+    if (
+      !payload.name ||
+      !payload.email ||
+      !payload.username ||
+      !payload.password ||
+      !payload.role
+    ) {
+      showFormError('All fields are required.');
+      return;
+    }
+
+    showLoading('Saving user...');
+
+    try {
+      if (isEditMode) {
+        const userId = $id('userId')?.value || editId;
+        if (!userId) {
+          throw new Error('User ID is required for update.');
+        }
+        await updateUser(userId, payload);
+        toast('User updated successfully', 'success');
+      } else {
+        await registerUser(payload);
+        toast('User created successfully', 'success');
+      }
+
+      navigateTo('users.html');
+    } catch (error) {
+      const message = extractApiErrorMessage(error);
+      showFormError(message);
+    } finally {
+      hideLoading();
+    }
+  });
+}
+
+// ============================================
+// Error Handling
+// ============================================
+
+function extractApiErrorMessage(error) {
+  let errorMessage = 'An error occurred. Please try again.';
+
+  if (error?.response?.data) {
+    const data = error.response.data;
+
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      const reasons = data.errors.map((err) => err.reason || err.message).filter(Boolean);
+      if (reasons.length > 0) {
+        return reasons.join('\n');
+      }
+    } else if (data.message) {
+      return data.message;
+    } else if (data.title || data.detail) {
+      return data.detail || data.title;
+    }
+  }
+
+  const normalized = normalizeError(error);
+  return normalized?.message || errorMessage;
+}
+
+function showFormError(message) {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+}
+
+function clearFormErrors() {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+}

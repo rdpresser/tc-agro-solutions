@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - User Management" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Users | TC Agro Solutions</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
+            <a href="users.html" class="nav-item active">
+              <span class="nav-icon">👥</span>
+              <span class="nav-text">Users</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Users</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">👥</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span>Users</span>
+                </div>
+                <h2 style="margin: 0">User Management</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <a href="users-form.html" class="btn btn-primary">➕ Add User</a>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card" style="margin-bottom: 24px">
+            <form id="usersFilterForm">
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0">
+                  <input
+                    type="text"
+                    id="filterInput"
+                    class="form-control"
+                    placeholder="🔍 Filter by name, email, username or role"
+                  />
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <input
+                    type="email"
+                    id="filterEmail"
+                    class="form-control"
+                    placeholder="📧 Find by email"
+                  />
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <button type="button" id="filterEmailBtn" class="btn btn-outline">Search</button>
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page</label>
+                  <input type="number" id="pageNumber" class="form-control" value="1" min="1" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page Size</label>
+                  <input type="number" id="pageSize" class="form-control" value="10" min="1" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Sort By</label>
+                  <select id="sortBy" class="form-control form-select">
+                    <option value="id">Id</option>
+                    <option value="name">Name</option>
+                    <option value="email">Email</option>
+                    <option value="username">Username</option>
+                    <option value="role">Role</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Direction</label>
+                  <select id="sortDirection" class="form-control form-select">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; align-self: flex-end">
+                  <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr>
+                  <td colspan="6" class="text-center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Summary -->
+          <div class="card" style="margin-top: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
+              <span id="usersSummary" class="text-muted">Loading users...</span>
+              <span class="text-muted">Identity API: http://localhost/identity/identity/</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="./js/users.js"></script>
+  </body>
+</html>
