@@ -204,6 +204,11 @@ function setupEventListeners() {
 }
 
 async function handleDelete(id, email) {
+  if (!id) {
+    toast('Unable to delete user: missing id', 'error');
+    return;
+  }
+
   const currentUser = getTokenInfo();
   const currentEmail = currentUser?.email?.toLowerCase();
 
