@@ -215,6 +215,7 @@ tc-agro-solutions/
 ### Development
 
 - **[📝 New Microservice Template](NEW_MICROSERVICE_TEMPLATE.md)** - Step-by-step checklist
+- **[🧪 Integration Tests](tests/README.md)** - Automated API testing guide
 
 ---
 
@@ -405,19 +406,39 @@ Azure Key Vault for production secrets.
 
 ### Unit Tests
 
-xUnit with NSubstitute/Moq for each service.
+xUnit with NSubstitute/Moq for each service (in individual service repos).
 
 ### Integration Tests
 
-API endpoint tests with in-memory database.
+**Location:** `tests/TC.Agro.IntegrationTests/`
+
+Automated integration tests validating:
+- ✅ 21 tests covering Identity, Farm, and cross-service workflows
+- ✅ Real HTTP endpoint validation against running services
+- ✅ End-to-end user scenarios
+- ✅ CI/CD integration via GitHub Actions
+
+**Quick Start:**
+```bash
+cd tests/TC.Agro.IntegrationTests
+dotnet test
+```
+
+See [Integration Tests README](tests/TC.Agro.IntegrationTests/README.md) for details.
+
+### Manual API Tests
+
+**Location:** `api-tests/TC.Agro.Solutions/`
+
+Bruno collections for manual API testing and exploration.
 
 ### Load Tests
 
-k6 simulating 100+ sensors with continuous readings.
+k6 simulating 100+ sensors with continuous readings (planned).
 
 ### Smoke Tests
 
-Automated post-deployment validation.
+Automated post-deployment validation (planned).
 
 ---
 
