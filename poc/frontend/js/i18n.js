@@ -57,7 +57,22 @@ const messages = {
 
     // Sensors
     'sensors.load_failed': 'Failed to load sensors',
-    'sensors.updated': 'Sensors updated'
+    'sensors.updated': 'Sensors updated',
+
+    // Users
+    'validation.user.name_required': 'Full name is required',
+    'validation.user.email_required': 'Email is required',
+    'validation.user.email_invalid': 'Please enter a valid email address',
+    'validation.user.username_required': 'Username is required',
+    'validation.user.password_required': 'Password is required',
+    'validation.user.role_required': 'Role is required',
+    'validation.user.required_fields': 'Please fill in all required fields',
+    'user.created_success': 'User created successfully!',
+    'user.updated_success': 'User updated successfully!',
+    'user.deleted_success': 'User deleted successfully!',
+    'user.load_failed': 'Failed to load users',
+    'user.not_found': 'User not found',
+    'user.cannot_delete_self': 'You cannot delete the currently logged in user'
   }
 };
 

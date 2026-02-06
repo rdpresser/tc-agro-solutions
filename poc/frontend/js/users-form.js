@@ -3,9 +3,6 @@
  * Entry point script for user create/edit
  */
 
-import { initProtectedPage } from './common.js';
-import { toast } from './i18n.js';
-import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 import {
   fetchIdentitySwagger,
   registerUser,
@@ -13,6 +10,9 @@ import {
   updateUser,
   normalizeError
 } from './api.js';
+import { initProtectedPage } from './common.js';
+import { toast, t } from './i18n.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
 // ============================================
 // Page State
@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPasswordToggle();
   setupFormHandler();
 });
+
+// ============================================
+// Identity API Check
+// ============================================
 
 async function checkIdentityApi() {
   try {
@@ -173,7 +177,7 @@ function setupFormHandler() {
 // ============================================
 
 function extractApiErrorMessage(error) {
-  let errorMessage = 'An error occurred. Please try again.';
+  const errorMessage = 'An error occurred. Please try again.';
 
   if (error?.response?.data) {
     const data = error.response.data;
@@ -206,4 +210,49 @@ function clearFormErrors() {
   if (!errorDiv) return;
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
+}
+
+// ============================================
+// Native Form Validation with i18n Messages
+// ============================================
+
+const userForm = document.getElementById('userForm');
+if (userForm) {
+  userForm.addEventListener(
+    'invalid',
+    (e) => {
+      const el = e.target;
+      const id = el.id;
+      if (el.validity.valueMissing) {
+        if (id === 'name') {
+          el.setCustomValidity(t('validation.user.name_required'));
+          toast('validation.user.name_required', 'warning');
+        } else if (id === 'email') {
+          el.setCustomValidity(t('validation.user.email_required'));
+          toast('validation.user.email_required', 'warning');
+        } else if (id === 'username') {
+          el.setCustomValidity(t('validation.user.username_required'));
+          toast('validation.user.username_required', 'warning');
+        } else if (id === 'password') {
+          el.setCustomValidity(t('validation.user.password_required'));
+          toast('validation.user.password_required', 'warning');
+        } else if (id === 'role') {
+          el.setCustomValidity(t('validation.user.role_required'));
+          toast('validation.user.role_required', 'warning');
+        } else {
+          el.setCustomValidity(t('validation.user.required_fields'));
+          toast('validation.user.required_fields', 'warning');
+        }
+      } else if (el.validity.typeMismatch && el.type === 'email') {
+        el.setCustomValidity(t('validation.user.email_invalid'));
+        toast('validation.user.email_invalid', 'warning');
+      }
+    },
+    true
+  );
+
+  // Clear custom messages on input
+  userForm.addEventListener('input', (e) => {
+    e.target.setCustomValidity('');
+  });
 }

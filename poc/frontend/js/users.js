@@ -9,10 +9,10 @@ import {
   deleteUser,
   normalizeError
 } from './api.js';
-import { initProtectedPage } from './common.js';
-import { toast } from './i18n.js';
-import { $, $$, showConfirm, getPageUrl } from './utils.js';
 import { getTokenInfo } from './auth.js';
+import { initProtectedPage } from './common.js';
+import { toast, t } from './i18n.js';
+import { $, showConfirm, getPageUrl } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -205,12 +205,41 @@ async function handleDelete(id, email) {
 
   try {
     await deleteUser(id);
-    toast('User deleted successfully', 'success');
+    toast('user.deleted_success', 'success');
     await loadUsers();
   } catch (error) {
     const { message } = normalizeError(error);
-    toast(message || 'Failed to delete user', 'error');
+    toast(message || 'user.load_failed', 'error');
   }
+}
+
+// ============================================
+// Native Form Validation with i18n Messages
+// ============================================
+
+const usersFilterForm = document.getElementById('usersFilterForm');
+if (usersFilterForm) {
+  usersFilterForm.addEventListener(
+    'invalid',
+    (e) => {
+      const el = e.target;
+      if (el.validity.valueMissing) {
+        el.setCustomValidity(t('validation.user.required_fields'));
+        toast('validation.user.required_fields', 'warning');
+      } else if (el.validity.typeMismatch && el.type === 'email') {
+        el.setCustomValidity(t('validation.user.email_invalid'));
+        toast('validation.user.email_invalid', 'warning');
+      } else if (el.validity.typeMismatch && el.type === 'number') {
+        el.setCustomValidity('Please enter a valid number');
+      }
+    },
+    true
+  );
+
+  // Clear custom messages on input
+  usersFilterForm.addEventListener('input', (e) => {
+    e.target.setCustomValidity('');
+  });
 }
 
 // Export for debugging
