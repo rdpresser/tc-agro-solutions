@@ -135,11 +135,24 @@ function Ensure-ComposeNetwork {
   $networkExists = docker network ls --format "{{.Name}}" 2>$null | Where-Object { $_ -eq $composeNetworkName }
   
   if ($networkExists) {
-    Write-Host " Network '$composeNetworkName' already exists" -ForegroundColor $Color.Muted
+    # Check if network is managed by Docker Compose (has compose labels)
+    $networkInfo = docker network inspect $composeNetworkName 2>$null | ConvertFrom-Json
+    $composeLabel = $networkInfo[0].Labels."com.docker.compose.network"
+    
+    if ($composeLabel) {
+      Write-Host " Network '$composeNetworkName' already exists (managed by Docker Compose)" -ForegroundColor $Color.Success
+      Write-Host "   Compose label: com.docker.compose.network=$composeLabel" -ForegroundColor $Color.Muted
+      Write-Host "   ✅ Safe to use with VS 2026 Docker Compose integration" -ForegroundColor $Color.Success
+    }
+    else {
+      Write-Host " Network '$composeNetworkName' already exists (manually created)" -ForegroundColor $Color.Muted
+      Write-Host "   ℹ️ Network works but VS 2026 may show warnings (non-critical)" -ForegroundColor $Color.Info
+    }
   }
   else {
     Write-Host " Creating network '$composeNetworkName'..." -ForegroundColor $Color.Info
-    docker network create $composeNetworkName 2>&1 | Out-Null
+    Write-Host "   ⚠️ Note: If using VS 2026 Docker Compose, start it first to let VS manage network" -ForegroundColor $Color.Warning
+    docker network create --driver bridge $composeNetworkName 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
       Write-Host "✅ Network created" -ForegroundColor $Color.Success
     }

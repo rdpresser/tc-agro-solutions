@@ -276,7 +276,7 @@ services:
   # SERVICE - Identity Service (Authentication & Authorization)
   # =====================================================
   tc-agro-identity-service:
-    image: ${DOCKER_REGISTRY-}tc-agro-identity-service:latest
+    image: ${DOCKER_REGISTRY-}identity-service:latest
     container_name: tc-agro-identity-service
     restart: unless-stopped
     build:
@@ -394,7 +394,7 @@ services:
   # FRONTEND - Dashboard UI (HTML/CSS/JS)
   # =====================================================
   tc-agro-frontend-service:
-    image: ${DOCKER_REGISTRY-}tc-agro-frontend-service:latest
+    image: ${DOCKER_REGISTRY-}frontend-service:latest
     container_name: tc-agro-frontend-service
     restart: unless-stopped
     build:

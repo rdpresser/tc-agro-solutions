@@ -61,7 +61,9 @@ function Show-Menu {
     Write-Host "  15) Diagnose ArgoCD access"
     Write-Host "  19) Import k3d env secrets/configmap"
     Write-Host "  20) Full rebuild: stop PF → cleanup → prune tc-agro images → bootstrap → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Warning
+    Write-Host "      💡 Tip: Start VS 2026 Docker Compose FIRST to avoid network label conflicts" -ForegroundColor $Color.Muted
     Write-Host "  21) Verify image sync (registry vs nodes vs pods)" -ForegroundColor $Color.Info
+    Write-Host "  22) Diagnose & fix cluster network issues (orphaned network references)" -ForegroundColor $Color.Warning
     Write-Host ""
     Write-Host "📦 HELM CHART MANAGEMENT:" -ForegroundColor $Color.Info
     Write-Host "  16) Check Helm chart versions (read-only)"
@@ -95,6 +97,116 @@ function Check-Prerequisites {
 function Get-ScriptPath {
     param([string]$ScriptName)
     return Join-Path $PSScriptRoot $ScriptName
+}
+
+function Test-ClusterNetworkHealth {
+    <#
+    .SYNOPSIS
+        Diagnose and fix k3d cluster network issues (orphaned network references).
+    
+    .DESCRIPTION
+        Detects if k3d cluster containers are referencing deleted networks.
+        Offers automatic fix by deleting and recreating cluster.
+    #>
+    
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Info
+    Write-Host "║           K3D CLUSTER NETWORK DIAGNOSTICS                 ║" -ForegroundColor $Color.Info
+    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Info
+    Write-Host ""
+    
+    # Check if cluster exists
+    $clusterExists = k3d cluster list 2>$null | Select-String -Pattern "^dev\s"
+    if (-not $clusterExists) {
+        Write-Host "✅ No cluster found - nothing to diagnose" -ForegroundColor $Color.Success
+        return $true
+    }
+    
+    Write-Host "🔍 Checking k3d cluster network configuration..." -ForegroundColor $Color.Info
+    Write-Host ""
+    
+    # Get all k3d containers
+    $containers = docker ps -a --filter "name=k3d-dev" --format "{{.Names}}" 2>$null
+    if (-not $containers) {
+        Write-Host "✅ No k3d containers found" -ForegroundColor $Color.Success
+        return $true
+    }
+    
+    $orphanedNetworks = @()
+    
+    foreach ($container in $containers) {
+        $networkInfo = docker inspect $container --format "{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}" 2>$null
+        
+        if ($networkInfo) {
+            # Check if network still exists
+            $networkExists = docker network inspect $networkInfo 2>$null
+            if (-not $networkExists) {
+                $orphanedNetworks += @{
+                    Container = $container
+                    NetworkID = $networkInfo
+                }
+            }
+        }
+    }
+    
+    if ($orphanedNetworks.Count -eq 0) {
+        Write-Host "✅ All cluster containers have valid network references" -ForegroundColor $Color.Success
+        Write-Host ""
+        
+        # Check if tc-agro-network exists
+        $tcAgroNetwork = docker network ls --format "{{.Name}}" 2>$null | Where-Object { $_ -eq "tc-agro-network" }
+        if ($tcAgroNetwork) {
+            Write-Host "✅ tc-agro-network exists and is healthy" -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "⚠️  tc-agro-network not found (may need to be created)" -ForegroundColor $Color.Warning
+            Write-Host "   Run option 1 (Bootstrap) or start VS 2026 Docker Compose" -ForegroundColor $Color.Muted
+        }
+        
+        return $true
+    }
+    
+    # Found orphaned network references
+    Write-Host "❌ Found $($orphanedNetworks.Count) container(s) with orphaned network references:" -ForegroundColor $Color.Error
+    Write-Host ""
+    foreach ($item in $orphanedNetworks) {
+        Write-Host "   Container: $($item.Container)" -ForegroundColor $Color.Muted
+        Write-Host "   Network ID: $($item.NetworkID) (DELETED)" -ForegroundColor $Color.Error
+        Write-Host ""
+    }
+    
+    Write-Host "🔧 ROOT CAUSE:" -ForegroundColor $Color.Warning
+    Write-Host "   Network 'tc-agro-network' was deleted while cluster was running." -ForegroundColor $Color.Muted
+    Write-Host "   Containers still reference the old network ID." -ForegroundColor $Color.Muted
+    Write-Host ""
+    
+    Write-Host "💡 SOLUTION:" -ForegroundColor $Color.Info
+    Write-Host "   Cluster must be deleted and recreated (cannot fix in-place)." -ForegroundColor $Color.Muted
+    Write-Host ""
+    
+    $confirm = Read-Host "Delete cluster and recreate with proper network? (yes/no)"
+    
+    if ($confirm -eq "yes") {
+        Write-Host ""
+        Write-Host "🗑️  Deleting broken cluster..." -ForegroundColor $Color.Warning
+        k3d cluster delete dev 2>&1 | Out-Null
+        Write-Host "✅ Cluster deleted" -ForegroundColor $Color.Success
+        Write-Host ""
+        Write-Host "🚀 NEXT STEPS:" -ForegroundColor $Color.Info
+        Write-Host "   1. Start VS 2026 Docker Compose (F5) to create network with correct labels" -ForegroundColor $Color.Muted
+        Write-Host "   2. Run option 20 (Full Rebuild) to recreate cluster" -ForegroundColor $Color.Muted
+        Write-Host ""
+        return $true
+    }
+    else {
+        Write-Host ""
+        Write-Host "⏭️  Cluster not deleted. To fix manually:" -ForegroundColor $Color.Info
+        Write-Host "   k3d cluster delete dev" -ForegroundColor $Color.Muted
+        Write-Host "   .\manager.ps1" -ForegroundColor $Color.Muted
+        Write-Host "   # Select option 20 (Full Rebuild)" -ForegroundColor $Color.Muted
+        Write-Host ""
+        return $false
+    }
 }
 
 function Remove-TcAgroImages {
@@ -231,8 +343,8 @@ else {
     # Interactive menu loop
     do {
         Show-Menu
-        $choice = Read-Host "Enter command (1-21 or q to quit)"
-    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21") -notcontains $choice -and $choice -ne "q")
+        $choice = Read-Host "Enter command (1-22 or q to quit)"
+    } while (@("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22") -notcontains $choice -and $choice -ne "q")
 
     if ($choice -eq "q") {
         Write-Host "`n👋 Goodbye!" -ForegroundColor $Color.Success
@@ -517,6 +629,11 @@ else {
 
         "21" {
             $null = Invoke-Script "verify-image-sync.ps1"
+            $null = Read-Host "`nPress Enter to continue"
+        }
+
+        "22" {
+            Test-ClusterNetworkHealth
             $null = Read-Host "`nPress Enter to continue"
         }
     

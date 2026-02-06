@@ -74,10 +74,22 @@ Write-Host "Checking network: $networkName" -ForegroundColor $Color.Info
 $networkExists = docker network ls --format "{{.Name}}" 2>&1 | Where-Object { $_ -eq $networkName }
 
 if ($networkExists) {
-    Write-Host "Network exists" -ForegroundColor $Color.Success
+    # Check if managed by Docker Compose
+    $networkInfo = docker network inspect $networkName 2>$null | ConvertFrom-Json
+    $composeLabel = $networkInfo[0].Labels."com.docker.compose.network"
+    
+    if ($composeLabel) {
+        Write-Host "Network exists (managed by Docker Compose)" -ForegroundColor $Color.Success
+        Write-Host "  Label: com.docker.compose.network=$composeLabel" -ForegroundColor $Color.Muted
+    }
+    else {
+        Write-Host "Network exists (manually created)" -ForegroundColor $Color.Success
+        Write-Host "  ⚠️  VS 2026 may show DT1001 warnings (non-critical)" -ForegroundColor $Color.Warning
+    }
 }
 else {
     Write-Host "Creating network..." -ForegroundColor $Color.Warning
+    Write-Host "  ℹ️  If using VS 2026, start Docker Compose from VS first" -ForegroundColor $Color.Info
     docker network create --driver bridge $networkName 2>&1 | Out-Null
     Write-Host "Network created" -ForegroundColor $Color.Success
 }
