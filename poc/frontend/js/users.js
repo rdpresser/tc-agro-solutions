@@ -214,7 +214,7 @@ async function handleDelete(id, email) {
 
   // Double-check protection (should not happen with disabled button)
   if (email && currentEmail && email.toLowerCase() === currentEmail) {
-    alert(
+    window.alert(
       '⚠️ You cannot delete your own user account.\n\nPlease ask another administrator to delete your account if needed.'
     );
     return;
