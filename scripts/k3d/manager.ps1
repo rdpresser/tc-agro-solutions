@@ -60,7 +60,7 @@ function Show-Menu {
     Write-Host "  14) List secrets"
     Write-Host "  15) Diagnose ArgoCD access"
     Write-Host "  19) Import k3d env secrets/configmap"
-    Write-Host "  20) Full rebuild: stop PF → cleanup → prune tc-agro images → bootstrap → build/push → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Warning
+    Write-Host "  20) Full rebuild: stop PF → cleanup → prune tc-agro images → bootstrap → import secrets → sync → PF ArgoCD" -ForegroundColor $Color.Warning
     Write-Host "  21) Verify image sync (registry vs nodes vs pods)" -ForegroundColor $Color.Info
     Write-Host ""
     Write-Host "📦 HELM CHART MANAGEMENT:" -ForegroundColor $Color.Info
@@ -484,24 +484,26 @@ else {
         }
 
         "20" {
-            Write-Host ""; Write-Host "🧭 FULL REBUILD: stop PF → cleanup → prune → bootstrap → build/push → import → sync → PF" -ForegroundColor $Color.Info
+            Write-Host ""; Write-Host "🧭 FULL REBUILD: stop PF → cleanup → prune → bootstrap → import → sync → PF" -ForegroundColor $Color.Info
+            Write-Host ""; Write-Host "💡 Build/push images is now handled by CI/CD pipelines (faster & more reliable)" -ForegroundColor $Color.Muted
+            Write-Host "   Use option 13 if you need to manually build/push images" -ForegroundColor $Color.Muted
+            Write-Host ""
             
             $fullRebuildSteps = @(
                 @{ name = "Stop port-forwards"; action = { Invoke-Script "stop-port-forward.ps1" -Arguments @("all") } },
                 @{ name = "Cleanup cluster/registry"; action = { Invoke-Script "cleanup.ps1" } },
                 @{ name = "Remove local tc-agro images"; action = { Remove-TcAgroImages } },
                 @{ name = "Bootstrap cluster (k3d + ArgoCD + manifests + secrets)"; action = { Invoke-Script "bootstrap.ps1" } },
-                @{ name = "Build & push images (Docker Hub rdpresser)"; action = { Invoke-Script "build-push-images.ps1" } },
                 @{ name = "Import secrets/configmap"; action = { Invoke-Script "import-secrets.ps1" } },
                 @{ name = "Sync ArgoCD (all)"; action = { Invoke-Script "sync-argocd.ps1" -Arguments @("all") } },
                 @{ name = "Port-forward ArgoCD"; action = { Invoke-Script "port-forward.ps1" -Arguments @("argocd") } }
             )
             
-            $result = Invoke-BootstrapPipeline -Steps $fullRebuildSteps -CheckDocker
+            $result = Invoke-BootstrapPipeline -Steps $fullRebuildSteps
             if ($result) {
                 Write-Host ""; Write-Host "✅ Full rebuild pipeline completed successfully!" -ForegroundColor $Color.Success
-                Write-Host "   🌐 ArgoCD: http://localhost:8080" -ForegroundColor $Color.Muted
-                Write-Host "   📦 Images pushed to Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
+                Write-Host "   🌐 ArgoCD: http://localhost:8090/argocd" -ForegroundColor $Color.Muted
+                Write-Host "   📦 Images: Use CI/CD pipelines or option 13 for manual build" -ForegroundColor $Color.Muted
                 Write-Host "   📋 Next: verify pods are running: kubectl get pods -n agro-apps -w" -ForegroundColor $Color.Muted
             }
             

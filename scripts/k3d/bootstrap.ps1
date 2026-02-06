@@ -395,11 +395,31 @@ function Set-NodeLabelsAndTaints {
   kubectl get nodes -L agentpool 2>&1 | ForEach-Object { Write-Host " $_" -ForegroundColor $Color.Muted }
 }
 
+function Clean-OrphanedPVCs {
+  Write-Step "Cleaning orphaned PVCs and volumes from previous deployments"
+  
+  # Delete any existing PVCs in argocd namespace (Option 1: PVC cleanup)
+  Write-Host " Removing orphaned PVCs..." -ForegroundColor $Color.Muted
+  kubectl delete pvc --all -n argocd --ignore-not-found=true 2>&1 | Out-Null
+  
+  # Also clean up any stuck emptyDir volumes at docker level
+  Write-Host " Cleaning docker volumes..." -ForegroundColor $Color.Muted
+  docker volume prune -f 2>&1 | Out-Null
+  
+  Write-Host "✅ Orphaned PVCs and volumes cleaned" -ForegroundColor $Color.Success
+  Write-Host ""
+}
+
 function Install-ArgoCD {
-  Write-Step "Installing ArgoCD via Helm"
+  Write-Step "Installing ArgoCD via Helm (with resilience configuration)"
 
   helm repo add argo https://argoproj.github.io/argo-helm 2>$null
   helm repo update 2>&1 | Out-Null
+
+  Write-Host " Applying resilience settings:" -ForegroundColor $Color.Muted
+  Write-Host "  • Option 2: fsGroup + security context (volume cleanup)" -ForegroundColor $Color.Muted
+  Write-Host "  • Option 3: Resource limits + probe tuning" -ForegroundColor $Color.Muted
+  Write-Host "  • Disabling Redis persistence (reduces volume issues)" -ForegroundColor $Color.Muted
 
   helm upgrade --install argocd argo/argo-cd `
     -n $argocdNamespace `
@@ -409,10 +429,21 @@ function Install-ArgoCD {
     --set configs.params."server\.insecure"=true `
     --set configs.params."server\.basehref"="/argocd" `
     --set configs.params."server\.rootpath"="/argocd" `
+    --set global.securityContext.fsGroup=1000 `
+    --set global.securityContext.runAsNonRoot=false `
+    --set repoServer.securityContext.runAsNonRoot=false `
+    --set repoServer.securityContext.allowPrivilegeEscalation=true `
+    --set repoServer.resources.requests.memory=256Mi `
+    --set repoServer.resources.requests.cpu=100m `
+    --set repoServer.resources.limits.memory=1Gi `
+    --set repoServer.resources.limits.cpu=500m `
+    --set repoServer.livenessProbe.initialDelaySeconds=30 `
+    --set repoServer.readinessProbe.initialDelaySeconds=15 `
+    --set redis.persistence.enabled=false `
     --wait --timeout=5m 2>&1 | Out-Null
 
   if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ ArgoCD installed" -ForegroundColor $Color.Success
+    Write-Host "✅ ArgoCD installed with resilience config" -ForegroundColor $Color.Success
   }
   else {
     Write-Host "⚠️ ArgoCD install had issues" -ForegroundColor $Color.Warning
@@ -421,6 +452,131 @@ function Install-ArgoCD {
   Write-Host " Waiting for ArgoCD server..." -ForegroundColor $Color.Info
   kubectl wait --for=condition=available --timeout=300s `
     deployment/argocd-server -n $argocdNamespace 2>&1 | Out-Null
+}
+
+function Deploy-AutoHealingCronJob {
+  Write-Step "Deploying auto-healing CronJob (monitors and restarts unhealthy repo-server)"
+  
+  Write-Host " Purpose: Auto-detects and heals stuck repo-server pods every 5 minutes" -ForegroundColor $Color.Muted
+  
+  $cronJobManifest = @"
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-healing-bot
+  namespace: argocd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-healing-bot
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-healing-bot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-healing-bot
+subjects:
+- kind: ServiceAccount
+  name: argocd-healing-bot
+  namespace: argocd
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: argocd-repo-server-healing
+  namespace: argocd
+  labels:
+    app: argocd-healing-bot
+spec:
+  schedule: "*/5 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          serviceAccountName: argocd-healing-bot
+          restartPolicy: OnFailure
+          containers:
+          - name: health-check
+            image: bitnami/kubectl:latest
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/sh
+              set -e
+              
+              REPO_POD=\$$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              
+              if [ -z "\$$REPO_POD" ]; then
+                echo "[WARN] No repo-server pod found, may be already recovering"
+                exit 0
+              fi
+              
+              READY=\$$(kubectl get pod \$$REPO_POD -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+              RESTARTS=\$$(kubectl get pod \$$REPO_POD -n argocd -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null)
+              
+              echo "[INFO] Pod: \$$REPO_POD | Ready: \$$READY | Restarts: \$$RESTARTS"
+              
+              if [ "\$$READY" != "True" ]; then
+                echo "[ERROR] Pod not ready! Attempting heal..."
+                
+                # Clean up stuck volumes
+                echo "[ACTION] Deleting stuck pod to trigger volume cleanup..."
+                kubectl delete pod \$$REPO_POD -n argocd --grace-period=10 2>/dev/null || true
+                
+                echo "[INFO] Waiting for new pod to be created..."
+                sleep 10
+                
+                # Verify recovery
+                NEW_POD=\$$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+                NEW_READY=\$$(kubectl get pod \$$NEW_POD -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+                
+                if [ "\$$NEW_READY" = "True" ]; then
+                  echo "[SUCCESS] Pod recovered!"
+                  exit 0
+                else
+                  echo "[WARN] Pod still not ready after recovery attempt"
+                  exit 1
+                fi
+              else
+                echo "[OK] Pod is healthy"
+              fi
+"@
+  
+  Write-Host " Creating auto-healing resources..." -ForegroundColor $Color.Muted
+  $cronJobManifest | kubectl apply -f - 2>&1 | Out-Null
+  
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Auto-healing CronJob deployed (checks every 5 minutes)" -ForegroundColor $Color.Success
+  }
+  else {
+    Write-Host "⚠️ Auto-healing CronJob deployment had issues" -ForegroundColor $Color.Warning
+  }
+  Write-Host ""
 }
 
 function Set-ArgocdPassword {
@@ -676,7 +832,9 @@ Write-Host "⏳ Allowing nodes to fully stabilize before labeling..." -Foregroun
 Start-Sleep -Seconds 3
 
 Set-NodeLabelsAndTaints
+Clean-OrphanedPVCs
 Install-ArgoCD
+Deploy-AutoHealingCronJob
 Set-ArgocdPassword
 Apply-GitOpsBootstrap
 Apply-LocalManifests
