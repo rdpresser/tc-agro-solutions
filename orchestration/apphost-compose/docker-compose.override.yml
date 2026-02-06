@@ -102,6 +102,8 @@ services:
   # SERVICE - Identity Service (Development Mode)
   # =====================================================
   tc-agro-identity-service:
+    # ⚠️ IMPORTANT: Override 'image:' to use local build (not Docker Hub)
+    image: tc-agro-identity-service:dev-local
     restart: "no"
     # Override build configuration for development
     build:
@@ -165,12 +167,16 @@ services:
   # FRONTEND - Development Mode
   # =====================================================
   tc-agro-frontend-service:
+    # ⚠️ IMPORTANT: Override 'image:' to use local build (not Docker Hub)
+    image: tc-agro-frontend-service:dev-local
     restart: "no"
     build:
       context: ../../poc/frontend
       dockerfile: Dockerfile
       args:
         VITE_BASE_PATH: /
+      # Force rebuild on every docker-compose up (uncomment if needed)
+      # no_cache: true
     ports:
       - "5010:8080"
     # No additional environment variables needed for static frontend
