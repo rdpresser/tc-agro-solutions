@@ -12,6 +12,11 @@
 
 $clusterName = "dev"
 
+$portUtils = Join-Path $PSScriptRoot "port-utils.ps1"
+if (Test-Path $portUtils) {
+    . $portUtils
+}
+
 $Color = @{
     Success = "Green"
     Error   = "Red"
@@ -49,6 +54,21 @@ if (-not $clusterExists) {
 }
 Write-Host "   ✅ Cluster exists" -ForegroundColor $Color.Success
 
+$apiStatus = $null
+if (Get-Command Test-K3dApiPortHealth -ErrorAction SilentlyContinue) {
+    $apiStatus = Test-K3dApiPortHealth -ClusterName $clusterName
+    if ($apiStatus.Port) {
+        if ($apiStatus.IsExcluded) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is in a Windows excluded port range." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: re-run .\bootstrap.ps1 to recreate the cluster with a safe port." -ForegroundColor $Color.Muted
+        }
+        elseif ($apiStatus.IsInUse) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is already in use on the host." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: stop the conflicting process or re-run .\bootstrap.ps1." -ForegroundColor $Color.Muted
+        }
+    }
+}
+
 
 
 # Start cluster with verbose output
@@ -75,7 +95,7 @@ $lbContainer = docker ps -a --filter "name=$lbName" --format "{{.ID}} {{.Status}
 if ($lbContainer) {
     $parts = $lbContainer.Trim() -split "\s+"
     $cid = $parts[0]
-    $cstatus = ($parts[1..($parts.Length-1)] -join " ")
+    $cstatus = ($parts[1..($parts.Length - 1)] -join " ")
     if ($cstatus -notlike "Up*") {
         Write-Host "   Starting load-balancer container (docker start $cid)..." -ForegroundColor $Color.Muted
         docker start $cid 2>&1 | Out-Null

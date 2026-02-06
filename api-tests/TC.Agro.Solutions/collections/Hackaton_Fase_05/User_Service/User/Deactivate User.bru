@@ -1,0 +1,26 @@
+meta {
+  name: Deactivate User
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{identity_service_url}}/api/user/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "name": "Admin Rodrigo Dois",
+      "email": "Admin2@admin.com",
+      "username": "adminadmin",
+      "password": "Admin@123",
+      "role": "Admin"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -39,6 +39,18 @@
 # =====================================================
 $clusterName = "dev"
 
+# Select a safe API port (avoid reserved/excluded and in-use ports)
+$apiPort = $null
+
+$portUtils = Join-Path $PSScriptRoot "port-utils.ps1"
+if (Test-Path $portUtils) {
+  . $portUtils
+}
+else {
+  Write-Host "⚠️  port-utils.ps1 not found. Falling back to default API port 6443." -ForegroundColor $Color.Warning
+  $apiPort = "6443"
+}
+
 # Node resource allocation (20GB total)
 # Creating agents individually allows different memory per node pool
 $serverMemory = "3g"         # Control plane (etcd, apiserver, scheduler, controller-manager)
@@ -118,6 +130,7 @@ function Test-Prerequisites {
 
   Write-Host "✅ All prerequisites found" -ForegroundColor $Color.Success
 }
+
 
 function Stop-PortForwards {
   Write-Step "Stopping existing port-forwards"
@@ -226,6 +239,7 @@ function New-K3dCluster {
     k3d cluster create $clusterName `
       --servers 1 `
       --agents 0 `
+      --api-port $apiPort `
       --port "80:80@loadbalancer" `
       --port "443:443@loadbalancer" `
       --servers-memory $serverMemory `
@@ -833,6 +847,11 @@ else {
 }
 
 Ensure-ComposeNetwork
+
+Write-Step "Selecting k3d API port"
+$apiPort = Select-K3dApiPort
+Write-Host " Using API port: $apiPort" -ForegroundColor $Color.Success
+
 Remove-ExistingCluster
 New-K3dCluster
 Fix-KubeconfigForDocker
