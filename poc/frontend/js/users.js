@@ -126,6 +126,10 @@ function renderUsersTable(users) {
     return;
   }
 
+  // Get current logged-in user email
+  const currentUser = getTokenInfo();
+  const currentEmail = currentUser?.email?.toLowerCase();
+
   tbody.innerHTML = users
     .map((user) => {
       const id = user.id || user.userId || '';
@@ -136,16 +140,24 @@ function renderUsersTable(users) {
         `users-form.html${id || email ? `?id=${encodeURIComponent(id)}&email=${encodeURIComponent(email)}` : ''}`
       );
 
+      // Check if this is the currently logged-in user
+      const isCurrentUser = email && currentEmail && email.toLowerCase() === currentEmail;
+
+      // Disable delete button for current user with tooltip
+      const deleteButton = isCurrentUser
+        ? `<button class="btn btn-sm btn-danger" disabled title="You cannot delete yourself" style="cursor: not-allowed; opacity: 0.5;">🗑️</button>`
+        : `<button class="btn btn-sm btn-danger" data-action="delete" data-id="${id}" data-email="${email}">🗑️</button>`;
+
       return `
-    <tr data-id="${id}" data-email="${email}">
-      <td><strong>${user.name || user.fullName || '-'}</strong></td>
+    <tr data-id="${id}" data-email="${email}" ${isCurrentUser ? 'style="background-color: rgba(45, 80, 22, 0.05);"' : ''}>
+      <td><strong>${user.name || user.fullName || '-'}${isCurrentUser ? ' <span style="color: #2d5016; font-weight: bold;">(You)</span>' : ''}</strong></td>
       <td>${email || '-'}</td>
       <td>${user.username || user.userName || '-'}</td>
       <td>${role}</td>
       <td><span class="badge ${status.badge}">${status.label}</span></td>
       <td class="actions">
         <a href="${editUrl}" class="btn btn-sm btn-outline">✏️ Edit</a>
-        <button class="btn btn-sm btn-danger" data-action="delete" data-id="${id}" data-email="${email}">🗑️</button>
+        ${deleteButton}
       </td>
     </tr>
   `;
@@ -195,8 +207,11 @@ async function handleDelete(id, email) {
   const currentUser = getTokenInfo();
   const currentEmail = currentUser?.email?.toLowerCase();
 
+  // Double-check protection (should not happen with disabled button)
   if (email && currentEmail && email.toLowerCase() === currentEmail) {
-    toast('You cannot delete the currently logged in user', 'warning');
+    alert(
+      '⚠️ You cannot delete your own user account.\n\nPlease ask another administrator to delete your account if needed.'
+    );
     return;
   }
 
