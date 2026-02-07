@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: rdpresser/frontend-service:b67aea72
+        image: rdpresser/frontend-service:34f64887
         imagePullPolicy: Always
         ports:
         - name: http
