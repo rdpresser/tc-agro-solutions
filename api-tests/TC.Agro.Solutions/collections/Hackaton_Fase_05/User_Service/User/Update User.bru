@@ -1,10 +1,10 @@
 meta {
-  name: Deactivate User
+  name: Update User
   type: http
-  seq: 3
+  seq: 4
 }
 
-delete {
+put {
   url: {{identity_service_url}}/api/user/0a5f35e4-7fc8-4b2a-affa-2988ad6f8046
   body: json
   auth: bearer
@@ -12,6 +12,14 @@ delete {
 
 auth:bearer {
   token: {{admin_token}}
+}
+
+body:json {
+  {
+      "name": "Admin Rodrigo Dois",
+      "email": "Admin299@admin.com",
+      "username": "adminadmin"
+  }
 }
 
 settings {
