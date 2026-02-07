@@ -16,5 +16,15 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tc-agro-identity-db')
 \c tc-agro-identity-db
 CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
+-- =====================================================
+-- Farm Service Database (isolated per microservice)
+-- =====================================================
+SELECT 'CREATE DATABASE "tc-agro-farm-db"'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tc-agro-farm-db')\gexec
+
+-- Enable TimescaleDB extension for farm database
+\c tc-agro-farm-db
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+
 -- Log completion
-\echo '✅ PostgreSQL initialization complete: tc-agro-identity-db ready'
+\echo '✅ PostgreSQL initialization complete: tc-agro-identity-db + tc-agro-farm-db ready'

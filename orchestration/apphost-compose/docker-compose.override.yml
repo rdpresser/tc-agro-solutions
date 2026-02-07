@@ -186,25 +186,40 @@ services:
   # FUTURE SERVICES - Development Placeholders
   # =====================================================
 
-  # # Farm Service - Development Mode (Uncomment when ready)
-  # tc-agro-farm-service:
-  #   build:
-  #     context: ../../
-  #     dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
-  #     args:
-  #       BUILD_CONFIGURATION: Debug
-  #   ports:
-  #     - "5002:8080"
-  #     - "15002:15001"  # Debug port
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
-  #     - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
-  #     - Serilog__MinimumLevel__Default=Debug
-  #   volumes:
-  #     # - ../../services/farm-service/src:/app/src:ro
-  #     - farm_nuget_cache:/root/.nuget/packages
-  #   restart: on-failure:3
+  # =====================================================
+  # SERVICE - Farm Service (Development Mode)
+  # =====================================================
+  tc-agro-farm-service:
+    image: tc-agro-farm-service:dev-local
+    restart: "no"
+    build:
+      context: ../../
+      dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Debug
+    ports:
+      - "5002:8080" # HTTP
+      - "5012:8081" # HTTPS
+      - "15002:15001" # VS Debugger port
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - Serilog__MinimumLevel__Default=Debug
+      - Serilog__MinimumLevel__Override__Microsoft=Information
+      - Serilog__MinimumLevel__Override__System=Information
+      - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
+    volumes:
+      - farm_logs:/app/logs
+      - farm_nuget_cache:/root/.nuget/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   # # Sensor Ingest Service - Development Mode (Uncomment when ready)
   # tc-agro-sensor-ingest-service:
@@ -275,9 +290,9 @@ volumes:
   identity_nuget_cache:
     name: tc-agro-identity-nuget-cache
 
-  # Uncomment for additional services
-  # farm_nuget_cache:
-  #   name: tc-agro-farm-nuget-cache
+  # Farm Service cache
+  farm_nuget_cache:
+    name: tc-agro-farm-nuget-cache
   # sensor_ingest_nuget_cache:
   #   name: tc-agro-sensor-ingest-nuget-cache
   # analytics_worker_nuget_cache:
