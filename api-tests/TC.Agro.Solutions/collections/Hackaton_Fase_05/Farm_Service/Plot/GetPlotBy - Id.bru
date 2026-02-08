@@ -7,7 +7,11 @@ meta {
 get {
   url: {{farm_service_url}}/api/plot/24e44b59-bc73-4788-b255-1821d3267f2d
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 settings {

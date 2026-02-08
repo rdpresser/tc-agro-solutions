@@ -5,9 +5,9 @@ meta {
 }
 
 get {
-  url: {{farm_service_url}}/api/sensor?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter&plotId&propertyId&type&status
+  url: {{farm_service_url}}/api/sensor?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter
   body: none
-  auth: inherit
+  auth: bearer
 }
 
 params:query {
@@ -16,10 +16,10 @@ params:query {
   sortBy: installedAt
   sortDirection: desc
   filter: 
-  plotId: 
-  propertyId: 
-  type: 
-  status: 
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 settings {

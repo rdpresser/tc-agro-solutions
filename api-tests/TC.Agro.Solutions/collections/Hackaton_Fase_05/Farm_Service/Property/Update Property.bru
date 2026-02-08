@@ -7,7 +7,11 @@ meta {
 put {
   url: {{farm_service_url}}/api/property/197435dd-23bd-46e0-830d-fc9d0cc71f09
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 body:json {
