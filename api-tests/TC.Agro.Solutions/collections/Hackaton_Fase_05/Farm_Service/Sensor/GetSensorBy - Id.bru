@@ -7,7 +7,11 @@ meta {
 get {
   url: {{farm_service_url}}/api/sensor/5f763069-cf98-47e4-baa8-502fff007104
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 settings {

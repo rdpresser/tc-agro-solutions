@@ -7,7 +7,11 @@ meta {
 post {
   url: {{farm_service_url}}/api/property
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 body:json {
