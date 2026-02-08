@@ -166,10 +166,10 @@
             </div>
 
             <!-- Password -->
-            <div class="form-section">
+            <div class="form-section" id="passwordSection">
               <h3 class="form-section-title">🔐 Password</h3>
               <div class="form-row">
-                <div class="form-group" style="flex: 1">
+                <div class="form-group" id="passwordGroup" style="flex: 1">
                   <label for="password" class="form-label required">Password</label>
                   <div style="display: flex; gap: 8px; align-items: center">
                     <input
@@ -199,7 +199,25 @@
       </main>
     </div>
 
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('id') || params.has('email')) {
+          const passwordSection = document.getElementById('passwordSection');
+          if (passwordSection) {
+            passwordSection.style.display = 'none';
+            passwordSection.hidden = true;
+          }
+
+          const roleSelect = document.getElementById('role');
+          if (roleSelect) {
+            roleSelect.disabled = true;
+            roleSelect.required = false;
+          }
+        }
+      })();
+    </script>
     <!-- Scripts (ES Module) -->
-    <script type="module" src="./js/users-form.js"></script>
+    <script type="module" src="./js/users-form.js?v=20260207"></script>
   </body>
 </html>

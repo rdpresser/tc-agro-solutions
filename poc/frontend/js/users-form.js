@@ -18,9 +18,11 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './util
 // Page State
 // ============================================
 
-const editId = getQueryParam('id');
-const editEmail = getQueryParam('email');
-const isEditMode = !!editId || !!editEmail;
+const hashQuery = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+const queryParams = new URLSearchParams(window.location.search || hashQuery);
+const editId = queryParams.get('id');
+const editEmail = queryParams.get('email');
+const isEditMode = queryParams.has('id') || queryParams.has('email');
 
 // ============================================
 // Page Initialization
@@ -65,6 +67,8 @@ async function setupEditMode() {
   if (formTitle) formTitle.textContent = 'Edit User';
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
 
+  applyEditModeUI();
+
   if (!editEmail) {
     showFormError('Unable to load user. Email parameter is required.');
     return;
@@ -77,6 +81,30 @@ async function setupEditMode() {
     const { message } = normalizeError(error);
     showFormError(message || 'User not found');
   }
+}
+
+function applyEditModeUI() {
+  const passwordSection = $id('passwordSection');
+  const passwordInput = $id('password');
+  const toggleBtn = $id('togglePassword');
+  const roleSelect = $id('role');
+  const passwordHelper = document.querySelector('#passwordSection .form-helper');
+
+  if (passwordSection) {
+    passwordSection.style.display = 'none';
+    passwordSection.hidden = true;
+  }
+  if (passwordInput) {
+    passwordInput.required = false;
+    passwordInput.value = '';
+    passwordInput.setCustomValidity('');
+  }
+  if (toggleBtn) toggleBtn.disabled = true;
+  if (roleSelect) {
+    roleSelect.disabled = true;
+    roleSelect.required = false;
+  }
+  if (passwordHelper) passwordHelper.style.display = 'none';
 }
 
 // ============================================
@@ -131,20 +159,25 @@ function setupFormHandler() {
     const payload = {
       name: $id('name')?.value?.trim(),
       email: $id('email')?.value?.trim(),
-      username: $id('username')?.value?.trim(),
-      password: $id('password')?.value,
-      role: $id('role')?.value
+      username: $id('username')?.value?.trim()
     };
 
-    if (
-      !payload.name ||
-      !payload.email ||
-      !payload.username ||
-      !payload.password ||
-      !payload.role
-    ) {
+    if (!payload.name || !payload.email || !payload.username) {
       showFormError('All fields are required.');
       return;
+    }
+
+    if (!isEditMode) {
+      payload.password = $id('password')?.value;
+      payload.role = $id('role')?.value;
+      if (!payload.password) {
+        showFormError('All fields are required.');
+        return;
+      }
+      if (!payload.role) {
+        showFormError('All fields are required.');
+        return;
+      }
     }
 
     showLoading('Saving user...');
