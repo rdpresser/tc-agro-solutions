@@ -5,9 +5,9 @@ meta {
 }
 
 get {
-  url: {{farm_service_url}}/api/plot?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter&propertyId&cropType
+  url: {{farm_service_url}}/api/plot?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
   body: none
-  auth: inherit
+  auth: bearer
 }
 
 params:query {
@@ -16,8 +16,10 @@ params:query {
   sortBy: name
   sortDirection: asc
   filter: 
-  propertyId: 
-  cropType: 
+}
+
+auth:bearer {
+  token: {{admin_token}}
 }
 
 settings {
