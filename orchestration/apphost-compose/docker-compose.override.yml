@@ -183,10 +183,6 @@ services:
     # Nginx serves pre-built static files
 
   # =====================================================
-  # FUTURE SERVICES - Development Placeholders
-  # =====================================================
-
-  # =====================================================
   # SERVICE - Farm Service (Development Mode)
   # =====================================================
   tc-agro-farm-service:
@@ -221,6 +217,9 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # =====================================================
+  # FUTURE SERVICES - Development Placeholders
+  # =====================================================
   # # Sensor Ingest Service - Development Mode (Uncomment when ready)
   # tc-agro-sensor-ingest-service:
   #   build:
