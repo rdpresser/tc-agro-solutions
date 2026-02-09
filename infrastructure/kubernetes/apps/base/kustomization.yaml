@@ -6,3 +6,4 @@ resources:
   - frontend
   - identity
   - sensor-ingest
+  - farm

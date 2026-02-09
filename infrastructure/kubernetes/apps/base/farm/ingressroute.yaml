@@ -1,0 +1,32 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: farm-service
+  namespace: agro-apps
+  labels:
+    app: farm-service
+  annotations:
+    kubernetes.io/description: "Path-based routing for Farm API service"
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/farm`)
+      kind: Rule
+      services:
+        - name: farm-service
+          port: 80
+      middlewares:
+        - name: farm-stripprefix
+          namespace: agro-apps
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: farm-stripprefix
+  namespace: agro-apps
+spec:
+  stripPrefix:
+    prefixes:
+      - /farm
