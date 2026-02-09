@@ -106,9 +106,9 @@ services:
     restart: unless-stopped
     hostname: tc-agro-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASSWORD:-guest}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST}
     ports:
       - "${RABBITMQ_PORT}:5672" # AMQP
       - "${RABBITMQ_MANAGEMENT_PORT}:15672" # Management UI
@@ -180,7 +180,7 @@ services:
     ports:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
-      - ./observability/prometheus/${PROMETHEUS_CONFIG_FILE:-prometheus.yml}:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/${PROMETHEUS_CONFIG_FILE}:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -284,13 +284,13 @@ services:
       context: ../../
       dockerfile: services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile
       args:
-        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION}
     ports:
       - "5001:8080" # HTTP
       - "5011:8081" # HTTPS (if configured)
     environment:
       # ASP.NET Core
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
 
@@ -348,20 +348,20 @@ services:
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
       # .NET Configuration - Telemetry (Grafana Agent)
-      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
-      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
-      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
-      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
-      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
+      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
+      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
+      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort}
+      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort}
+      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled}
       # =====================================================
       # ESTRATÉGIA DAEMONSET: Apps k3d usam DaemonSet agent
       # - Antigo (Docker direto): http://otel-collector:4318
       # - Novo (k3d DaemonSet): http://otel-collector.observability:4318 (definido em .env)
       # =====================================================
-      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
-      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
-      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
-      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
+      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint}
+      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol}
+      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds}
+      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure}
     volumes:
       # Hot reload support (optional - comment if not needed)
       # - ../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service:/app:ro
@@ -431,13 +431,13 @@ services:
       context: ../../
       dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
       args:
-        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION}
     ports:
       - "5002:8080" # HTTP
       - "5012:8081" # HTTPS (if configured)
     environment:
       # ASP.NET Core
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
 
@@ -495,15 +495,15 @@ services:
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
       # .NET Configuration - Telemetry (Grafana Agent)
-      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
-      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
-      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
-      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
-      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
-      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
-      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
-      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
-      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
+      - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
+      - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
+      - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort}
+      - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort}
+      - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled}
+      - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint}
+      - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol}
+      - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds}
+      - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure}
     volumes:
       - farm_logs:/app/logs
     depends_on:
@@ -547,7 +547,7 @@ services:
   #   ports:
   #     - "5003:8080"
   #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
   #     - ASPNETCORE_URLS=http://+:8080
   #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #     - OTEL_SERVICE_NAME=sensor-ingest-service
@@ -573,13 +573,13 @@ services:
   #     context: ../../
   #     dockerfile: services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/Dockerfile
   #     args:
-  #       BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Debug}
+  #       BUILD_CONFIGURATION: ${BUILD_CONFIGURATION}
   #   ports:
   #     - "5004:8080" # HTTP
   #     - "5014:8081" # HTTPS (if configured)
   #   environment:
   #     # ASP.NET Core
-  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
   #     - ASPNETCORE_URLS=http://+:8080
   #     - DOTNET_USE_POLLING_FILE_WATCHER=1
 
@@ -635,20 +635,20 @@ services:
   #     - Logging__LogLevel__System=${Logging__LogLevel__System}
 
   #     # .NET Configuration - Telemetry (Grafana Agent)
-  #     - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host:-otel-collector}
-  #     - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort:-4317}
-  #     - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort:-4318}
-  #     - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort:-12345}
-  #     - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled:-true}
+  #     - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
+  #     - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
+  #     - Telemetry__Grafana__Agent__OtlpHttpPort=${Telemetry__Grafana__Agent__OtlpHttpPort}
+  #     - Telemetry__Grafana__Agent__MetricsPort=${Telemetry__Grafana__Agent__MetricsPort}
+  #     - Telemetry__Grafana__Agent__Enabled=${Telemetry__Grafana__Agent__Enabled}
   #     # =====================================================
   #     # ESTRATÉGIA DAEMONSET: Apps k3d usam DaemonSet agent
   #     # - Antigo (Docker direto): http://otel-collector:4318
   #     # - Novo (k3d DaemonSet): http://otel-collector.observability:4318 (definido em .env)
   #     # =====================================================
-  #     - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint:-http://otel-collector:4318}
-  #     - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol:-http/protobuf}
-  #     - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds:-10}
-  #     - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure:-true}
+  #     - Telemetry__Grafana__Otlp__Endpoint=${Telemetry__Grafana__Otlp__Endpoint}
+  #     - Telemetry__Grafana__Otlp__Protocol=${Telemetry__Grafana__Otlp__Protocol}
+  #     - Telemetry__Grafana__Otlp__TimeoutSeconds=${Telemetry__Grafana__Otlp__TimeoutSeconds}
+  #     - Telemetry__Grafana__Otlp__Insecure=${Telemetry__Grafana__Otlp__Insecure}
   #   volumes:
   #     # Hot reload support (optional - comment if not needed)
   #     # - ../../services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service:/app:ro
@@ -690,7 +690,7 @@ services:
   #   ports:
   #     - "5005:8080"
   #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+  #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
   #     - ASPNETCORE_URLS=http://+:8080
   #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #     - OTEL_SERVICE_NAME=dashboard-service
