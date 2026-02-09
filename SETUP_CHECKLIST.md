@@ -294,22 +294,21 @@ Use este checklist para garantir que seu ambiente está completamente configurad
 
 ## 🔧 ENVIRONMENT CONFIGURATION
 
-### .env File
+### .env Files
 
-- [ ] `.env` file exists
+- [ ] `.env` files exist
 
   ```powershell
   ls orchestration\apphost-compose\.env
   ```
 
 - [ ] `.env` has correct values
-  - `POSTGRES_DB=tc-agro-identity-db`
   - `POSTGRES_USER=postgres`
   - `POSTGRES_PASSWORD=postgres`
   - `REDIS_HOST=redis`
   - `RABBITMQ_HOST=rabbitmq`
 
-- [ ] `.env` is in `.gitignore`
+- [ ] `.env` files are in `.gitignore`
   ```powershell
   # Should NOT be tracked by git
   git status | findstr ".env"

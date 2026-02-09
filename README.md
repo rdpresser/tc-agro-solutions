@@ -116,7 +116,7 @@ This will:
 
 - Clone 5 microservices to `services/`
 - Clone common libraries to `common/`
-- Create `.env` with local configuration
+- Create `.env` files with local configuration (shared + per service)
 
 ### 3️⃣ Open Solution
 
@@ -154,7 +154,9 @@ tc-agro-solutions/
 ├── scripts/
 │   └── bootstrap.ps1       # ⚙️ Setup automation
 ├── docs/                   # Architecture & ADRs
-├── .env                    # 🔄 Created by bootstrap
+├── orchestration/
+│   └── apphost-compose/
+│       ├── .env            # 🔄 Created by bootstrap (shared)
 └── docker-compose.yml      # (To be created)
 ```
 

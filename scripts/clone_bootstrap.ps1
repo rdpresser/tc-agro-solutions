@@ -136,6 +136,7 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
 function Ensure-DotEnv($rootPath) {
     $envPath = Join-Path $rootPath "orchestration\apphost-compose\.env"
     
+    
     if (-not (Test-Path $envPath)) {
         Write-Step "Creating .env file (apphost-compose)"
         
@@ -164,7 +165,7 @@ BUILD_CONFIGURATION=Debug
 # =====================================================
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=tc-agro-identity-db
+# Default database for the PostgreSQL container is set in docker-compose.yml.
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_SCHEMA=public
@@ -216,7 +217,6 @@ OTEL_COLLECTOR_HTTP_PORT=4318
 # Maps to appsettings.json: "Database": { "Postgres": { ... } }
 Database__Postgres__Host=${POSTGRES_HOST}
 Database__Postgres__Port=${POSTGRES_PORT}
-Database__Postgres__Database=${POSTGRES_DB}
 Database__Postgres__UserName=${POSTGRES_USER}
 Database__Postgres__Password=${POSTGRES_PASSWORD}
 Database__Postgres__Schema=${POSTGRES_SCHEMA}
@@ -224,10 +224,6 @@ Database__Postgres__MaintenanceDatabase=${POSTGRES_MAINTENANCE_DB}
 Database__Postgres__ConnectionTimeout=30
 Database__Postgres__MinPoolSize=2
 Database__Postgres__MaxPoolSize=20
-
-# .NET Connection String (built from above variables)
-# This is a convenience variable, apps can build it from individual values
-ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=true
 
 # =====================================================
 # .NET APPLICATION - CACHE (Cache.Redis.*)
@@ -248,7 +244,8 @@ Messaging__RabbitMQ__Host=${RABBITMQ_HOST}
 Messaging__RabbitMQ__Port=${RABBITMQ_PORT}
 Messaging__RabbitMQ__ManagementPort=${RABBITMQ_MANAGEMENT_PORT}
 Messaging__RabbitMQ__VirtualHost=${RABBITMQ_DEFAULT_VHOST}
-Messaging__RabbitMQ__Exchange=identity.events
+# Exchange is set per service in docker-compose.yml.
+# Messaging__RabbitMQ__Exchange=
 Messaging__RabbitMQ__UserName=${RABBITMQ_DEFAULT_USER}
 Messaging__RabbitMQ__Password=${RABBITMQ_DEFAULT_PASSWORD}
 Messaging__RabbitMQ__AutoProvision=true
@@ -351,33 +348,9 @@ Logging__LogLevel__System=Warning
     else {
         Write-Warning ".env already exists at $envPath - skipping generation"
     }
-}
 
-# ===========================
-# MAIN EXECUTION
-# ===========================
 
-Write-Header "TC Agro Solutions - Bootstrap"
 
-# Resolve path to project root (one level above scripts/)
-$rootPath = Resolve-Path (Join-Path $PSScriptRoot "..")
-
-Write-Info "Project root: $rootPath"
-
-# ===========================
-# Validate Prerequisites
-# ===========================
-Write-Step "Validating prerequisites"
-
-Ensure-Command "git"
-Write-Success "Git found"
-
-Ensure-Command "docker"
-Write-Success "Docker found"
-
-# Test internet connectivity
-Write-Step "Testing internet connectivity..."
-try {
     $testUrl = "https://github.com"
     $null = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     Write-Success "Internet connectivity verified"

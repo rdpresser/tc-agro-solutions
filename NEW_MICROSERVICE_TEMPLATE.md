@@ -471,7 +471,7 @@ Add to `docker-compose.yml` in parent:
     - "500X:80"  # Replace X with unique port
   environment:
     ASPNETCORE_ENVIRONMENT: Development
-    ConnectionStrings__DefaultConnection: Host=postgres;Database=agro_db;Username=postgres;Password=postgres
+    # Database name should come from appsettings.* per service
   depends_on:
     - postgres
 ```

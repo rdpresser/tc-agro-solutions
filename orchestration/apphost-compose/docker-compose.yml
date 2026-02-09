@@ -18,7 +18,7 @@ services:
     container_name: tc-agro-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: postgres
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -27,7 +27,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -278,6 +278,8 @@ services:
     image: ${DOCKER_REGISTRY-}identity-service:latest
     container_name: tc-agro-identity-service
     restart: unless-stopped
+    env_file:
+      - ./.env
     build:
       context: ../../
       dockerfile: services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile
@@ -292,13 +294,10 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
 
-      # .NET Configuration - Connection Strings (built from individual values)
-      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
-
       # .NET Configuration - Database (Database.Postgres.*)
       - Database__Postgres__Host=${Database__Postgres__Host}
       - Database__Postgres__Port=${Database__Postgres__Port}
-      - Database__Postgres__Database=${Database__Postgres__Database}
+      - Database__Postgres__Database=tc-agro-identity-db
       - Database__Postgres__UserName=${Database__Postgres__UserName}
       - Database__Postgres__Password=${Database__Postgres__Password}
       - Database__Postgres__Schema=${Database__Postgres__Schema}
@@ -318,7 +317,7 @@ services:
       - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
       - Messaging__RabbitMQ__ManagementPort=${Messaging__RabbitMQ__ManagementPort}
       - Messaging__RabbitMQ__VirtualHost=${Messaging__RabbitMQ__VirtualHost}
-      - Messaging__RabbitMQ__Exchange=${Messaging__RabbitMQ__Exchange}
+      - Messaging__RabbitMQ__Exchange=identity.events
       - Messaging__RabbitMQ__UserName=${Messaging__RabbitMQ__UserName}
       - Messaging__RabbitMQ__Password=${Messaging__RabbitMQ__Password}
       - Messaging__RabbitMQ__AutoProvision=${Messaging__RabbitMQ__AutoProvision}
@@ -335,7 +334,11 @@ services:
 
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
-      - Auth__Jwt__Audience=${Auth__Jwt__Audience}
+      - Auth__Jwt__Audience__0=${Auth__Jwt__Audience__0}
+      - Auth__Jwt__Audience__1=${Auth__Jwt__Audience__1}
+      - Auth__Jwt__Audience__2=${Auth__Jwt__Audience__2}
+      - Auth__Jwt__Audience__3=${Auth__Jwt__Audience__3}
+      - Auth__Jwt__Audience__4=${Auth__Jwt__Audience__4}
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
       - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
@@ -422,6 +425,8 @@ services:
     image: ${DOCKER_REGISTRY-}farm-service:latest
     container_name: tc-agro-farm-service
     restart: unless-stopped
+    env_file:
+      - ./.env
     build:
       context: ../../
       dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
@@ -436,14 +441,10 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
 
-      # .NET Configuration - Connection Strings (built from individual values)
-      - ConnectionStrings__DefaultConnection=Host=${Database__Postgres__Host};Port=${Database__Postgres__Port};Database=${FARM_POSTGRES_DB:-tc-agro-farm-db};Username=${Database__Postgres__UserName};Password=${Database__Postgres__Password};Include Error Detail=true
-
       # .NET Configuration - Database (Database.Postgres.*)
-      # NOTE: Database name is overridden to use isolated farm-db (microservice pattern)
       - Database__Postgres__Host=${Database__Postgres__Host}
       - Database__Postgres__Port=${Database__Postgres__Port}
-      - Database__Postgres__Database=${FARM_POSTGRES_DB:-tc-agro-farm-db}
+      - Database__Postgres__Database=tc-agro-farm-db
       - Database__Postgres__UserName=${Database__Postgres__UserName}
       - Database__Postgres__Password=${Database__Postgres__Password}
       - Database__Postgres__Schema=${Database__Postgres__Schema}
@@ -463,7 +464,7 @@ services:
       - Messaging__RabbitMQ__Port=${Messaging__RabbitMQ__Port}
       - Messaging__RabbitMQ__ManagementPort=${Messaging__RabbitMQ__ManagementPort}
       - Messaging__RabbitMQ__VirtualHost=${Messaging__RabbitMQ__VirtualHost}
-      - Messaging__RabbitMQ__Exchange=${Messaging__RabbitMQ__Exchange}
+      - Messaging__RabbitMQ__Exchange=farm.events
       - Messaging__RabbitMQ__UserName=${Messaging__RabbitMQ__UserName}
       - Messaging__RabbitMQ__Password=${Messaging__RabbitMQ__Password}
       - Messaging__RabbitMQ__AutoProvision=${Messaging__RabbitMQ__AutoProvision}
@@ -480,7 +481,11 @@ services:
 
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
-      - Auth__Jwt__Audience=${Auth__Jwt__Audience}
+      - Auth__Jwt__Audience__0=${Auth__Jwt__Audience__0}
+      - Auth__Jwt__Audience__1=${Auth__Jwt__Audience__1}
+      - Auth__Jwt__Audience__2=${Auth__Jwt__Audience__2}
+      - Auth__Jwt__Audience__3=${Auth__Jwt__Audience__3}
+      - Auth__Jwt__Audience__4=${Auth__Jwt__Audience__4}
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
       - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
@@ -544,7 +549,6 @@ services:
   #   environment:
   #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
   #     - ASPNETCORE_URLS=http://+:8080
-  #     - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #     - OTEL_SERVICE_NAME=sensor-ingest-service
   #   depends_on:
@@ -580,7 +584,6 @@ services:
   #     - DOTNET_USE_POLLING_FILE_WATCHER=1
 
   #     # .NET Configuration - Connection Strings (built from individual values)
-  #     - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
 
   #     # .NET Configuration - Database (Database.Postgres.*)
   #     - Database__Postgres__Host=${Database__Postgres__Host}
@@ -689,7 +692,6 @@ services:
   #   environment:
   #     - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
   #     - ASPNETCORE_URLS=http://+:8080
-  #     - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #     - OTEL_SERVICE_NAME=dashboard-service
   #   depends_on:

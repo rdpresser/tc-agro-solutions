@@ -181,11 +181,11 @@ spec:
             - name: ASPNETCORE_ENVIRONMENT
               value: Development
 
-            - name: ConnectionStrings__DefaultConnection
+            - name: Database__Postgres__Database
               valueFrom:
                 configMapKeyRef:
                   name: identity-config
-                  key: db-connection-string
+                  key: Database__Postgres__Database
 
           resources:
             requests:

@@ -317,33 +317,17 @@ dotnet ef database update --project src/Agro.Farm.Api
 
 ## 📦 Environment Variables
 
-Create a `.env` file at the repository root:
+Create env files in `orchestration/apphost-compose`:
 
 ```bash
-# Database
-POSTGRES_HOST=localhost
+# Shared defaults
+ASPNETCORE_ENVIRONMENT=Development
+POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=agro_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# RabbitMQ
-RABBITMQ_HOST=localhost
-RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
-
-# JWT
-JWT_SECRET=your-256-bit-secret-key-change-in-production
-JWT_ISSUER=https://agro.local
-JWT_AUDIENCE=https://agro.local
-
-# Logging
-LOG_LEVEL=Information
+# Service-specific values are defined per service in docker-compose.yml
 ```
 
 ---

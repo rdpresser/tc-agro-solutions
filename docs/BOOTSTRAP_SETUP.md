@@ -14,7 +14,7 @@ The bootstrap automates:
 
 - ✅ Clone of all 5 microservices (via HTTPS)
 - ✅ Clone of shared `common` libraries
-- ✅ Creation of `.env` file with local configuration
+- ✅ Creation of `.env` files with local configuration
 - ✅ Update of existing repositories (with confirmation)
 - ✅ Preparation of folder structure
 
@@ -54,7 +54,10 @@ tc-agro-solutions/
 │   └── frontend/                            # Dashboard UI demo
 │
 ├── .gitignore                               # Git: ignore services/ e common/
-├── .env                                     # ⚙️ Created by bootstrap
+├── orchestration/
+│   └── apphost-compose/
+│       ├── .env                             # ⚙️ Shared defaults
+│
 ├── docker-compose.yml                       # 🐳 Local orchestration (future)
 ├── README.md                                # 📖 Quick start
 └── tc-agro-solutions.sln                    # 🔧 Solution (.NET)
@@ -92,7 +95,7 @@ This will:
 3. Test internet connectivity
 4. Clone all 5 services
 5. Clone `common` repository
-6. Create `.env` file with local configuration
+6. Create `.env` files with local configuration
 7. **Verify all repositories were cloned successfully**
 
 ### 3️⃣ Open Solution
@@ -153,41 +156,19 @@ If services already exist, skip the pull. Useful for CI/CD.
 
 ---
 
-## 📝 Generated `.env` File
+## 📝 Generated Env Files
 
-Bootstrap creates a `.env` file at root with safe local configuration:
+Bootstrap creates env files in `orchestration/apphost-compose` with safe local configuration:
 
 ```bash
-# Environment
+# Shared defaults (.env)
 ASPNETCORE_ENVIRONMENT=Development
-
-# PostgreSQL
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=agro
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# RabbitMQ
-RABBITMQ_HOST=rabbitmq
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
-
-# JWT
-JWT_ISSUER=http://localhost:5001
-JWT_AUDIENCE=http://localhost:5000
-JWT_SECRET_KEY=your-256-bit-secret-key-change-in-production-12345678
-
-# Service Ports
-IDENTITY_HTTP_PORT=5001
-FARM_HTTP_PORT=5002
-SENSOR_INGEST_HTTP_PORT=5003
-ANALYTICS_WORKER_HTTP_PORT=5004
-DASHBOARD_HTTP_PORT=5005
+# Service-specific values are defined in docker-compose.yml per service
 ```
 
 ⚠️ **Important:** This `.env` is for local development only. Use Azure Key Vault in production.
