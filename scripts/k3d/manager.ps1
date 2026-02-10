@@ -460,6 +460,8 @@ else {
             Write-Host "   📦 Registry: Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
             Write-Host "   🔐 Login status: check via docker info or 'docker login'" -ForegroundColor $Color.Muted
             Write-Host ""
+            Write-Host "   Services: frontend-service, identity-service, farm-service" -ForegroundColor $Color.Muted
+            Write-Host "   Example: farm-service,identity-service" -ForegroundColor $Color.Muted
             
             $confirm = Read-Host "   Did you run 'docker login' already? (y/n - default: y)"
             if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = "y" }
@@ -470,12 +472,26 @@ else {
                 $null = Read-Host "`nPress Enter to continue"
                 continue
             }
-            
-            $null = Invoke-Script "build-push-images.ps1"
+
+            $serviceInput = Read-Host "   Services to build (default: all)"
+            if ([string]::IsNullOrWhiteSpace($serviceInput)) {
+                $null = Invoke-Script "build-push-images.ps1"
+            }
+            else {
+                [string[]]$services = $serviceInput -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                if ($services.Count -eq 0) {
+                    $null = Invoke-Script "build-push-images.ps1"
+                }
+                else {
+                    $args = @("-Services")
+                    $args += $services
+                    $null = Invoke-Script "build-push-images.ps1" -Arguments $args
+                }
+            }
             
             # Print per-deployment rollout summary for quick visibility
             Write-Host ""; Write-Host "📦 Deployment Rollout Summary:" -ForegroundColor $Color.Info
-            $deployments = @('frontend', 'identity-service')
+            $deployments = @('frontend', 'identity-service', 'farm-service')
             foreach ($d in $deployments) {
                 $exists = kubectl get deployment $d -n agro-apps --no-headers 2>$null
                 if (-not $exists) {
