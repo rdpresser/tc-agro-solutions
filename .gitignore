@@ -66,6 +66,7 @@ terraform/terraform.tfstate*
 
 # Docker backups (versioned with timestamps)
 docker-compose.yml.backup*
+*.backup*
 
 # Kubernetes
 .kube/

@@ -738,8 +738,19 @@ function Apply-GitOpsBootstrap {
     Write-Host "✅ Base manifests applied (namespaces, ingress)" -ForegroundColor $Color.Success
   }
 
-  # Create agro-secrets from .env.k3d (must happen AFTER namespaces are created)
-  Create-AgroSecrets
+  # Import secrets + configmaps from .env.k3d (must happen AFTER namespaces are created)
+  $importScript = Join-Path $PSScriptRoot "import-secrets.ps1"
+  if (Test-Path $importScript) {
+    & $importScript
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "⚠️ import-secrets.ps1 reported errors" -ForegroundColor $Color.Warning
+      $global:LASTEXITCODE = 0
+    }
+  }
+  else {
+    Write-Host "⚠️ import-secrets.ps1 not found; falling back to secret-only import" -ForegroundColor $Color.Warning
+    Create-AgroSecrets
+  }
 
   $bootstrapAllFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-all.yaml"
   if (Test-Path $bootstrapAllFile) {

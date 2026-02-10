@@ -77,6 +77,9 @@ data:
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
   Logging__LogLevel__System: "Warning"
 
+  # Auth / JWT (non-sensitive)
+  Auth__Jwt__ExpirationInMinutes: "60"
+
   # ═══════════════════════════════════════════════════════════════════════════════════
   # Telemetry / OpenTelemetry Configuration
   # ═══════════════════════════════════════════════════════════════════════════════════

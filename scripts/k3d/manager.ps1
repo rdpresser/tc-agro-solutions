@@ -651,7 +651,26 @@ else {
         }
 
         "19" {
-            $null = Invoke-Script "import-secrets.ps1"
+            Write-Host "";
+            Write-Host "Import secrets/configmaps for services:" -ForegroundColor $Color.Info
+            Write-Host "  - identity" -ForegroundColor $Color.Muted
+            Write-Host "  - farm" -ForegroundColor $Color.Muted
+            Write-Host "  - all (default)" -ForegroundColor $Color.Muted
+            Write-Host "";
+
+            $svcInput = Read-Host "Enter services (comma-separated, Enter = all)"
+            if ([string]::IsNullOrWhiteSpace($svcInput)) {
+                $null = Invoke-Script "import-secrets.ps1"
+            }
+            else {
+                $services = $svcInput -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                if ($services.Count -eq 0) {
+                    $null = Invoke-Script "import-secrets.ps1"
+                }
+                else {
+                    $null = Invoke-Script "import-secrets.ps1" -Arguments @("-Services", ($services -join ","))
+                }
+            }
             $null = Read-Host "`nPress Enter to continue"
         }
 
