@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: identity-service
-        image: rdpresser/identity-service:d42ff863
+        image: rdpresser/identity-service:d0d30505
         imagePullPolicy: Always
         ports:
         - name: http
