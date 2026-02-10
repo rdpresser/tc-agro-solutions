@@ -1,0 +1,8 @@
+name: Docker-Global
+variables:
+  - name: identity_service_url
+    value: http://localhost:5001
+  - name: farm_service_url
+    value: http://localhost:5002
+  - name: admin_token
+    value: ""

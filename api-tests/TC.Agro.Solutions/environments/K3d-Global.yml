@@ -1,0 +1,8 @@
+name: K3d-Global
+variables:
+  - name: identity_service_url
+    value: http://localhost/identity
+  - name: farm_service_url
+    value: http://localhost/farm
+  - name: admin_token
+    value: ""
