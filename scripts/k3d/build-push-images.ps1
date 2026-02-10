@@ -18,6 +18,7 @@
 param(
     [ValidateSet("all", "platform", "apps")]
     [string]$SyncTarget = "apps",
+    [string[]]$Services = @("frontend-service", "identity-service", "farm-service"),
     [switch]$SkipSync
 )
 
@@ -184,7 +185,16 @@ if (-not $gitSha) {
     Write-Host "⚠️  Could not get git SHA, using 'latest' tag" -ForegroundColor $Color.Warning
 }
 
-foreach ($img in $images) {
+$selectedServices = $Services | ForEach-Object { $_.Trim().ToLowerInvariant() }
+$imagesToBuild = $images | Where-Object { $selectedServices -contains $_.name.ToLowerInvariant() }
+
+if (-not $imagesToBuild -or $imagesToBuild.Count -eq 0) {
+    Write-Host "❌ No matching services found to build." -ForegroundColor $Color.Error
+    Write-Host "   Available: frontend-service, identity-service, farm-service" -ForegroundColor $Color.Muted
+    exit 1
+}
+
+foreach ($img in $imagesToBuild) {
     $imageName = $img.name
     $imagePath = Join-Path $repoRoot $img.path
     $dockerfilePath = Join-Path $imagePath $img.dockerfile
