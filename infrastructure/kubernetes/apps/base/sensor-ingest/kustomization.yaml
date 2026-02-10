@@ -9,6 +9,8 @@ resources:
   - service.yaml
   - ingressroute.yaml
 
-commonLabels:
-  project: tc-agro-solutions
-  managed-by: argocd
+labels:
+  - pairs:
+      project: tc-agro-solutions
+      managed-by: argocd
+    includeSelectors: true

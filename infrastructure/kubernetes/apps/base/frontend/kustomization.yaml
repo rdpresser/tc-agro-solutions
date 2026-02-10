@@ -13,6 +13,8 @@ resources:
   - ingressroute.yaml
   # - ingress.yaml  # Legacy: NGINX Ingress (disabled)
 
-commonLabels:
-  project: tc-agro-solutions
-  managed-by: argocd
+labels:
+  - pairs:
+      project: tc-agro-solutions
+      managed-by: argocd
+    includeSelectors: true
