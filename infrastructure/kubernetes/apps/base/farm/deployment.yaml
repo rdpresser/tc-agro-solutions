@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: farm-service
+  namespace: agro-apps
+  labels:
+    app: farm-service
+    component: farm
+spec:
+  selector:
+    matchLabels:
+      app: farm-service
+  template:
+    metadata:
+      labels:
+        app: farm-service
+        component: farm
+    spec:
+      containers:
+      - name: farm-service
+        image: rdpresser/farm-service:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: farm-config
+        env:
+        # Sensitive values from Secret only
+        - name: Database__Postgres__Password
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Database__Postgres__Password
+        # RabbitMQ credentials from Secret
+        - name: Messaging__RabbitMQ__UserName
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Messaging__RabbitMQ__UserName
+        - name: Messaging__RabbitMQ__Password
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Messaging__RabbitMQ__Password
+        # JWT secret from Secret
+        - name: Auth__Jwt__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: Auth__Jwt__SecretKey
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL

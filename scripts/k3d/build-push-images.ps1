@@ -27,6 +27,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $images = @(
     @{ name = "frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile"; repo = "$dockerHubUser/frontend-service" }
     @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile"; repo = "$dockerHubUser/identity-service" }
+    @{ name = "farm-service"; path = "services/farm-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile"; repo = "$dockerHubUser/farm-service" }
     # @{ name = "tc-agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
 )
 
@@ -48,6 +49,7 @@ function Update-GitOpsManifest {
     $manifestMap = @{
         "frontend-service" = "infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
         "identity-service" = "infrastructure/kubernetes/apps/base/identity/deployment.yaml"
+        "farm-service"     = "infrastructure/kubernetes/apps/base/farm/deployment.yaml"
     }
 
     $manifestPath = $manifestMap[$ServiceName]

@@ -1,0 +1,120 @@
+# ╔══════════════════════════════════════════════════════════════════════════════════════╗
+# ║                                                                                       ║
+# ║  🔴 ORIGIN OF TRUTH FOR k3d CLUSTER CONFIGURATION                                    ║
+# ║                                                                                       ║
+# ║  All values in this ConfigMap are injected as ENVIRONMENT VARIABLES into pods.       ║
+# ║  These environment variables OVERRIDE all appsettings.*.json values at runtime.      ║
+# ║                                                                                       ║
+# ║  THIS FILE is the single source of truth for k3d cluster configuration.              ║
+# ║  (Just like .env file is the source of truth in Docker Compose)                      ║
+# ║                                                                                       ║
+# ║  Configuration Resolution Order:                                                     ║
+# ║  ┌──────────────────────────────────────────────────────────────────────────────┐   ║
+# ║  │ 1. appsettings.json (base defaults)                                          │   ║
+# ║  │ 2. appsettings.Development.json (SKIPPED - not Production env)              │   ║
+# ║  │ 3. appsettings.Production.json (LOADED - matched environment)               │   ║
+# ║  │ 4. 🔴 ConfigMap env vars (THIS FILE) ← FINAL WINNER - OVERRIDES ALL        │   ║
+# ║  └──────────────────────────────────────────────────────────────────────────────┘   ║
+# ║                                                                                       ║
+# ║  When to Modify:                                                                     ║
+# ║  ├─ Update this ConfigMap (git commit, ArgoCD syncs to cluster)                     ║
+# ║  ├─ Also update services/*/appsettings.Production.json (fallback consistency)       ║
+# ║  └─ Rebuild & push image only if ASPNETCORE_ENVIRONMENT changes                    ║
+# ║                                                                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: farm-config
+  namespace: agro-apps
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://0.0.0.0:8080"
+  ASPNETCORE_APPL_PATH: "/farm"
+  DOTNET_USE_POLLING_FILE_WATCHER: "1"
+
+  # Database (non-sensitive)
+  # Use Docker container name - k3d shares Docker network with compose
+  Database__Postgres__Host: "tc-agro-postgres"
+  Database__Postgres__Port: "5432"
+  Database__Postgres__Database: "tc-agro-farm-db"
+  Database__Postgres__UserName: "postgres"
+  Database__Postgres__Schema: "public"
+  Database__Postgres__MaintenanceDatabase: "postgres"
+  Database__Postgres__ConnectionTimeout: "30"
+  Database__Postgres__MinPoolSize: "2"
+  Database__Postgres__MaxPoolSize: "20"
+
+  # Redis (non-sensitive)
+  # Use Docker container name - k3d shares Docker network with compose
+  Cache__Redis__Host: "tc-agro-redis"
+  Cache__Redis__Port: "6379"
+  Cache__Redis__Password: ""
+  Cache__Redis__DefaultTTL: "300"
+
+  # RabbitMQ (non-sensitive parts)
+  # Use Docker container name - k3d shares Docker network with compose
+  Messaging__RabbitMQ__Host: "tc-agro-rabbitmq"
+  Messaging__RabbitMQ__Port: "5672"
+  Messaging__RabbitMQ__ManagementPort: "15672"
+  Messaging__RabbitMQ__VirtualHost: "/"
+  Messaging__RabbitMQ__Exchange: "farm.events"
+  Messaging__RabbitMQ__AutoProvision: "true"
+  Messaging__RabbitMQ__Durable: "true"
+  Messaging__RabbitMQ__UseQuorumQueues: "false"
+  Messaging__RabbitMQ__AutoPurgeOnStartup: "false"
+
+  # Service ports
+  Services__Identity__HttpPort: "5001"
+  Services__Farm__HttpPort: "5002"
+  Services__SensorIngest__HttpPort: "5003"
+  Services__AnalyticsWorker__HttpPort: "5004"
+  Services__Dashboard__HttpPort: "5005"
+
+  # Logging
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft_AspNetCore: "Warning"
+  Logging__LogLevel__System: "Warning"
+
+  # ═══════════════════════════════════════════════════════════════════════════════════
+  # Telemetry / OpenTelemetry Configuration
+  # ═══════════════════════════════════════════════════════════════════════════════════
+  # TWO SEPARATE TELEMETRY PATHS (both important, different purposes):
+  #
+  # PATH 1: OpenTelemetry SDK (Traces + Metrics)
+  # ├─ Configured via:     Telemetry__Grafana__Otlp__* env vars (THIS ConfigMap)
+  # ├─ Protocol:           gRPC
+  # ├─ Port:               4317
+  # ├─ Endpoint:           otel-collector-agent.observability.svc.cluster.local:4317
+  # ├─ What it sends:      Traces, Metrics, Runtime metrics
+  # ├─ Final destination:  OTEL DaemonSet → Docker Compose otel-collector → Prometheus/Tempo
+  # └─ Status:             ✅ Configured here (ConfigMap)
+  #
+  # PATH 2: Serilog.Sinks.OpenTelemetry (Logs only)
+  # ├─ Configured via:     appsettings.Production.json (Serilog section)
+  # ├─ Protocol:           HTTP/Protobuf
+  # ├─ Port:               4318
+  # ├─ Endpoint:           otel-collector-agent.observability.svc.cluster.local:4318/v1/logs
+  # ├─ What it sends:      Structured logs (ILogger logs)
+  # ├─ Final destination:  OTEL DaemonSet → Docker Compose otel-collector → Loki
+  # └─ Status:             ✅ Configured in appsettings.Production.json (fallback)
+  #
+  # NOTE: ConfigMap values (PATH 1) OVERRIDE appsettings.Production.json values
+  #       But both ConfigMap and appsettings have same values for consistency
+
+  # Agent Configuration (OpenTelemetry SDK auto-instrumentation)
+  Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
+  Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
+  Telemetry__Grafana__Agent__OtlpHttpPort: "4318"
+  Telemetry__Grafana__Agent__MetricsPort: "8889"
+  Telemetry__Grafana__Agent__Enabled: "true"
+
+  # OTLP Endpoint (OpenTelemetry Protocol - for traces/metrics, NOT logs)
+  # This is PATH 1: gRPC on 4317 for traces and metrics
+  Telemetry__Grafana__Otlp__Endpoint: "http://otel-collector-agent.observability.svc.cluster.local:4317"
+  Telemetry__Grafana__Otlp__Protocol: "grpc"
+  Telemetry__Grafana__Otlp__TimeoutSeconds: "10"
+  Telemetry__Grafana__Otlp__Insecure: "true"
+
+  # Note: Serilog configuration (PATH 2 - logs via HTTP 4318) is in appsettings.Production.json
