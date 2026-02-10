@@ -460,8 +460,11 @@ else {
             Write-Host "   📦 Registry: Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
             Write-Host "   🔐 Login status: check via docker info or 'docker login'" -ForegroundColor $Color.Muted
             Write-Host ""
-            Write-Host "   Services: frontend-service, identity-service, farm-service" -ForegroundColor $Color.Muted
-            Write-Host "   Example: farm-service,identity-service" -ForegroundColor $Color.Muted
+            Write-Host "   Services:" -ForegroundColor $Color.Muted
+            Write-Host "     1) frontend UI" -ForegroundColor $Color.Muted
+            Write-Host "     2) identity-service" -ForegroundColor $Color.Muted
+            Write-Host "     3) farm-service" -ForegroundColor $Color.Muted
+            Write-Host "   Example: 1,3" -ForegroundColor $Color.Muted
             
             $confirm = Read-Host "   Did you run 'docker login' already? (y/n - default: y)"
             if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = "y" }
@@ -473,20 +476,29 @@ else {
                 continue
             }
 
-            $serviceInput = Read-Host "   Services to build (default: all)"
+            $serviceInput = Read-Host "   Select services (default: all)"
             if ([string]::IsNullOrWhiteSpace($serviceInput)) {
                 $null = Invoke-Script "build-push-images.ps1"
             }
             else {
-                [string[]]$services = $serviceInput -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-                if ($services.Count -eq 0) {
-                    $null = Invoke-Script "build-push-images.ps1"
+                $selection = $serviceInput -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                $serviceMap = @{
+                    "1" = "frontend-service"
+                    "2" = "identity-service"
+                    "3" = "farm-service"
                 }
-                else {
-                    $args = @("-Services")
-                    $args += $services
-                    $null = Invoke-Script "build-push-images.ps1" -Arguments $args
+
+                $invalid = $selection | Where-Object { -not $serviceMap.ContainsKey($_) }
+                if ($invalid.Count -gt 0) {
+                    Write-Host "❌ Invalid selection: $($invalid -join ', ')" -ForegroundColor $Color.Error
+                    Write-Host "   Valid options: 1, 2, 3" -ForegroundColor $Color.Muted
+                    $null = Read-Host "`nPress Enter to continue"
+                    continue
                 }
+
+                $services = $selection | ForEach-Object { $serviceMap[$_] } | Sort-Object -Unique
+                $scriptPath = Get-ScriptPath "build-push-images.ps1"
+                & $scriptPath -Services $services
             }
             
             # Print per-deployment rollout summary for quick visibility
