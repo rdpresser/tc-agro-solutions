@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: farm-service
-        image: rdpresser/farm-service:5af1fa18
+        image: rdpresser/farm-service:958df08b
         imagePullPolicy: Always
         ports:
         - name: http
