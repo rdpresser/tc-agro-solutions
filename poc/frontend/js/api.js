@@ -25,6 +25,7 @@ function createApiClient(baseURL) {
 
 export const api = createApiClient(APP_CONFIG.apiBaseUrl);
 export const identityApi = createApiClient(APP_CONFIG.identityApiBaseUrl);
+export const farmApi = createApiClient(APP_CONFIG.farmApiBaseUrl);
 
 // Simple helpers for retry policy
 function isIdempotent(method) {
@@ -95,6 +96,7 @@ function attachInterceptors(client) {
 
 attachInterceptors(api);
 attachInterceptors(identityApi);
+attachInterceptors(farmApi);
 
 // ============================================
 // DASHBOARD API
@@ -219,47 +221,17 @@ export function getHistoricalData(sensorId, days = 7) {
  * @returns {Promise<Array>} List of properties (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function getProperties() {
-  // MOCK DATA
-  return [
-    {
-      id: 'prop-001',
-      name: 'Green Valley Farm',
-      location: 'São Paulo, SP',
-      areaHectares: 350.5,
-      status: 'active',
-      plotsCount: 2
-    },
-    {
-      id: 'prop-002',
-      name: 'Sunrise Ranch',
-      location: 'Minas Gerais, MG',
-      areaHectares: 180.0,
-      status: 'active',
-      plotsCount: 2
-    },
-    {
-      id: 'prop-003',
-      name: 'Highland Estate',
-      location: 'Goiás, GO',
-      areaHectares: 250.0,
-      status: 'active',
-      plotsCount: 1
-    },
-    {
-      id: 'prop-004',
-      name: 'River Bend Farm',
-      location: 'Paraná, PR',
-      areaHectares: 120.0,
-      status: 'inactive',
-      plotsCount: 0
-    }
-  ];
-
-  /* REAL API
-  const { data } = await api.get('/properties');
+export async function getProperties({
+  pageNumber = 1,
+  pageSize = 10,
+  sortBy = 'name',
+  sortDirection = 'asc',
+  filter = ''
+} = {}) {
+  const { data } = await farmApi.get('/api/property', {
+    params: { pageNumber, pageSize, sortBy, sortDirection, filter }
+  });
   return data;
-  */
 }
 
 export async function getProperty(id) {

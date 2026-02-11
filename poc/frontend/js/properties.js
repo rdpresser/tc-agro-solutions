@@ -2,10 +2,10 @@
  * TC Agro Solutions - Properties Page Entry Point
  */
 
-import { getProperties, deleteProperty } from './api.js';
+import { getProperties, deleteProperty, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, $$, showConfirm, getPageUrl } from './utils.js';
+import { $, showConfirm, getPageUrl } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -25,21 +25,77 @@ document.addEventListener('DOMContentLoaded', async () => {
 // DATA LOADING
 // ============================================
 
-async function loadProperties() {
+function getFiltersFromUI() {
+  return {
+    pageNumber: Number($('#pageNumber')?.value || 1),
+    pageSize: Number($('#pageSize')?.value || 10),
+    sortBy: $('#sortBy')?.value || 'name',
+    sortDirection: $('#sortDirection')?.value || 'asc',
+    filter: $('#filterInput')?.value?.trim() || ''
+  };
+}
+
+function updatePageOptions(pageCount, currentPage) {
+  const pageSelect = $('#pageNumber');
+  if (!pageSelect) return;
+
+  const pages = Math.max(1, pageCount || 1);
+  pageSelect.innerHTML = Array.from({ length: pages }, (_, index) => {
+    const page = index + 1;
+    return `<option value="${page}">${page}</option>`;
+  }).join('');
+
+  const safePage = Math.min(Math.max(1, currentPage || 1), pages);
+  pageSelect.value = String(safePage);
+}
+
+async function loadProperties(filters = getFiltersFromUI()) {
   const tbody = $('#properties-tbody');
+  const summary = $('#propertiesSummary');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
 
   try {
-    const properties = await getProperties();
-    renderPropertiesTable(properties);
+    const data = await getProperties(filters);
+    const normalized = normalizePropertiesResponse(data, filters);
+
+    renderPropertiesTable(normalized.items);
+    updatePageOptions(normalized.pageCount, normalized.pageNumber);
+
+    if (summary) {
+      summary.textContent = `Showing ${normalized.items.length} of ${normalized.totalCount} properties · Page ${normalized.pageNumber} of ${normalized.pageCount}`;
+    }
   } catch (error) {
+    const { message } = normalizeError(error);
     console.error('Error loading properties:', error);
     tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-danger">Error loading properties</td></tr>';
-    toast('properties.load_failed', 'error');
+      '<tr><td colspan="7" class="text-center text-danger">Error loading properties</td></tr>';
+    if (summary) summary.textContent = 'Failed to load properties';
+    toast(message || 'properties.load_failed', 'error');
   }
+}
+
+function normalizePropertiesResponse(data, filters) {
+  if (Array.isArray(data)) {
+    const totalCount = data.length;
+    const pageSize = filters?.pageSize || totalCount || 1;
+    return {
+      items: data,
+      totalCount,
+      pageNumber: filters?.pageNumber || 1,
+      pageSize,
+      pageCount: Math.max(1, Math.ceil(totalCount / pageSize))
+    };
+  }
+
+  const items = data?.data || data?.items || data?.results || [];
+  const totalCount = data?.totalCount ?? data?.total ?? items.length;
+  const pageNumber = data?.pageNumber || filters?.pageNumber || 1;
+  const pageSize = data?.pageSize || filters?.pageSize || 10;
+  const pageCount = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+
+  return { items, totalCount, pageNumber, pageSize, pageCount };
 }
 
 function renderPropertiesTable(properties) {
@@ -48,30 +104,38 @@ function renderPropertiesTable(properties) {
 
   if (!properties.length) {
     tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-muted">No properties found</td></tr>';
+      '<tr><td colspan="7" class="text-center text-muted">No properties found</td></tr>';
     return;
   }
 
   tbody.innerHTML = properties
-    .map(
-      (prop) => `
-    <tr data-id="${prop.id}">
-      <td><strong>${prop.name}</strong></td>
-      <td>${prop.location}</td>
-      <td>${prop.areaHectares.toLocaleString('en-US')} ha</td>
-      <td>${prop.plotsCount} plot(s)</td>
+    .map((prop) => {
+      const id = prop.id || '';
+      const location = [prop.city, prop.state, prop.country].filter(Boolean).join(', ') || '-';
+      const area = Number(prop.areaHectares || 0);
+      const plots = Number(prop.plotCount || 0);
+      const isActive = prop.isActive !== false;
+      const createdAt = prop.createdAt ? new Date(prop.createdAt).toLocaleDateString('en-US') : '-';
+
+      return `
+    <tr data-id="${id}">
+      <td><strong>${prop.name || '-'}</strong></td>
+      <td>${location}</td>
+      <td>${area.toLocaleString('en-US')} ha</td>
+      <td>${plots} plot(s)</td>
       <td>
-        <span class="badge ${prop.status === 'active' ? 'badge-success' : 'badge-secondary'}">
-          ${prop.status === 'active' ? 'Ativo' : 'Inativo'}
+        <span class="badge ${isActive ? 'badge-success' : 'badge-secondary'}">
+          ${isActive ? 'Active' : 'Inactive'}
         </span>
       </td>
+      <td>${createdAt}</td>
       <td class="actions">
-        <a href="${getPageUrl('properties-form.html')}?id=${prop.id}" class="btn btn-sm btn-outline">✏️ Edit</a>
-        <button class="btn btn-sm btn-danger" data-action="delete" data-id="${prop.id}">🗑️</button>
+        <a href="${getPageUrl('properties-form.html')}?id=${encodeURIComponent(id)}" class="btn btn-sm btn-outline">✏️ Edit</a>
+        <button class="btn btn-sm btn-danger" data-action="delete" data-id="${id}">🗑️</button>
       </td>
     </tr>
-  `
-    )
+  `;
+    })
     .join('');
 }
 
@@ -80,16 +144,20 @@ function renderPropertiesTable(properties) {
 // ============================================
 
 function setupEventListeners() {
-  // Search filter
-  const searchInput = $('#search-properties');
-  searchInput?.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    const rows = $$('#properties-tbody tr');
+  const filterForm = $('#propertiesFilterForm');
+  filterForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await loadProperties();
+  });
 
-    rows.forEach((row) => {
-      const text = row.textContent.toLowerCase();
-      row.style.display = text.includes(query) ? '' : 'none';
-    });
+  const pageNumber = $('#pageNumber');
+  pageNumber?.addEventListener('change', async () => {
+    await loadProperties();
+  });
+
+  const pageSize = $('#pageSize');
+  pageSize?.addEventListener('change', async () => {
+    await loadProperties();
   });
 
   // Delete button handler (event delegation)

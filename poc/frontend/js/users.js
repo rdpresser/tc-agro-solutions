@@ -2,16 +2,10 @@
  * TC Agro Solutions - Users Page Entry Point
  */
 
-import {
-  fetchIdentitySwagger,
-  getUsers,
-  getUserByEmail,
-  deleteUser,
-  normalizeError
-} from './api.js';
+import { fetchIdentitySwagger, getUsers, deleteUser, normalizeError } from './api.js';
 import { getTokenInfo } from './auth.js';
 import { initProtectedPage } from './common.js';
-import { toast, t } from './i18n.js';
+import { toast } from './i18n.js';
 import { $, showConfirm, getPageUrl } from './utils.js';
 
 // ============================================
@@ -51,6 +45,20 @@ function getFiltersFromUI() {
   };
 }
 
+function updatePageOptions(pageCount, currentPage) {
+  const pageSelect = $('#pageNumber');
+  if (!pageSelect) return;
+
+  const pages = Math.max(1, pageCount || 1);
+  pageSelect.innerHTML = Array.from({ length: pages }, (_, index) => {
+    const page = index + 1;
+    return `<option value="${page}">${page}</option>`;
+  }).join('');
+
+  const safePage = Math.min(Math.max(1, currentPage || 1), pages);
+  pageSelect.value = String(safePage);
+}
+
 async function loadUsers(filters = getFiltersFromUI()) {
   const tbody = $('#users-tbody');
   const summary = $('#usersSummary');
@@ -60,12 +68,13 @@ async function loadUsers(filters = getFiltersFromUI()) {
 
   try {
     const data = await getUsers(filters);
-    const { items, totalCount } = normalizeUsersResponse(data);
+    const normalized = normalizeUsersResponse(data, filters);
 
-    renderUsersTable(items);
+    renderUsersTable(normalized.items);
+    updatePageOptions(normalized.pageCount, normalized.pageNumber);
 
     if (summary) {
-      summary.textContent = `Showing ${items.length} of ${totalCount} users`;
+      summary.textContent = `Showing ${normalized.items.length} of ${normalized.totalCount} users · Page ${normalized.pageNumber} of ${normalized.pageCount}`;
     }
   } catch (error) {
     const { message } = normalizeError(error);
@@ -76,45 +85,26 @@ async function loadUsers(filters = getFiltersFromUI()) {
   }
 }
 
-async function loadUserByEmail(email) {
-  const tbody = $('#users-tbody');
-  const summary = $('#usersSummary');
-  if (!tbody) return;
-
-  if (!email) {
-    toast('Please enter an email to search', 'warning');
-    return;
-  }
-
-  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-
-  try {
-    const user = await getUserByEmail(email);
-    const items = Array.isArray(user) ? user : [user];
-    renderUsersTable(items);
-
-    if (summary) {
-      summary.textContent = `Found ${items.length} user(s)`;
-    }
-  } catch (error) {
-    const { message } = normalizeError(error);
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-danger">User not found</td></tr>';
-    if (summary) summary.textContent = 'User not found';
-    toast(message || 'User not found', 'error');
-  }
-}
-
-function normalizeUsersResponse(data) {
+function normalizeUsersResponse(data, filters) {
   if (Array.isArray(data)) {
-    return { items: data, totalCount: data.length };
+    const totalCount = data.length;
+    const pageSize = filters?.pageSize || totalCount || 1;
+    return {
+      items: data,
+      totalCount,
+      pageNumber: filters?.pageNumber || 1,
+      pageSize,
+      pageCount: Math.max(1, Math.ceil(totalCount / pageSize))
+    };
   }
 
   const items = data?.items || data?.data || data?.users || data?.results || [];
-  const totalCount =
-    data?.totalCount || data?.total || data?.count || (Array.isArray(items) ? items.length : 0);
+  const totalCount = data?.totalCount ?? data?.total ?? data?.count ?? items.length;
+  const pageNumber = data?.pageNumber || filters?.pageNumber || 1;
+  const pageSize = data?.pageSize || filters?.pageSize || 10;
+  const pageCount = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
 
-  return { items, totalCount };
+  return { items, totalCount, pageNumber, pageSize, pageCount };
 }
 
 function renderUsersTable(users) {
@@ -186,10 +176,14 @@ function setupEventListeners() {
     await loadUsers();
   });
 
-  const emailBtn = $('#filterEmailBtn');
-  emailBtn?.addEventListener('click', async () => {
-    const email = $('#filterEmail')?.value?.trim() || '';
-    await loadUserByEmail(email);
+  const pageNumber = $('#pageNumber');
+  pageNumber?.addEventListener('change', async () => {
+    await loadUsers();
+  });
+
+  const pageSize = $('#pageSize');
+  pageSize?.addEventListener('change', async () => {
+    await loadUsers();
   });
 
   const tbody = $('#users-tbody');
@@ -233,36 +227,7 @@ async function handleDelete(id, email) {
   }
 }
 
-// ============================================
-// Native Form Validation with i18n Messages
-// ============================================
-
-const usersFilterForm = document.getElementById('usersFilterForm');
-if (usersFilterForm) {
-  usersFilterForm.addEventListener(
-    'invalid',
-    (e) => {
-      const el = e.target;
-      if (el.validity.valueMissing) {
-        el.setCustomValidity(t('validation.user.required_fields'));
-        toast('validation.user.required_fields', 'warning');
-      } else if (el.validity.typeMismatch && el.type === 'email') {
-        el.setCustomValidity(t('validation.user.email_invalid'));
-        toast('validation.user.email_invalid', 'warning');
-      } else if (el.validity.typeMismatch && el.type === 'number') {
-        el.setCustomValidity('Please enter a valid number');
-      }
-    },
-    true
-  );
-
-  // Clear custom messages on input
-  usersFilterForm.addEventListener('input', (e) => {
-    e.target.setCustomValidity('');
-  });
-}
-
 // Export for debugging
 if (import.meta.env.DEV) {
-  window.usersDebug = { loadUsers, loadUserByEmail };
+  window.usersDebug = { loadUsers };
 }
