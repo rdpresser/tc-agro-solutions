@@ -1,11 +1,11 @@
 meta {
-  name: Create Property
+  name: Create
   type: http
   seq: 1
 }
 
 post {
-  url: {{farm_service_url}}/api/property
+  url: {{farm_service_url}}/api/properties
   body: json
   auth: bearer
 }
@@ -16,7 +16,7 @@ auth:bearer {
 
 body:json {
   {
-    "name": "Fazenda Boa Vista",
+    "name": "Fazenda Boa Vista 2",
     "address": "Estrada Rural Km 15",
     "city": "Ribeirão Preto",
     "state": "SP",

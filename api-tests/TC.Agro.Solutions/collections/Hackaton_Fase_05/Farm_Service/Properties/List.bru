@@ -1,11 +1,11 @@
 meta {
-  name: GetProperty - List
+  name: List
   type: http
   seq: 2
 }
 
 get {
-  url: {{farm_service_url}}/api/property?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
+  url: {{farm_service_url}}/api/properties?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
   body: none
   auth: bearer
 }

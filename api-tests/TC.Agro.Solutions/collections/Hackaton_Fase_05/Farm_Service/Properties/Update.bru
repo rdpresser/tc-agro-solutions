@@ -1,0 +1,33 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{farm_service_url}}/api/properties/487eb063-e973-4c8d-8311-07091756bc9e
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "name": "Fazenda Boa Vista 222",
+    "address": "Estrada Rural Km 15",
+    "city": "Ribeirão Preto",
+    "state": "SP",
+    "country": "Brazil",
+    "latitude": -21.1767,
+    "longitude": -47.8208,
+    "areaHectares": 250.5
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

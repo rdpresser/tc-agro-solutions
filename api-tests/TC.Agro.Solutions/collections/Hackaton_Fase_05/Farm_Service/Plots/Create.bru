@@ -1,11 +1,11 @@
 meta {
-  name: Create Plot
+  name: Create
   type: http
   seq: 1
 }
 
 post {
-  url: {{farm_service_url}}/api/plot
+  url: {{farm_service_url}}/api/plots
   body: json
   auth: bearer
 }
@@ -16,8 +16,8 @@ auth:bearer {
 
 body:json {
   {
-    "propertyId": "197435dd-23bd-46e0-830d-fc9d0cc71f09",
-    "name": "Talhão Norte",
+    "propertyId": "5d5cdd15-ea89-4b88-9333-be10f261a914",
+    "name": "Talhão Norte 3",
     "cropType": "Soja",
     "areaHectares": 50
   }

@@ -1,11 +1,11 @@
 meta {
-  name: GetSensor - List
+  name: List
   type: http
   seq: 2
 }
 
 get {
-  url: {{farm_service_url}}/api/sensor?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter
+  url: {{farm_service_url}}/api/plots/ab2c3087-b382-4b89-aee4-1937dc5f3114/sensors?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter
   body: none
   auth: bearer
 }
