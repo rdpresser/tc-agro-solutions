@@ -22,6 +22,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
 });
 
+let lastPageState = {
+  pageNumber: 1,
+  pageCount: 1,
+  hasNextPage: false,
+  hasPreviousPage: false
+};
+
 // ============================================
 // DATA LOADING
 // ============================================
@@ -59,6 +66,15 @@ function updatePageOptions(pageCount, currentPage) {
   pageSelect.value = String(safePage);
 }
 
+function updatePagerControls(state) {
+  const prevBtn = $('#usersPrev');
+  const nextBtn = $('#usersNext');
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.disabled = !state.hasPreviousPage;
+  nextBtn.disabled = !state.hasNextPage;
+}
+
 async function loadUsers(filters = getFiltersFromUI()) {
   const tbody = $('#users-tbody');
   const summary = $('#usersSummary');
@@ -72,6 +88,8 @@ async function loadUsers(filters = getFiltersFromUI()) {
 
     renderUsersTable(normalized.items);
     updatePageOptions(normalized.pageCount, normalized.pageNumber);
+    updatePagerControls(normalized);
+    lastPageState = normalized;
 
     if (summary) {
       summary.textContent = `Showing ${normalized.items.length} of ${normalized.totalCount} users · Page ${normalized.pageNumber} of ${normalized.pageCount}`;
@@ -103,8 +121,10 @@ function normalizeUsersResponse(data, filters) {
   const pageNumber = data?.pageNumber || filters?.pageNumber || 1;
   const pageSize = data?.pageSize || filters?.pageSize || 10;
   const pageCount = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+  const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
+  const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;
 
-  return { items, totalCount, pageNumber, pageSize, pageCount };
+  return { items, totalCount, pageNumber, pageSize, pageCount, hasNextPage, hasPreviousPage };
 }
 
 function renderUsersTable(users) {
@@ -184,6 +204,28 @@ function setupEventListeners() {
   const pageSize = $('#pageSize');
   pageSize?.addEventListener('change', async () => {
     await loadUsers();
+  });
+
+  const prevBtn = $('#usersPrev');
+  prevBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasPreviousPage) return;
+    const pageSelect = $('#pageNumber');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current > 1) {
+      pageSelect.value = String(current - 1);
+      await loadUsers();
+    }
+  });
+
+  const nextBtn = $('#usersNext');
+  nextBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasNextPage) return;
+    const pageSelect = $('#pageNumber');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current < lastPageState.pageCount) {
+      pageSelect.value = String(current + 1);
+      await loadUsers();
+    }
   });
 
   const tbody = $('#users-tbody');
