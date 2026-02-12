@@ -66,7 +66,7 @@ cd scripts\k3d
 **What you get:**
 
 - ✅ k3d cluster (4 nodes: 1 server + 3 agents)
-- ✅ 🐳 Local registry at `localhost:5000` (auto-configured!)
+- ✅ 🐳 Docker Hub images (public, rdpresser/\*)
 - ✅ **Traefik** (k3s built-in ingress controller)
 - ✅ ArgoCD (GitOps controller)
 - ✅ **Auto-installed via GitOps:**
@@ -80,7 +80,6 @@ cd scripts\k3d
 
 - 🌐 Frontend: `http://localhost/agro`
 - 🔐 ArgoCD: `http://localhost/argocd`
-- 📚 [Traefik Routing Guide](TRAEFIK_ROUTING_GUIDE.md) - Complete routing documentation
 
 **Best for:** Testing K8s deployments, validating observability, rehearsing AKS production setup
 
@@ -116,7 +115,7 @@ This will:
 
 - Clone 5 microservices to `services/`
 - Clone common libraries to `common/`
-- Create `.env` with local configuration
+- Create `.env` files with local configuration (shared + per service)
 
 ### 3️⃣ Open Solution
 
@@ -154,7 +153,9 @@ tc-agro-solutions/
 ├── scripts/
 │   └── bootstrap.ps1       # ⚙️ Setup automation
 ├── docs/                   # Architecture & ADRs
-├── .env                    # 🔄 Created by bootstrap
+├── orchestration/
+│   └── apphost-compose/
+│       ├── .env            # 🔄 Created by bootstrap (shared)
 └── docker-compose.yml      # (To be created)
 ```
 
@@ -251,7 +252,7 @@ tc-agro-solutions/
 - **Orchestration:** k3d (lightweight Kubernetes)
 - **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA)
 - **Cluster:** 18GB total (1 server 2GB + 2 agents: system 6GB + apps 10GB)
-- **Registry:** localhost:5000 (local image registry)
+- **Registry:** Docker Hub (rdpresser)
 
 **Choose your mode:**
 

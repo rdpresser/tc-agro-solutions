@@ -666,6 +666,19 @@ function Cleanup-All {
         Write-Host "      ✅ Networks removed" -ForegroundColor $Color.Success
     }
     
+    # Remove tc-agro-network explicitly (may not have label if created manually)
+    $tcAgroNet = docker network ls --format "{{.Name}}" | Where-Object { $_ -eq "tc-agro-network" }
+    if ($tcAgroNet) {
+        Write-Host "   Removing tc-agro-network (shared network)..." -ForegroundColor $Color.Info
+        docker network rm tc-agro-network 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "      ✅ tc-agro-network removed" -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "      ⚠️  tc-agro-network in use (k3d cluster running?)" -ForegroundColor $Color.Warning
+        }
+    }
+    
     Write-Host ""
     Write-Host "   ✅ All cleanup operations complete" -ForegroundColor $Color.Success
     return $true

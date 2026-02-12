@@ -21,8 +21,7 @@ This folder contains Kubernetes manifests for **microservice deployments on loca
 ```
 apps/
 ├── argocd/                              # ArgoCD manifests
-│   ├── projects/                        # (Managed by platform; see platform/argocd/projects/)
-│   │   └── [project-apps.yaml is in platform/]
+│   ├── projects/                        # (Managed by platform bootstrap)
 │   └── applications/
 │       └── apps-dev.yaml                # Application for microservices
 │
@@ -34,7 +33,7 @@ apps/
         └── kustomization.yaml
 ```
 
-**Note:** The `project-apps` AppProject is defined once in `platform/argocd/projects/project-apps.yaml` and shared by all applications.
+**Note:** The `apps` AppProject is created by the single bootstrap entrypoint in `platform/argocd/bootstrap/bootstrap-all.yaml`.
 
 ---
 
@@ -171,7 +170,7 @@ spec:
 
       containers:
         - name: identity-service
-          image: localhost:5000/agro-identity-service:latest
+          image: rdpresser/identity-service:latest
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -182,11 +181,11 @@ spec:
             - name: ASPNETCORE_ENVIRONMENT
               value: Development
 
-            - name: ConnectionStrings__DefaultConnection
+            - name: Database__Postgres__Database
               valueFrom:
                 configMapKeyRef:
                   name: identity-config
-                  key: db-connection-string
+                  key: Database__Postgres__Database
 
           resources:
             requests:
@@ -363,7 +362,7 @@ git push origin main
 
 ## 🎯 ArgoCD Project Configuration
 
-The `apps` project is defined in `platform/argocd/projects/project-apps.yaml` and allows:
+The `apps` project is defined in `platform/argocd/bootstrap/bootstrap-all.yaml` and allows:
 
 - **All source repositories** (via `sourceRepos: ['*']`)
 - **All destinations** (via `destinations: [namespace: '*']`)

@@ -45,8 +45,62 @@ function detectApiBaseUrl() {
   return 'http://localhost:5001';
 }
 
+/**
+ * Detect Identity API base URL based on context:
+ * 1. Manual override: VITE_IDENTITY_API_BASE_URL env var
+ * 2. Cluster context: BASE_URL === '/agro/' → Identity at '/identity'
+ * 3. Dev mode: localhost:3000 → Identity at 'http://localhost:5001'
+ * 4. Docker Compose or other: default to 'http://localhost:5001'
+ */
+function detectIdentityApiBaseUrl() {
+  if (import.meta.env.VITE_IDENTITY_API_BASE_URL) {
+    return import.meta.env.VITE_IDENTITY_API_BASE_URL;
+  }
+
+  const base = import.meta.env.BASE_URL || '/';
+  const currentHost = window.location.host;
+
+  if (base === '/agro/') {
+    return '/identity';
+  }
+
+  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
+    return 'http://localhost:5001';
+  }
+
+  return 'http://localhost:5001';
+}
+
+/**
+ * Detect Farm API base URL based on context:
+ * 1. Manual override: VITE_FARM_API_BASE_URL env var
+ * 2. Cluster context: BASE_URL === '/agro/' -> Farm API at '/farm'
+ * 3. Dev mode: localhost:3000 -> Farm API at 'http://localhost:5002'
+ * 4. Docker Compose or other: default to 'http://localhost:5002'
+ */
+function detectFarmApiBaseUrl() {
+  if (import.meta.env.VITE_FARM_API_BASE_URL) {
+    return import.meta.env.VITE_FARM_API_BASE_URL;
+  }
+
+  const base = import.meta.env.BASE_URL || '/';
+  const currentHost = window.location.host;
+
+  if (base === '/agro/') {
+    return '/farm';
+  }
+
+  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
+    return 'http://localhost:5002';
+  }
+
+  return 'http://localhost:5002';
+}
+
 export const APP_CONFIG = {
   apiBaseUrl: detectApiBaseUrl(),
+  identityApiBaseUrl: detectIdentityApiBaseUrl(),
+  farmApiBaseUrl: detectFarmApiBaseUrl(),
   tokenKey: 'agro_token',
   userKey: 'agro_user',
   signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true',

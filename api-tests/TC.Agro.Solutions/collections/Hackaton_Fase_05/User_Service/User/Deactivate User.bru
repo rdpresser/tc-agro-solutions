@@ -1,0 +1,20 @@
+meta {
+  name: Deactivate User
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{identity_service_url}}/api/user/0a5f35e4-7fc8-4b2a-affa-2988ad6f8046
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

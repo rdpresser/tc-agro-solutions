@@ -29,12 +29,22 @@ catch {
 # =====================================================
 # 2. Check .env File
 # =====================================================
-Write-Host "`n[2/6] Checking .env file..." -ForegroundColor Yellow
-if (Test-Path ".env") {
-    Write-Host "✅ .env file found" -ForegroundColor Green
+Write-Host "`n[2/6] Checking env files..." -ForegroundColor Yellow
+$envFiles = @(".env", ".env.identity", ".env.farm")
+$missingEnvFiles = @()
+
+foreach ($envFile in $envFiles) {
+    if (Test-Path $envFile) {
+        Write-Host "✅ $envFile found" -ForegroundColor Green
+    }
+    else {
+        $missingEnvFiles += $envFile
+        Write-Host "❌ $envFile not found" -ForegroundColor Red
+    }
 }
-else {
-    Write-Host "❌ .env file not found at orchestration/apphost-compose/.env" -ForegroundColor Red
+
+if ($missingEnvFiles.Count -gt 0) {
+    Write-Host "Missing env files in orchestration/apphost-compose: $($missingEnvFiles -join ', ')" -ForegroundColor Red
     exit 1
 }
 

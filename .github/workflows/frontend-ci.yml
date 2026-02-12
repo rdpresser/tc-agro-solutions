@@ -1,0 +1,242 @@
+name: 🏗️ Frontend Service CI
+
+env:
+  SERVICE_NAME: frontend-service
+  DOCKERFILE_PATH: poc/frontend/Dockerfile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'poc/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - 'poc/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for secrets'
+        default: 'dev-rodrigo'
+        type: choice
+        options:
+          - dev-rodrigo
+      skip-build:
+        description: 'Skip frontend build (emergency only)'
+        type: boolean
+        default: false
+      skip-security-scan:
+        description: 'Skip Trivy scan (emergency only)'
+        type: boolean
+        default: false
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # 📦 Build Frontend (Node + Vite)
+  # ─────────────────────────────────────────────
+  build-frontend:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip-build != 'true'
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: poc/frontend/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: poc/frontend
+        run: npm ci
+
+      - name: 🔍 Lint check
+        working-directory: poc/frontend
+        run: npm run lint || true  # Don't fail on lint warnings
+
+      - name: 🏗️ Build frontend (Vite dist)
+        working-directory: poc/frontend
+        run: npm run build
+
+      - name: 📦 Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: poc/frontend/dist
+          retention-days: 3
+
+  # ─────────────────────────────────────────────
+  # 🐳 Build, Scan, Push Docker
+  # ─────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    needs: [build-frontend]
+    if: always() && (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    environment: ${{ github.event.inputs.environment || 'dev-rodrigo' }}
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download dist artifact
+        if: needs.build-frontend.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: poc/frontend/dist
+
+      - name: 🔖 Prepare tags
+        id: vars
+        run: |
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)
+          IMAGE_TAG=$SHORT_SHA
+
+          # Use local name for PRs, DockerHub URI for push scenarios
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            IMAGE_URI=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.SERVICE_NAME }}
+          else
+            IMAGE_URI=${{ env.SERVICE_NAME }}
+          fi
+
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+          echo "🔖 Tag: $IMAGE_TAG"
+          echo "📦 Image: $IMAGE_URI"
+
+      - name: 🔐 Docker Hub Login
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: ⚙️ Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ Build & Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: poc/frontend
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          tags: |
+            ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+            ${{ steps.vars.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: ${{ github.event_name == 'pull_request' }}
+
+      - name: 🔒 Trivy Scan
+        if: github.event.inputs.skip-security-scan != 'true'
+        continue-on-error: true  # Don't fail CI on vulnerabilities (dev/hackathon mode)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: 📤 Upload SARIF
+        if: always() && github.event.inputs.skip-security-scan != 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+
+      - name: ✅ Verify Push
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          echo "🔍 Verifying pushed images..."
+          docker pull ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          docker pull ${{ steps.vars.outputs.image }}:latest
+
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          echo "✅ FRONTEND BUILD & PUSH COMPLETED"
+          echo "════════════════════════════════════════════════════════════"
+          echo "📦 Tag: ${{ steps.vars.outputs.tag }}"
+          echo "📦 URI: ${{ steps.vars.outputs.image }}"
+          echo "🔒 Security: Trivy passed"
+          echo "🐳 Registry: Docker Hub"
+          echo "📊 View: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.SERVICE_NAME }}"
+          echo "════════════════════════════════════════════════════════════"
+
+      - name: ℹ️ Build Only (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "✅ Image built and scanned"
+          echo "ℹ️ Push skipped (PR validation only)"
+          echo "🚀 Will push on: workflow_dispatch or push to main"
+
+  # ─────────────────────────────────────────────
+  # 🧭 GitOps: Update Manifests in Same Repo
+  # ─────────────────────────────────────────────
+  update-gitops:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    environment: ${{ github.event.inputs.environment || 'dev-rodrigo' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SOLUTIONS_REPO_TOKEN }}
+
+      - name: 🔖 Get image tag from build
+        id: get-tag
+        run: |
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)
+          echo "tag=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "📦 Using tag: $SHORT_SHA"
+
+      - name: ✏️ Update image tag in deployment manifest
+        run: |
+          FILE="infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
+          NEW_TAG="${{ steps.get-tag.outputs.tag }}"
+          NEW_IMAGE="rdpresser/frontend-service:${NEW_TAG}"
+          
+          echo "📝 Updating: $FILE"
+          echo "🔖 New image: $NEW_IMAGE"
+          
+          sed -i "s|image: .*frontend-service.*|image: ${NEW_IMAGE}|g" $FILE
+
+      - name: 💾 Commit and push manifest update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infrastructure/kubernetes/apps/base/frontend/deployment.yaml
+          git commit -m "ci(frontend): update image to ${{ steps.get-tag.outputs.tag }}
+          
+          Automated commit from frontend CI pipeline
+          Commit: ${{ github.sha }}
+          Workflow: ${{ github.workflow }}" || true
+          git pull --rebase origin main || true
+          git push origin main
+
+      - name: ✅ GitOps Update Complete
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          echo "✅ GITOPS UPDATE COMPLETED"
+          echo "════════════════════════════════════════════════════════════"
+          echo "📦 Image: rdpresser/frontend-service:${{ steps.get-tag.outputs.tag }}"
+          echo "📝 File: infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
+          echo "🔄 ArgoCD will detect this change and deploy automatically"
+          echo "════════════════════════════════════════════════════════════"

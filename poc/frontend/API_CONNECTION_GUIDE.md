@@ -137,8 +137,8 @@ Rebuild frontend image:
 
 ```bash
 cd poc/frontend
-docker build -t k3d-localhost:5000/tc-agro-frontend-service:latest .
-docker push k3d-localhost:5000/tc-agro-frontend-service:latest
+docker build -t rdpresser/frontend-service:latest .
+docker push rdpresser/frontend-service:latest
 ```
 
 ---

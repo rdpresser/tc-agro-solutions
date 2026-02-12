@@ -32,15 +32,24 @@ catch {
 # =====================================================
 # 2. Check .env file
 # =====================================================
-Write-Host "`n[2/8] Checking .env file..." -ForegroundColor Yellow
-if (Test-Path ".env") {
-    Write-Host "✓ .env file found" -ForegroundColor Green
-    $envLines = (Get-Content ".env" | Measure-Object -Line).Lines
-    Write-Host "  $envLines configuration lines" -ForegroundColor Gray
+Write-Host "`n[2/8] Checking env files..." -ForegroundColor Yellow
+$envFiles = @(".env", ".env.identity", ".env.farm")
+$missingEnvFiles = @()
+
+foreach ($envFile in $envFiles) {
+    if (Test-Path $envFile) {
+        Write-Host "✓ $envFile found" -ForegroundColor Green
+        $envLines = (Get-Content $envFile | Measure-Object -Line).Lines
+        Write-Host "  $envLines configuration lines" -ForegroundColor Gray
+    }
+    else {
+        $missingEnvFiles += $envFile
+        Write-Host "✗ $envFile NOT found!" -ForegroundColor Red
+    }
 }
-else {
-    Write-Host "✗ .env file NOT found!" -ForegroundColor Red
-    Write-Host "  Expected at: $rootPath/.env" -ForegroundColor Yellow
+
+if ($missingEnvFiles.Count -gt 0) {
+    Write-Host "  Expected at: $rootPath/$($missingEnvFiles -join ', ')" -ForegroundColor Yellow
     exit 1
 }
 
@@ -202,6 +211,12 @@ $(docker volume ls 2>&1)
 
 === ENVIRONMENT (.env) ===
 $(Get-Content ".env" -ErrorAction SilentlyContinue)
+
+=== ENVIRONMENT (.env.identity) ===
+$(Get-Content ".env.identity" -ErrorAction SilentlyContinue)
+
+=== ENVIRONMENT (.env.farm) ===
+$(Get-Content ".env.farm" -ErrorAction SilentlyContinue)
 
 === COMPOSE CONFIG ===
 $(docker compose config 2>&1)

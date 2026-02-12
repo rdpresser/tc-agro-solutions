@@ -11,10 +11,15 @@
     <None Remove="services\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".env.example" />
+    <None Include=".env.k3d.example" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
     <None Include="docker-compose.yml" />
+    <None Include="docker-compose.aspire.yml">
+      <DependentUpon>docker-compose.yml</DependentUpon>
+    </None>
     <None Include="docker-compose.vs.debug.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
@@ -30,7 +35,6 @@
     <None Include="scripts\docker-manager.ps1" />
     <None Include="scripts\fix-rabbitmq.ps1" />
     <None Include="scripts\init-pgadmin.sh" />
-    <None Include="scripts\init-postgres.sql" />
     <None Include="scripts\pre-build-vs.ps1" />
     <None Include="scripts\README.md" />
   </ItemGroup>

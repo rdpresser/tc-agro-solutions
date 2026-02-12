@@ -12,25 +12,45 @@ post {
 
 body:json {
   {
-    "email": "Admin4@Admin.COM",
+    "email": "admin@admin.com",
     "password": "Admin@123"
   }
 }
 
 script:post-response {
+  // Garante que a resposta é JSON
   const responseJson = res.getBody();
-  const newToken = responseJson.jwtToken;
   
-  if (newToken) {
-      bru.setEnvVar("admin_token", newToken);
-      console.log("✅ Token atualizado com sucesso!");
-  } else {
-      throw new Error("❌ Não foi possível extrair o token da resposta");
+  // Verifica status HTTP
+  const status = res.getStatus();
+  
+  if (status !== 200 && status !== 201) {
+      console.log("⚠️ Requisição não retornou sucesso:", status);
+      return;
   }
   
-  // Teste simples
+  // Validação segura
+  if (!responseJson || typeof responseJson !== "object") {
+      throw new Error("❌ Resposta não é JSON válido");
+  }
+  
+  const newToken = responseJson.jwtToken;
+  
+  // Validação do token
+  if (!newToken || typeof newToken !== "string" || newToken.length === 0) {
+      throw new Error("❌ Token inválido ou ausente na resposta");
+  }
+  
+  // Set env var
+  bru.setEnvVar("admin_token", newToken);
+  
+  console.log("✅ Token atualizado com sucesso!");
+  console.log("🔑 Novo token:", newToken);
+  
+  // Testes
   assert(newToken, "Token deve existir");
   assert(newToken.length > 0, "Token não pode ser vazio");
+  
 }
 
 settings {

@@ -2,14 +2,21 @@
 
 **Status:** 🔵 CURRENT (Localhost Development) | GitOps-first approach for local k3d cluster
 
-This folder contains scripts and documentation for running the complete TC Agro Solutions system locally on k3d with ArgoCD managing everything via GitOps.
+This folder contains scripts and documentation for running the complete TC Agro Solutions system locally on k3d with ArgoCD managing microservices via GitOps.
 
 **What you get:**
 
 - k3d Kubernetes cluster (4 nodes: 1 server + 3 agents) on localhost
-- Full observability stack (Prometheus, Grafana, Loki, Tempo, OTel)
-- All 5 microservices deployed via GitOps
+- Observability stack in Docker Compose (Prometheus, Grafana, Loki, Tempo, OTEL Collector)
+- OTEL DaemonSet in k3d for telemetry collection
+- Microservices deployed via GitOps (ArgoCD)
 - Zero cloud costs, all local
+
+**Networking:**
+
+- k3d cluster joins `tc-agro-network` Docker network
+- Pods resolve Docker container names directly (e.g., `tc-agro-postgres`, `tc-agro-redis`)
+- No need for `host.k3d.internal` or bridge IPs
 
 ---
 
@@ -21,11 +28,6 @@ This folder contains scripts and documentation for running the complete TC Agro 
 create-all-from-zero.ps1
   ├─ Create k3d cluster
   ├── Install ArgoCD via Helm
-  ├── Install Prometheus via Helm
-  ├── Install Grafana via Helm
-  ├── Install Loki via Helm
-  ├── Install Tempo via Helm
-  ├── Install OTel via Helm
   └── Install KEDA via Helm
 
 ❌ Problems:
@@ -57,18 +59,16 @@ create-all-from-zero.ps1
 
 ```
 1. .\bootstrap.ps1
-   └─ Create k3d cluster (18GB: 2+6+10)
+   └─ Create k3d cluster (20GB: 3+4+6+7)
    └─ Install ArgoCD via Helm
-   └─ Apply bootstrap-platform.yaml (Infrastructure)
-   └─ Apply bootstrap-apps.yaml (Applications)
+   └─ Apply bootstrap-all.yaml (projects + platform/apps)
 
 2. ArgoCD takes over and installs:
-   ├─ platform-observability
-   │  ├── kube-prometheus-stack (Prometheus + Grafana + AlertManager)
-   │  ├── Loki (logs)
-   │  ├── Tempo (traces)
-   │  └── OpenTelemetry Collector
-   └── platform-autoscaling (KEDA)
+   ├─ platform-base (namespaces, ingress config)
+   └── apps-dev (microservices: frontend, identity-service)
+
+   **Note:** Observability stack (Prometheus, Grafana, Loki, Tempo) runs in Docker Compose.
+   Only the OTEL DaemonSet runs in k3d for telemetry collection.
 
 3. You manage microservices via Git:
    - Push manifests to repos
@@ -82,8 +82,8 @@ create-all-from-zero.ps1
 
 ### 🏗️ By Bootstrap Script
 
-- k3d cluster (3 nodes: 1 server + 2 agents)
-- Local registry (localhost:5000)
+- k3d cluster (4 nodes: 1 server + 3 agents)
+- Docker Hub images (public, rdpresser/\*)
 - ArgoCD (via Helm)
 - Platform Project
 - Bootstrap Application (App-of-apps)
@@ -91,11 +91,11 @@ create-all-from-zero.ps1
 
 ### ✨ By ArgoCD (GitOps)
 
-- **kube-prometheus-stack** (Prometheus + Grafana + AlertManager)
-- **Loki** (log aggregation)
-- **Tempo** (distributed tracing)
-- **OpenTelemetry Collector** (telemetry hub)
-- **KEDA** (event-driven autoscaling)
+- **platform-base** (namespaces: agro-apps, observability; ingress config)
+- **apps-dev** (frontend, identity-service deployments)
+- **OTEL DaemonSet** (telemetry collection in observability namespace)
+
+**Note:** Full observability stack (Prometheus, Grafana, Loki, Tempo, OTEL Collector) runs in **Docker Compose**, not k3d.
 
 ---
 
@@ -110,16 +110,16 @@ cd c:\Projects\tc-agro-solutions\scripts\k3d
 
 **What it does:**
 
-1. Creates k3d cluster (1 server + 2 agents, 18GB total)
-2. Installs ArgoCD via Helm
-3. Applies ArgoCD bootstrap Application (App-of-apps)
-4. ArgoCD installs **automatically**:
-   - kube-prometheus-stack (Prometheus + Grafana)
-   - Loki (logs)
-   - Tempo (traces)
-   - OpenTelemetry Collector
-   - KEDA (autoscaling)
-   - Ingress NGINX
+1. Creates k3d cluster (1 server + 3 agents, labeled by workload type)
+2. Joins cluster to `tc-agro-network` Docker network
+3. Installs ArgoCD via Helm
+4. Applies ArgoCD bootstrap Application (App-of-apps)
+5. ArgoCD installs **automatically**:
+   - platform-base (namespaces, ingress)
+   - apps-dev (microservices)
+   - OTEL DaemonSet (telemetry)
+
+**Observability:** Runs in Docker Compose (`docker-compose.yml`)
 
 **Time:** ~3-4 minutes
 
@@ -133,37 +133,31 @@ kubectl get applications -n argocd --watch
 
 Expected applications:
 
-- `platform-observability` (Prometheus, Grafana, Loki, Tempo, OTel)
-- `platform-autoscaling` (KEDA)
+- `platform-base` (namespaces + OTEL DaemonSet)
+- `apps-dev` (microservices)
+
+**Note:** Full observability (Prometheus, Grafana, Loki, Tempo) runs in Docker Compose.
 
 ---
 
-### 3. Update Hosts File (for Ingress access)
+### 3. Start ArgoCD Port-Forward
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds to `C:\Windows\System32\drivers\etc\hosts`:
+This exposes ArgoCD at `http://localhost:8090/argocd`.
 
-```
-127.0.0.1 argocd.local
-127.0.0.1 agro.local
-```
+**Note:** Port-forward is the recommended way to access ArgoCD in k3d.
 
 ---
 
 ### 4. Access ArgoCD
 
 ```powershell
-# Option 1: Port-Forward (Recommended for development)
+# Port-Forward (Recommended - working solution)
 .\port-forward.ps1 argocd
 # Then access: http://localhost:8090/argocd/
-
-# Option 2: Via Ingress (requires hosts file configuration)
-# Edit C:\Windows\System32\drivers\etc\hosts and add:
-#   127.0.0.1 argocd.local
-# Then access: http://argocd.local/
 
 # Credentials
 Username: admin
@@ -184,10 +178,11 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 1. **bootstrap.ps1** creates cluster + installs ArgoCD + applies bootstrap Application
 2. **ArgoCD** automatically syncs and installs:
-   - **platform-observability** (Prometheus, Grafana, Loki, Tempo, OTel Collector)
-   - **platform-autoscaling** (KEDA)
-3. All configurations come from **versioned Helm values** in Git
-4. Changes to `platform/helm-values/dev/*.values.yaml` auto-sync via ArgoCD
+   - **platform-base** (namespaces, ingress configuration)
+   - **apps-dev** (frontend, identity-service deployments)
+   - **OTEL DaemonSet** (telemetry collection)
+3. Observability (Prometheus, Grafana, Loki, Tempo) runs in **Docker Compose**
+4. Changes to manifests in `infrastructure/kubernetes/` auto-sync via ArgoCD
 
 ---
 
@@ -206,7 +201,7 @@ This single command:
 - ✅ Creates k3d cluster (18GB: 2GB server + 6GB system + 10GB apps)
 - ✅ Installs ArgoCD via Helm
 - ✅ Applies GitOps bootstrap (App-of-apps)
-- ✅ **Creates local registry at localhost:5000** ⭐ **NEW**
+- ✅ Uses Docker Hub images (public, rdpresser/\*)
 - ✅ ArgoCD auto-installs: Prometheus, Grafana, Loki, Tempo, OTel, KEDA
 
 ⏱️ **Time:** ~3-4 minutes
@@ -215,25 +210,15 @@ This single command:
 
 ## 🐳 Container Registry Configuration
 
-### Registry Automatically Configured ✅
+### Docker Hub (Public) ✅
 
-The local registry `localhost:5000` is **automatically configured** during bootstrap:
-
-```powershell
-# bootstrap.ps1 (line 32-33, 158):
-$registryName = "localhost"
-$registryPort = 5000
-
-# bootstrap.ps1 (line 200):
---registry-use "$registryName`:$registryPort"
-```
+Images are pulled from Docker Hub under the **rdpresser** account.
 
 **What bootstrap.ps1 does:**
 
-- ✅ Creates k3d registry at `localhost:5000`
-- ✅ Connects cluster nodes to registry (auto-configured, no auth)
-- ✅ Nodes can pull/push images without credentials
-- ✅ Ready for your microservices
+- ✅ Sets up cluster networking for Docker Compose services
+- ✅ ArgoCD installs platform/apps from GitOps
+- ✅ Images are pulled from Docker Hub (public)
 
 ### Build & Push Images
 
@@ -243,19 +228,19 @@ $registryPort = 5000
 
 This script:
 
-1. **Builds** Docker images with tag `localhost:5000/{image-name}:latest`
-2. **Pushes** to local registry
-3. Currently configured for: `tc-agro-frontend-service`
+1. **Builds** Docker images with tag `rdpresser/{image-name}:latest`
+2. **Pushes** to Docker Hub
+3. Currently configured for: `frontend-service`, `identity-service`
 
 **To add your microservices:**
 Edit `build-push-images.ps1` and add to the `$images` array:
 
 ```powershell
 $images = @(
-    @{ name = "tc-agro-frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
+   @{ name = "frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile" }
     # Add your services:
-    @{ name = "agro-identity-service"; path = "services/identity-service"; dockerfile = "Dockerfile" }
-    @{ name = "agro-farm-service"; path = "services/farm-service"; dockerfile = "Dockerfile" }
+   @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "Dockerfile" }
+   @{ name = "farm-service"; path = "services/farm-service"; dockerfile = "Dockerfile" }
     # ... etc
 )
 ```
@@ -266,17 +251,17 @@ $images = @(
 # 1️⃣ Build your microservices
 .\build-push-images.ps1
 
-# 2️⃣ Verify images in registry
-curl http://localhost:5000/v2/_catalog
+# 2️⃣ Verify images in Docker Hub
+# https://hub.docker.com/u/rdpresser
 
 # 3️⃣ Deploy pods using the images
-# image: localhost:5000/agro-identity-service:latest
+# image: rdpresser/identity-service:latest
 
 # 4️⃣ K8s pulls automatically (already configured)
 kubectl get pods  # Shows running pods
 ```
 
-📖 **Complete registry guide:** See **[REGISTRY_CONFIGURATION.md](REGISTRY_CONFIGURATION.md)**
+📖 **Image registry:** Docker Hub (public)
 
 ---
 
@@ -290,30 +275,29 @@ You should see:
 
 ```
 NAME                      SYNC STATUS   HEALTH STATUS
-platform-observability    Synced        Healthy
-platform-autoscaling      Synced        Healthy
+platform-bootstrap        Synced        Healthy
+platform-base             Synced        Healthy
+apps-bootstrap            Synced        Healthy
+apps-dev                  Synced        Healthy
 ```
 
 ---
 
-### 3. **Update Hosts File (Windows)**
+### 3. **Start ArgoCD Port-Forward**
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds:
-
-- `127.0.0.1 argocd.local`
-- `127.0.0.1 agro.local`
+Exposes ArgoCD at `http://localhost:8090/argocd`.
 
 ---
 
-### 4. **Access ArgoCD (Native Ingress)**
+### 4. **Access ArgoCD**
 
 ```powershell
-# No port-forward needed! Native ingress on port 80.
-http://argocd.local
+# Access via port-forward (recommended)
+http://localhost:8090/argocd
 ```
 
 **Credentials:**
@@ -330,15 +314,15 @@ http://argocd.local
 | **Cluster Name** | dev                                               |
 | **Nodes**        | 1 server (2GB) + 2 agents (system 6GB, apps 10GB) |
 | **Total RAM**    | 18GB                                              |
-| **Registry**     | localhost:5000                                    |
+| **Registry**     | Docker Hub (rdpresser)                            |
 | **Port Mapping** | 80:80, 443:443 (native LoadBalancer)              |
 
 ### Node Pools (AKS-like)
 
-| Pool       | Label              | Taint                         | Purpose                                                          |
-| ---------- | ------------------ | ----------------------------- | ---------------------------------------------------------------- |
-| **system** | `agentpool=system` | `agentpool=system:NoSchedule` | Platform (Prometheus, Grafana, Loki, Tempo, OTel, KEDA, Ingress) |
-| **apps**   | `agentpool=apps`   | (none)                        | Microservices                                                    |
+| Pool       | Label              | Taint                         | Purpose                                  |
+| ---------- | ------------------ | ----------------------------- | ---------------------------------------- |
+| **system** | `agentpool=system` | `agentpool=system:NoSchedule` | Platform (OTEL DaemonSet, Ingress)       |
+| **apps**   | `agentpool=apps`   | (none)                        | Microservices (frontend, identity, etc.) |
 
 ---
 
@@ -352,16 +336,16 @@ http://argocd.local
 
 **What it does:**
 
-- Creates k3d cluster (1 server + 2 agents)
+- Creates k3d cluster (1 server + 3 agents)
+- Joins cluster to `tc-agro-network` Docker network
 - Installs ArgoCD via Helm
 - Applies ArgoCD bootstrap Application (App-of-apps)
 - ArgoCD automatically installs:
-  - kube-prometheus-stack (Prometheus + Grafana)
-  - Loki
-  - Tempo
-  - OpenTelemetry Collector
-  - KEDA
-  - Ingress NGINX
+  - platform-base (namespaces, ingress)
+  - apps-dev (microservices)
+  - OTEL DaemonSet
+
+**Observability:** Prometheus/Grafana/Loki/Tempo run in Docker Compose.
 
 **Time:** ~3-4 minutes
 
@@ -375,28 +359,27 @@ kubectl get applications -n argocd --watch
 
 Expected applications:
 
-- `platform-observability` (Prometheus, Grafana, Loki, Tempo, OTel)
-- `platform-autoscaling` (KEDA)
+- `platform-bootstrap` (App-of-apps)
+- `platform-base` (namespaces, ingress)
+- `apps-bootstrap` (App-of-apps)
+- `apps-dev` (microservices)
 
 ---
 
-### 3. Update Hosts File (for Ingress)
+### 3. Start ArgoCD Port-Forward
 
 ```powershell
-.\update-hosts-file.ps1
+.\port-forward.ps1 argocd
 ```
 
-Adds:
-
-- `127.0.0.1 argocd.local`
-- `127.0.0.1 agro.local`
+Exposes ArgoCD at `http://localhost:8090/argocd`.
 
 ---
 
 ### 4. Access ArgoCD
 
 ```
-http://argocd.local
+http://localhost:8090/argocd
 ```
 
 **Credentials:**
@@ -419,12 +402,12 @@ http://argocd.local
 | Command                       | Description                                   |
 | ----------------------------- | --------------------------------------------- |
 | `.\status.ps1`                | Cluster status (nodes, services, ArgoCD apps) |
-| `.\cleanup.ps1`               | Delete cluster and registry                   |
+| `.\cleanup.ps1`               | Delete cluster                                |
 | `.\start-cluster.ps1`         | Start stopped cluster                         |
 | `.\port-forward.ps1 grafana`  | Access Grafana at `http://localhost:3000`     |
 | `.\port-forward.ps1 all`      | Port-forward all services                     |
 | `.\stop-port-forward.ps1 all` | Stop all port-forwards                        |
-| `.\build-push-images.ps1`     | Build and push images to local registry       |
+| `.\build-push-images.ps1`     | Build and push images to Docker Hub           |
 | `.\list-secrets.ps1`          | Debug tool for secrets                        |
 
 ---
@@ -458,28 +441,28 @@ tc-agro-solutions/
 
 ```
 1. bootstrap.ps1
-   ├── Create k3d cluster
+   ├── Create k3d cluster (joins tc-agro-network)
    ├── Install ArgoCD (Helm)
    └── Apply bootstrap Application
-       └── ArgoCD reads: infrastructure/kubernetes/platform/argocd/applications/
-           ├── platform-observability.yaml
-           │   └── Installs: Prometheus, Grafana, Loki, Tempo, OTel
-           └── platform-autoscaling.yaml
-               └── Installs: KEDA
+       └── ArgoCD reads: infrastructure/kubernetes/platform/argocd/
+           ├── bootstrap/
+         │   └── bootstrap-all.yaml (projects + platform/apps)
+           └── applications/
+               └── platform-base.yaml (namespaces, ingress)
 ```
+
+**Note:** Observability (Prometheus, Grafana, Loki, Tempo) runs in Docker Compose, not k3d.
 
 ### Helm Values Strategy
 
-All platform components use **versioned Helm values** in:
+Active k3d components use **versioned Helm values** in:
 
 ```
 infrastructure/kubernetes/platform/helm-values/dev/
-├── kube-prometheus-stack.values.yaml
-├── loki.values.yaml
-├── tempo.values.yaml
-├── otel-collector.values.yaml
-└── keda.values.yaml
+└── keda.values.yaml              # Optional autoscaling (future)
 ```
+
+**Note:** OTEL DaemonSet is deployed as a manual Kubernetes manifest (`platform/base/otel-daemonset.yaml`), not via Helm chart.
 
 **Why?**
 
@@ -492,11 +475,10 @@ infrastructure/kubernetes/platform/helm-values/dev/
 
 ## 🌐 Access Methods
 
-| Service      | Method       | URL                             | Notes                                 |
-| ------------ | ------------ | ------------------------------- | ------------------------------------- |
-| **ArgoCD**   | Port-Forward | `http://localhost:8090/argocd/` | Recommended: works immediately        |
-| **ArgoCD**   | Ingress      | `http://argocd.local/`          | Requires hosts file setup (see below) |
-| **Frontend** | Port-Forward | `http://localhost:3080`         | Frontend POC app                      |
+| Service      | Method       | URL                             | Notes                            |
+| ------------ | ------------ | ------------------------------- | -------------------------------- |
+| **ArgoCD**   | Port-Forward | `http://localhost:8090/argocd/` | Run: `.\port-forward.ps1 argocd` |
+| **Frontend** | Port-Forward | `http://localhost:3080`         | Frontend POC app                 |
 
 ### Port-Forward Method (Quick & Easy)
 
@@ -520,17 +502,17 @@ Edit `C:\Windows\System32\drivers\etc\hosts` and add:
 Then access:
 
 ```
-http://argocd.local/   (if Ingress configured)
+http://localhost:8090/argocd/  (ArgoCD via port-forward)
 ```
 
-**Note:** Traefik Ingress for ArgoCD requires additional configuration due to k3d networking. Port-forward is the reliable method for local development.
+**Note:** Port-forward is the reliable method for accessing ArgoCD in k3d. Run `.\port-forward.ps1 argocd` first.
 
 ---
 
 ## 📊 Port Forwards (Optional)
 
-- Grafana: `.\port-forward.ps1 grafana` → `http://localhost:3000`
-- Prometheus: `.\port-forward.ps1 prometheus` → `http://localhost:9090`
+- Grafana: http://localhost:3000 (Docker Compose)
+- Prometheus: http://localhost:9090 (Docker Compose)
 
 ---
 
@@ -540,24 +522,24 @@ http://argocd.local/   (if Ingress configured)
 
 ```powershell
 kubectl get applications -n argocd
-kubectl describe application platform-observability -n argocd
+kubectl describe application apps-dev -n argocd
 ```
 
-### Check Helm Release Status
+### Check Pods in Namespaces
 
 ```powershell
-helm list -n monitoring
-kubectl get pods -n monitoring
+kubectl get pods -n agro-apps
+kubectl get pods -n observability
 ```
 
 ### Grafana Not Accessible
 
 ```powershell
-# Check service
-kubectl get svc -n monitoring | Select-String grafana
+# Grafana runs in Docker Compose, not k3d
+docker logs tc-agro-grafana
 
-# Port-forward directly
-kubectl port-forward -n monitoring svc/kube-prom-stack-grafana 3000:80
+# Access Grafana at http://localhost:3000
+# Default credentials: admin / admin
 ```
 
 ### Node Pool Issues

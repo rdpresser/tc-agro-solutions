@@ -5,6 +5,7 @@ Complete Docker Compose orchestration for local development with full observabil
 ## ?? Quick Start
 
 ### Prerequisites
+
 - Docker Desktop 4.x+
 - Docker Compose V2
 - .NET 10 SDK
@@ -32,18 +33,21 @@ docker compose down -v
 ## ?? Access Points
 
 ### Infrastructure
+
 - **PostgreSQL**: `localhost:5432` (postgres/postgres)
 - **pgAdmin**: http://localhost:15432 (admin@tcagro.local/admin)
 - **Redis**: `localhost:6379`
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
 
 ### Services
+
 - **Identity Service**: http://localhost:5001
   - Health: http://localhost:5001/health
   - Swagger: http://localhost:5001/swagger
 - **Identity Service Debug**: `localhost:15001` (Visual Studio debugger)
 
 ### Observability
+
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
 - **Loki**: http://localhost:3100
@@ -80,9 +84,14 @@ docker compose down -v
 
 ## ?? Configuration
 
-Environment variables are loaded from `src/TC.Agro.AppHost.Compose/.env`
+Environment variables are loaded from:
+
+- `orchestration/apphost-compose/.env` (shared defaults)
+
+Service-specific values are set per service in docker-compose.yml.
 
 Key configurations:
+
 - Database credentials
 - Redis settings
 - RabbitMQ credentials
@@ -93,10 +102,13 @@ Key configurations:
 ## ?? Docker Compose Files
 
 ### `docker-compose.yml` (Base Configuration)
+
 Production-ready configuration with all services.
 
 ### `docker-compose.override.yml` (Development Overrides)
+
 Development-specific enhancements automatically applied locally:
+
 - ? Debug logging (verbose output)
 - ? Hot-reload for code changes (when volumes enabled)
 - ? Debug ports for Visual Studio (15001, 15002, etc.)
@@ -111,6 +123,7 @@ When deploying to k3d or production, only the base `docker-compose.yml` is used.
 ### Debug Identity Service in Visual Studio
 
 #### Option 1: Docker Compose Debug (Recommended)
+
 1. **Set Docker Compose as Startup Project**
    - Right-click `docker-compose.dcproj` ? **Set as StartUp Project**
 2. **Enable code volume (hot-reload)**
@@ -122,6 +135,7 @@ When deploying to k3d or production, only the base `docker-compose.yml` is used.
 4. **Breakpoints work normally** in the Identity Service code
 
 #### Option 2: Attach to Running Container
+
 ```bash
 # Start containers
 docker compose up -d
@@ -131,6 +145,7 @@ docker compose up -d
 ```
 
 #### Option 3: Remote Debugging
+
 Enable debugger port in your Dockerfile and connect from VS to `localhost:15001`
 
 ## ?? Adding New Services
@@ -138,6 +153,7 @@ Enable debugger port in your Dockerfile and connect from VS to `localhost:15001`
 Uncomment placeholder services in both files:
 
 **`docker-compose.yml`:**
+
 ```yaml
 # Farm Service - Property & Plot Management
 tc-agro-farm-service:
@@ -145,6 +161,7 @@ tc-agro-farm-service:
 ```
 
 **`docker-compose.override.yml`:**
+
 ```yaml
 # Farm Service - Development Mode
 tc-agro-farm-service:
@@ -158,6 +175,7 @@ tc-agro-farm-service:
 ```
 
 Then run:
+
 ```bash
 docker compose up -d tc-agro-farm-service
 ```
@@ -165,6 +183,7 @@ docker compose up -d tc-agro-farm-service
 ## ?? Monitoring & Troubleshooting
 
 ### View Service Logs
+
 ```bash
 # All services
 docker compose logs -f
@@ -180,6 +199,7 @@ docker compose logs -f grafana prometheus loki tempo
 ```
 
 ### Health Checks
+
 ```bash
 # Check all container statuses
 docker compose ps
@@ -192,6 +212,7 @@ docker compose inspect <service-name>
 ```
 
 ### Database Access
+
 ```bash
 # Direct PostgreSQL access
 docker compose exec postgres psql -U postgres -d agro
@@ -204,6 +225,7 @@ SELECT * FROM pg_extension WHERE extname = 'timescaledb';
 ```
 
 ### Redis CLI
+
 ```bash
 docker compose exec redis redis-cli
 > PING
@@ -212,6 +234,7 @@ PONG
 ```
 
 ### RabbitMQ Queues
+
 ```bash
 # Explore via UI: http://localhost:15672
 # Or via CLI
@@ -221,6 +244,7 @@ docker compose exec rabbitmq rabbitmq-queues list
 ## ?? Testing
 
 ### API Testing with curl
+
 ```bash
 # Identity Service health
 curl http://localhost:5001/health
@@ -230,6 +254,7 @@ curl http://localhost:5001/swagger/v1/swagger.json
 ```
 
 ### Load Testing with k6
+
 ```bash
 # Install k6
 # Run load test (when scripts are created)
@@ -241,6 +266,7 @@ k6 run tests/load/identity-service.js
 Persistent data is stored in named volumes:
 
 **Infrastructure:**
+
 - `tc-agro-postgres-data` - Database
 - `tc-agro-postgres-backups` - Database backups (dev only)
 - `tc-agro-redis-data` - Cache
@@ -248,26 +274,31 @@ Persistent data is stored in named volumes:
 - `tc-agro-pgadmin-data` - pgAdmin configs
 
 **Observability:**
+
 - `tc-agro-grafana-data` - Dashboards
 - `tc-agro-loki-data` - Logs
 - `tc-agro-tempo-data` - Traces
 - `tc-agro-prometheus-data` - Metrics
 
 **Services:**
+
 - `tc-agro-identity-logs` - Service logs
 - `tc-agro-identity-nuget-cache` - NuGet packages (dev only)
 
 ### Clean All Data
+
 ```bash
 docker compose down -v
 ```
 
 ### Backup Database
+
 ```bash
 docker compose exec postgres pg_dump -U postgres agro > backup.sql
 ```
 
 ### Restore Database
+
 ```bash
 docker compose exec -T postgres psql -U postgres agro < backup.sql
 ```
@@ -292,6 +323,7 @@ docker compose exec -T postgres psql -U postgres agro < backup.sql
 ## ?? Common Issues
 
 ### Port Already in Use
+
 ```bash
 # Find process using port
 netstat -ano | findstr :5001
@@ -300,6 +332,7 @@ netstat -ano | findstr :5001
 ```
 
 ### Container Won't Start
+
 ```bash
 # View detailed logs
 docker compose logs <service-name>
@@ -310,6 +343,7 @@ docker compose up -d <service-name>
 ```
 
 ### Database Connection Refused
+
 ```bash
 # Wait for PostgreSQL to be ready
 docker compose exec postgres pg_isready -U postgres
@@ -319,6 +353,7 @@ docker compose logs tc-agro-identity-service | grep "Connection"
 ```
 
 ### Hot-Reload Not Working
+
 ```bash
 # Make sure volume is uncommented in docker-compose.override.yml
 # Ensure file watcher is enabled
@@ -329,6 +364,7 @@ docker compose restart tc-agro-identity-service
 ```
 
 ### Debugger Not Connecting
+
 ```bash
 # Check if debug port is exposed
 docker compose ps | grep identity
@@ -342,6 +378,7 @@ docker compose ps | grep identity
 ## ?? Contributing
 
 When adding new services:
+
 1. Create service Dockerfile
 2. Add service to `docker-compose.yml` (base config)
 3. Add service overrides to `docker-compose.override.yml` (debug config)

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - User Registration" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>User Details | TC Agro Solutions</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
+            <a href="users.html" class="nav-item active">
+              <span class="nav-icon">👥</span>
+              <span class="nav-text">Users</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title" id="pageTitle">Add User</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">🧑‍💼</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <a href="users.html">Users</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span id="breadcrumbCurrent">Add New</span>
+                </div>
+                <h2 id="formTitle" style="margin: 0">Add New User</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <a href="users.html" class="btn btn-outline">← Back to List</a>
+            </div>
+          </div>
+
+          <!-- Form Card -->
+          <form id="userForm" class="card">
+            <input type="hidden" id="userId" name="id" />
+
+            <div
+              id="formErrors"
+              class="text-danger"
+              style="margin-bottom: 16px; display: none"
+            ></div>
+
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h3 class="form-section-title">👤 User Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="name" class="form-label required">Full Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    class="form-control"
+                    placeholder="e.g., Admin Rodrigo Dois"
+                    required
+                    maxlength="200"
+                  />
+                  <span class="form-helper">User's full name</span>
+                </div>
+                <div class="form-group">
+                  <label for="email" class="form-label required">Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control"
+                    placeholder="e.g., admin2@admin.com"
+                    required
+                  />
+                  <span class="form-helper">Must be a valid email address</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="username" class="form-label required">Username</label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-control"
+                    placeholder="e.g., adminadmin"
+                    required
+                    maxlength="100"
+                  />
+                  <span class="form-helper">Unique username for login</span>
+                </div>
+                <div class="form-group">
+                  <label for="role" class="form-label required">Role</label>
+                  <select id="role" name="role" class="form-control form-select" required>
+                    <option value="">Select role...</option>
+                    <option value="Admin">Admin</option>
+                    <option value="User">User</option>
+                    <option value="Manager">Manager</option>
+                  </select>
+                  <span class="form-helper">User role for authorization</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="form-section" id="passwordSection">
+              <h3 class="form-section-title">🔐 Password</h3>
+              <div class="form-row">
+                <div class="form-group" id="passwordGroup" style="flex: 1">
+                  <label for="password" class="form-label required">Password</label>
+                  <div style="display: flex; gap: 8px; align-items: center">
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      class="form-control"
+                      placeholder="e.g., Admin@123"
+                      required
+                    />
+                    <button type="button" id="togglePassword" class="btn btn-outline btn-sm">
+                      👁️
+                    </button>
+                  </div>
+                  <span class="form-helper">Use a strong password</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <a href="users.html" class="btn btn-outline">Cancel</a>
+              <button type="submit" class="btn btn-primary">💾 Save User</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('id') || params.has('email')) {
+          const passwordSection = document.getElementById('passwordSection');
+          if (passwordSection) {
+            passwordSection.style.display = 'none';
+            passwordSection.hidden = true;
+          }
+
+          const roleSelect = document.getElementById('role');
+          if (roleSelect) {
+            roleSelect.disabled = true;
+            roleSelect.required = false;
+          }
+        }
+      })();
+    </script>
+    <!-- Scripts (ES Module) -->
+    <script type="module" src="./js/users-form.js?v=20260207"></script>
+  </body>
+</html>

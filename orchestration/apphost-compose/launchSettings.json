@@ -4,9 +4,18 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "tc.agro.apphost.compose": "StartDebugging"
+        "postgres": "StartWithoutDebugging",
+        "redis": "StartWithoutDebugging",
+        "rabbitmq": "StartWithoutDebugging",
+        "loki": "StartWithoutDebugging",
+        "tempo": "StartWithoutDebugging",
+        "prometheus": "StartWithoutDebugging",
+        "otel-collector": "StartWithoutDebugging",
+        "grafana": "StartWithoutDebugging",
+        "tc-agro-identity-service": "StartDebugging"
       },
-      "timeout": 180
+      "timeout": 180,
+      "launchUrl": "http://localhost:3000"
     }
   }
 }

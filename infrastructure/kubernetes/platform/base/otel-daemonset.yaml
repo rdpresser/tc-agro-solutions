@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-agent-config
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 256
+        spike_limit_mib: 64
+
+      attributes:
+        actions:
+          - key: environment
+            value: development
+            action: insert
+          - key: cluster
+            value: tc-agro-local
+            action: insert
+
+    exporters:
+      # Export to Docker Compose OTEL Collector via shared Docker network
+      # k3d cluster is connected to tc-agro-network (same network as Docker Compose)
+      # Pods can resolve Docker Compose container names directly: otel-collector:4318
+      # No need for host.k3d.internal bridge (avoids reliability issues)
+      otlp_http/docker:
+        endpoint: "http://otel-collector:4318"
+        tls:
+          insecure: true
+
+      # Export directly to Aspire Dashboard (OTLP HTTP) - DISABLED: Using Grafana Stack
+      # Requires aspire-dashboard to be reachable from k3d network
+      # otlp_http/aspire:
+      #   endpoint: "http://aspire-dashboard:18890"
+      #   tls:
+      #     insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, attributes]
+          # exporters: [otlp_http/docker, otlp_http/aspire]  # DISABLED: Using Grafana Stack
+          exporters: [otlp_http/docker]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector-agent
+  template:
+    metadata:
+      labels:
+        app: otel-collector-agent
+        component: observability
+        tier: collector
+        strategy: daemonset
+    spec:
+      containers:
+        - name: otel-collector-agent
+          image: otel/opentelemetry-collector-contrib:0.144.0
+          imagePullPolicy: Always
+          args:
+            - "--config=/etc/otelcol-contrib/otel-collector-config.yaml"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol-contrib
+      volumes:
+        - name: otel-config
+          configMap:
+            name: otel-collector-agent-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+    component: observability
+    tier: collector
+    strategy: daemonset
+spec:
+  selector:
+    app: otel-collector-agent
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+  type: ClusterIP

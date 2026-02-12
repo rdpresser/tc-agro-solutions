@@ -16,14 +16,10 @@ spec:
         app: sensor-ingest-service
         component: ingest
     spec:
-      hostAliases:
-      - ip: "192.168.65.254"
-        hostnames:
-        - "host.docker.internal"
       containers:
       - name: sensor-ingest-service
-        image: k3d-localhost:5000/tc-agro-sensor-ingest-service:latest
-        imagePullPolicy: IfNotPresent
+        image: rdpresser/sensor-ingest-service:latest
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080

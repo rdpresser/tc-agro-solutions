@@ -33,37 +33,31 @@ $Color = @{
 }
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Title
-Write-Host "║              ARGOCD FORCE SYNC                            ║" -ForegroundColor $Color.Title
-Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Title
+Write-Host "ARGOCD FORCE SYNC" -ForegroundColor $Color.Title
 Write-Host ""
 
 # Check ArgoCD is installed
 $argocdCheck = kubectl get ns argocd --no-headers 2>$null
 if (-not $argocdCheck) {
-    Write-Host "❌ ArgoCD not found in cluster" -ForegroundColor $Color.Error
+    Write-Host "ArgoCD not found in cluster" -ForegroundColor $Color.Error
     Write-Host "   Run: .\bootstrap.ps1 first" -ForegroundColor $Color.Warning
     exit 1
 }
 
-Write-Host "✅ ArgoCD found in cluster" -ForegroundColor $Color.Success
+Write-Host "ArgoCD found in cluster" -ForegroundColor $Color.Success
 Write-Host ""
 
-# Ensure ArgoCD projects exist before syncing applications
-Write-Host "Ensuring ArgoCD projects exist..." -ForegroundColor $Color.Info
+# Ensure ArgoCD projects and bootstrap apps exist before syncing applications
+Write-Host "Ensuring ArgoCD bootstrap is applied..." -ForegroundColor $Color.Info
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$projectsPath = Join-Path $repoRoot "infrastructure\kubernetes\platform\argocd\projects"
+$bootstrapAllPath = Join-Path $repoRoot "infrastructure\kubernetes\platform\argocd\bootstrap\bootstrap-all.yaml"
 
-$projectPlatform = Join-Path $projectsPath "project-platform.yaml"
-$projectApps = Join-Path $projectsPath "project-apps.yaml"
-
-if (Test-Path $projectPlatform) {
-    kubectl apply -f $projectPlatform 2>&1 | Out-Null
-    Write-Host "  ✅ Platform project applied" -ForegroundColor $Color.Success
+if (Test-Path $bootstrapAllPath) {
+    kubectl apply -f $bootstrapAllPath 2>&1 | Out-Null
+    Write-Host "  ArgoCD bootstrap applied" -ForegroundColor $Color.Success
 }
-if (Test-Path $projectApps) {
-    kubectl apply -f $projectApps 2>&1 | Out-Null
-    Write-Host "  ✅ Apps project applied" -ForegroundColor $Color.Success
+else {
+    Write-Host "  Bootstrap file not found: $bootstrapAllPath" -ForegroundColor $Color.Warning
 }
 Write-Host ""
 
@@ -76,8 +70,6 @@ switch ($Target) {
         $applications = @(
             "platform-bootstrap",
             "platform-base",
-            "platform-observability",
-            "platform-autoscaling",
             "apps-bootstrap",
             "apps-dev"
         )
@@ -86,9 +78,7 @@ switch ($Target) {
         Write-Host "Syncing PLATFORM components..." -ForegroundColor $Color.Info
         $applications = @(
             "platform-bootstrap",
-            "platform-base",
-            "platform-observability",
-            "platform-autoscaling"
+            "platform-base"
         )
     }
     "apps" {
@@ -109,33 +99,30 @@ foreach ($app in $applications) {
     $appExists = kubectl get application $app -n argocd --no-headers 2>$null
     
     if (-not $appExists) {
-        Write-Host "  ⚠️  Application not found: $app" -ForegroundColor $Color.Warning
+        Write-Host "  Application not found: $app" -ForegroundColor $Color.Warning
         $failedCount++
         continue
     }
     
     # Hard refresh (clears cache and fetches latest from Git)
-    Write-Host "  • Hard refresh from Git..." -ForegroundColor $Color.Muted
+    Write-Host "  - Hard refresh from Git..." -ForegroundColor $Color.Muted
     kubectl patch application $app -n argocd --type merge -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}' 2>&1 | Out-Null
     
     Start-Sleep -Seconds 1
     
     # Force sync operation
-    Write-Host "  • Forcing sync operation..." -ForegroundColor $Color.Muted
-    $syncPatch = @{
-        operation = @{
-            initiatedBy = @{
-                username = "admin"
-            }
-            sync        = @{
-                syncStrategy = @{
-                    hook = @{}
-                }
-            }
-        }
-    } | ConvertTo-Json -Depth 10 -Compress
-    
-    kubectl patch application $app -n argocd --type merge -p $syncPatch 2>&1 | Out-Null
+    Write-Host "  - Forcing sync operation..." -ForegroundColor $Color.Muted
+    $syncPatch = @'
+{"operation":{"initiatedBy":{"username":"admin"},"sync":{"syncStrategy":{"hook":{}}}}}
+'@
+    $patchFile = [System.IO.Path]::GetTempFileName()
+    Set-Content -Path $patchFile -Value $syncPatch -Encoding ASCII
+    try {
+        kubectl patch application $app -n argocd --type merge --patch-file $patchFile 2>&1 | Out-Null
+    }
+    finally {
+        Remove-Item -Path $patchFile -ErrorAction SilentlyContinue
+    }
     
     # Wait for sync to start
     Start-Sleep -Seconds 2
@@ -145,19 +132,19 @@ foreach ($app in $applications) {
     $syncStatus = kubectl get application $app -n argocd -o jsonpath='{.status.sync.status}' 2>$null
     
     if ($syncStatus -eq "Synced") {
-        Write-Host "  ✅ Synced successfully" -ForegroundColor $Color.Success
+        Write-Host "  Synced successfully" -ForegroundColor $Color.Success
         $syncedCount++
     }
     elseif ($status -eq "Running" -or $status -eq "Progressing") {
-        Write-Host "  🔄 Sync in progress..." -ForegroundColor $Color.Warning
+        Write-Host "  Sync in progress..." -ForegroundColor $Color.Warning
         $syncedCount++
     }
     elseif ($status -eq "Succeeded") {
-        Write-Host "  ✅ Sync operation succeeded" -ForegroundColor $Color.Success
+        Write-Host "  Sync operation succeeded" -ForegroundColor $Color.Success
         $syncedCount++
     }
     else {
-        Write-Host "  ⚠️  Status: $syncStatus (Operation: $status)" -ForegroundColor $Color.Warning
+        Write-Host "  Status: $syncStatus (Operation: $status)" -ForegroundColor $Color.Warning
         $syncedCount++
     }
     
@@ -165,17 +152,17 @@ foreach ($app in $applications) {
 }
 
 # Summary
-Write-Host "═════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
+Write-Host "----------------------------------------" -ForegroundColor $Color.Muted
 Write-Host ""
-Write-Host "📊 SYNC SUMMARY:" -ForegroundColor $Color.Info
-Write-Host "   ✅ Triggered: $syncedCount" -ForegroundColor $Color.Success
+Write-Host "SYNC SUMMARY:" -ForegroundColor $Color.Info
+Write-Host "   Triggered: $syncedCount" -ForegroundColor $Color.Success
 if ($failedCount -gt 0) {
-    Write-Host "   ⚠️  Failed: $failedCount" -ForegroundColor $Color.Warning
+    Write-Host "   Failed: $failedCount" -ForegroundColor $Color.Warning
 }
 Write-Host ""
 
 # Wait for syncs to complete (optional, with timeout)
-Write-Host "⏳ Waiting for syncs to complete (max 30s)..." -ForegroundColor $Color.Info
+Write-Host "Waiting for syncs to complete (max 30s)..." -ForegroundColor $Color.Info
 $timeout = 30
 $elapsed = 0
 $allSynced = $false
@@ -194,29 +181,29 @@ while ($elapsed -lt $timeout -and -not $allSynced) {
     
     if ($pendingApps.Count -eq 0) {
         $allSynced = $true
-        Write-Host "   ✅ All applications synced!" -ForegroundColor $Color.Success
+        Write-Host "   All applications synced." -ForegroundColor $Color.Success
     }
     else {
-        Write-Host "   ⏳ Pending: $($pendingApps -join ', ')" -ForegroundColor $Color.Muted
+        Write-Host "   Pending: $($pendingApps -join ', ')" -ForegroundColor $Color.Muted
     }
 }
 
 if (-not $allSynced) {
-    Write-Host "   ⚠️  Timeout reached. Some apps may still be syncing." -ForegroundColor $Color.Warning
+    Write-Host "   Timeout reached. Some apps may still be syncing." -ForegroundColor $Color.Warning
 }
 Write-Host ""
 
 # Show how to monitor
-Write-Host "🔍 MONITOR SYNC STATUS:" -ForegroundColor $Color.Info
+Write-Host "MONITOR SYNC STATUS:" -ForegroundColor $Color.Info
 Write-Host ""
 Write-Host "   Via kubectl:" -ForegroundColor $Color.Muted
 Write-Host "   kubectl get applications -n argocd" -ForegroundColor $Color.Info
 Write-Host ""
 Write-Host "   Via ArgoCD UI:" -ForegroundColor $Color.Muted
-Write-Host "   1. Port-forward: .\manager.ps1 6 → argocd" -ForegroundColor $Color.Info
+Write-Host "   1. Port-forward: .\manager.ps1 6 - argocd" -ForegroundColor $Color.Info
 Write-Host "   2. Open: http://localhost:8090/argocd/" -ForegroundColor $Color.Info
 Write-Host "   3. Login: admin / Argo@123!" -ForegroundColor $Color.Info
 Write-Host ""
 
-Write-Host "✅ Force sync complete!" -ForegroundColor $Color.Success
+Write-Host "Force sync complete." -ForegroundColor $Color.Success
 Write-Host ""

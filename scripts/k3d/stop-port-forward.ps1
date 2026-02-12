@@ -6,12 +6,12 @@
   Kills kubectl port-forward processes by service name or all.
 
 .EXAMPLE
-  .\stop-port-forward.ps1 grafana
-  .\stop-port-forward.ps1 all
+    .\stop-port-forward.ps1 argocd
+    .\stop-port-forward.ps1 all
 #>
 
 param(
-    [ValidateSet("grafana", "prometheus", "loki", "tempo", "all")]
+    [ValidateSet("argocd", "frontend", "identity", "all")]
     [string]$Service = "all"
 )
 
@@ -38,10 +38,9 @@ if ($Service -eq "all") {
 }
 else {
     $ports = @{
-        grafana    = 3000
-        prometheus = 9090
-        loki       = 3100
-        tempo      = 3200
+        argocd   = 8090
+        frontend = 3080
+        identity = 5001
     }
     
     $port = $ports[$Service]

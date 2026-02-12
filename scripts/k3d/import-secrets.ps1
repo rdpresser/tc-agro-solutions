@@ -1,7 +1,7 @@
 param(
     [string]$Namespace = "agro-apps",
     [string]$EnvFile = "..\..\orchestration\apphost-compose\.env.k3d",
-    [string]$ConfigMapPath = "..\..\infrastructure\kubernetes\apps\base\identity\configmap.yaml",
+    [string[]]$Services = @(),
     [string]$SecretName = "agro-secrets"
 )
 
@@ -15,28 +15,58 @@ function Ensure-Namespace {
     }
 }
 
-function Apply-ConfigMap {
-    param([string]$Path, [string]$Ns)
-    if (-not (Test-Path $Path)) {
-        Write-Host "ConfigMap file not found: $Path" -ForegroundColor Yellow
-        return
+function Apply-ConfigMaps {
+    param([string[]]$SelectedServices, [string]$Ns)
+
+    $serviceMap = @{
+        identity = "..\..\infrastructure\kubernetes\apps\base\identity\configmap.yaml"
+        farm     = "..\..\infrastructure\kubernetes\apps\base\farm\configmap.yaml"
     }
-    kubectl apply -n $Ns -f $Path | Out-Null
+
+    $targets = if ($SelectedServices -and $SelectedServices.Count -gt 0) {
+        $SelectedServices | ForEach-Object { $_.ToLowerInvariant() } | Where-Object { $serviceMap.ContainsKey($_) }
+    }
+    else {
+        $serviceMap.Keys
+    }
+
+    foreach ($svc in $targets) {
+        $rawPath = $serviceMap[$svc]
+        $path = if ([System.IO.Path]::IsPathRooted($rawPath)) {
+            $rawPath
+        }
+        else {
+            Join-Path $PSScriptRoot $rawPath
+        }
+
+        if (-not (Test-Path $path)) {
+            Write-Host "ConfigMap file not found: $path" -ForegroundColor Yellow
+            continue
+        }
+        kubectl apply -n $Ns -f $path --server-side | Out-Null
+    }
 }
 
 function Apply-SecretFromEnv {
     param([string]$File, [string]$Ns, [string]$Name)
-    if (-not (Test-Path $File)) {
-        throw "Env file not found: $File"
+    $resolvedFile = if ([System.IO.Path]::IsPathRooted($File)) {
+        $File
+    }
+    else {
+        Join-Path $PSScriptRoot $File
+    }
+
+    if (-not (Test-Path $resolvedFile)) {
+        throw "Env file not found: $resolvedFile"
     }
     # Create/Update via server-side apply
-    kubectl -n $Ns create secret generic $Name --from-env-file=$File --dry-run=client -o yaml |
-    kubectl -n $Ns apply -f - | Out-Null
+    kubectl -n $Ns create secret generic $Name --from-env-file=$resolvedFile --dry-run=client -o yaml |
+    kubectl -n $Ns apply --server-side -f - | Out-Null
 }
 
-Write-Host "\n🔐 Importing secrets and configmap into namespace '$Namespace'" -ForegroundColor Cyan
+Write-Host "\nImporting secrets and configmap into namespace '$Namespace'" -ForegroundColor Cyan
 Ensure-Namespace -Ns $Namespace
-Apply-ConfigMap -Path $ConfigMapPath -Ns $Namespace
+Apply-ConfigMaps -SelectedServices $Services -Ns $Namespace
 Apply-SecretFromEnv -File $EnvFile -Ns $Namespace -Name $SecretName
 
-Write-Host "✅ Secrets and ConfigMap applied." -ForegroundColor Green
+Write-Host "Secrets and ConfigMap applied." -ForegroundColor Green

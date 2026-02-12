@@ -20,14 +20,16 @@ spec:
         - name: strip-prefix
         - name: compress
     
-    # Host-based: argocd.local (clean URLs, requires hosts file)
-    - match: Host(`argocd.local`)
-      kind: Rule
-      services:
-        - name: argocd-server
-          port: 80
-      middlewares:
-        - name: compress
+    # Host-based route disabled - use port-forward instead:
+    # .\port-forward.ps1 argocd → http://localhost:8090/argocd
+    #
+    # - match: Host(`argocd.local`)
+    #   kind: Rule
+    #   services:
+    #     - name: argocd-server
+    #       port: 80
+    #   middlewares:
+    #     - name: compress
 
 ---
 # Middleware: Remove /argocd prefix before sending to ArgoCD

@@ -1,9 +1,14 @@
 # =====================================================
-# Tempo Configuration - Local Development
+# Tempo Configuration - Local Development (Single Instance)
+# =====================================================
+# Simplified config for single-instance Tempo without metrics-generator
+# to avoid "empty ring" errors in local development
 # =====================================================
 server:
   http_listen_port: 3200
   grpc_listen_port: 9096
+  grpc_server_max_recv_msg_size: 4194304
+  grpc_server_max_send_msg_size: 4194304
 
 distributor:
   receivers:
@@ -15,16 +20,45 @@ distributor:
           endpoint: 0.0.0.0:4318
 
 ingester:
+  max_block_duration: 30s
+  max_block_bytes: 1073741824
   trace_idle_period: 10s
-  max_block_bytes: 1048576
-  max_block_duration: 5m
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    num_tokens: 128
+    heartbeat_timeout: 5m
 
 compactor:
   compaction:
     compaction_window: 1h
-    max_block_bytes: 104857600
+    max_block_bytes: 107374182400
     block_retention: 1h
     compacted_block_retention: 10m
+
+querier:
+  max_concurrent_queries: 20
+
+# ==============================
+# 🔥 METRICS GENERATOR (for Drilldown, Service Map, Rate queries)
+# ==============================
+metrics_generator:
+  ring:
+    kvstore:
+      store: inmemory
+  processor:
+    service_graphs:
+      dimensions: []
+    span_metrics:
+      dimensions: []
+  registry:
+    external_labels:
+      cluster: tc-agro-local
+      environment: development
+  storage:
+    path: /var/tempo/metrics
 
 storage:
   trace:
@@ -33,6 +67,3 @@ storage:
       path: /var/tempo/wal
     local:
       path: /var/tempo/traces
-
-querier:
-  max_concurrent_queries: 20

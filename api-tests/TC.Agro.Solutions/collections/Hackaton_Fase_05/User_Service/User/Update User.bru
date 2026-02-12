@@ -1,0 +1,32 @@
+meta {
+  name: Update User
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{identity_service_url}}/api/user/c00de4b9-795d-420e-9988-f73d6f5b94b4
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "name": "Admin Rodrigo Quatrro",
+    "email": "Admin1981@admin.com",
+    "username": "adminadmin"
+  }
+}
+
+vars:pre-request {
+  admin_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ0Yy1hZ3JvLWlkZW50aXR5LXNlcnZpY2UiLCJleHAiOjE3NzA4NjQxMzMsImlhdCI6MTc3MDgzNTMzMywic3ViIjoiYzAwZGU0YjktNzk1ZC00MjBlLTk5ODgtZjczZDZmNWI5NGI0IiwibmFtZSI6IkFkbWluIFJvZHJpZ28gUXVhdHJybyIsInVuaXF1ZV9uYW1lIjoiYWRtaW5hZG1pbiIsImVtYWlsIjoiYWRtaW4xOTgxQGFkbWluLmNvbSIsImF1ZCI6WyJ0Yy1hZ3JvLWlkZW50aXR5LXNlcnZpY2UiLCJ0Yy1hZ3JvLWZhcm0tc2VydmljZSIsInRjLWFncm8tc2Vuc29yLWluZ2VzdC1zZXJ2aWNlIiwidGMtYWdyby1hbmFseXRpY3Mtd29ya2VyIiwidGMtYWdyby1kYXNoYm9hcmQtc2VydmljZSJdLCJyb2xlIjoiQWRtaW4iLCJuYmYiOjE3NzA4MzUzMzN9.qddDujmm0dcdtrrHVKVXTIqeg_c37Af4ORVXYtSpDcQ
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

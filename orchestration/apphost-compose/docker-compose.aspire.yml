@@ -1,0 +1,44 @@
+# =====================================================
+# TC Agro Solutions - Aspire Dashboard Extension
+# =====================================================
+# This file extends docker-compose.yml to add Aspire Dashboard
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.aspire.yml up -d
+#
+# Official docs: https://aspire.dev/dashboard/standalone/
+# =====================================================
+
+name: tc-agro-local
+
+services:
+  # =====================================================
+  # OBSERVABILITY - .NET Aspire Dashboard
+  # =====================================================
+  aspire-dashboard-ui:
+    image: aspire-dashboard:local
+    container_name: tc-agro-aspire-dashboard
+    restart: unless-stopped
+    environment:
+      # Frontend endpoint (Dashboard UI)
+      ASPNETCORE_URLS: "http://+:18888"
+      # OTLP gRPC endpoint (default internal port: 18889)
+      ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL: "http://0.0.0.0:18889"
+      # OTLP HTTP endpoint (default internal port: 18890)
+      ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL: "http://0.0.0.0:18890"
+      # Disable authentication for local development (official setting)
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888" # Dashboard UI
+      - "18889:18889" # OTLP gRPC ingest
+      - "18890:18890" # OTLP HTTP ingest
+    networks:
+      - agro-net
+    labels:
+      - "tc-agro.component=observability"
+      - "tc-agro.layer=visualization"
+
+networks:
+  agro-net:
+    external: true
+    name: tc-agro-network

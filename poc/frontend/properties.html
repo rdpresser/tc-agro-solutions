@@ -32,6 +32,10 @@
               <span class="nav-icon">🌱</span>
               <span class="nav-text">Plots</span>
             </a>
+            <a href="users.html" class="nav-item">
+              <span class="nav-icon">👥</span>
+              <span class="nav-text">Users</span>
+            </a>
           </div>
 
           <div class="nav-section">
@@ -92,25 +96,60 @@
             </div>
           </div>
 
-          <!-- Filters (Optional) -->
+          <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom: 0">
-                <input
-                  type="text"
-                  id="search-properties"
-                  class="form-control"
-                  placeholder="🔍 Search properties..."
-                />
+            <form id="propertiesFilterForm">
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0">
+                  <input
+                    type="text"
+                    id="filterInput"
+                    class="form-control"
+                    placeholder="🔍 Filter by name, city, state or country"
+                  />
+                </div>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
-                <select id="statusFilter" class="form-control form-select">
-                  <option value="">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page</label>
+                  <select id="pageNumber" class="form-control form-select">
+                    <option value="1">1</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page Size</label>
+                  <select id="pageSize" class="form-control form-select">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Sort By</label>
+                  <select id="sortBy" class="form-control form-select">
+                    <option value="name">Name</option>
+                    <option value="city">City</option>
+                    <option value="state">State</option>
+                    <option value="areahectares">Area (ha)</option>
+                    <option value="createdat">Created At</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Direction</label>
+                  <select id="sortDirection" class="form-control form-select">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; align-self: flex-end">
+                  <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
 
           <!-- Properties Table -->
@@ -138,9 +177,16 @@
 
           <!-- Summary -->
           <div class="card" style="margin-top: 24px">
-            <div class="d-flex justify-between align-center">
-              <span class="text-muted">Showing 4 of 4 properties</span>
-              <span class="text-muted">Total Area: 1,536.5 ha</span>
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
+              <span id="propertiesSummary" class="text-muted">Loading properties...</span>
+              <div class="d-flex align-center" style="gap: 8px">
+                <button type="button" id="propertiesPrev" class="btn btn-outline btn-sm">
+                  ◀ Prev
+                </button>
+                <button type="button" id="propertiesNext" class="btn btn-outline btn-sm">
+                  Next ▶
+                </button>
+              </div>
             </div>
           </div>
         </div>

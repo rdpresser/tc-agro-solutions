@@ -1,5 +1,11 @@
 <Solution>
   <Folder Name="/Services/" />
+  <Folder Name="/Services/Farm-Service/">
+    <Project Path="../../services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/TC.Agro.Farm.Service.csproj" />
+    <Project Path="../../services/farm-service/src/Adapters/Outbound/TC.Agro.Farm.Infrastructure/TC.Agro.Farm.Infrastructure.csproj" />
+    <Project Path="../../services/farm-service/src/Core/TC.Agro.Farm.Application/TC.Agro.Farm.Application.csproj" />
+    <Project Path="../../services/farm-service/src/Core/TC.Agro.Farm.Domain/TC.Agro.Farm.Domain.csproj" />
+  </Folder>
   <Folder Name="/Services/Identity-Service/">
     <Project Path="../../services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/TC.Agro.Identity.Service.csproj" />
     <Project Path="../../services/identity-service/src/Adapters/Outbound/TC.Agro.Identity.Infrastructure/TC.Agro.Identity.Infrastructure.csproj" />
@@ -14,6 +20,7 @@
   </Folder>
   <Folder Name="/Shared/">
     <Project Path="../../common/src/TC.Agro.Contracts/TC.Agro.Contracts.csproj" />
+    <Project Path="../../common/src/TC.Agro.Messaging/TC.Agro.Messaging.csproj" />
     <Project Path="../../common/src/TC.Agro.SharedKernel/TC.Agro.SharedKernel.csproj" />
   </Folder>
   <Project Path="docker-compose.dcproj">

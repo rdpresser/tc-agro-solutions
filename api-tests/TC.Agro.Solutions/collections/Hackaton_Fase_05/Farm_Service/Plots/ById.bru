@@ -1,0 +1,20 @@
+meta {
+  name: ById
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{farm_service_url}}/api/plots/ab2c3087-b382-4b89-aee4-1937dc5f3114
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

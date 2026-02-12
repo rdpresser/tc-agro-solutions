@@ -16,6 +16,11 @@
 
 $clusterName = "dev"
 
+$portUtils = Join-Path $PSScriptRoot "port-utils.ps1"
+if (Test-Path $portUtils) {
+    . $portUtils
+}
+
 $Color = @{
     Success = "Green"
     Error   = "Red"
@@ -33,17 +38,32 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 Write-Host "=== Step 1/2: Stopping cluster ===" -ForegroundColor $Color.Info
 
+$apiStatus = $null
+if (Get-Command Test-K3dApiPortHealth -ErrorAction SilentlyContinue) {
+    $apiStatus = Test-K3dApiPortHealth -ClusterName $clusterName
+    if ($apiStatus.Port) {
+        if ($apiStatus.IsExcluded) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is in a Windows excluded port range." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: re-run .\bootstrap.ps1 to recreate the cluster with a safe port." -ForegroundColor $Color.Muted
+        }
+        elseif ($apiStatus.IsInUse) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is already in use on the host." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: stop the conflicting process or re-run .\bootstrap.ps1." -ForegroundColor $Color.Muted
+        }
+    }
+}
+
 # Stop all port-forwards first
 Write-Host "   Stopping port-forwards..." -ForegroundColor $Color.Muted
 Get-Process kubectl -ErrorAction SilentlyContinue | 
-    Where-Object { 
-        try {
-            $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
-            $cmdLine -like "*port-forward*"
-        }
-        catch { $false }
-    } | 
-    Stop-Process -Force -ErrorAction SilentlyContinue
+Where-Object { 
+    try {
+        $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
+        $cmdLine -like "*port-forward*"
+    }
+    catch { $false }
+} | 
+Stop-Process -Force -ErrorAction SilentlyContinue
 
 Start-Sleep -Seconds 1
 

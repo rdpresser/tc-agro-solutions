@@ -16,14 +16,10 @@ spec:
         app: identity-service
         component: auth
     spec:
-      hostAliases:
-      - ip: "192.168.65.254"
-        hostnames:
-        - "host.docker.internal"
       containers:
       - name: identity-service
-        image: k3d-localhost:5000/tc-agro-identity-service:latest
-        imagePullPolicy: IfNotPresent
+        image: rdpresser/identity-service:2cb6f5a4
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080

@@ -1,0 +1,28 @@
+meta {
+  name: List
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{farm_service_url}}/api/properties/5d5cdd15-ea89-4b88-9333-be10f261a914/plots?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
+  body: none
+  auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 10
+  sortBy: name
+  sortDirection: asc
+  filter: 
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

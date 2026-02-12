@@ -5,14 +5,15 @@
       "Group": "TC Agro Solutions",
       "Host": "postgres",
       "Port": 5432,
-      "MaintenanceDB": "tc-agro-identity-db",
+      "MaintenanceDB": "postgres",
       "Username": "postgres",
       "Password": "postgres",
       "SSLMode": "prefer",
       "Databases": {
-        "tc-agro-identity-db": {}
+        "tc-agro-identity-db": {},
+        "tc-agro-farm-db": {}
       },
-      "Comment": "Main PostgreSQL database (Identity service)"
+      "Comment": "PostgreSQL server with isolated databases per microservice"
     }
   }
 }

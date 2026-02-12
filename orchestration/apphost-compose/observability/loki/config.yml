@@ -6,6 +6,7 @@ auth_enabled: false
 server:
   http_listen_port: 3100
   grpc_listen_port: 9096
+  log_level: info
 
 common:
   path_prefix: /loki
@@ -29,8 +30,22 @@ schema_config:
         prefix: index_
         period: 24h
 
+# Limits and ingestion rules (OTLP support requires structured metadata)
 limits_config:
+  allow_structured_metadata: true
+  volume_enabled: true
   reject_old_samples: true
   reject_old_samples_max_age: 168h
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
+
+# ============================================================
+# Structured Metadata (OTLP labels)
+# ============================================================
+# Loki 2.9+ supports receiving logs via OTLP HTTP endpoint.
+# OTEL Collector sends log attributes which Loki automatically converts
+# to structured metadata when allow_structured_metadata: true is set.
+#
+# Attributes like correlation_id, trace_id, span_id are automatically
+# available as labels in Grafana Explore.
+# ============================================================

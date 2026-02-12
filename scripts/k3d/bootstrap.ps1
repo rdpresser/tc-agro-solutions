@@ -5,16 +5,20 @@
 .DESCRIPTION
   Minimal bootstrap script that ONLY:
   1. Creates k3d cluster (1 server + 3 agents with AKS-like node pools)
-  2. Installs ArgoCD via Helm
-  3. Applies ArgoCD bootstrap Application (App-of-apps)
-  4. Applies platform Project
+  2. Joins cluster to tc-agro-network for Docker container name resolution
+  3. Installs ArgoCD via Helm
+  4. Applies ArgoCD bootstrap Application (App-of-apps)
+  5. Applies platform Project
 
   After this, ArgoCD installs automatically:
-  - kube-prometheus-stack (Prometheus + Grafana)
-  - Loki
-  - Tempo
-  - OpenTelemetry Collector
-  - KEDA
+  - OpenTelemetry Collector DaemonSet (exports to Docker Compose OTEL Collector)
+
+  Observability Stack (Docker Compose - NOT k3d):
+  - Prometheus, Grafana, Loki, Tempo run in Docker Compose
+  - OTEL DaemonSet in k3d exports to tc-agro-otel-collector container
+
+  Optional (disabled by default):
+  - KEDA (event-driven autoscaling) - NOT USED in current project
 
   Note: Traefik is k3s built-in (no Helm install needed)
 
@@ -24,7 +28,7 @@
 .NOTES
   Requirements: k3d v5.x+, kubectl, helm, docker
   Cluster name: "dev"
-  Registry: localhost:5000
+  Registry: Docker Hub (rdpresser)
 
 .EXAMPLE
   .\bootstrap.ps1
@@ -34,8 +38,18 @@
 # === Configuration
 # =====================================================
 $clusterName = "dev"
-$registryName = "localhost"
-$registryPort = 5000
+
+# Select a safe API port (avoid reserved/excluded and in-use ports)
+$apiPort = $null
+
+$portUtils = Join-Path $PSScriptRoot "port-utils.ps1"
+if (Test-Path $portUtils) {
+  . $portUtils
+}
+else {
+  Write-Host "⚠️  port-utils.ps1 not found. Falling back to default API port 6443." -ForegroundColor $Color.Warning
+  $apiPort = "6443"
+}
 
 # Node resource allocation (20GB total)
 # Creating agents individually allows different memory per node pool
@@ -44,9 +58,17 @@ $systemAgentMemory = "4g"    # agent-0: kube-system, CoreDNS, CNI, CSI
 $platformAgentMemory = "6g"  # agent-1: ArgoCD, Ingress, cert-manager
 $appsAgentMemory = "7g"      # agent-2: .NET microservices (business logic)
 
+# Docker Compose network (k3d will join this network to access compose services)
+# This allows pods to resolve Docker Compose container names like:
+# - tc-agro-postgres, tc-agro-redis, tc-agro-rabbitmq, tc-agro-otel-collector
+$composeNetworkName = "tc-agro-network"
+
 # ArgoCD config
 $argocdNamespace = "argocd"
 $argocdAdminPassword = "Argo@123!"
+
+# Optional components (disabled by default)
+$script:installKeda = $false  # KEDA is NOT USED in current project - kept for future reference
 
 # Colors
 $Color = @{
@@ -64,6 +86,31 @@ function Write-Step {
   param([string]$Message)
   Write-Host ""
   Write-Host "=== $Message ===" -ForegroundColor $Color.Info
+}
+
+function Prompt-OptionalComponents {
+  Write-Step "Optional Components Configuration"
+  
+  Write-Host ""
+  Write-Host " ╔══════════════════════════════════════════════════════════════╗" -ForegroundColor $Color.Warning
+  Write-Host " ║  KEDA (Kubernetes Event-Driven Autoscaling)                   ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Status: NOT USED in current project                         ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Purpose: Scale pods based on events (RabbitMQ queue, etc.)  ║" -ForegroundColor $Color.Warning
+  Write-Host " ║  Note: Can be added later if needed                          ║" -ForegroundColor $Color.Warning
+  Write-Host " ╚══════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Warning
+  Write-Host ""
+  
+  $response = Read-Host " Install KEDA? (y/N - default: N)"
+  if ($response -match "^[Yy](es)?$") {
+    $script:installKeda = $true
+    Write-Host " ✓ KEDA will be installed" -ForegroundColor $Color.Success
+  }
+  else {
+    $script:installKeda = $false
+    Write-Host " ✓ KEDA will NOT be installed (recommended)" -ForegroundColor $Color.Muted
+  }
+  
+  Write-Host ""
 }
 
 function Test-Prerequisites {
@@ -84,6 +131,7 @@ function Test-Prerequisites {
   Write-Host "✅ All prerequisites found" -ForegroundColor $Color.Success
 }
 
+
 function Stop-PortForwards {
   Write-Step "Stopping existing port-forwards"
   Get-Process kubectl -ErrorAction SilentlyContinue |
@@ -94,17 +142,45 @@ function Stop-PortForwards {
   Write-Host "✅ Port-forwards stopped" -ForegroundColor $Color.Success
 }
 
-function New-LocalRegistry {
-  Write-Step "Creating local registry ($registryName`:$registryPort)"
-  $regList = k3d registry list 2>&1 | Out-String
-
-  if ($regList -match "k3d-$registryName") {
-    Write-Host " Registry already exists. Skipping." -ForegroundColor $Color.Muted
+function Ensure-ComposeNetwork {
+  Write-Step "Ensuring Docker Compose network exists ($composeNetworkName)"
+  
+  $networkExists = docker network ls --format "{{.Name}}" 2>$null | Where-Object { $_ -eq $composeNetworkName }
+  
+  if ($networkExists) {
+    # Check if network is managed by Docker Compose (has compose labels)
+    $networkInfo = docker network inspect $composeNetworkName 2>$null | ConvertFrom-Json
+    $composeLabel = $networkInfo[0].Labels."com.docker.compose.network"
+    
+    if ($composeLabel) {
+      Write-Host " Network '$composeNetworkName' already exists (managed by Docker Compose)" -ForegroundColor $Color.Success
+      Write-Host "   Compose label: com.docker.compose.network=$composeLabel" -ForegroundColor $Color.Muted
+      Write-Host "   ✅ Safe to use with VS 2026 Docker Compose integration" -ForegroundColor $Color.Success
+    }
+    else {
+      Write-Host " Network '$composeNetworkName' already exists (manually created)" -ForegroundColor $Color.Muted
+      Write-Host "   ℹ️ Network works but VS 2026 may show warnings (non-critical)" -ForegroundColor $Color.Info
+    }
   }
   else {
-    k3d registry create $registryName --port $registryPort 2>&1 | Out-Null
-    Write-Host "✅ Registry created" -ForegroundColor $Color.Success
+    Write-Host " Creating network '$composeNetworkName'..." -ForegroundColor $Color.Info
+    Write-Host "   ⚠️ Note: If using VS 2026 Docker Compose, start it first to let VS manage network" -ForegroundColor $Color.Warning
+    docker network create --driver bridge $composeNetworkName 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "✅ Network created" -ForegroundColor $Color.Success
+    }
+    else {
+      Write-Host "⚠️ Network creation failed (may already exist)" -ForegroundColor $Color.Warning
+    }
   }
+  
+  Write-Host ""
+  Write-Host " 💡 k3d will join this network to access Docker Compose services:" -ForegroundColor $Color.Info
+  Write-Host "    • tc-agro-postgres (PostgreSQL)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-redis (Redis)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-rabbitmq (RabbitMQ)" -ForegroundColor $Color.Muted
+  Write-Host "    • tc-agro-otel-collector (OpenTelemetry)" -ForegroundColor $Color.Muted
+  Write-Host ""
 }
 
 function Remove-ExistingCluster {
@@ -152,18 +228,22 @@ function New-K3dCluster {
   Write-Host " Apps:     $appsAgentMemory (agent-apps)" -ForegroundColor $Color.Muted
   Write-Host " Total:    20GB (3+4+6+7)" -ForegroundColor $Color.Success
   Write-Host ""
+  Write-Host " 🔗 Network: $composeNetworkName (shared with Docker Compose)" -ForegroundColor $Color.Info
+  Write-Host ""
 
   # Step 1: Create cluster WITHOUT agents (we'll add them individually)
-  Write-Host " Step 1/2: Creating server node..." -ForegroundColor $Color.Info
+  # Using --network to join Docker Compose network for service discovery
+  Write-Host " Step 1/2: Creating server node on $composeNetworkName network..." -ForegroundColor $Color.Info
 
   $ok = Invoke-Retry -Retries 3 -DelaySeconds 2 -ErrorMessage "Failed to create cluster server node" -Action {
     k3d cluster create $clusterName `
       --servers 1 `
       --agents 0 `
+      --api-port $apiPort `
       --port "80:80@loadbalancer" `
       --port "443:443@loadbalancer" `
       --servers-memory $serverMemory `
-      --registry-use "$registryName`:$registryPort" 2>&1 | Out-Null
+      --network $composeNetworkName 2>&1 | Out-Null
   }
 
   if (-not $ok) { exit 1 }
@@ -180,7 +260,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-system" `
       --cluster $clusterName `
       --role agent `
-      --memory $systemAgentMemory 2>&1 | Out-Null
+      --memory $systemAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okSystem) { Write-Host " ✅ System agent created ($systemAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -190,7 +271,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-platform" `
       --cluster $clusterName `
       --role agent `
-      --memory $platformAgentMemory 2>&1 | Out-Null
+      --memory $platformAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okPlatform) { Write-Host " ✅ Platform agent created ($platformAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -200,7 +282,8 @@ function New-K3dCluster {
     k3d node create "$clusterName-agent-apps" `
       --cluster $clusterName `
       --role agent `
-      --memory $appsAgentMemory 2>&1 | Out-Null
+      --memory $appsAgentMemory `
+      --network $composeNetworkName 2>&1 | Out-Null
   }
   if ($okApps) { Write-Host " ✅ Apps agent created ($appsAgentMemory)" -ForegroundColor $Color.Success }
 
@@ -339,11 +422,31 @@ function Set-NodeLabelsAndTaints {
   kubectl get nodes -L agentpool 2>&1 | ForEach-Object { Write-Host " $_" -ForegroundColor $Color.Muted }
 }
 
+function Clean-OrphanedPVCs {
+  Write-Step "Cleaning orphaned PVCs and volumes from previous deployments"
+  
+  # Delete any existing PVCs in argocd namespace (Option 1: PVC cleanup)
+  Write-Host " Removing orphaned PVCs..." -ForegroundColor $Color.Muted
+  kubectl delete pvc --all -n argocd --ignore-not-found=true 2>&1 | Out-Null
+  
+  # Also clean up any stuck emptyDir volumes at docker level
+  Write-Host " Cleaning docker volumes..." -ForegroundColor $Color.Muted
+  docker volume prune -f 2>&1 | Out-Null
+  
+  Write-Host "✅ Orphaned PVCs and volumes cleaned" -ForegroundColor $Color.Success
+  Write-Host ""
+}
+
 function Install-ArgoCD {
-  Write-Step "Installing ArgoCD via Helm"
+  Write-Step "Installing ArgoCD via Helm (with resilience configuration)"
 
   helm repo add argo https://argoproj.github.io/argo-helm 2>$null
   helm repo update 2>&1 | Out-Null
+
+  Write-Host " Applying resilience settings:" -ForegroundColor $Color.Muted
+  Write-Host "  • Option 2: fsGroup + security context (volume cleanup)" -ForegroundColor $Color.Muted
+  Write-Host "  • Option 3: Resource limits + probe tuning" -ForegroundColor $Color.Muted
+  Write-Host "  • Disabling Redis persistence (reduces volume issues)" -ForegroundColor $Color.Muted
 
   helm upgrade --install argocd argo/argo-cd `
     -n $argocdNamespace `
@@ -353,10 +456,21 @@ function Install-ArgoCD {
     --set configs.params."server\.insecure"=true `
     --set configs.params."server\.basehref"="/argocd" `
     --set configs.params."server\.rootpath"="/argocd" `
+    --set global.securityContext.fsGroup=1000 `
+    --set global.securityContext.runAsNonRoot=false `
+    --set repoServer.securityContext.runAsNonRoot=false `
+    --set repoServer.securityContext.allowPrivilegeEscalation=true `
+    --set repoServer.resources.requests.memory=256Mi `
+    --set repoServer.resources.requests.cpu=100m `
+    --set repoServer.resources.limits.memory=1Gi `
+    --set repoServer.resources.limits.cpu=500m `
+    --set repoServer.livenessProbe.initialDelaySeconds=30 `
+    --set repoServer.readinessProbe.initialDelaySeconds=15 `
+    --set redis.persistence.enabled=false `
     --wait --timeout=5m 2>&1 | Out-Null
 
   if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ ArgoCD installed" -ForegroundColor $Color.Success
+    Write-Host "✅ ArgoCD installed with resilience config" -ForegroundColor $Color.Success
   }
   else {
     Write-Host "⚠️ ArgoCD install had issues" -ForegroundColor $Color.Warning
@@ -365,6 +479,131 @@ function Install-ArgoCD {
   Write-Host " Waiting for ArgoCD server..." -ForegroundColor $Color.Info
   kubectl wait --for=condition=available --timeout=300s `
     deployment/argocd-server -n $argocdNamespace 2>&1 | Out-Null
+}
+
+function Deploy-AutoHealingCronJob {
+  Write-Step "Deploying auto-healing CronJob (monitors and restarts unhealthy repo-server)"
+  
+  Write-Host " Purpose: Auto-detects and heals stuck repo-server pods every 5 minutes" -ForegroundColor $Color.Muted
+  
+  $cronJobManifest = @"
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-healing-bot
+  namespace: argocd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-healing-bot
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-healing-bot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-healing-bot
+subjects:
+- kind: ServiceAccount
+  name: argocd-healing-bot
+  namespace: argocd
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: argocd-repo-server-healing
+  namespace: argocd
+  labels:
+    app: argocd-healing-bot
+spec:
+  schedule: "*/5 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          serviceAccountName: argocd-healing-bot
+          restartPolicy: OnFailure
+          containers:
+          - name: health-check
+            image: bitnami/kubectl:latest
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/sh
+              set -e
+              
+              REPO_POD=\$$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              
+              if [ -z "\$$REPO_POD" ]; then
+                echo "[WARN] No repo-server pod found, may be already recovering"
+                exit 0
+              fi
+              
+              READY=\$$(kubectl get pod \$$REPO_POD -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+              RESTARTS=\$$(kubectl get pod \$$REPO_POD -n argocd -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null)
+              
+              echo "[INFO] Pod: \$$REPO_POD | Ready: \$$READY | Restarts: \$$RESTARTS"
+              
+              if [ "\$$READY" != "True" ]; then
+                echo "[ERROR] Pod not ready! Attempting heal..."
+                
+                # Clean up stuck volumes
+                echo "[ACTION] Deleting stuck pod to trigger volume cleanup..."
+                kubectl delete pod \$$REPO_POD -n argocd --grace-period=10 2>/dev/null || true
+                
+                echo "[INFO] Waiting for new pod to be created..."
+                sleep 10
+                
+                # Verify recovery
+                NEW_POD=\$$(kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+                NEW_READY=\$$(kubectl get pod \$$NEW_POD -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+                
+                if [ "\$$NEW_READY" = "True" ]; then
+                  echo "[SUCCESS] Pod recovered!"
+                  exit 0
+                else
+                  echo "[WARN] Pod still not ready after recovery attempt"
+                  exit 1
+                fi
+              else
+                echo "[OK] Pod is healthy"
+              fi
+"@
+  
+  Write-Host " Creating auto-healing resources..." -ForegroundColor $Color.Muted
+  $cronJobManifest | kubectl apply -f - 2>&1 | Out-Null
+  
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Auto-healing CronJob deployed (checks every 5 minutes)" -ForegroundColor $Color.Success
+  }
+  else {
+    Write-Host "⚠️ Auto-healing CronJob deployment had issues" -ForegroundColor $Color.Warning
+  }
+  Write-Host ""
 }
 
 function Set-ArgocdPassword {
@@ -380,6 +619,103 @@ function Set-ArgocdPassword {
   Write-Host " Delegating to reset-argocd-password.ps1 (standardized password change)..." -ForegroundColor $Color.Muted
   Write-Host ""
   & $scriptPath -NewPassword $argocdAdminPassword
+  
+  # Reset exit code - password reset may return 1 even on success
+  $global:LASTEXITCODE = 0
+}
+
+function Create-AgroSecrets {
+  Write-Step "Creating agro-secrets from .env.k3d"
+
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+  $envFilePath = Join-Path $repoRoot "orchestration\apphost-compose\.env.k3d"
+
+  if (-not (Test-Path $envFilePath)) {
+    Write-Host "❌ .env.k3d not found at $envFilePath" -ForegroundColor $Color.Error
+    Write-Host " Secret 'agro-secrets' will NOT be created" -ForegroundColor $Color.Warning
+    Write-Host " Applications may fail to start without secrets" -ForegroundColor $Color.Warning
+    return
+  }
+
+  Write-Host " Reading secrets from .env.k3d..." -ForegroundColor $Color.Info
+
+  # Read .env.k3d and extract key=value pairs (skip comments and empty lines)
+  $envContent = Get-Content $envFilePath |
+  Where-Object { $_ -match '^[^#].*=.*$' } |
+  ForEach-Object { $_.Trim() }
+
+  if (-not $envContent -or $envContent.Count -eq 0) {
+    Write-Host "⚠️ .env.k3d is empty or has no valid key=value pairs" -ForegroundColor $Color.Warning
+    return
+  }
+
+  Write-Host " Found $($envContent.Count) secret key(s)" -ForegroundColor $Color.Muted
+
+  # Build kubectl create secret command with all key-value pairs
+  $secretArgs = @()
+  foreach ($line in $envContent) {
+    if ($line -match '^([^=]+)=(.*)$') {
+      $key = $matches[1].Trim()
+      $value = $matches[2].Trim()
+      $secretArgs += "--from-literal=$key=$value"
+    }
+  }
+
+  if ($secretArgs.Count -eq 0) {
+    Write-Host "⚠️ No valid secrets extracted from .env.k3d" -ForegroundColor $Color.Warning
+    return
+  }
+
+  # Ensure target namespace exists before creating secrets
+  kubectl get namespace agro-apps 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    kubectl create namespace agro-apps --dry-run=client -o yaml | kubectl apply -f - 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0
+  }
+
+  # Delete existing secret if present (to allow updates)
+  & kubectl @("delete", "secret", "agro-secrets", "-n", "agro-apps", "--ignore-not-found=true") 2>&1 | Out-Null
+
+  # Create secret in agro-apps namespace
+  Write-Host " Creating secret 'agro-secrets' in namespace 'agro-apps'..." -ForegroundColor $Color.Info
+  $kubectlArgs = @("create", "secret", "generic", "agro-secrets", "-n", "agro-apps") + $secretArgs
+  $createOutput = & kubectl @kubectlArgs 2>&1
+
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Secret 'agro-secrets' created successfully" -ForegroundColor $Color.Success
+    Write-Host "    Namespace: agro-apps" -ForegroundColor $Color.Muted
+    Write-Host "    Keys: $($secretArgs.Count)" -ForegroundColor $Color.Muted
+  }
+  else {
+    Write-Host "❌ Failed to create secret 'agro-secrets'" -ForegroundColor $Color.Error
+    if ($createOutput) {
+      Write-Host "    kubectl error: $createOutput" -ForegroundColor $Color.Muted
+    }
+    Write-Host " Applications will fail to start without secrets" -ForegroundColor $Color.Warning
+  }
+
+  $global:LASTEXITCODE = 0  # Reset exit code
+}
+
+function Test-KustomizeBuild {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][string]$Label
+  )
+
+  Write-Host " Preflight: kustomize build $Label" -ForegroundColor $Color.Info
+  $output = & kubectl @("kustomize", $Path) 2>&1
+
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Kustomize build failed for $Label" -ForegroundColor $Color.Error
+    if ($output) {
+      Write-Host "    $output" -ForegroundColor $Color.Muted
+    }
+    return $false
+  }
+
+  Write-Host "✅ Kustomize build OK: $Label" -ForegroundColor $Color.Success
+  return $true
 }
 
 function Apply-GitOpsBootstrap {
@@ -392,53 +728,70 @@ function Apply-GitOpsBootstrap {
   $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
   $platformPath = Join-Path $repoRoot "infrastructure\kubernetes\platform"
 
-  $projectFile = Join-Path $platformPath "argocd\projects\project-platform.yaml"
-  if (Test-Path $projectFile) {
-    kubectl apply -f $projectFile 2>&1 | Out-Null
-    Write-Host "✅ Platform project created" -ForegroundColor $Color.Success
-  }
-
-  $appsProjectFile = Join-Path $platformPath "argocd\projects\project-apps.yaml"
-  if (Test-Path $appsProjectFile) {
-    kubectl apply -f $appsProjectFile 2>&1 | Out-Null
-    Write-Host "✅ Apps project created" -ForegroundColor $Color.Success
-  }
-
   $baseKustomization = Join-Path $platformPath "base"
   if (Test-Path $baseKustomization) {
+    if (-not (Test-KustomizeBuild -Path $baseKustomization -Label "platform/base")) {
+      return
+    }
+
     kubectl apply -k $baseKustomization 2>&1 | Out-Null
     Write-Host "✅ Base manifests applied (namespaces, ingress)" -ForegroundColor $Color.Success
   }
 
-  $bootstrapPlatformFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-platform.yaml"
-  if (Test-Path $bootstrapPlatformFile) {
-    kubectl apply -f $bootstrapPlatformFile 2>&1 | Out-Null
-    Write-Host "✅ Platform bootstrap applied (infrastructure components)" -ForegroundColor $Color.Success
-    Write-Host " ℹ️ ArgoCD will now install: Prometheus, Grafana, Loki, Tempo, OTel, KEDA" -ForegroundColor $Color.Info
-   
-    # KEDA CRD Known Issue: Helm adds oversized annotations (>262KB limit)
-    # Patch CRD to remove problematic metadata after installation
-    Write-Host " ⏳ Waiting for KEDA CRD to stabilize..." -ForegroundColor $Color.Info
-    Start-Sleep -Seconds 15
-   
-    Write-Host " 🔧 Applying KEDA CRD metadata fix..." -ForegroundColor $Color.Info
-    kubectl patch crd scaledjobs.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    kubectl patch crd scaledobjects.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    kubectl patch crd triggers.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
-    Write-Host "✅ KEDA CRD metadata patched (removed oversized annotations)" -ForegroundColor $Color.Success
+  # Import secrets + configmaps from .env.k3d (must happen AFTER namespaces are created)
+  $importScript = Join-Path $PSScriptRoot "import-secrets.ps1"
+  if (Test-Path $importScript) {
+    & $importScript
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "⚠️ import-secrets.ps1 reported errors" -ForegroundColor $Color.Warning
+      $global:LASTEXITCODE = 0
+    }
   }
   else {
-    Write-Host "⚠️ Bootstrap file not found: $bootstrapPlatformFile" -ForegroundColor $Color.Warning
+    Write-Host "⚠️ import-secrets.ps1 not found; falling back to secret-only import" -ForegroundColor $Color.Warning
+    Create-AgroSecrets
   }
 
-  $bootstrapAppsFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-apps.yaml"
-  if (Test-Path $bootstrapAppsFile) {
-    kubectl apply -f $bootstrapAppsFile 2>&1 | Out-Null
-    Write-Host "✅ Apps bootstrap applied (application components)" -ForegroundColor $Color.Success
+  $bootstrapAllFile = Join-Path $platformPath "argocd\bootstrap\bootstrap-all.yaml"
+  if (Test-Path $bootstrapAllFile) {
+    kubectl apply -f $bootstrapAllFile 2>&1 | Out-Null
+    Write-Host "✅ ArgoCD bootstrap applied (projects + platform/apps)" -ForegroundColor $Color.Success
+    Write-Host " ℹ️ ArgoCD will now install: OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Info
     Write-Host " ℹ️ ArgoCD will now install: Frontend and future microservices" -ForegroundColor $Color.Info
+
+    # Optional: Install KEDA if user requested
+    if ($script:installKeda) {
+      Write-Host " ℹ️ Installing KEDA (user requested)..." -ForegroundColor $Color.Info
+      
+      # Create KEDA namespace
+      kubectl create namespace keda --dry-run=client -o yaml | kubectl apply -f - 2>&1 | Out-Null
+      
+      # Install KEDA via Helm
+      helm repo add kedacore https://kedacore.github.io/charts 2>$null
+      helm repo update 2>&1 | Out-Null
+      helm upgrade --install keda kedacore/keda -n keda --wait --timeout=3m 2>&1 | Out-Null
+      
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ KEDA installed successfully" -ForegroundColor $Color.Success
+        
+        # KEDA CRD Known Issue: Helm adds oversized annotations (>262KB limit)
+        Write-Host " 🔧 Applying KEDA CRD metadata fix..." -ForegroundColor $Color.Info
+        Start-Sleep -Seconds 5
+        kubectl patch crd scaledjobs.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        kubectl patch crd scaledobjects.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        kubectl patch crd triggerauthentications.keda.sh -p '{"metadata":{"annotations":null}}' --type=merge 2>&1 | Out-Null
+        Write-Host "✅ KEDA CRD metadata patched" -ForegroundColor $Color.Success
+      }
+      else {
+        Write-Host "⚠️ KEDA installation had issues (non-critical)" -ForegroundColor $Color.Warning
+      }
+    }
+    else {
+      Write-Host " ℹ️ KEDA skipped (not installed - use bootstrap prompt to enable)" -ForegroundColor $Color.Muted
+    }
   }
   else {
-    Write-Host "⚠️ Apps bootstrap file not found: $bootstrapAppsFile" -ForegroundColor $Color.Warning
+    Write-Host "⚠️ Bootstrap file not found: $bootstrapAllFile" -ForegroundColor $Color.Warning
   }
 }
 
@@ -451,7 +804,12 @@ function Apply-LocalManifests {
 
   if (Test-Path $platformOverlay) {
     Write-Host " Applying platform overlay (namespaces, ingress, ArgoCD projects)..." -ForegroundColor $Color.Info
+    if (-not (Test-KustomizeBuild -Path $platformOverlay -Label "platform/overlays/dev")) {
+      return
+    }
+
     kubectl apply -k $platformOverlay 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Platform overlay applied" -ForegroundColor $Color.Success
   }
   else {
@@ -460,7 +818,12 @@ function Apply-LocalManifests {
 
   if (Test-Path $appsOverlay) {
     Write-Host " Applying apps overlay (frontend ingress/deployment)..." -ForegroundColor $Color.Info
+    if (-not (Test-KustomizeBuild -Path $appsOverlay -Label "apps/overlays/dev")) {
+      return
+    }
+
     kubectl apply -k $appsOverlay 2>&1 | Out-Null
+    $global:LASTEXITCODE = 0  # Reset exit code (resources may already exist)
     Write-Host "✅ Apps overlay applied" -ForegroundColor $Color.Success
   }
   else {
@@ -477,8 +840,29 @@ Write-Host "║ GITOPS BOOTSTRAP - K3D CLUSTER + ARGOCD ║" -ForegroundColor $C
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
 
 Test-Prerequisites
+Prompt-OptionalComponents
 Stop-PortForwards
-New-LocalRegistry
+
+# Ensure Docker Compose infrastructure stack is ready BEFORE k3d cluster creation
+# This ensures Prometheus, Grafana, OTEL, and other services are on tc-agro-network
+Write-Step "Ensuring Docker Compose Infrastructure"
+$infrastructureScript = Join-Path $PSScriptRoot "ensure-compose-infrastructure.ps1"
+if (Test-Path $infrastructureScript) {
+  & $infrastructureScript
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️  Infrastructure script failed, but continuing with k3d bootstrap..." -ForegroundColor $Color.Warning
+  }
+}
+else {
+  Write-Host "ℹ️  Infrastructure script not found: $infrastructureScript" -ForegroundColor $Color.Warning
+}
+
+Ensure-ComposeNetwork
+
+Write-Step "Selecting k3d API port"
+$apiPort = Select-K3dApiPort
+Write-Host " Using API port: $apiPort" -ForegroundColor $Color.Success
+
 Remove-ExistingCluster
 New-K3dCluster
 Fix-KubeconfigForDocker
@@ -491,7 +875,9 @@ Write-Host "⏳ Allowing nodes to fully stabilize before labeling..." -Foregroun
 Start-Sleep -Seconds 3
 
 Set-NodeLabelsAndTaints
+Clean-OrphanedPVCs
 Install-ArgoCD
+Deploy-AutoHealingCronJob
 Set-ArgocdPassword
 Apply-GitOpsBootstrap
 Apply-LocalManifests
@@ -512,25 +898,46 @@ Write-Host " Server: 3GB (control plane)" -ForegroundColor $Color.Success
 Write-Host " System: 4GB (kube-system, CoreDNS, CNI)" -ForegroundColor $Color.Success
 Write-Host " Platform: 6GB (ArgoCD, Ingress, cert-manager)" -ForegroundColor $Color.Success
 Write-Host " Apps: 7GB (.NET microservices)" -ForegroundColor $Color.Success
-Write-Host " Registry: localhost:$registryPort" -ForegroundColor $Color.Muted
+Write-Host " Registry: Docker Hub (rdpresser)" -ForegroundColor $Color.Muted
+Write-Host " Network: $composeNetworkName (shared with Docker Compose)" -ForegroundColor $Color.Success
 
 Write-Host ""
 Write-Host "🔐 ARGOCD" -ForegroundColor $Color.Info
 Write-Host " Username: admin" -ForegroundColor $Color.Muted
 Write-Host " Password: $argocdAdminPassword" -ForegroundColor $Color.Muted
-Write-Host " URL: http://argocd.local (after updating hosts file)" -ForegroundColor $Color.Muted
+Write-Host " URL: http://localhost:8090/argocd (start port-forward: .\port-forward.ps1 argocd)" -ForegroundColor $Color.Muted
 
 Write-Host ""
-Write-Host "🔗 NEXT STEPS" -ForegroundColor $Color.Info
+Write-Host "🔑 SECRETS" -ForegroundColor $Color.Info
+Write-Host " Secret: agro-secrets (from .env.k3d)" -ForegroundColor $Color.Muted
+Write-Host " Namespace: agro-apps" -ForegroundColor $Color.Muted
+Write-Host " Source: orchestration/apphost-compose/.env.k3d" -ForegroundColor $Color.Muted
+
+Write-Host ""
+Write-Host "� INSTALLED COMPONENTS" -ForegroundColor $Color.Info
+Write-Host " ✅ OTEL DaemonSet (observability agent)" -ForegroundColor $Color.Success
+Write-Host " ✅ Docker Compose Observability Stack (Grafana/Prometheus/Loki/Tempo)" -ForegroundColor $Color.Success
+if ($script:installKeda) {
+  Write-Host " ✅ KEDA (event-driven autoscaling)" -ForegroundColor $Color.Success
+}
+else {
+  Write-Host " ⏭️ KEDA (skipped - not used in current project)" -ForegroundColor $Color.Muted
+}
+
+Write-Host ""
+Write-Host "�� NEXT STEPS" -ForegroundColor $Color.Info
 Write-Host " 1) Watch ArgoCD sync platform stack" -ForegroundColor $Color.Muted
 Write-Host "    kubectl get applications -n argocd --watch" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 2) Update Windows hosts file for Ingress access" -ForegroundColor $Color.Muted
-Write-Host "    .\update-hosts-file.ps1" -ForegroundColor $Color.Success
+Write-Host " 2) Start ArgoCD port-forward" -ForegroundColor $Color.Muted
+Write-Host "    .\port-forward.ps1 argocd" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 3) Access ArgoCD via Ingress (no port-forward needed)" -ForegroundColor $Color.Muted
-Write-Host "    http://argocd.local" -ForegroundColor $Color.Success
+Write-Host " 3) Access ArgoCD via port-forward" -ForegroundColor $Color.Muted
+Write-Host "    http://localhost:8090/argocd" -ForegroundColor $Color.Success
 Write-Host ""
-Write-Host " 4) Optional: Port-forward Grafana" -ForegroundColor $Color.Muted
-Write-Host "    .\port-forward.ps1 grafana" -ForegroundColor $Color.Success
+Write-Host " 4) Optional: Start Docker Compose observability stack" -ForegroundColor $Color.Muted
+Write-Host "    (Grafana at http://localhost:3000)" -ForegroundColor $Color.Success
 Write-Host ""
+
+# Explicit success exit
+exit 0

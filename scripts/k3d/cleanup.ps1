@@ -24,7 +24,6 @@
 #>
 
 $clusterName = "dev"
-$registryName = "localhost"
 
 $Color = @{
     Success = "Green"
@@ -71,24 +70,6 @@ else {
     Write-Host "❌ Cluster deletion cancelled" -ForegroundColor $Color.Muted
 }
 
-# Delete registry
-Write-Host ""
-Write-Host "=== Delete registry '$registryName'? ===" -ForegroundColor $Color.Warning
-$confirmRegistry = Read-Host "Type 'yes' to confirm"
-
-if ($confirmRegistry -eq "yes") {
-    k3d registry delete $registryName 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Registry deleted" -ForegroundColor $Color.Success
-    }
-    else {
-        Write-Host "⚠️  Registry not found or already deleted" -ForegroundColor $Color.Muted
-    }
-}
-else {
-    Write-Host "❌ Registry deletion cancelled" -ForegroundColor $Color.Muted
-}
-
 # Docker cleanup (SAFE)
 Write-Host ""
 Write-Host "=== Clean k3d Docker resources only? ===" -ForegroundColor $Color.Warning
@@ -132,6 +113,19 @@ if ($confirmDocker -eq "yes") {
     }
     else {
         Write-Host "No k3d networks found" -ForegroundColor $Color.Muted
+    }
+
+    # Remove tc-agro-network (shared with Docker Compose)
+    $tcAgroNet = docker network ls --format "{{.Name}}" | Where-Object { $_ -eq "tc-agro-network" }
+    if ($tcAgroNet) {
+        Write-Host "Removing tc-agro-network (shared network)..." -ForegroundColor $Color.Info
+        docker network rm tc-agro-network 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ tc-agro-network removed" -ForegroundColor $Color.Success
+        }
+        else {
+            Write-Host "⚠️  tc-agro-network in use or already removed" -ForegroundColor $Color.Warning
+        }
     }
 
     # --------------------------------------------------

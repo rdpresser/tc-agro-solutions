@@ -258,15 +258,15 @@ Use este checklist para garantir que seu ambiente está completamente configurad
 - [ ] Platform stack deployed
   ```powershell
   kubectl get pods -n observability
-  # Should show Prometheus, Grafana, Loki, Tempo
+  # Should show otel-collector-agent DaemonSet pods
   ```
 
 ### Step 3: Access Services
 
-- [ ] Local registry available
+- [ ] Docker Hub access available
 
   ```powershell
-  curl -X GET http://localhost:5000/v2/_catalog
+  docker pull rdpresser/frontend-service:latest
   ```
 
 - [ ] ArgoCD via port-forward
@@ -274,19 +274,19 @@ Use este checklist para garantir que seu ambiente está completamente configurad
   ```powershell
   cd scripts\k3d
   .\port-forward.ps1 argocd
-  # Then visit: http://localhost:9000
+  # Then visit: http://localhost:8090/argocd
   ```
 
 - [ ] Grafana via port-forward
 
   ```powershell
-  .\port-forward.ps1 grafana
+  # Grafana runs in Docker Compose
   # Then visit: http://localhost:3000
   ```
 
 - [ ] Prometheus accessible
   ```powershell
-  .\port-forward.ps1 prometheus
+  # Prometheus runs in Docker Compose
   # Then visit: http://localhost:9090
   ```
 
@@ -294,22 +294,21 @@ Use este checklist para garantir que seu ambiente está completamente configurad
 
 ## 🔧 ENVIRONMENT CONFIGURATION
 
-### .env File
+### .env Files
 
-- [ ] `.env` file exists
+- [ ] `.env` files exist
 
   ```powershell
   ls orchestration\apphost-compose\.env
   ```
 
 - [ ] `.env` has correct values
-  - `POSTGRES_DB=tc-agro-identity-db`
   - `POSTGRES_USER=postgres`
   - `POSTGRES_PASSWORD=postgres`
   - `REDIS_HOST=redis`
   - `RABBITMQ_HOST=rabbitmq`
 
-- [ ] `.env` is in `.gitignore`
+- [ ] `.env` files are in `.gitignore`
   ```powershell
   # Should NOT be tracked by git
   git status | findstr ".env"

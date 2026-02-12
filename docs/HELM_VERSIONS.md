@@ -1,8 +1,20 @@
 # Helm Chart Versions - Version Management Guide
 
-**Date:** January 17, 2026  
+**Date:** February 1, 2026  
 **Status:** ✅ Active  
 **Location:** `docs/HELM_VERSIONS.md`
+
+---
+
+## ⚠️ Important: Architecture Change
+
+**Full observability stack (Prometheus, Grafana, Loki, Tempo) now runs in Docker Compose**, not in k3d cluster.
+
+**Helm charts still in k3d:**
+
+- **keda** - Kubernetes Event Driven Autoscaling (optional)
+
+**Note:** OTEL DaemonSet is deployed via a manual manifest (`infrastructure/kubernetes/platform/base/otel-daemonset.yaml`), not a Helm chart.
 
 ---
 
@@ -20,36 +32,27 @@ The `targetRevision` property in ArgoCD applications specifies **which version**
 
 ```yaml
 sources:
-  - repoURL: https://prometheus-community.github.io/helm-charts
-    chart: kube-prometheus-stack
-    targetRevision: 65.0.0 # ← Helm chart version
+   - repoURL: https://kedacore.github.io/charts
+      chart: keda
+      targetRevision: 2.15.1 # ← Helm chart version
 ```
 
 ### Two Types of `targetRevision`
 
-| Type                   | Example  | Meaning                            |
-| ---------------------- | -------- | ---------------------------------- |
-| **Helm Chart Version** | `65.0.0` | Specific version of the Helm chart |
-| **Git Reference**      | `main`   | Git branch, tag, or commit SHA     |
+| Type                   | Example   | Meaning                            |
+| ---------------------- | --------- | ---------------------------------- |
+| **Helm Chart Version** | `0.105.0` | Specific version of the Helm chart |
+| **Git Reference**      | `main`    | Git branch, tag, or commit SHA     |
 
 ---
 
-## 📊 Current Helm Chart Versions
+## 📊 Current Helm Chart Versions (k3d)
 
-### Platform Observability Stack
+### Active Charts
 
-| Chart                       | Current Version | Repository           | Purpose                           |
-| --------------------------- | --------------- | -------------------- | --------------------------------- |
-| **kube-prometheus-stack**   | 65.0.0          | prometheus-community | Prometheus, Grafana, AlertManager |
-| **loki**                    | 6.16.0          | grafana              | Log aggregation                   |
-| **tempo**                   | 1.10.3          | grafana              | Distributed tracing               |
-| **opentelemetry-collector** | 0.105.0         | opentelemetry        | Telemetry ingestion               |
-
-### Platform Autoscaling
-
-| Chart    | Current Version | Repository | Purpose                             |
-| -------- | --------------- | ---------- | ----------------------------------- |
-| **keda** | 2.15.1          | kedacore   | Kubernetes Event Driven Autoscaling |
+| Chart    | Current Version | Repository | Purpose                  |
+| -------- | --------------- | ---------- | ------------------------ |
+| **keda** | 2.15.1          | kedacore   | Event-driven autoscaling |
 
 ---
 
@@ -66,7 +69,7 @@ We provide a PowerShell script to check for latest versions:
 
 **Output:**
 
-- Shows current vs latest versions
+- Shows current vs latest versions for KEDA
 - Indicates which charts have updates available
 - Provides links to release notes
 
@@ -74,13 +77,13 @@ We provide a PowerShell script to check for latest versions:
 
 ```bash
 # Add repository
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add kedacore https://kedacore.github.io/charts
 
 # Update repository index
 helm repo update
 
 # Search for latest version
-helm search repo prometheus-community/kube-prometheus-stack
+helm search repo kedacore/keda
 ```
 
 ---
@@ -109,30 +112,23 @@ helm search repo prometheus-community/kube-prometheus-stack
 1. **Find the file:**
 
    ```
-   infrastructure/kubernetes/platform/argocd/applications/
-   ├── platform-observability.yaml  # Prometheus, Loki, Tempo, OTel
-   └── platform-autoscaling.yaml    # KEDA
+   infrastructure/kubernetes/platform/helm-values/dev/
+   └── keda.values.yaml   # KEDA (optional)
    ```
 
 2. **Check latest version:**
 
    ```bash
-   helm search repo grafana/loki --versions | head -5
+   helm search repo kedacore/keda --versions | head -5
    ```
 
-3. **Edit the YAML file:**
-
-   ```yaml
-   - repoURL: https://grafana.github.io/helm-charts
-     chart: loki
-     targetRevision: 6.16.0 # ← Update this line
-   ```
+3. **Edit the values file or ArgoCD application:**
 
 4. **Commit and push:**
 
    ```bash
-   git add infrastructure/kubernetes/platform/argocd/applications/
-   git commit -m "chore: update loki chart to version 6.20.0"
+   git add infrastructure/kubernetes/platform/
+   git commit -m "chore: update keda chart"
    git push
    ```
 
@@ -146,13 +142,9 @@ helm search repo prometheus-community/kube-prometheus-stack
 
 Always check release notes for **breaking changes**:
 
-| Chart                   | Release Notes URL                                                    |
-| ----------------------- | -------------------------------------------------------------------- |
-| kube-prometheus-stack   | https://github.com/prometheus-community/helm-charts/releases         |
-| loki                    | https://github.com/grafana/loki/releases                             |
-| tempo                   | https://github.com/grafana/tempo/releases                            |
-| opentelemetry-collector | https://github.com/open-telemetry/opentelemetry-helm-charts/releases |
-| keda                    | https://github.com/kedacore/charts/releases                          |
+| Chart | Release Notes URL                           |
+| ----- | ------------------------------------------- |
+| keda  | https://github.com/kedacore/charts/releases |
 
 ### 2. Check for Breaking Changes
 
@@ -175,7 +167,7 @@ git push origin feature/update-helm-charts
 kubectl get applications -n argocd -w
 
 # Verify pods are healthy
-kubectl get pods -n monitoring
+kubectl get pods -n observability
 kubectl get pods -n keda
 ```
 
@@ -189,8 +181,8 @@ kubectl get pods -n keda
 
 - ✅ Critical security patches
 - ✅ Important bug fixes
-- ⚠️ Minor version updates (e.g., 6.16.0 → 6.17.0)
-- ❌ Major version updates (e.g., 6.x → 7.x) - **AVOID during hackathon**
+- ⚠️ Minor version updates (e.g., 0.105.0 → 0.106.0)
+- ❌ Major version updates (e.g., 0.x → 1.x) - **AVOID during hackathon**
 
 **Rationale:**
 
@@ -230,19 +222,22 @@ targetRevision: "65.*"  # Floating minor version
 ### 2. Track Version Changes in Git
 
 ```bash
-git log --oneline --follow infrastructure/kubernetes/platform/argocd/applications/platform-observability.yaml
+# Platform components
+git log --oneline --follow infrastructure/kubernetes/platform/argocd/applications/platform-base.yaml
+
+# Apps
+git log --oneline --follow infrastructure/kubernetes/apps/argocd/applications/apps-dev.yaml
 ```
 
 ### 3. Document Upgrade Reasons
 
 ```
-chore: update kube-prometheus-stack to 66.0.0
+chore: update keda to 2.17.0
 
-- Security patch for CVE-2024-XXXXX
-- Fixes Grafana dashboard rendering issue
-- Requires no configuration changes
+- CRD fixes and stability improvements
+- No breaking changes in configuration
 
-Release notes: https://github.com/.../releases/tag/v66.0.0
+Release notes: https://github.com/kedacore/charts/releases
 ```
 
 ### 4. Monitor After Updates
@@ -251,11 +246,11 @@ Release notes: https://github.com/.../releases/tag/v66.0.0
 # Watch ArgoCD sync status
 kubectl get applications -n argocd -w
 
-# Check pod health
-kubectl get pods -n monitoring
+# Check pod health (OTEL DaemonSet)
+kubectl get pods -n observability
 
 # Check logs for errors
-kubectl logs -n monitoring -l app.kubernetes.io/name=prometheus --tail=50
+kubectl logs -n observability -l app.kubernetes.io/name=opentelemetry-collector --tail=50
 ```
 
 ---
@@ -266,44 +261,23 @@ kubectl logs -n monitoring -l app.kubernetes.io/name=prometheus --tail=50
 
 ```bash
 # From ArgoCD applications
-grep -A2 "chart: kube-prometheus-stack" infrastructure/kubernetes/platform/argocd/applications/platform-observability.yaml
+kubectl get applications -n argocd
 
-# From running cluster
-helm list -n monitoring
-helm list -n keda
+# From running cluster (if using Helm)
+helm list -n observability
 ```
 
 ### View Chart Details
 
 ```bash
 # Show chart information
-helm show chart prometheus-community/kube-prometheus-stack --version 65.0.0
+helm show chart kedacore/keda --version 2.15.1
 
 # Show default values
-helm show values grafana/loki --version 6.16.0
+helm show values kedacore/keda --version 2.15.1
 
 # Show README
 helm show readme kedacore/keda --version 2.15.1
-```
-
-### Compare Versions
-
-```bash
-# List all available versions
-helm search repo prometheus-community/kube-prometheus-stack --versions
-
-# Show what would change
-helm template monitoring prometheus-community/kube-prometheus-stack \
-  --version 65.0.0 \
-  --values infrastructure/kubernetes/platform/helm-values/dev/kube-prometheus-stack.values.yaml \
-  > /tmp/old.yaml
-
-helm template monitoring prometheus-community/kube-prometheus-stack \
-  --version 66.0.0 \
-  --values infrastructure/kubernetes/platform/helm-values/dev/kube-prometheus-stack.values.yaml \
-  > /tmp/new.yaml
-
-diff /tmp/old.yaml /tmp/new.yaml
 ```
 
 ---
@@ -315,7 +289,7 @@ diff /tmp/old.yaml /tmp/new.yaml
 **Check:**
 
 ```bash
-kubectl get application platform-observability -n argocd -o yaml
+kubectl get application platform-base -n argocd -o yaml
 ```
 
 **Common causes:**
@@ -328,26 +302,23 @@ kubectl get application platform-observability -n argocd -o yaml
 
 ```bash
 # Force refresh
-kubectl patch application platform-observability -n argocd \
+kubectl patch application platform-base -n argocd \
   --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
 ```
 
-### Issue: Pods CrashLoopBackOff after update
+### Issue: OTEL DaemonSet not exporting telemetry
 
-**Check logs:**
+**Check:**
 
 ```bash
-kubectl logs -n monitoring <pod-name> --previous
+kubectl get pods -n observability -l app.kubernetes.io/name=opentelemetry-collector
+kubectl logs -n observability -l app.kubernetes.io/name=opentelemetry-collector
 ```
 
-**Rollback:**
+**Verify Docker Compose OTEL Collector is running:**
 
 ```bash
-# Revert YAML file to previous version
-git revert <commit-hash>
-git push
-
-# Or manually edit and change targetRevision back
+docker ps | grep otel
 ```
 
 ---
@@ -356,9 +327,10 @@ git push
 
 Track major version changes here:
 
-| Date       | Chart      | Old Version | New Version       | Reason        |
-| ---------- | ---------- | ----------- | ----------------- | ------------- |
-| 2026-01-17 | (baseline) | -           | (see table above) | Initial setup |
+| Date       | Chart               | Old Version | New Version | Reason                 |
+| ---------- | ------------------- | ----------- | ----------- | ---------------------- |
+| 2026-01-17 | (baseline)          | -           | (see above) | Initial setup          |
+| 2026-02-01 | Architecture change | -           | -           | Observability → Docker |
 
 ---
 
@@ -382,8 +354,8 @@ Track major version changes here:
 
 **Consider:**
 
-- Review all charts for major version updates
-- Align with vendor LTS releases
+- Review OTEL and KEDA charts for major version updates
+- Evaluate if in-cluster observability is needed for production
 - Create staging environment for testing
 - Automate version checks in CI/CD
 
@@ -395,6 +367,7 @@ Track major version changes here:
 - [Helm Chart Versions](https://helm.sh/docs/topics/charts/#the-chart-version)
 - [Local Setup Guide](./development/local-setup.md)
 - [ADR-004: Observability](./adr/ADR-004-observability.md)
+- [Docker Compose Observability](../orchestration/apphost-compose/OBSERVABILITY_STACK_SETUP.md)
 
 ---
 
@@ -404,9 +377,10 @@ Track major version changes here:
 - Helm chart versions follow [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH)
 - ArgoCD automatically detects new versions when Git repository is updated
 - Use automated scripts to avoid manual errors
+- Full observability (Prometheus, Grafana, Loki, Tempo) runs in Docker Compose
 
 ---
 
-> **Last Updated:** January 17, 2026  
+> **Last Updated:** February 1, 2026  
 > **Scripts:** `scripts/check-helm-versions.ps1`, `scripts/update-helm-versions.ps1`  
-> **Status:** ✅ All charts at stable versions for Phase 5
+> **Key Change:** Observability moved to Docker Compose

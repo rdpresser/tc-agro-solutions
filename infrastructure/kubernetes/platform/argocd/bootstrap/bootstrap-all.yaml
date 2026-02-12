@@ -1,0 +1,95 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Platform components (observability, autoscaling, ingress, etc)
+  
+  sourceRepos:
+    - '*'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  description: Application components (frontend, microservices, etc)
+  
+  sourceRepos:
+    - '*'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-bootstrap
+  namespace: argocd
+  labels:
+    bootstrap: "true"
+    component: platform
+spec:
+  project: platform
+  
+  source:
+    repoURL: https://github.com/rdpresser/tc-agro-solutions.git
+    targetRevision: main
+    path: infrastructure/kubernetes/platform/argocd/applications
+    directory:
+      recurse: true
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-bootstrap
+  namespace: argocd
+  labels:
+    bootstrap: "true"
+    component: apps
+spec:
+  project: apps
+  
+  source:
+    repoURL: https://github.com/rdpresser/tc-agro-solutions.git
+    targetRevision: main
+    path: infrastructure/kubernetes/apps/argocd/applications
+    directory:
+      recurse: true
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

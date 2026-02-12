@@ -9,10 +9,16 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  otlp/from-k3d:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:14317
+      http:
+        endpoint: 0.0.0.0:14318
 
 processors:
   batch:
-    timeout: 10s
+    timeout: 5s
     send_batch_size: 1024
     send_batch_max_size: 2048
 
@@ -23,20 +29,56 @@ processors:
 
   attributes:
     actions:
-      - key: environment
+      - key: deployment.environment
         value: development
         action: insert
-      - key: cluster
+      - key: cluster.name
         value: tc-agro-local
         action: insert
+
+      # Normalize correlation_id from common variants
+      - key: correlation_id
+        from_attribute: correlationId
+        action: insert
+      - key: correlation_id
+        from_attribute: CorrelationId
+        action: insert
+
+  # ============================================================
+  # Resource processor: Manage resource attributes
+  # ============================================================
+  # Used to promote log/trace attributes for better correlation
+  resource:
+    attributes:
+      - key: service.name
+        action: upsert
+        from_attribute: service.name
+      - key: deployment.environment
+        action: upsert
+        from_attribute: deployment.environment
+
+  # ============================================================
+  # Metrics-specific attributes processor
+  # ============================================================
+  # Remove problematic scope attributes that cause Prometheus duplicate label errors
+  # These attributes are added by .NET OpenTelemetry instrumentations (AspNetCore, Runtime, etc.)
+  attributes/metrics:
+    actions:
+      - key: otel.scope.name
+        action: delete
+      - key: otel.scope.version
+        action: delete
 
 exporters:
   # Prometheus exporter for metrics
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: tc_agro
-    const_labels:
-      environment: development
+    # CRITICAL: Disable resource_to_telemetry conversion
+    # This prevents resource attributes from being added as metric labels
+    # which causes duplicate label name errors in Prometheus
+    resource_to_telemetry_conversion:
+      enabled: false
 
   # Tempo exporter for traces (via gRPC OTLP)
   otlp/tempo:
@@ -44,33 +86,47 @@ exporters:
     tls:
       insecure: true
 
-  # Loki exporter for logs (via OTLP HTTP)
+  # Aspire Dashboard exporter (OTLP gRPC) - DISABLED: Using Grafana Stack instead
+  # otlp/aspire:
+  #   endpoint: "aspire-dashboard-ui:18889"
+  #   tls:
+  #     insecure: true
+
+  # Loki exporter for logs (via OTLP HTTP endpoint - Loki 2.9+ supports OTLP)
   otlphttp/loki:
     endpoint: "http://loki:3100/otlp"
+    tls:
+      insecure: true
     headers:
-      Content-Type: "application/protobuf"
-    compression: gzip
-    timeout: 10s
+      X-Scope-OrgID: "1"
+
+  # Debug exporter for development troubleshooting
+  debug:
+    verbosity: detailed
 
 service:
   pipelines:
     # Traces pipeline
     traces:
-      receivers: [otlp]
+      receivers: [otlp, otlp/from-k3d]
       processors: [memory_limiter, batch, attributes]
+      # exporters: [otlp/tempo, otlp/aspire]  # DISABLED: Using Grafana Stack
       exporters: [otlp/tempo]
 
     # Metrics pipeline
+    # CRITICAL: attributes/metrics removes otel.scope.* attributes to prevent Prometheus duplicate labels
     metrics:
-      receivers: [otlp]
-      processors: [memory_limiter, batch, attributes]
+      receivers: [otlp, otlp/from-k3d]
+      processors: [memory_limiter, attributes/metrics, batch, attributes]
+      # exporters: [prometheus, otlp/aspire]  # DISABLED: Using Grafana Stack
       exporters: [prometheus]
 
-    # Logs pipeline - send to Loki via OTLP HTTP
+    # Logs pipeline - attributes processor normalizes correlation_id variants
     logs:
-      receivers: [otlp]
-      processors: [memory_limiter, batch, attributes]
-      exporters: [otlphttp/loki]
+      receivers: [otlp, otlp/from-k3d]
+      processors: [memory_limiter, batch, attributes, resource]
+      # exporters: [otlphttp/loki, otlp/aspire, debug]  # DISABLED: Using Grafana Stack
+      exporters: [otlphttp/loki, debug]
 
   # Extensions disabled for local development
   # extensions:

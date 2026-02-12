@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: k3d-localhost:5000/tc-agro-frontend-service:latest
-        imagePullPolicy: IfNotPresent
+        image: rdpresser/frontend-service:d35f085
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080

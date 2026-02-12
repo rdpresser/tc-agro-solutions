@@ -102,6 +102,8 @@ services:
   # SERVICE - Identity Service (Development Mode)
   # =====================================================
   tc-agro-identity-service:
+    # ⚠️ IMPORTANT: Override 'image:' to use local build (not Docker Hub)
+    image: tc-agro-identity-service:dev-local
     restart: "no"
     # Override build configuration for development
     build:
@@ -129,11 +131,8 @@ services:
       - Serilog__MinimumLevel__Override__Microsoft=Information
       - Serilog__MinimumLevel__Override__System=Information
 
-      # Console output for debugging
-      - Serilog__WriteTo__0__Name=Console
-
-      # Disable Telemetry (Grafana Agent) by default for development
-      - Telemetry__Grafana__Agent__Enabled=false
+      # Telemetry (Grafana Agent) - Use value from .env
+      - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
 
     # Enable hot-reload: map source code as volume
     volumes:
@@ -168,41 +167,59 @@ services:
   # FRONTEND - Development Mode
   # =====================================================
   tc-agro-frontend-service:
+    # ⚠️ IMPORTANT: Override 'image:' to use local build (not Docker Hub)
+    image: tc-agro-frontend-service:dev-local
     restart: "no"
     build:
       context: ../../poc/frontend
       dockerfile: Dockerfile
       args:
         VITE_BASE_PATH: /
+      # Force rebuild on every docker-compose up (uncomment if needed)
+      # no_cache: true
     ports:
       - "5010:8080"
     # No additional environment variables needed for static frontend
     # Nginx serves pre-built static files
 
   # =====================================================
+  # SERVICE - Farm Service (Development Mode)
+  # =====================================================
+  tc-agro-farm-service:
+    image: tc-agro-farm-service:dev-local
+    restart: "no"
+    build:
+      context: ../../
+      dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Debug
+    ports:
+      - "5002:8080" # HTTP
+      - "5012:8081" # HTTPS
+      - "15002:15001" # VS Debugger port
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - Serilog__MinimumLevel__Default=Debug
+      - Serilog__MinimumLevel__Override__Microsoft=Information
+      - Serilog__MinimumLevel__Override__System=Information
+      - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
+    volumes:
+      - farm_logs:/app/logs
+      - farm_nuget_cache:/root/.nuget/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # =====================================================
   # FUTURE SERVICES - Development Placeholders
   # =====================================================
-
-  # # Farm Service - Development Mode (Uncomment when ready)
-  # tc-agro-farm-service:
-  #   build:
-  #     context: ../../
-  #     dockerfile: services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile
-  #     args:
-  #       BUILD_CONFIGURATION: Debug
-  #   ports:
-  #     - "5002:8080"
-  #     - "15002:15001"  # Debug port
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
-  #     - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
-  #     - Serilog__MinimumLevel__Default=Debug
-  #   volumes:
-  #     # - ../../services/farm-service/src:/app/src:ro
-  #     - farm_nuget_cache:/root/.nuget/packages
-  #   restart: on-failure:3
-
   # # Sensor Ingest Service - Development Mode (Uncomment when ready)
   # tc-agro-sensor-ingest-service:
   #   build:
@@ -272,9 +289,9 @@ volumes:
   identity_nuget_cache:
     name: tc-agro-identity-nuget-cache
 
-  # Uncomment for additional services
-  # farm_nuget_cache:
-  #   name: tc-agro-farm-nuget-cache
+  # Farm Service cache
+  farm_nuget_cache:
+    name: tc-agro-farm-nuget-cache
   # sensor_ingest_nuget_cache:
   #   name: tc-agro-sensor-ingest-nuget-cache
   # analytics_worker_nuget_cache:

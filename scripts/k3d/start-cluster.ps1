@@ -11,7 +11,11 @@
 #>
 
 $clusterName = "dev"
-$registryName = "localhost"
+
+$portUtils = Join-Path $PSScriptRoot "port-utils.ps1"
+if (Test-Path $portUtils) {
+    . $portUtils
+}
 
 $Color = @{
     Success = "Green"
@@ -50,46 +54,22 @@ if (-not $clusterExists) {
 }
 Write-Host "   ✅ Cluster exists" -ForegroundColor $Color.Success
 
-# Ensure registry is running (needed for image pulls)
-Write-Host "   Ensuring registry k3d-$registryName is running..." -ForegroundColor $Color.Muted
-$registryInfo = k3d registry list 2>&1 | Select-String "k3d-$registryName"
-if ($registryInfo) {
-    $regStatus = ($registryInfo.Line -split "\s+")[2]
-    if ($regStatus -ne "running") {
-        Write-Host "   Registry is $regStatus, starting..." -ForegroundColor $Color.Warning
-        $regStart = k3d registry start $registryName 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Failed to start registry k3d-$registryName" -ForegroundColor $Color.Error
-            Write-Host "   Output: $regStart" -ForegroundColor $Color.Muted
-            exit 1
+$apiStatus = $null
+if (Get-Command Test-K3dApiPortHealth -ErrorAction SilentlyContinue) {
+    $apiStatus = Test-K3dApiPortHealth -ClusterName $clusterName
+    if ($apiStatus.Port) {
+        if ($apiStatus.IsExcluded) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is in a Windows excluded port range." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: re-run .\bootstrap.ps1 to recreate the cluster with a safe port." -ForegroundColor $Color.Muted
         }
-        Write-Host "   ✅ Registry started" -ForegroundColor $Color.Success
+        elseif ($apiStatus.IsInUse) {
+            Write-Host "⚠️  Cluster API port $($apiStatus.Port) is already in use on the host." -ForegroundColor $Color.Warning
+            Write-Host "   Recommendation: stop the conflicting process or re-run .\bootstrap.ps1." -ForegroundColor $Color.Muted
+        }
     }
-    else {
-        Write-Host "   ✅ Registry already running" -ForegroundColor $Color.Success
-    }
-}
-else {
-    Write-Host "⚠️  Registry k3d-$registryName not found (create with bootstrap if needed)" -ForegroundColor $Color.Warning
 }
 
-# Docker fallback: ensure registry container is running if it exists
-$regContainer = docker ps -a --filter "name=k3d-$registryName" --format "{{.ID}} {{.Status}}" 2>$null
-if ($regContainer) {
-    $parts = $regContainer.Trim() -split "\s+"
-    $cid = $parts[0]
-    $cstatus = ($parts[1..($parts.Length-1)] -join " ")
-    if ($cstatus -notlike "Up*") {
-        Write-Host "   Starting registry container (docker start $cid)..." -ForegroundColor $Color.Muted
-        docker start $cid 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ Registry container started" -ForegroundColor $Color.Success
-        }
-        else {
-            Write-Host "   ⚠️  Failed to start registry container $cid" -ForegroundColor $Color.Warning
-        }
-    }
-}
+
 
 # Start cluster with verbose output
 Write-Host ""
@@ -115,7 +95,7 @@ $lbContainer = docker ps -a --filter "name=$lbName" --format "{{.ID}} {{.Status}
 if ($lbContainer) {
     $parts = $lbContainer.Trim() -split "\s+"
     $cid = $parts[0]
-    $cstatus = ($parts[1..($parts.Length-1)] -join " ")
+    $cstatus = ($parts[1..($parts.Length - 1)] -join " ")
     if ($cstatus -notlike "Up*") {
         Write-Host "   Starting load-balancer container (docker start $cid)..." -ForegroundColor $Color.Muted
         docker start $cid 2>&1 | Out-Null
