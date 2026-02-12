@@ -7,7 +7,8 @@
 
   Supports:
   - tc-agro-frontend-service (poc/frontend)
-  - (future: microservices when they have Dockerfiles)
+  - tc-agro-identity-service (services/identity-service)
+  - tc-agro-sensor-ingest-service (services/sensor-ingest-service)
 
 .EXAMPLE
   .\build-push-images.ps1

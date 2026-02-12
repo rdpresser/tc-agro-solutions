@@ -4,5 +4,6 @@ kind: Kustomization
 resources:
   - ../../base/frontend
   - ../../base/identity
+  - ../../base/sensor-ingest
   - frontend-hpa.yaml
   - identity-hpa.yaml

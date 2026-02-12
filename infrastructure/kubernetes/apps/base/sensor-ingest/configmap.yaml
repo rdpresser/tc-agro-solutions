@@ -41,8 +41,13 @@ data:
   Services__Identity__HttpPort: "5001"
   Services__Farm__HttpPort: "5002"
   Services__SensorIngest__HttpPort: "5003"
-  Services__AnalyticsWorker__HttpPort: "5004"
-  Services__Dashboard__HttpPort: "5005"
+  Services__Dashboard__HttpPort: "5004"
+  Services__AnalyticsWorker__HttpPort: "5005"
+
+  # CORS
+  Cors__AllowedOrigins__0: "http://localhost:3000"
+  Cors__AllowedOrigins__1: "http://localhost:5173"
+  Cors__AllowedOrigins__2: "http://localhost:3080"
 
   # Logging
   Logging__LogLevel__Default: "Information"
