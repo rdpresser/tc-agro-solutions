@@ -8,7 +8,6 @@
   <!-- Docker Compose Files (nested under docker-compose.yml) -->
   <ItemGroup>
     <None Remove="orchestration\**" />
-    <None Remove="services\**" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".env.example" />

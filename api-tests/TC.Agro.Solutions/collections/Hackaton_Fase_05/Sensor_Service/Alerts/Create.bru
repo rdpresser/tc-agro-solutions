@@ -1,0 +1,31 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sensor_service_url}}/api/alerts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "severity": "Warning",
+    "title": "High Temperature",
+    "message": "Temperature exceeded 40C threshold",
+    "plotId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "plotName": "Plot Alpha",
+    "sensorId": "07efe506-4091-4c27-a124-23492d93d749"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
