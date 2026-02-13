@@ -11,7 +11,8 @@
       "SSLMode": "prefer",
       "Databases": {
         "tc-agro-identity-db": {},
-        "tc-agro-farm-db": {}
+        "tc-agro-farm-db": {},
+        "tc-agro-sensor-ingest-db": {}
       },
       "Comment": "PostgreSQL server with isolated databases per microservice"
     }
