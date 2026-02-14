@@ -1,0 +1,20 @@
+meta {
+  name: GetStatistics
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{sensor_service_url}}/api/dashboard/stats
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

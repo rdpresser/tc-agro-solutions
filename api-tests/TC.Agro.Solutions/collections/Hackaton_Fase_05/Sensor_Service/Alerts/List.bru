@@ -5,9 +5,18 @@ meta {
 }
 
 get {
-  url: {{sensor_service_url}}/api/alerts
+  url: {{sensor_service_url}}/api/alerts?pageNumber=1&pageSize=1&sortBy=createdat&sortDirection=desc&filter&status
   body: none
   auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 1
+  sortBy: createdat
+  sortDirection: desc
+  filter: 
+  status: 
 }
 
 auth:bearer {

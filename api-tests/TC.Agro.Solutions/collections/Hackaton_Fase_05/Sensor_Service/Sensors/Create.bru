@@ -1,0 +1,29 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sensor_service_url}}/api/sensors
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "sensorId": "b15fb970-859a-44c1-a417-57d43014b34c",
+    "plotId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "plotName": "Plot Alpha",
+    "battery": 95
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

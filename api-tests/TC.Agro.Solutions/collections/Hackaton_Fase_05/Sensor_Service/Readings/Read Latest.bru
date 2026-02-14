@@ -1,0 +1,47 @@
+meta {
+  name: Read Latest
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{sensor_service_url}}/api/readings/latest
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "readings": [
+      {
+        "sensorId": "1df5a85e-64f5-4152-a7cd-7a3ab93eb815",
+        "plotId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "timestamp": "2026-02-14T03:46:56.0185484Z",
+        "temperature": 28.5,
+        "humidity": 65.2,
+        "soilMoisture": 42.1,
+        "rainfall": 0,
+        "batteryLevel": 85
+      },
+      {
+        "sensorId": "b0faac23-dd0c-40e8-a377-b595f2ef82ca",
+        "plotId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "timestamp": "2026-02-14T03:46:56.0186221Z",
+        "temperature": 29.1,
+        "humidity": 62.8,
+        "soilMoisture": 38.5,
+        "rainfall": 0,
+        "batteryLevel": 92
+      }
+    ]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

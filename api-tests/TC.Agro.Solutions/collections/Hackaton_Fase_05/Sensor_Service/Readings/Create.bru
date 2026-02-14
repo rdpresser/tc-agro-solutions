@@ -1,0 +1,33 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sensor_service_url}}/api/readings
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "sensorId": "f7becf1b-f23b-4a08-9713-5a3c826299c4",
+    "plotId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "timestamp": "2026-02-14T03:46:56.0205311Z",
+    "temperature": 28.5,
+    "humidity": 65.2,
+    "soilMoisture": 42.1,
+    "rainfall": 0,
+    "batteryLevel": 85
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
