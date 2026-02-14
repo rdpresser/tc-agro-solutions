@@ -4,7 +4,7 @@ metadata:
   name: sensor-ingest-config
   namespace: agro-apps
 data:
-  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://0.0.0.0:8080"
   ASPNETCORE_APPL_PATH: "/sensor-ingest"
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
@@ -51,6 +51,51 @@ data:
   Logging__LogLevel__Default: "Information"
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
   Logging__LogLevel__System: "Warning"
+
+  # Auth / JWT (non-sensitive)
+  Auth__Jwt__ExpirationInMinutes: "60"
+
+  # ═══════════════════════════════════════════════════════════════════════════════════
+  # Telemetry / OpenTelemetry Configuration
+  # ═══════════════════════════════════════════════════════════════════════════════════
+  # TWO SEPARATE TELEMETRY PATHS (both important, different purposes):
+  #
+  # PATH 1: OpenTelemetry SDK (Traces + Metrics)
+  # ├─ Configured via:     Telemetry__Grafana__Otlp__* env vars (THIS ConfigMap)
+  # ├─ Protocol:           gRPC
+  # ├─ Port:               4317
+  # ├─ Endpoint:           otel-collector-agent.observability.svc.cluster.local:4317
+  # ├─ What it sends:      Traces, Metrics, Runtime metrics
+  # ├─ Final destination:  OTEL DaemonSet → Docker Compose otel-collector → Prometheus/Tempo
+  # └─ Status:             ✅ Configured here (ConfigMap)
+  #
+  # PATH 2: Serilog.Sinks.OpenTelemetry (Logs only)
+  # ├─ Configured via:     appsettings.Production.json (Serilog section)
+  # ├─ Protocol:           HTTP/Protobuf
+  # ├─ Port:               4318
+  # ├─ Endpoint:           otel-collector-agent.observability.svc.cluster.local:4318/v1/logs
+  # ├─ What it sends:      Structured logs (ILogger logs)
+  # ├─ Final destination:  OTEL DaemonSet → Docker Compose otel-collector → Loki
+  # └─ Status:             ✅ Configured in appsettings.Production.json (fallback)
+  #
+  # NOTE: ConfigMap values (PATH 1) OVERRIDE appsettings.Production.json values
+  #       But both ConfigMap and appsettings have same values for consistency
+
+  # Agent Configuration (OpenTelemetry SDK auto-instrumentation)
+  Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
+  Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
+  Telemetry__Grafana__Agent__OtlpHttpPort: "4318"
+  Telemetry__Grafana__Agent__MetricsPort: "8889"
+  Telemetry__Grafana__Agent__Enabled: "true"
+
+  # OTLP Endpoint (OpenTelemetry Protocol - for traces/metrics, NOT logs)
+  # This is PATH 1: gRPC on 4317 for traces and metrics
+  Telemetry__Grafana__Otlp__Endpoint: "http://otel-collector-agent.observability.svc.cluster.local:4317"
+  Telemetry__Grafana__Otlp__Protocol: "grpc"
+  Telemetry__Grafana__Otlp__TimeoutSeconds: "10"
+  Telemetry__Grafana__Otlp__Insecure: "true"
+
+  # Note: Serilog configuration (PATH 2 - logs via HTTP 4318) is in appsettings.Production.json
 
   # OpenTelemetry
   OpenTelemetry__Enabled: "true"

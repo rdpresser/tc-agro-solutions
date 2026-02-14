@@ -5,6 +5,8 @@ resources:
   - ../../base/frontend
   - ../../base/identity
   - ../../base/farm
+  - ../../base/sensor-ingest
   - frontend-hpa.yaml
   - identity-hpa.yaml
   - farm-hpa.yaml
+  - sensor-ingest-hpa.yaml

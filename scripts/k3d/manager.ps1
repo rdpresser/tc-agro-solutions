@@ -464,6 +464,7 @@ else {
             Write-Host "     1) frontend UI" -ForegroundColor $Color.Muted
             Write-Host "     2) identity-service" -ForegroundColor $Color.Muted
             Write-Host "     3) farm-service" -ForegroundColor $Color.Muted
+            Write-Host "     4) sensor-ingest-service" -ForegroundColor $Color.Muted
             Write-Host "   Example: 1,3" -ForegroundColor $Color.Muted
             
             $confirm = Read-Host "   Did you run 'docker login' already? (y/n - default: y)"
@@ -486,12 +487,13 @@ else {
                     "1" = "frontend-service"
                     "2" = "identity-service"
                     "3" = "farm-service"
+                    "4" = "sensor-ingest-service"
                 }
 
                 $invalid = $selection | Where-Object { -not $serviceMap.ContainsKey($_) }
                 if ($invalid.Count -gt 0) {
                     Write-Host "❌ Invalid selection: $($invalid -join ', ')" -ForegroundColor $Color.Error
-                    Write-Host "   Valid options: 1, 2, 3" -ForegroundColor $Color.Muted
+                    Write-Host "   Valid options: 1, 2, 3, 4" -ForegroundColor $Color.Muted
                     $null = Read-Host "`nPress Enter to continue"
                     continue
                 }
@@ -503,7 +505,7 @@ else {
             
             # Print per-deployment rollout summary for quick visibility
             Write-Host ""; Write-Host "📦 Deployment Rollout Summary:" -ForegroundColor $Color.Info
-            $deployments = @('frontend', 'identity-service', 'farm-service')
+            $deployments = @('frontend', 'identity-service', 'farm-service', 'sensor-ingest-service')
             foreach ($d in $deployments) {
                 $exists = kubectl get deployment $d -n agro-apps --no-headers 2>$null
                 if (-not $exists) {
@@ -655,6 +657,7 @@ else {
             Write-Host "Import secrets/configmaps for services:" -ForegroundColor $Color.Info
             Write-Host "  - identity" -ForegroundColor $Color.Muted
             Write-Host "  - farm" -ForegroundColor $Color.Muted
+            Write-Host "  - sensor-ingest" -ForegroundColor $Color.Muted
             Write-Host "  - all (default)" -ForegroundColor $Color.Muted
             Write-Host "";
 

@@ -19,8 +19,9 @@ function Apply-ConfigMaps {
     param([string[]]$SelectedServices, [string]$Ns)
 
     $serviceMap = @{
-        identity = "..\..\infrastructure\kubernetes\apps\base\identity\configmap.yaml"
-        farm     = "..\..\infrastructure\kubernetes\apps\base\farm\configmap.yaml"
+        identity        = "..\..\infrastructure\kubernetes\apps\base\identity\configmap.yaml"
+        farm            = "..\..\infrastructure\kubernetes\apps\base\farm\configmap.yaml"
+        "sensor-ingest" = "..\..\infrastructure\kubernetes\apps\base\sensor-ingest\configmap.yaml"
     }
 
     $targets = if ($SelectedServices -and $SelectedServices.Count -gt 0) {

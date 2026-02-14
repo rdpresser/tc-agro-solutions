@@ -8,6 +8,8 @@
   Supports:
   - rdpresser/frontend-service (poc/frontend)
   - rdpresser/identity-service (services/identity-service)
+    - rdpresser/farm-service (services/farm-service)
+    - rdpresser/sensor-ingest-service (services/sensor-ingest-service)
 
   Requires: docker login to have been executed successfully
 
@@ -18,7 +20,7 @@
 param(
     [ValidateSet("all", "platform", "apps")]
     [string]$SyncTarget = "apps",
-    [string[]]$Services = @("frontend-service", "identity-service", "farm-service"),
+    [string[]]$Services = @("frontend-service", "identity-service", "farm-service", "sensor-ingest-service"),
     [switch]$SkipSync
 )
 
@@ -29,7 +31,7 @@ $images = @(
     @{ name = "frontend-service"; path = "poc/frontend"; dockerfile = "Dockerfile"; repo = "$dockerHubUser/frontend-service" }
     @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile"; repo = "$dockerHubUser/identity-service" }
     @{ name = "farm-service"; path = "services/farm-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile"; repo = "$dockerHubUser/farm-service" }
-    # @{ name = "tc-agro-sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile" }
+    @{ name = "sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile"; repo = "$dockerHubUser/sensor-ingest-service" }
 )
 
 $Color = @{
@@ -48,9 +50,10 @@ function Update-GitOpsManifest {
     )
 
     $manifestMap = @{
-        "frontend-service" = "infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
-        "identity-service" = "infrastructure/kubernetes/apps/base/identity/deployment.yaml"
-        "farm-service"     = "infrastructure/kubernetes/apps/base/farm/deployment.yaml"
+        "frontend-service"      = "infrastructure/kubernetes/apps/base/frontend/deployment.yaml"
+        "identity-service"      = "infrastructure/kubernetes/apps/base/identity/deployment.yaml"
+        "farm-service"          = "infrastructure/kubernetes/apps/base/farm/deployment.yaml"
+        "sensor-ingest-service" = "infrastructure/kubernetes/apps/base/sensor-ingest/deployment.yaml"
     }
 
     $manifestPath = $manifestMap[$ServiceName]
@@ -185,12 +188,27 @@ if (-not $gitSha) {
     Write-Host "⚠️  Could not get git SHA, using 'latest' tag" -ForegroundColor $Color.Warning
 }
 
-$selectedServices = $Services | ForEach-Object { $_.Trim().ToLowerInvariant() }
+$serviceSelectionMap = @{
+    "1" = "frontend-service"
+    "2" = "identity-service"
+    "3" = "farm-service"
+    "4" = "sensor-ingest-service"
+}
+
+$selectedServices = $Services | ForEach-Object {
+    $value = $_.Trim().ToLowerInvariant()
+    if ($serviceSelectionMap.ContainsKey($value)) {
+        $serviceSelectionMap[$value]
+    }
+    else {
+        $value
+    }
+}
 $imagesToBuild = $images | Where-Object { $selectedServices -contains $_.name.ToLowerInvariant() }
 
 if (-not $imagesToBuild -or $imagesToBuild.Count -eq 0) {
     Write-Host "❌ No matching services found to build." -ForegroundColor $Color.Error
-    Write-Host "   Available: frontend-service, identity-service, farm-service" -ForegroundColor $Color.Muted
+    Write-Host "   Available: frontend-service, identity-service, farm-service, sensor-ingest-service" -ForegroundColor $Color.Muted
     exit 1
 }
 
@@ -281,7 +299,7 @@ foreach ($img in $imagesToBuild) {
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
-Write-Host "📊 Build Summary: $successfulImages/$($images.Count) successful" -ForegroundColor $Color.Info
+Write-Host "📊 Build Summary: $successfulImages/$($imagesToBuild.Count) successful" -ForegroundColor $Color.Info
 
 if ($successfulImages -eq 0) {
     Write-Host "❌ No images built successfully" -ForegroundColor $Color.Error
