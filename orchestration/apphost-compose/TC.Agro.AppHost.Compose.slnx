@@ -23,6 +23,13 @@
     <Project Path="../../common/src/TC.Agro.Messaging/TC.Agro.Messaging.csproj" />
     <Project Path="../../common/src/TC.Agro.SharedKernel/TC.Agro.SharedKernel.csproj" />
   </Folder>
+  <Folder Name="/Solution Items/" />
+  <Folder Name="/Solution Items/.github/">
+    <File Path="../../.github/copilot-instructions.md" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/workflows/">
+    <File Path="../../.github/workflows/frontend-ci.yml" />
+  </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>

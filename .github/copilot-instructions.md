@@ -749,6 +749,18 @@ dotnet run --project src/Agro.Farm.Api
 
 ---
 
+## 📁 Repository Roots & File Creation Rules
+
+- Treat the solution root as the reference point (no absolute local paths).
+- The repository contains multiple independent Git repos under `services/` and `common/`.
+- When creating files or classes, always place them relative to the active repository you are working in:
+  - If working inside a service repository (under `services/<service-name>/`), create files within that service repository.
+  - If working inside `common/`, create files within `common/`.
+- Do not place new files under the orchestration project (`orchestration/apphost-compose`) unless explicitly requested.
+- When asked to use a reference file, follow its relative path and place new files alongside it unless directed otherwise.
+
+---
+
 ## 🎯 Important Rules
 
 ### ✅ ALWAYS Do:
