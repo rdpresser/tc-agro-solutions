@@ -38,7 +38,7 @@ data:
   Messaging__RabbitMQ__AutoProvision: "true"
   Messaging__RabbitMQ__Durable: "true"
   Messaging__RabbitMQ__UseQuorumQueues: "false"
-  Messaging__RabbitMQ__AutoPurgeOnStartup: "false"
+  Messaging__RabbitMQ__AutoPurgeOnStartup: "true"
 
   # Service ports
   Services__Identity__HttpPort: "5001"
