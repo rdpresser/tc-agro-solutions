@@ -13,7 +13,7 @@ data:
   # Use Docker container name - k3d shares Docker network with compose
   Database__Postgres__Host: "tc-agro-postgres"
   Database__Postgres__Port: "5432"
-  Database__Postgres__Database: "tc-agro-ingestion-db"
+  Database__Postgres__Database: "tc-agro-sensor-ingest-db"
   Database__Postgres__UserName: "postgres"
   Database__Postgres__Schema: "public"
   Database__Postgres__MaintenanceDatabase: "postgres"

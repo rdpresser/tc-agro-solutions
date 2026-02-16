@@ -538,7 +538,7 @@ services:
 
   # SERVICE - Sensor Ingest Service (IoT Data Ingestion)
   tc-agro-sensor-ingest-service:
-    image: ${DOCKER_REGISTRY-}tc-agro-sensor-ingest-service:latest
+    image: ${DOCKER_REGISTRY-}sensor-ingest-service:latest
     container_name: tc-agro-sensor-ingest-service
     restart: unless-stopped
     env_file:
