@@ -3,62 +3,58 @@
  * Entry point script for property create/edit
  */
 
-import { getProperty, createProperty, updateProperty } from './api.js';
-import { requireAuth } from './auth.js';
+import { getProperty, createProperty, updateProperty, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $id, getQueryParam, navigateTo } from './utils.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+
+// ============================================
+// Page State
+// ============================================
+
+const editId = getQueryParam('id');
+const isEditMode = !!editId;
 
 // ============================================
 // Page Initialization
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Verify authentication
-  if (!requireAuth()) return;
+  if (!initProtectedPage()) return;
 
-  // Initialize protected page (sidebar, user display)
-  initProtectedPage();
-
-  // Check if editing existing property
-  const id = getQueryParam('id');
-  if (id) {
-    await loadProperty(id);
+  if (isEditMode) {
+    await setupEditMode();
   }
 
-  // Setup form handler
   setupFormHandler();
 });
 
 // ============================================
-// Load Property for Edit
+// Edit Mode Setup
 // ============================================
 
-async function loadProperty(id) {
+async function setupEditMode() {
+  const pageTitle = $id('pageTitle');
+  const formTitle = $id('formTitle');
+  const breadcrumbTitle = $id('breadcrumbTitle');
+  const submitBtn = $id('submitBtn');
+
+  if (pageTitle) pageTitle.textContent = 'Edit Property';
+  if (formTitle) formTitle.textContent = 'Edit Property';
+  if (breadcrumbTitle) breadcrumbTitle.textContent = 'Edit';
+  if (submitBtn) submitBtn.innerHTML = '💾 Update Property';
+
   try {
-    const property = await getProperty(id);
+    const property = await getProperty(editId);
     if (!property) {
-      toast('property.not_found', 'danger');
-      navigateTo('properties.html');
+      showFormError('Property not found.');
       return;
     }
-
-    // Update page titles
-    const pageTitle = $id('pageTitle');
-    const formTitle = $id('formTitle');
-    const breadcrumbTitle = $id('breadcrumbTitle');
-    const submitBtn = $id('submitBtn');
-
-    if (pageTitle) pageTitle.textContent = 'Edit Property';
-    if (formTitle) formTitle.textContent = 'Edit Property';
-    if (breadcrumbTitle) breadcrumbTitle.textContent = property.name;
-    if (submitBtn) submitBtn.innerHTML = '💾 Update Property';
-
-    // Populate form
+    if (breadcrumbTitle) breadcrumbTitle.textContent = property.name || 'Edit';
     populateForm(property);
   } catch (error) {
-    console.error('Failed to load property:', error);
-    toast('property.load_failed', 'danger');
+    const { message } = normalizeError(error);
+    showFormError(message || 'Failed to load property');
   }
 }
 
@@ -68,14 +64,15 @@ async function loadProperty(id) {
 
 function populateForm(property) {
   const fields = {
-    propertyId: property.id,
+    propertyId: property.id || '',
     name: property.name || '',
-    location: property.location || '',
+    address: property.address || '',
+    city: property.city || '',
+    state: property.state || '',
+    country: property.country || '',
     areaHectares: property.areaHectares || '',
-    latitude: property.latitude || '',
-    longitude: property.longitude || '',
-    status: property.status || 'active',
-    notes: property.notes || ''
+    latitude: property.latitude ?? '',
+    longitude: property.longitude ?? ''
   };
 
   Object.entries(fields).forEach(([id, value]) => {
@@ -85,7 +82,7 @@ function populateForm(property) {
 }
 
 // ============================================
-// Form Submit Handler
+// Form Handler
 // ============================================
 
 function setupFormHandler() {
@@ -94,58 +91,55 @@ function setupFormHandler() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    clearFormErrors();
 
-    const id = $id('propertyId')?.value;
-    const submitBtn = $id('submitBtn');
-
-    const data = {
-      name: $id('name')?.value,
-      location: $id('location')?.value,
+    const payload = {
+      name: $id('name')?.value?.trim(),
+      address: $id('address')?.value?.trim() || '',
+      city: $id('city')?.value?.trim(),
+      state: $id('state')?.value?.trim(),
+      country: $id('country')?.value?.trim(),
       areaHectares: parseFloat($id('areaHectares')?.value) || 0,
       latitude: $id('latitude')?.value ? parseFloat($id('latitude').value) : null,
-      longitude: $id('longitude')?.value ? parseFloat($id('longitude').value) : null,
-      status: $id('status')?.value || 'active',
-      notes: $id('notes')?.value || ''
+      longitude: $id('longitude')?.value ? parseFloat($id('longitude').value) : null
     };
 
-    // Validation
-    if (!data.name || !data.location || !data.areaHectares) {
-      toast('validation.property.required_fields', 'warning');
+    if (
+      !payload.name ||
+      !payload.city ||
+      !payload.state ||
+      !payload.country ||
+      !payload.areaHectares
+    ) {
+      showFormError('Please fill in all required fields.');
       return;
     }
 
+    showLoading('Saving property...');
+
     try {
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('app.saving')}`;
-      }
-
-      if (id) {
-        // Update existing
-        await updateProperty(id, data);
-        toast('property.updated_success', 'success');
+      if (isEditMode) {
+        const propertyId = $id('propertyId')?.value || editId;
+        if (!propertyId) {
+          throw new Error('Property ID is required for update.');
+        }
+        await updateProperty(propertyId, payload);
+        toast('Property updated successfully', 'success');
       } else {
-        // Create new
-        await createProperty(data);
-        toast('property.created_success', 'success');
+        await createProperty(payload);
+        toast('Property created successfully', 'success');
       }
 
-      // Redirect to list
-      setTimeout(() => {
-        navigateTo('properties.html');
-      }, 1000);
+      navigateTo('properties.html');
     } catch (error) {
-      console.error('Failed to save property:', error);
-      toast('property.save_failed', 'danger');
-
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '💾 Save Property';
-      }
+      const message = extractApiErrorMessage(error);
+      showFormError(message);
+    } finally {
+      hideLoading();
     }
   });
 
-  // Show English messages and override browser built-in validation text
+  // Custom validation messages
   form.addEventListener(
     'invalid',
     (e) => {
@@ -154,24 +148,61 @@ function setupFormHandler() {
       if (el.validity.valueMissing) {
         if (fieldId === 'name') {
           el.setCustomValidity(t('validation.property.name_required'));
-          toast('validation.property.name_required', 'warning');
-        } else if (fieldId === 'location') {
-          el.setCustomValidity(t('validation.property.location_required'));
-          toast('validation.property.location_required', 'warning');
+        } else if (fieldId === 'city') {
+          el.setCustomValidity('City is required');
+        } else if (fieldId === 'state') {
+          el.setCustomValidity('State is required');
+        } else if (fieldId === 'country') {
+          el.setCustomValidity('Country is required');
         } else if (fieldId === 'areaHectares') {
           el.setCustomValidity(t('validation.property.area_required'));
-          toast('validation.property.area_required', 'warning');
         } else {
           el.setCustomValidity(t('validation.property.required_fields'));
-          toast('validation.property.required_fields', 'warning');
         }
       }
     },
     true
   );
 
-  // Clear custom validity when user edits input
   form.addEventListener('input', (e) => {
     e.target.setCustomValidity('');
   });
+}
+
+// ============================================
+// Error Handling
+// ============================================
+
+function extractApiErrorMessage(error) {
+  const fallback = 'An error occurred. Please try again.';
+
+  if (error?.response?.data) {
+    const data = error.response.data;
+
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      const reasons = data.errors.map((err) => err.reason || err.message).filter(Boolean);
+      if (reasons.length > 0) return reasons.join('\n');
+    } else if (data.message) {
+      return data.message;
+    } else if (data.title || data.detail) {
+      return data.detail || data.title;
+    }
+  }
+
+  const normalized = normalizeError(error);
+  return normalized?.message || fallback;
+}
+
+function showFormError(message) {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+}
+
+function clearFormErrors() {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
 }

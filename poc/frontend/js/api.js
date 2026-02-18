@@ -228,20 +228,15 @@ export async function getProperties({
   sortDirection = 'asc',
   filter = ''
 } = {}) {
-  const { data } = await farmApi.get('/api/property', {
+  const { data } = await farmApi.get('/api/properties', {
     params: { pageNumber, pageSize, sortBy, sortDirection, filter }
   });
   return data;
 }
 
 export async function getProperty(id) {
-  const properties = await getProperties();
-  return properties.find((p) => p.id === id);
-
-  /* REAL API
-  const { data } = await api.get(`/properties/${id}`);
+  const { data } = await farmApi.get(`/api/properties/${encodeURIComponent(id)}`);
   return data;
-  */
 }
 
 /**
@@ -250,14 +245,9 @@ export async function getProperty(id) {
  * @returns {Promise<Object>} Created property (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function createProperty(propertyData) {
-  // MOCK - Return created property
-  return { id: `prop-${Date.now()}`, ...propertyData };
-
-  /* REAL API
-  const { data } = await api.post('/properties', propertyData);
+export async function createProperty(propertyData) {
+  const { data } = await farmApi.post('/api/properties', propertyData);
   return data;
-  */
 }
 
 /**
@@ -267,14 +257,9 @@ export function createProperty(propertyData) {
  * @returns {Promise<Object>} Updated property (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function updateProperty(id, propertyData) {
-  // MOCK
-  return { id, ...propertyData };
-
-  /* REAL API
-  const { data } = await api.put(`/properties/${id}`, propertyData);
+export async function updateProperty(id, propertyData) {
+  const { data } = await farmApi.put(`/api/properties/${encodeURIComponent(id)}`, propertyData);
   return data;
-  */
 }
 
 /**
@@ -283,14 +268,9 @@ export function updateProperty(id, propertyData) {
  * @returns {Promise<boolean>} Success status (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function deleteProperty(_id) {
-  // MOCK
+export async function deleteProperty(id) {
+  await farmApi.delete(`/api/properties/${encodeURIComponent(id)}`);
   return true;
-
-  /* REAL API
-  await api.delete(`/properties/${id}`);
-  return true;
-  */
 }
 
 // ============================================

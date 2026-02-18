@@ -47,8 +47,12 @@ async function loadPropertyFilter() {
   if (!select) return;
 
   try {
-    const properties = await getProperties();
-    select.innerHTML = `<option value="">All Properties</option>${properties
+    const response = await getProperties();
+    const properties = response?.data || response || [];
+    select.innerHTML = `<option value="">All Properties</option>${(Array.isArray(properties)
+      ? properties
+      : []
+    )
       .map((p) => `<option value="${p.id}">${p.name}</option>`)
       .join('')}`;
   } catch (error) {
