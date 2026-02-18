@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{farm_service_url}}/api/properties?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
+  url: {{farm_service_url}}/api/properties?pageNumber=1&pageSize=10&sortBy=updatedAt&sortDirection=desc&filter
   body: none
   auth: bearer
 }
@@ -13,8 +13,8 @@ get {
 params:query {
   pageNumber: 1
   pageSize: 10
-  sortBy: name
-  sortDirection: asc
+  sortBy: updatedAt
+  sortDirection: desc
   filter: 
 }
 

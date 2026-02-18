@@ -12,9 +12,45 @@ post {
 
 body:json {
   {
-      "email": "user@user1.com",
-      "password": "User@123"
+      "email": "producer@producer.com",
+      "password": "Producer@123"
   }
+}
+
+script:post-response {
+  // Garante que a resposta é JSON
+  const responseJson = res.getBody();
+  
+  // Verifica status HTTP
+  const status = res.getStatus();
+  
+  if (status !== 200 && status !== 201) {
+      console.log("⚠️ Requisição não retornou sucesso:", status);
+      return;
+  }
+  
+  // Validação segura
+  if (!responseJson || typeof responseJson !== "object") {
+      throw new Error("❌ Resposta não é JSON válido");
+  }
+  
+  const newToken = responseJson.jwtToken;
+  
+  // Validação do token
+  if (!newToken || typeof newToken !== "string" || newToken.length === 0) {
+      throw new Error("❌ Token inválido ou ausente na resposta");
+  }
+  
+  // Set env var
+  bru.setEnvVar("admin_token", newToken);
+  
+  console.log("✅ Token atualizado com sucesso!");
+  console.log("🔑 Novo token:", newToken);
+  
+  // Testes
+  assert(newToken, "Token deve existir");
+  assert(newToken.length > 0, "Token não pode ser vazio");
+  
 }
 
 settings {
