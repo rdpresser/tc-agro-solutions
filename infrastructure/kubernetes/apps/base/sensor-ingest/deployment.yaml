@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: sensor-ingest-service
-        image: rdpresser/sensor-ingest-service:040fe1bb
+        image: rdpresser/sensor-ingest-service:1f4fc84d
         imagePullPolicy: Always
         ports:
         - name: http
