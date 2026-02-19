@@ -70,7 +70,7 @@ async function loadProperties(filters = getFiltersFromUI()) {
   const summary = $('#propertiesSummary');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
 
   try {
     const data = await getProperties(filters);
@@ -88,7 +88,7 @@ async function loadProperties(filters = getFiltersFromUI()) {
     const { message } = normalizeError(error);
     console.error('Error loading properties:', error);
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center text-danger">Error loading properties</td></tr>';
+      '<tr><td colspan="8" class="text-center text-danger">Error loading properties</td></tr>';
     if (summary) summary.textContent = 'Failed to load properties';
     toast(message || 'properties.load_failed', 'error');
   }
@@ -124,13 +124,14 @@ function renderPropertiesTable(properties) {
 
   if (!properties.length) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center text-muted">No properties found</td></tr>';
+      '<tr><td colspan="8" class="text-center text-muted">No properties found</td></tr>';
     return;
   }
 
   tbody.innerHTML = properties
     .map((prop) => {
       const id = prop.id || '';
+      const ownerName = prop.ownerName || '-';
       const location = [prop.city, prop.state, prop.country].filter(Boolean).join(', ') || '-';
       const area = Number(prop.areaHectares || 0);
       const plots = Number(prop.plotCount || 0);
@@ -139,7 +140,8 @@ function renderPropertiesTable(properties) {
 
       return `
     <tr data-id="${id}">
-      <td><strong>${prop.name || '-'}</strong></td>
+      <td><strong>${ownerName}</strong></td>
+      <td>${prop.name || '-'}</td>
       <td>${location}</td>
       <td>${area.toLocaleString('en-US')} ha</td>
       <td>${plots} plot(s)</td>
