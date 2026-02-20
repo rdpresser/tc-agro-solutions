@@ -5,7 +5,7 @@
 import { getPlotsPaginated, getProperties, deletePlot, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, showConfirm, getPageUrl } from './utils.js';
+import { $, showConfirm, getPageUrl, debounce } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -21,14 +21,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
 });
 
+let lastPageState = {
+  pageNumber: 1,
+  pageCount: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+  totalCount: 0
+};
+
 // ============================================
 // DATA LOADING
 // ============================================
 
 function getCurrentFilters() {
   return {
+    pageNumber: Number($('#plots-page-number')?.value || 1),
+    pageSize: Number($('#plots-page-size')?.value || 10),
+    sortBy: $('#plots-sort-by')?.value || 'name',
+    sortDirection: $('#plots-sort-direction')?.value || 'asc',
     propertyId: $('#filter-property')?.value || '',
     cropType: $('#filter-crop')?.value || '',
+    status: $('#filter-status')?.value || '',
     filter: $('#search-plots')?.value?.trim() || ''
   };
 }
@@ -40,27 +53,99 @@ async function loadPlots() {
   tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
 
   try {
-    const data = await getPlotsPaginated({ pageNumber: 1, pageSize: 100, ...getCurrentFilters() });
-    const plots = normalizePlotsResponse(data);
+    const filters = getCurrentFilters();
+    const data = await getPlotsPaginated(filters);
+    const normalized = normalizePlotsResponse(data, filters);
+    const plots = normalized.items;
+
+    updatePageOptions(normalized.pageCount, normalized.pageNumber);
+    updatePagerControls(normalized);
+    lastPageState = normalized;
+
     renderPlotsTable(plots);
-    renderSummary(plots);
+    renderSummary(normalized);
   } catch (error) {
     const { message } = normalizeError(error);
     console.error('Error loading plots:', error);
     tbody.innerHTML =
       '<tr><td colspan="7" class="text-center text-danger">Error loading plots</td></tr>';
-    renderSummary([]);
+    renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
     toast(message || 'plots.load_failed', 'error');
   }
 }
 
-function normalizePlotsResponse(data) {
+function normalizePlotsResponse(data, filters) {
   if (Array.isArray(data)) {
-    return data.map(normalizePlotItem);
+    const normalizedItems = data.map(normalizePlotItem);
+    const filteredItems = applyStatusFilter(normalizedItems, filters?.status);
+    const pageSize = filters?.pageSize || 10;
+    const pageNumber = filters?.pageNumber || 1;
+    const totalCount = filteredItems.length;
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const safePage = Math.min(Math.max(1, pageNumber), pageCount);
+    const start = (safePage - 1) * pageSize;
+
+    return {
+      items: filteredItems.slice(start, start + pageSize),
+      totalCount,
+      pageNumber: safePage,
+      pageSize,
+      pageCount,
+      hasPreviousPage: safePage > 1,
+      hasNextPage: safePage < pageCount
+    };
   }
 
   const items = data?.data || data?.items || data?.results || [];
-  return (Array.isArray(items) ? items : []).map(normalizePlotItem);
+  const normalizedItems = (Array.isArray(items) ? items : []).map(normalizePlotItem);
+  const filteredItems = applyStatusFilter(normalizedItems, filters?.status);
+  const totalCount =
+    filters?.status && Number.isFinite(Number(data?.totalCount))
+      ? filteredItems.length
+      : Number(data?.totalCount ?? filteredItems.length);
+  const pageNumber = Number(data?.pageNumber || filters?.pageNumber || 1);
+  const pageSize = Number(data?.pageSize || filters?.pageSize || 10);
+  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
+  const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;
+
+  return {
+    items: filteredItems,
+    totalCount,
+    pageNumber,
+    pageSize,
+    pageCount,
+    hasPreviousPage,
+    hasNextPage
+  };
+}
+
+function applyStatusFilter(items, status) {
+  if (!status) return items;
+  return items.filter((item) => item.status === status);
+}
+
+function updatePageOptions(pageCount, currentPage) {
+  const pageSelect = $('#plots-page-number');
+  if (!pageSelect) return;
+
+  const pages = Math.max(1, pageCount || 1);
+  pageSelect.innerHTML = Array.from({ length: pages }, (_, index) => {
+    const page = index + 1;
+    return `<option value="${page}">${page}</option>`;
+  }).join('');
+
+  const safePage = Math.min(Math.max(1, currentPage || 1), pages);
+  pageSelect.value = String(safePage);
+}
+
+function updatePagerControls(state) {
+  const prevBtn = $('#plots-prev');
+  const nextBtn = $('#plots-next');
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.disabled = !state.hasPreviousPage;
+  nextBtn.disabled = !state.hasNextPage;
 }
 
 function normalizePlotItem(plot) {
@@ -140,13 +225,14 @@ function renderPlotsTable(plots) {
     .join('');
 }
 
-function renderSummary(plots) {
+function renderSummary(state) {
   const summaryText = $('#plots-summary-text');
   const summaryArea = $('#plots-summary-area');
   const healthyBadge = $('#plots-summary-healthy');
   const warningBadge = $('#plots-summary-warning');
   const alertBadge = $('#plots-summary-alert');
 
+  const plots = state?.items || [];
   const totalArea = plots.reduce((sum, plot) => sum + Number(plot.areaHectares || 0), 0);
   const healthyCount = plots.filter((plot) => plot.status === 'healthy').length;
   const warningCount = plots.filter((plot) => plot.status === 'warning').length;
@@ -154,7 +240,9 @@ function renderSummary(plots) {
     (plot) => plot.status === 'alert' || plot.status === 'critical'
   ).length;
 
-  if (summaryText) summaryText.textContent = `Showing ${plots.length} plot(s)`;
+  if (summaryText) {
+    summaryText.textContent = `Showing ${plots.length} of ${state?.totalCount ?? plots.length} plot(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
+  }
   if (summaryArea) summaryArea.textContent = `Total Area: ${totalArea.toLocaleString('en-US')} ha`;
   if (healthyBadge) healthyBadge.textContent = `${healthyCount} Healthy`;
   if (warningBadge) warningBadge.textContent = `${warningCount} Warning`;
@@ -213,20 +301,95 @@ function getStatusIcon(status) {
 // ============================================
 
 function setupEventListeners() {
-  // Property filter
+  const filtersForm = $('#plotsFilterForm');
+  filtersForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadPlots();
+  });
+
   const propertyFilter = $('#filter-property');
   propertyFilter?.addEventListener('change', () => {
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
     loadPlots();
   });
 
   const cropFilter = $('#filter-crop');
   cropFilter?.addEventListener('change', () => {
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
     loadPlots();
   });
 
-  // Search filter
+  const statusFilter = $('#filter-status');
+  statusFilter?.addEventListener('change', () => {
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadPlots();
+  });
+
+  const pageNumber = $('#plots-page-number');
+  pageNumber?.addEventListener('change', () => {
+    loadPlots();
+  });
+
+  const pageSize = $('#plots-page-size');
+  pageSize?.addEventListener('change', () => {
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadPlots();
+  });
+
+  const sortBy = $('#plots-sort-by');
+  sortBy?.addEventListener('change', () => {
+    loadPlots();
+  });
+
+  const sortDirection = $('#plots-sort-direction');
+  sortDirection?.addEventListener('change', () => {
+    loadPlots();
+  });
+
   const searchInput = $('#search-plots');
+  const debouncedSearch = debounce(() => {
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadPlots();
+  }, 300);
+
   searchInput?.addEventListener('input', () => {
+    debouncedSearch();
+  });
+
+  const prevBtn = $('#plots-prev');
+  prevBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasPreviousPage) return;
+    const pageSelect = $('#plots-page-number');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current > 1) {
+      pageSelect.value = String(current - 1);
+      await loadPlots();
+    }
+  });
+
+  const nextBtn = $('#plots-next');
+  nextBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasNextPage) return;
+    const pageSelect = $('#plots-page-number');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current < lastPageState.pageCount) {
+      pageSelect.value = String(current + 1);
+      await loadPlots();
+    }
+  });
+
+  searchInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const pageSelect = $('#plots-page-number');
+    if (pageSelect) pageSelect.value = '1';
     loadPlots();
   });
 

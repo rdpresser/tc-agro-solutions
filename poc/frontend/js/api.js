@@ -294,15 +294,18 @@ export async function getPlot(id) {
 
 export async function getPlotsPaginated({
   pageNumber = 1,
-  pageSize = 50,
+  pageSize = 10,
   sortBy = 'name',
   sortDirection = 'asc',
   filter = '',
   propertyId = '',
-  cropType = ''
+  cropType = '',
+  status = ''
 } = {}) {
+  void status;
+
   const params = {
-    pageNumber,
+    pageNumber: 1,
     pageSize,
     sortBy,
     sortDirection,
@@ -317,7 +320,7 @@ export async function getPlotsPaginated({
   });
 
   const fetchPlotsFromProperty = async (targetPropertyId) => {
-    let currentPage = Number(pageNumber) || 1;
+    let currentPage = 1;
     const all = [];
     let totalPages = 1;
 
@@ -344,7 +347,17 @@ export async function getPlotsPaginated({
   };
 
   if (propertyId) {
-    return fetchPlotsFromProperty(propertyId);
+    const { data } = await farmApi.get(`/api/properties/${encodeURIComponent(propertyId)}/plots`, {
+      params: {
+        pageNumber,
+        pageSize,
+        sortBy,
+        sortDirection,
+        filter,
+        cropType
+      }
+    });
+    return data;
   }
 
   const properties = [];
@@ -379,7 +392,59 @@ export async function getPlotsPaginated({
       .map((id) => fetchPlotsFromProperty(id))
   );
 
-  return plotGroups.flat();
+  const combined = plotGroups.flat();
+
+  const normalizedSortBy = String(sortBy || 'name').toLowerCase();
+  const directionFactor = String(sortDirection || 'asc').toLowerCase() === 'desc' ? -1 : 1;
+
+  const getComparableValue = (item) => {
+    switch (normalizedSortBy) {
+      case 'propertyname':
+        return item?.propertyName || '';
+      case 'croptype':
+      case 'type':
+        return item?.cropType || '';
+      case 'areahectares':
+      case 'area':
+        return Number(item?.areaHectares ?? 0);
+      case 'sensorcount':
+        return Number(item?.sensorCount ?? 0);
+      case 'createdat':
+      case 'updatedat':
+        return item?.createdAt || '';
+      default:
+        return item?.name || '';
+    }
+  };
+
+  combined.sort((a, b) => {
+    const valueA = getComparableValue(a);
+    const valueB = getComparableValue(b);
+
+    if (typeof valueA === 'number' && typeof valueB === 'number') {
+      return (valueA - valueB) * directionFactor;
+    }
+
+    return String(valueA).localeCompare(String(valueB)) * directionFactor;
+  });
+
+  const safePageSize = Math.max(1, Number(pageSize) || 10);
+  const safePageNumber = Math.max(1, Number(pageNumber) || 1);
+  const totalCount = combined.length;
+  const pageCount = Math.max(1, Math.ceil(totalCount / safePageSize));
+  const boundedPageNumber = Math.min(safePageNumber, pageCount);
+  const start = (boundedPageNumber - 1) * safePageSize;
+  const data = combined.slice(start, start + safePageSize);
+
+  return {
+    data,
+    totalCount,
+    pageNumber: boundedPageNumber,
+    pageSize: safePageSize,
+    pageCount,
+    hasPreviousPage: boundedPageNumber > 1,
+    hasNextPage: boundedPageNumber < pageCount
+  };
 }
 
 /**

@@ -78,7 +78,6 @@
         </header>
 
         <div class="content">
-          <!-- Page Header -->
           <div class="page-header">
             <div class="page-header-title">
               <span class="page-header-icon">🌱</span>
@@ -96,33 +95,90 @@
             </div>
           </div>
 
-          <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom: 0">
-                <input
-                  type="text"
-                  id="search-plots"
-                  class="form-control"
-                  placeholder="🔍 Search plots..."
-                />
+            <form id="plotsFilterForm">
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0">
+                  <input
+                    type="text"
+                    id="search-plots"
+                    class="form-control"
+                    placeholder="🔍 Filter by plot name or property"
+                  />
+                </div>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
-                <select id="filter-property" class="form-control form-select">
-                  <option value="">All Properties</option>
-                </select>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Property</label>
+                  <select id="filter-property" class="form-control form-select">
+                    <option value="">All Properties</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Crop Type</label>
+                  <select id="filter-crop" class="form-control form-select">
+                    <option value="">All Crops</option>
+                    <option value="soybean">Soybean</option>
+                    <option value="corn">Corn</option>
+                    <option value="coffee">Coffee</option>
+                    <option value="sugarcane">Sugarcane</option>
+                    <option value="cotton">Cotton</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Status</label>
+                  <select id="filter-status" class="form-control form-select">
+                    <option value="">All Status</option>
+                    <option value="healthy">Healthy</option>
+                    <option value="warning">Warning</option>
+                    <option value="alert">Alert</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
-                <select id="filter-crop" class="form-control form-select">
-                  <option value="">All Crops</option>
-                  <option value="soybean">Soybean</option>
-                  <option value="corn">Corn</option>
-                  <option value="coffee">Coffee</option>
-                  <option value="sugarcane">Sugarcane</option>
-                  <option value="cotton">Cotton</option>
-                </select>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page</label>
+                  <select id="plots-page-number" class="form-control form-select">
+                    <option value="1">1</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page Size</label>
+                  <select id="plots-page-size" class="form-control form-select">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Sort By</label>
+                  <select id="plots-sort-by" class="form-control form-select">
+                    <option value="name">Name</option>
+                    <option value="propertyName">Property</option>
+                    <option value="cropType">Crop Type</option>
+                    <option value="areahectares">Area (ha)</option>
+                    <option value="sensorcount">Sensors</option>
+                    <option value="createdat">Created At</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Direction</label>
+                  <select id="plots-sort-direction" class="form-control form-select">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; align-self: flex-end">
+                  <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
 
           <!-- Status Legend -->
@@ -164,6 +220,10 @@
                 <span id="plots-summary-alert" class="badge badge-danger">0 Alert</span>
               </div>
               <span id="plots-summary-area" class="text-muted">Total Area: 0 ha</span>
+              <div class="d-flex align-center" style="gap: 8px">
+                <button type="button" id="plots-prev" class="btn btn-outline btn-sm">◀ Prev</button>
+                <button type="button" id="plots-next" class="btn btn-outline btn-sm">Next ▶</button>
+              </div>
             </div>
           </div>
         </div>
