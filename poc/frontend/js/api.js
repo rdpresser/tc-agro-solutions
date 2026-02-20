@@ -304,184 +304,24 @@ export async function getPlotsPaginated({
 } = {}) {
   void status;
 
-  const buildParams = (targetPageNumber) => {
-    const params = {
-      pageNumber: targetPageNumber,
-      pageSize,
-      sortBy,
-      sortDirection,
-      filter,
-      cropType
-    };
-
-    Object.keys(params).forEach((key) => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key];
-      }
-    });
-
-    return params;
+  const params = {
+    pageNumber,
+    pageSize,
+    sortBy,
+    sortDirection,
+    filter,
+    cropType,
+    propertyId
   };
 
-  const fetchPlotsFromProperty = async (targetPropertyId) => {
-    let currentPage = 1;
-    const all = [];
-    let totalPages = 1;
-
-    do {
-      const { data } = await farmApi.get(
-        `/api/properties/${encodeURIComponent(targetPropertyId)}/plots`,
-        {
-          params: buildParams(currentPage)
-        }
-      );
-
-      const items = data?.data || data?.items || data?.results || [];
-      all.push(...(Array.isArray(items) ? items : []));
-
-      const responsePageSize = Number(data?.pageSize || params.pageSize || 10);
-      const responseTotalCount = Number(data?.totalCount || all.length);
-      totalPages = Number(
-        data?.pageCount || Math.max(1, Math.ceil(responseTotalCount / responsePageSize))
-      );
-      currentPage += 1;
-    } while (currentPage <= totalPages);
-
-    return all;
-  };
-
-  const applyClientSideQueryFilters = (items) => {
-    const normalizedFilter = String(filter || '')
-      .trim()
-      .toLowerCase();
-    const normalizedCropType = String(cropType || '')
-      .trim()
-      .toLowerCase();
-
-    return items.filter((item) => {
-      const name = String(item?.name || '').toLowerCase();
-      const propertyName = String(item?.propertyName || '').toLowerCase();
-      const itemCropType = String(item?.cropType || '').toLowerCase();
-
-      const matchesFilter =
-        !normalizedFilter ||
-        name.includes(normalizedFilter) ||
-        propertyName.includes(normalizedFilter);
-
-      const matchesCropType = !normalizedCropType || itemCropType === normalizedCropType;
-
-      return matchesFilter && matchesCropType;
-    });
-  };
-
-  if (propertyId) {
-    const plotsFromProperty = await fetchPlotsFromProperty(propertyId);
-    const filteredPropertyPlots = applyClientSideQueryFilters(plotsFromProperty);
-
-    const safePageSize = Math.max(1, Number(pageSize) || 10);
-    const safePageNumber = Math.max(1, Number(pageNumber) || 1);
-    const totalCount = filteredPropertyPlots.length;
-    const pageCount = Math.max(1, Math.ceil(totalCount / safePageSize));
-    const boundedPageNumber = Math.min(safePageNumber, pageCount);
-    const start = (boundedPageNumber - 1) * safePageSize;
-    const data = filteredPropertyPlots.slice(start, start + safePageSize);
-
-    return {
-      data,
-      totalCount,
-      pageNumber: boundedPageNumber,
-      pageSize: safePageSize,
-      pageCount,
-      hasPreviousPage: boundedPageNumber > 1,
-      hasNextPage: boundedPageNumber < pageCount
-    };
-  }
-
-  const properties = [];
-  let currentPropertyPage = 1;
-  let propertyPages = 1;
-
-  do {
-    const propertiesResponse = await getProperties({
-      pageNumber: currentPropertyPage,
-      pageSize: 100,
-      sortBy: 'name',
-      sortDirection: 'asc',
-      filter: ''
-    });
-
-    const propertyItems =
-      propertiesResponse?.data || propertiesResponse?.items || propertiesResponse?.results || [];
-    properties.push(...(Array.isArray(propertyItems) ? propertyItems : []));
-
-    const totalCount = Number(propertiesResponse?.totalCount || properties.length);
-    const responsePageSize = Number(propertiesResponse?.pageSize || 100);
-    propertyPages = Number(
-      propertiesResponse?.pageCount || Math.max(1, Math.ceil(totalCount / responsePageSize))
-    );
-    currentPropertyPage += 1;
-  } while (currentPropertyPage <= propertyPages);
-
-  const plotGroups = await Promise.all(
-    properties
-      .map((property) => property?.id)
-      .filter(Boolean)
-      .map((id) => fetchPlotsFromProperty(id))
-  );
-
-  const combined = applyClientSideQueryFilters(plotGroups.flat());
-
-  const normalizedSortBy = String(sortBy || 'name').toLowerCase();
-  const directionFactor = String(sortDirection || 'asc').toLowerCase() === 'desc' ? -1 : 1;
-
-  const getComparableValue = (item) => {
-    switch (normalizedSortBy) {
-      case 'propertyname':
-        return item?.propertyName || '';
-      case 'croptype':
-      case 'type':
-        return item?.cropType || '';
-      case 'areahectares':
-      case 'area':
-        return Number(item?.areaHectares ?? 0);
-      case 'sensorcount':
-        return Number(item?.sensorCount ?? 0);
-      case 'createdat':
-      case 'updatedat':
-        return item?.createdAt || '';
-      default:
-        return item?.name || '';
+  Object.keys(params).forEach((key) => {
+    if (params[key] === '' || params[key] === null || params[key] === undefined) {
+      delete params[key];
     }
-  };
-
-  combined.sort((a, b) => {
-    const valueA = getComparableValue(a);
-    const valueB = getComparableValue(b);
-
-    if (typeof valueA === 'number' && typeof valueB === 'number') {
-      return (valueA - valueB) * directionFactor;
-    }
-
-    return String(valueA).localeCompare(String(valueB)) * directionFactor;
   });
 
-  const safePageSize = Math.max(1, Number(pageSize) || 10);
-  const safePageNumber = Math.max(1, Number(pageNumber) || 1);
-  const totalCount = combined.length;
-  const pageCount = Math.max(1, Math.ceil(totalCount / safePageSize));
-  const boundedPageNumber = Math.min(safePageNumber, pageCount);
-  const start = (boundedPageNumber - 1) * safePageSize;
-  const data = combined.slice(start, start + safePageSize);
-
-  return {
-    data,
-    totalCount,
-    pageNumber: boundedPageNumber,
-    pageSize: safePageSize,
-    pageCount,
-    hasPreviousPage: boundedPageNumber > 1,
-    hasNextPage: boundedPageNumber < pageCount
-  };
+  const { data } = await farmApi.get('/api/plots', { params });
+  return data;
 }
 
 /**

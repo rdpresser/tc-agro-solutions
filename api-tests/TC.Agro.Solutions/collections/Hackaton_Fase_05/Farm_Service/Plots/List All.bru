@@ -1,0 +1,30 @@
+meta {
+  name: List All
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{farm_service_url}}/api/plots?pageNumber=1&pageSize=10&sortBy=createdat&sortDirection=desc&filter&cropType&propertyId=6243c4ac-171b-4907-9ef0-72e5214ebb37
+  body: none
+  auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 10
+  sortBy: createdat
+  sortDirection: desc
+  filter: 
+  cropType: 
+  propertyId: 6243c4ac-171b-4907-9ef0-72e5214ebb37
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

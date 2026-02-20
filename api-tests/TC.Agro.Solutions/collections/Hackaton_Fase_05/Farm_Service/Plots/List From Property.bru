@@ -1,11 +1,11 @@
 meta {
-  name: List
+  name: List From Property
   type: http
   seq: 2
 }
 
 get {
-  url: {{farm_service_url}}/api/properties/5d5cdd15-ea89-4b88-9333-be10f261a914/plots?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter
+  url: {{farm_service_url}}/api/properties/6243c4ac-171b-4907-9ef0-72e5214ebb37/plots?pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc&filter=value1&cropType=value2
   body: none
   auth: bearer
 }
@@ -15,7 +15,8 @@ params:query {
   pageSize: 10
   sortBy: name
   sortDirection: asc
-  filter: 
+  filter: value1
+  cropType: value2
 }
 
 auth:bearer {
