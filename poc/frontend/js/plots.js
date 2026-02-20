@@ -29,6 +29,29 @@ let lastPageState = {
   totalCount: 0
 };
 
+const COMMON_CROP_TYPES = [
+  'Soy',
+  'Corn',
+  'Wheat',
+  'Cotton',
+  'Coffee',
+  'Sugarcane',
+  'Rice',
+  'Beans',
+  'Potato',
+  'Tomato',
+  'Lettuce',
+  'Carrot',
+  'Onion',
+  'Orange',
+  'Grape',
+  'Apple',
+  'Banana',
+  'Mango',
+  'Pasture',
+  'Other'
+];
+
 // ============================================
 // DATA LOADING
 // ============================================
@@ -254,16 +277,12 @@ function renderSummary(state) {
 // ============================================
 
 function formatCropType(cropType) {
-  const types = {
-    soybean: 'Soja',
-    corn: 'Milho',
-    coffee: 'Coffee',
-    sugarcane: 'Sugarcane',
-    cotton: 'Cotton',
-    wheat: 'Trigo',
-    rice: 'Arroz'
-  };
-  return types[cropType] || cropType;
+  const value = String(cropType || '').trim();
+  if (!value) return '-';
+
+  const normalized = value.toLowerCase();
+  const match = COMMON_CROP_TYPES.find((item) => item.toLowerCase() === normalized);
+  return match || value;
 }
 
 function formatStatus(status) {
