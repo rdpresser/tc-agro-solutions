@@ -304,20 +304,24 @@ export async function getPlotsPaginated({
 } = {}) {
   void status;
 
-  const params = {
-    pageNumber: 1,
-    pageSize,
-    sortBy,
-    sortDirection,
-    filter,
-    cropType
-  };
+  const buildParams = (targetPageNumber) => {
+    const params = {
+      pageNumber: targetPageNumber,
+      pageSize,
+      sortBy,
+      sortDirection,
+      filter,
+      cropType
+    };
 
-  Object.keys(params).forEach((key) => {
-    if (params[key] === '' || params[key] === null || params[key] === undefined) {
-      delete params[key];
-    }
-  });
+    Object.keys(params).forEach((key) => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key];
+      }
+    });
+
+    return params;
+  };
 
   const fetchPlotsFromProperty = async (targetPropertyId) => {
     let currentPage = 1;
@@ -328,7 +332,7 @@ export async function getPlotsPaginated({
       const { data } = await farmApi.get(
         `/api/properties/${encodeURIComponent(targetPropertyId)}/plots`,
         {
-          params: { ...params, pageNumber: currentPage }
+          params: buildParams(currentPage)
         }
       );
 
@@ -346,18 +350,51 @@ export async function getPlotsPaginated({
     return all;
   };
 
-  if (propertyId) {
-    const { data } = await farmApi.get(`/api/properties/${encodeURIComponent(propertyId)}/plots`, {
-      params: {
-        pageNumber,
-        pageSize,
-        sortBy,
-        sortDirection,
-        filter,
-        cropType
-      }
+  const applyClientSideQueryFilters = (items) => {
+    const normalizedFilter = String(filter || '')
+      .trim()
+      .toLowerCase();
+    const normalizedCropType = String(cropType || '')
+      .trim()
+      .toLowerCase();
+
+    return items.filter((item) => {
+      const name = String(item?.name || '').toLowerCase();
+      const propertyName = String(item?.propertyName || '').toLowerCase();
+      const itemCropType = String(item?.cropType || '').toLowerCase();
+
+      const matchesFilter =
+        !normalizedFilter ||
+        name.includes(normalizedFilter) ||
+        propertyName.includes(normalizedFilter);
+
+      const matchesCropType = !normalizedCropType || itemCropType === normalizedCropType;
+
+      return matchesFilter && matchesCropType;
     });
-    return data;
+  };
+
+  if (propertyId) {
+    const plotsFromProperty = await fetchPlotsFromProperty(propertyId);
+    const filteredPropertyPlots = applyClientSideQueryFilters(plotsFromProperty);
+
+    const safePageSize = Math.max(1, Number(pageSize) || 10);
+    const safePageNumber = Math.max(1, Number(pageNumber) || 1);
+    const totalCount = filteredPropertyPlots.length;
+    const pageCount = Math.max(1, Math.ceil(totalCount / safePageSize));
+    const boundedPageNumber = Math.min(safePageNumber, pageCount);
+    const start = (boundedPageNumber - 1) * safePageSize;
+    const data = filteredPropertyPlots.slice(start, start + safePageSize);
+
+    return {
+      data,
+      totalCount,
+      pageNumber: boundedPageNumber,
+      pageSize: safePageSize,
+      pageCount,
+      hasPreviousPage: boundedPageNumber > 1,
+      hasNextPage: boundedPageNumber < pageCount
+    };
   }
 
   const properties = [];
@@ -392,7 +429,7 @@ export async function getPlotsPaginated({
       .map((id) => fetchPlotsFromProperty(id))
   );
 
-  const combined = plotGroups.flat();
+  const combined = applyClientSideQueryFilters(plotGroups.flat());
 
   const normalizedSortBy = String(sortBy || 'name').toLowerCase();
   const directionFactor = String(sortDirection || 'asc').toLowerCase() === 'desc' ? -1 : 1;
