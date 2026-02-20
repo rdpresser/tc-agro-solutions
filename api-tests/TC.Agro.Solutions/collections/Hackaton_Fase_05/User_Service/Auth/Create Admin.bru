@@ -1,0 +1,26 @@
+meta {
+  name: Create Admin
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{identity_service_url}}/auth/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "name": "Rodrigo Admin",
+      "email": "admin@admin.com",
+      "username": "adminadmin",
+      "password": "Admin@123",
+      "role": "Admin"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
