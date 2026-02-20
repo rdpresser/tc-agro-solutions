@@ -284,76 +284,102 @@ export async function deleteProperty(id) {
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
 export function getPlots(propertyId = null) {
-  // MOCK DATA
-  const plots = [
-    {
-      id: 'plot-001',
-      propertyId: 'prop-001',
-      propertyName: 'Green Valley Farm',
-      name: 'North Field',
-      cropType: 'soybean',
-      areaHectares: 85.5,
-      status: 'healthy',
-      sensorsCount: 4
-    },
-    {
-      id: 'plot-002',
-      propertyId: 'prop-001',
-      propertyName: 'Green Valley Farm',
-      name: 'South Valley',
-      cropType: 'corn',
-      areaHectares: 120.0,
-      status: 'healthy',
-      sensorsCount: 6
-    },
-    {
-      id: 'plot-003',
-      propertyId: 'prop-002',
-      propertyName: 'Sunrise Ranch',
-      name: 'East Ridge',
-      cropType: 'coffee',
-      areaHectares: 45.2,
-      status: 'warning',
-      sensorsCount: 3
-    },
-    {
-      id: 'plot-004',
-      propertyId: 'prop-002',
-      propertyName: 'Sunrise Ranch',
-      name: 'West Grove',
-      cropType: 'sugarcane',
-      areaHectares: 95.8,
-      status: 'healthy',
-      sensorsCount: 5
-    },
-    {
-      id: 'plot-005',
-      propertyId: 'prop-003',
-      propertyName: 'Highland Estate',
-      name: 'Central Plain',
-      cropType: 'cotton',
-      areaHectares: 200.0,
-      status: 'alert',
-      sensorsCount: 8
-    }
-  ];
-
-  return propertyId ? plots.filter((p) => p.propertyId === propertyId) : plots;
-
-  /* REAL API
-  const { data } = await api.get('/plots', { params: { propertyId } });
-  return data;
-  */
+  return getPlotsPaginated({ propertyId });
 }
 
 export async function getPlot(id) {
-  const plots = await getPlots();
-  return plots.find((p) => p.id === id);
-
-  /* REAL API
-  const { data } = await api.get(`/plots/${id}`);
+  const { data } = await farmApi.get(`/api/plots/${encodeURIComponent(id)}`);
   return data;
-  */
+}
+
+export async function getPlotsPaginated({
+  pageNumber = 1,
+  pageSize = 50,
+  sortBy = 'name',
+  sortDirection = 'asc',
+  filter = '',
+  propertyId = '',
+  cropType = ''
+} = {}) {
+  const params = {
+    pageNumber,
+    pageSize,
+    sortBy,
+    sortDirection,
+    filter,
+    cropType
+  };
+
+  Object.keys(params).forEach((key) => {
+    if (params[key] === '' || params[key] === null || params[key] === undefined) {
+      delete params[key];
+    }
+  });
+
+  const fetchPlotsFromProperty = async (targetPropertyId) => {
+    let currentPage = Number(pageNumber) || 1;
+    const all = [];
+    let totalPages = 1;
+
+    do {
+      const { data } = await farmApi.get(
+        `/api/properties/${encodeURIComponent(targetPropertyId)}/plots`,
+        {
+          params: { ...params, pageNumber: currentPage }
+        }
+      );
+
+      const items = data?.data || data?.items || data?.results || [];
+      all.push(...(Array.isArray(items) ? items : []));
+
+      const responsePageSize = Number(data?.pageSize || params.pageSize || 10);
+      const responseTotalCount = Number(data?.totalCount || all.length);
+      totalPages = Number(
+        data?.pageCount || Math.max(1, Math.ceil(responseTotalCount / responsePageSize))
+      );
+      currentPage += 1;
+    } while (currentPage <= totalPages);
+
+    return all;
+  };
+
+  if (propertyId) {
+    return fetchPlotsFromProperty(propertyId);
+  }
+
+  const properties = [];
+  let currentPropertyPage = 1;
+  let propertyPages = 1;
+
+  do {
+    const propertiesResponse = await getProperties({
+      pageNumber: currentPropertyPage,
+      pageSize: 100,
+      sortBy: 'name',
+      sortDirection: 'asc',
+      filter: ''
+    });
+
+    const propertyItems =
+      propertiesResponse?.data || propertiesResponse?.items || propertiesResponse?.results || [];
+    properties.push(...(Array.isArray(propertyItems) ? propertyItems : []));
+
+    const totalCount = Number(propertiesResponse?.totalCount || properties.length);
+    const responsePageSize = Number(propertiesResponse?.pageSize || 100);
+    propertyPages = Number(
+      propertiesResponse?.pageCount || Math.max(1, Math.ceil(totalCount / responsePageSize))
+    );
+    currentPropertyPage += 1;
+  } while (currentPropertyPage <= propertyPages);
+
+  const plotGroups = await Promise.all(
+    properties
+      .map((property) => property?.id)
+      .filter(Boolean)
+      .map((id) => fetchPlotsFromProperty(id))
+  );
+
+  return plotGroups.flat();
 }
 
 /**

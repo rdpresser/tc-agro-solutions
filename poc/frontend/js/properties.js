@@ -2,10 +2,10 @@
  * TC Agro Solutions - Properties Page Entry Point
  */
 
-import { getProperties, deleteProperty, normalizeError } from './api.js';
+import { getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, showConfirm, getPageUrl } from './utils.js';
+import { $, getPageUrl } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -216,18 +216,10 @@ function setupEventListeners() {
 }
 
 async function handleDelete(id) {
-  const confirmed = await showConfirm('Are you sure you want to delete this property?');
-
-  if (confirmed) {
-    try {
-      await deleteProperty(id);
-      toast('properties.delete_success', 'success');
-      await loadProperties();
-    } catch (error) {
-      console.error('Error deleting property:', error);
-      toast('properties.delete_failed', 'error');
-    }
-  }
+  void id;
+  alert(
+    'Property deletion will be implemented in a future version with the client, considering plot and sensor relationships.'
+  );
 }
 
 // Export for debugging

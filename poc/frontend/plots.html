@@ -102,21 +102,18 @@
               <div class="form-group" style="margin-bottom: 0">
                 <input
                   type="text"
-                  id="searchInput"
+                  id="search-plots"
                   class="form-control"
                   placeholder="🔍 Search plots..."
                 />
               </div>
               <div class="form-group" style="margin-bottom: 0">
-                <select id="propertyFilter" class="form-control form-select">
+                <select id="filter-property" class="form-control form-select">
                   <option value="">All Properties</option>
-                  <option value="1">Green Valley Farm</option>
-                  <option value="2">Sunrise Ranch</option>
-                  <option value="3">Highland Estate</option>
                 </select>
               </div>
               <div class="form-group" style="margin-bottom: 0">
-                <select id="cropFilter" class="form-control form-select">
+                <select id="filter-crop" class="form-control form-select">
                   <option value="">All Crops</option>
                   <option value="soybean">Soybean</option>
                   <option value="corn">Corn</option>
@@ -149,122 +146,9 @@
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="plotsTable">
-                <!-- Mock Data Rows -->
+              <tbody id="plots-tbody">
                 <tr>
-                  <td><strong>North Field</strong></td>
-                  <td>Green Valley Farm</td>
-                  <td><span class="badge badge-primary">🌿 Soybean</span></td>
-                  <td>85.5 ha</td>
-                  <td>4 sensors</td>
-                  <td><span class="badge badge-success">Healthy</span></td>
-                  <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=1"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
-                      >✏️</a
-                    >
-                    <button
-                      onclick="handleDelete('1', 'North Field')"
-                      class="btn btn-danger btn-sm btn-icon"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>South Valley</strong></td>
-                  <td>Green Valley Farm</td>
-                  <td><span class="badge badge-primary">🌽 Corn</span></td>
-                  <td>120.0 ha</td>
-                  <td>6 sensors</td>
-                  <td><span class="badge badge-success">Healthy</span></td>
-                  <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=2"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
-                      >✏️</a
-                    >
-                    <button
-                      onclick="handleDelete('2', 'South Valley')"
-                      class="btn btn-danger btn-sm btn-icon"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>East Ridge</strong></td>
-                  <td>Sunrise Ranch</td>
-                  <td><span class="badge badge-primary">☕ Coffee</span></td>
-                  <td>45.2 ha</td>
-                  <td>3 sensors</td>
-                  <td><span class="badge badge-warning">⚠️ Low Moisture</span></td>
-                  <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=3"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
-                      >✏️</a
-                    >
-                    <button
-                      onclick="handleDelete('3', 'East Ridge')"
-                      class="btn btn-danger btn-sm btn-icon"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>West Grove</strong></td>
-                  <td>Sunrise Ranch</td>
-                  <td><span class="badge badge-primary">🎋 Sugarcane</span></td>
-                  <td>95.8 ha</td>
-                  <td>5 sensors</td>
-                  <td><span class="badge badge-success">Healthy</span></td>
-                  <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=4"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
-                      >✏️</a
-                    >
-                    <button
-                      onclick="handleDelete('4', 'West Grove')"
-                      class="btn btn-danger btn-sm btn-icon"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>Central Plain</strong></td>
-                  <td>Highland Estate</td>
-                  <td><span class="badge badge-primary">🌸 Cotton</span></td>
-                  <td>200.0 ha</td>
-                  <td>8 sensors</td>
-                  <td><span class="badge badge-danger">🚨 Sensor Offline</span></td>
-                  <td class="table-actions">
-                    <a
-                      href="plots-form.html?id=5"
-                      class="btn btn-outline btn-sm btn-icon"
-                      title="Edit"
-                      >✏️</a
-                    >
-                    <button
-                      onclick="handleDelete('5', 'Central Plain')"
-                      class="btn btn-danger btn-sm btn-icon"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
+                  <td colspan="7" class="text-center">Loading...</td>
                 </tr>
               </tbody>
             </table>
@@ -273,13 +157,13 @@
           <!-- Summary -->
           <div class="card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
-              <span class="text-muted">Showing 5 of 5 plots</span>
+              <span id="plots-summary-text" class="text-muted">Showing 0 plot(s)</span>
               <div class="d-flex gap-2" style="flex-wrap: wrap">
-                <span class="badge badge-success">3 Healthy</span>
-                <span class="badge badge-warning">1 Warning</span>
-                <span class="badge badge-danger">1 Alert</span>
+                <span id="plots-summary-healthy" class="badge badge-success">0 Healthy</span>
+                <span id="plots-summary-warning" class="badge badge-warning">0 Warning</span>
+                <span id="plots-summary-alert" class="badge badge-danger">0 Alert</span>
               </div>
-              <span class="text-muted">Total Area: 546.5 ha</span>
+              <span id="plots-summary-area" class="text-muted">Total Area: 0 ha</span>
             </div>
           </div>
         </div>
