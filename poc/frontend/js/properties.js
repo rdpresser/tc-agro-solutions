@@ -5,7 +5,7 @@
 import { getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, getPageUrl } from './utils.js';
+import { $, getPageUrl, debounce } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -179,7 +179,40 @@ function setupEventListeners() {
 
   const pageSize = $('#pageSize');
   pageSize?.addEventListener('change', async () => {
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
     await loadProperties();
+  });
+
+  const sortBy = $('#sortBy');
+  sortBy?.addEventListener('change', async () => {
+    await loadProperties();
+  });
+
+  const sortDirection = $('#sortDirection');
+  sortDirection?.addEventListener('change', async () => {
+    await loadProperties();
+  });
+
+  // Debounced search on input (300ms delay)
+  const filterInput = $('#filterInput');
+  const debouncedSearch = debounce(() => {
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
+    loadProperties();
+  }, 300);
+
+  filterInput?.addEventListener('input', () => {
+    debouncedSearch();
+  });
+
+  // Immediate search on Enter key
+  filterInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
+    loadProperties();
   });
 
   const prevBtn = $('#propertiesPrev');
