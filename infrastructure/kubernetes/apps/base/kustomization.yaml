@@ -7,3 +7,4 @@ resources:
   - identity
   - sensor-ingest
   - farm
+  - analytics-worker

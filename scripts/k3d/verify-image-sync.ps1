@@ -11,17 +11,22 @@
   Checks:
   - frontend-service (rdpresser/frontend-service)
   - identity-service (rdpresser/identity-service)
+    - farm-service (rdpresser/farm-service)
+    - sensor-ingest-service (rdpresser/sensor-ingest-service)
+    - analytics-worker (rdpresser/analytics-worker)
 
 .EXAMPLE
   .\verify-image-sync.ps1
 #>
 
 $dockerHubUser = "rdpresser"
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $services = @(
     @{ name = "frontend-service"; repo = "$dockerHubUser/frontend-service"; deployment = "frontend" }
     @{ name = "identity-service"; repo = "$dockerHubUser/identity-service"; deployment = "identity-service" }
+    @{ name = "farm-service"; repo = "$dockerHubUser/farm-service"; deployment = "farm-service" }
+    @{ name = "sensor-ingest-service"; repo = "$dockerHubUser/sensor-ingest-service"; deployment = "sensor-ingest-service" }
+    @{ name = "analytics-worker"; repo = "$dockerHubUser/analytics-worker"; deployment = "analytics-worker" }
 )
 
 $Color = @{
@@ -53,7 +58,7 @@ foreach ($svc in $services) {
     Write-Host "   🔍 Checking Docker Hub: $repo..." -ForegroundColor $Color.Muted
     
     # Pull latest image to verify it's available
-    $pullOutput = docker pull $repo`:latest 2>&1
+    docker pull $repo`:latest 2>&1 | Out-Null
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "   ❌ Failed to pull $repo`:latest" -ForegroundColor $Color.Error
@@ -62,8 +67,8 @@ foreach ($svc in $services) {
         continue
     }
     
-    # Get latest digest
-    $latestDigest = docker inspect --format='{{.RepoDigests}}' $repo`:latest 2>$null
+    # Verify image metadata is available locally after pull
+    docker inspect --format='{{.RepoDigests}}' $repo`:latest 2>$null | Out-Null
     Write-Host "   ✅ Available on Docker Hub: $repo`:latest" -ForegroundColor $Color.Success
     
     $dockerHubTags[$name] = @{
@@ -184,7 +189,6 @@ $allHealthy = $true
 
 foreach ($svc in $services) {
     $name = $svc.name
-    $deployment = $svc.deployment
     $repo = $svc.repo
     
     Write-Host "🔹 $name ($repo)" -ForegroundColor $Color.Info
@@ -261,6 +265,9 @@ Write-Host ""
 Write-Host "📝 DOCKER HUB LINKS:" -ForegroundColor $Color.Info
 Write-Host "   • Frontend: https://hub.docker.com/r/$($dockerHubUser)/frontend-service/tags" -ForegroundColor $Color.Muted
 Write-Host "   • Identity: https://hub.docker.com/r/$($dockerHubUser)/identity-service/tags" -ForegroundColor $Color.Muted
+Write-Host "   • Farm: https://hub.docker.com/r/$($dockerHubUser)/farm-service/tags" -ForegroundColor $Color.Muted
+Write-Host "   • Sensor Ingest: https://hub.docker.com/r/$($dockerHubUser)/sensor-ingest-service/tags" -ForegroundColor $Color.Muted
+Write-Host "   • Analytics: https://hub.docker.com/r/$($dockerHubUser)/analytics-worker/tags" -ForegroundColor $Color.Muted
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor $Color.Muted
 Write-Host "✅ Validation complete." -ForegroundColor $Color.Info

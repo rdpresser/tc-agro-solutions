@@ -1,0 +1,32 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: analytics-worker
+  namespace: agro-apps
+  labels:
+    app: analytics-worker
+  annotations:
+    kubernetes.io/description: "Path-based routing for Analytics Worker service"
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/analytics-worker`)
+      kind: Rule
+      services:
+        - name: analytics-worker
+          port: 80
+      middlewares:
+        - name: analytics-worker-stripprefix
+          namespace: agro-apps
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: analytics-worker-stripprefix
+  namespace: agro-apps
+spec:
+  stripPrefix:
+    prefixes:
+      - /analytics-worker

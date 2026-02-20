@@ -7,25 +7,28 @@
     - argocd (8090:80)
     - frontend (3080:80)
     - identity (5001:80)
+    - analytics-worker (5004:80)
 
 .EXAMPLE
     .\port-forward.ps1 argocd
     .\port-forward.ps1 frontend
     .\port-forward.ps1 identity
+    .\port-forward.ps1 analytics-worker
     .\port-forward.ps1 all
 #>
 
 param(
-    [ValidateSet("argocd", "frontend", "identity", "all")]
+    [ValidateSet("argocd", "frontend", "identity", "analytics-worker", "all")]
     [string]$Service = "argocd"
 )
 
 $ErrorActionPreference = "Stop"
 
 $portForwards = @{
-    argocd   = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8090; remotePort = 80 }
-    frontend = @{ namespace = "agro-apps"; service = "frontend"; localPort = 3080; remotePort = 80 }
-    identity = @{ namespace = "agro-apps"; service = "identity-service"; localPort = 5001; remotePort = 80 }
+    argocd           = @{ namespace = "argocd"; service = "argocd-server"; localPort = 8090; remotePort = 80 }
+    frontend         = @{ namespace = "agro-apps"; service = "frontend"; localPort = 3080; remotePort = 80 }
+    identity         = @{ namespace = "agro-apps"; service = "identity-service"; localPort = 5001; remotePort = 80 }
+    "analytics-worker" = @{ namespace = "agro-apps"; service = "analytics-worker"; localPort = 5004; remotePort = 80 }
 }
 
 $Color = @{

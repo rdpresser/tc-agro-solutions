@@ -11,7 +11,7 @@
 #>
 
 param(
-    [ValidateSet("argocd", "frontend", "identity", "all")]
+    [ValidateSet("argocd", "frontend", "identity", "analytics-worker", "all")]
     [string]$Service = "all"
 )
 
@@ -38,9 +38,10 @@ if ($Service -eq "all") {
 }
 else {
     $ports = @{
-        argocd   = 8090
-        frontend = 3080
-        identity = 5001
+        argocd           = 8090
+        frontend         = 3080
+        identity         = 5001
+        "analytics-worker" = 5004
     }
     
     $port = $ports[$Service]

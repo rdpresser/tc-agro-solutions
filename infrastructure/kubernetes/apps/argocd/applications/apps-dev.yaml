@@ -12,16 +12,16 @@
 # 📊 Currently Deployed Services:
 #   ✅ frontend (Dashboard UI)
 #   ✅ identity-service (Authentication & Authorization)
-#   📋 farm-service (Future - pending Dockerfile)
-#   📋 sensor-ingest-service (Future - pending Dockerfile)
-#   📋 analytics-worker (Future - pending Dockerfile)
+#   ✅ farm-service (Property and Plot Management)
+#   ✅ sensor-ingest-service (Sensor Ingestion)
+#   ✅ analytics-worker (Alerts and Rules Processing)
 #   📋 dashboard-service (Future - pending Dockerfile)
 #
 # 🔄 How It Works:
 #   1. ArgoCD watches this file for changes
 #   2. Reads generators → gets path to overlays/dev
 #   3. Overlays/dev/kustomization.yaml lists all service manifests
-#   4. Kustomize merges frontend + identity + HPA configs
+#   4. Kustomize merges all app service manifests + HPA configs
 #   5. ArgoCD applies merged manifests to agro-apps namespace
 #
 # 📖 See Also:

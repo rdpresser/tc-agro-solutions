@@ -51,7 +51,7 @@ function Show-Menu {
     Write-Host "   9) Force sync ArgoCD applications (after Git changes)"
     Write-Host ""
     Write-Host "🌐 NETWORKING & ACCESS:" -ForegroundColor $Color.Info
-    Write-Host "  10) Start port-forward (ArgoCD, Frontend, Identity)"
+    Write-Host "  10) Start port-forward (ArgoCD, Frontend, Identity, Analytics Worker)"
     Write-Host "  11) List active port-forwards"
     Write-Host "  12) Stop port-forwards"
     Write-Host ""
@@ -434,6 +434,7 @@ else {
             Write-Host "  - argocd (default)" -ForegroundColor $Color.Muted
             Write-Host "  - frontend" -ForegroundColor $Color.Muted
             Write-Host "  - identity" -ForegroundColor $Color.Muted
+            Write-Host "  - analytics-worker" -ForegroundColor $Color.Muted
             Write-Host "  - all" -ForegroundColor $Color.Muted
             Write-Host ""
         
@@ -465,6 +466,7 @@ else {
             Write-Host "     2) identity-service" -ForegroundColor $Color.Muted
             Write-Host "     3) farm-service" -ForegroundColor $Color.Muted
             Write-Host "     4) sensor-ingest-service" -ForegroundColor $Color.Muted
+            Write-Host "     5) analytics-worker" -ForegroundColor $Color.Muted
             Write-Host "   Example: 1,3" -ForegroundColor $Color.Muted
             
             $confirm = Read-Host "   Did you run 'docker login' already? (y/n - default: y)"
@@ -488,12 +490,13 @@ else {
                     "2" = "identity-service"
                     "3" = "farm-service"
                     "4" = "sensor-ingest-service"
+                    "5" = "analytics-worker"
                 }
 
                 $invalid = $selection | Where-Object { -not $serviceMap.ContainsKey($_) }
                 if ($invalid.Count -gt 0) {
                     Write-Host "❌ Invalid selection: $($invalid -join ', ')" -ForegroundColor $Color.Error
-                    Write-Host "   Valid options: 1, 2, 3, 4" -ForegroundColor $Color.Muted
+                    Write-Host "   Valid options: 1, 2, 3, 4, 5" -ForegroundColor $Color.Muted
                     $null = Read-Host "`nPress Enter to continue"
                     continue
                 }
@@ -505,7 +508,7 @@ else {
             
             # Print per-deployment rollout summary for quick visibility
             Write-Host ""; Write-Host "📦 Deployment Rollout Summary:" -ForegroundColor $Color.Info
-            $deployments = @('frontend', 'identity-service', 'farm-service', 'sensor-ingest-service')
+            $deployments = @('frontend', 'identity-service', 'farm-service', 'sensor-ingest-service', 'analytics-worker')
             foreach ($d in $deployments) {
                 $exists = kubectl get deployment $d -n agro-apps --no-headers 2>$null
                 if (-not $exists) {
@@ -658,6 +661,7 @@ else {
             Write-Host "  - identity" -ForegroundColor $Color.Muted
             Write-Host "  - farm" -ForegroundColor $Color.Muted
             Write-Host "  - sensor-ingest" -ForegroundColor $Color.Muted
+            Write-Host "  - analytics-worker" -ForegroundColor $Color.Muted
             Write-Host "  - all (default)" -ForegroundColor $Color.Muted
             Write-Host "";
 

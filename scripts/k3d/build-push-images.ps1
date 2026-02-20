@@ -10,6 +10,7 @@
   - rdpresser/identity-service (services/identity-service)
     - rdpresser/farm-service (services/farm-service)
     - rdpresser/sensor-ingest-service (services/sensor-ingest-service)
+        - rdpresser/analytics-worker (services/analytics-worker)
 
   Requires: docker login to have been executed successfully
 
@@ -20,7 +21,7 @@
 param(
     [ValidateSet("all", "platform", "apps")]
     [string]$SyncTarget = "apps",
-    [string[]]$Services = @("frontend-service", "identity-service", "farm-service", "sensor-ingest-service"),
+    [string[]]$Services = @("frontend-service", "identity-service", "farm-service", "sensor-ingest-service", "analytics-worker"),
     [switch]$SkipSync
 )
 
@@ -32,6 +33,7 @@ $images = @(
     @{ name = "identity-service"; path = "services/identity-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Identity.Service/Dockerfile"; repo = "$dockerHubUser/identity-service" }
     @{ name = "farm-service"; path = "services/farm-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.Farm.Service/Dockerfile"; repo = "$dockerHubUser/farm-service" }
     @{ name = "sensor-ingest-service"; path = "services/sensor-ingest-service"; dockerfile = "src/Adapters/Inbound/TC.Agro.SensorIngest.Service/Dockerfile"; repo = "$dockerHubUser/sensor-ingest-service" }
+    @{ name = "analytics-worker"; path = "services/analytics-worker"; dockerfile = "src/Adapters/Inbound/TC.Agro.Analytics.Service/Dockerfile"; repo = "$dockerHubUser/analytics-worker" }
 )
 
 $Color = @{
@@ -54,6 +56,7 @@ function Update-GitOpsManifest {
         "identity-service"      = "infrastructure/kubernetes/apps/base/identity/deployment.yaml"
         "farm-service"          = "infrastructure/kubernetes/apps/base/farm/deployment.yaml"
         "sensor-ingest-service" = "infrastructure/kubernetes/apps/base/sensor-ingest/deployment.yaml"
+        "analytics-worker"      = "infrastructure/kubernetes/apps/base/analytics-worker/deployment.yaml"
     }
 
     $manifestPath = $manifestMap[$ServiceName]
@@ -171,7 +174,7 @@ Write-Host ""
 # Verify docker login
 Write-Host "🔍 Checking Docker Hub login status..." -ForegroundColor $Color.Info
 # Test login by attempting a simple docker command that requires authentication
-$dockerLoginCheck = docker ps 2>&1
+docker ps 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Docker daemon not accessible or not logged in" -ForegroundColor $Color.Error
     Write-Host "   Run: docker login" -ForegroundColor $Color.Warning
@@ -193,6 +196,7 @@ $serviceSelectionMap = @{
     "2" = "identity-service"
     "3" = "farm-service"
     "4" = "sensor-ingest-service"
+    "5" = "analytics-worker"
 }
 
 $selectedServices = $Services | ForEach-Object {
@@ -208,7 +212,7 @@ $imagesToBuild = $images | Where-Object { $selectedServices -contains $_.name.To
 
 if (-not $imagesToBuild -or $imagesToBuild.Count -eq 0) {
     Write-Host "❌ No matching services found to build." -ForegroundColor $Color.Error
-    Write-Host "   Available: frontend-service, identity-service, farm-service, sensor-ingest-service" -ForegroundColor $Color.Muted
+    Write-Host "   Available: frontend-service, identity-service, farm-service, sensor-ingest-service, analytics-worker" -ForegroundColor $Color.Muted
     exit 1
 }
 
