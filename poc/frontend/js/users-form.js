@@ -12,7 +12,7 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+import { $id, navigateTo, showLoading, hideLoading } from './utils.js';
 
 // ============================================
 // Page State

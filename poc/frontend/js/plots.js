@@ -2,10 +2,12 @@
  * TC Agro Solutions - Plots Page Entry Point
  */
 
-import { getPlotsPaginated, getProperties, deletePlot, normalizeError } from './api.js';
+import { getPlotsPaginated, getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, showConfirm, getPageUrl, debounce } from './utils.js';
+import { $, getPageUrl, debounce } from './utils.js';
+// import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
+// import { deletePlot } from './api.js'; // Commented out - no delete route available
 
 // ============================================
 // PAGE INITIALIZATION
@@ -240,7 +242,8 @@ function renderPlotsTable(plots) {
       </td>
       <td class="actions">
         <a href="${getPageUrl('plots-form.html')}?id=${encodeURIComponent(plot.id)}" class="btn btn-sm btn-outline">✏️ Edit</a>
-        <button class="btn btn-sm btn-danger" data-action="delete" data-id="${plot.id}">🗑️</button>
+        <!-- Delete button commented out - no delete route available for plots -->
+        <!-- <button class="btn btn-sm btn-danger" data-action="delete" data-id="${plot.id}">🗑️</button> -->
       </td>
     </tr>
   `
@@ -413,32 +416,34 @@ function setupEventListeners() {
   });
 
   // Delete button handler (event delegation)
-  const tbody = $('#plots-tbody');
-  tbody?.addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('[data-action="delete"]');
-    if (deleteBtn) {
-      const id = deleteBtn.dataset.id;
-      await handleDelete(id);
-    }
-  });
+  // Commented out - no delete route available for plots
+  // const tbody = $('#plots-tbody');
+  // tbody?.addEventListener('click', async (e) => {
+  //   const deleteBtn = e.target.closest('[data-action="delete"]');
+  //   if (deleteBtn) {
+  //     const id = deleteBtn.dataset.id;
+  //     await handleDelete(id);
+  //   }
+  // });
 }
 
-async function handleDelete(id) {
-  const confirmed = await showConfirm('Are you sure you want to delete this plot?');
-
-  if (confirmed) {
-    try {
-      await deletePlot(id);
-      toast('plots.delete_success', 'success');
-      await loadPlots();
-    } catch (error) {
-      console.error('Error deleting plot:', error);
-      toast('plots.delete_failed', 'error');
-    }
-  }
-}
+// Commented out - no delete route available for plots
+// async function handleDelete(id) {
+//   const confirmed = await showConfirm('Are you sure you want to delete this plot?');
+//
+//   if (confirmed) {
+//     try {
+//       await deletePlot(id);
+//       toast('plots.delete_success', 'success');
+//       await loadPlots();
+//     } catch (error) {
+//       console.error('Error deleting plot:', error);
+//       toast('plots.delete_failed', 'error');
+//     }
+//   }
+// }
 
 // Export for debugging
 if (import.meta.env.DEV) {
-  window.plotsDebug = { loadPlots, handleDelete };
+  window.plotsDebug = { loadPlots };
 }

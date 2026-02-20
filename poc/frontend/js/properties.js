@@ -250,7 +250,7 @@ function setupEventListeners() {
 
 async function handleDelete(id) {
   void id;
-  alert(
+  window.alert(
     'Property deletion will be implemented in a future version with the client, considering plot and sensor relationships.'
   );
 }
