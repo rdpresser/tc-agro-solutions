@@ -146,7 +146,7 @@ Expected applications:
 .\port-forward.ps1 argocd
 ```
 
-This exposes ArgoCD at `http://localhost:8090/argocd`.
+This exposes ArgoCD at `http://localhost:8090/argocd/`.
 
 **Note:** Port-forward is the recommended way to access ArgoCD in k3d.
 
@@ -289,7 +289,7 @@ apps-dev                  Synced        Healthy
 .\port-forward.ps1 argocd
 ```
 
-Exposes ArgoCD at `http://localhost:8090/argocd`.
+Exposes ArgoCD at `http://localhost:8090/argocd/`.
 
 ---
 
@@ -297,7 +297,7 @@ Exposes ArgoCD at `http://localhost:8090/argocd`.
 
 ```powershell
 # Access via port-forward (recommended)
-http://localhost:8090/argocd
+http://localhost:8090/argocd/
 ```
 
 **Credentials:**
@@ -372,14 +372,14 @@ Expected applications:
 .\port-forward.ps1 argocd
 ```
 
-Exposes ArgoCD at `http://localhost:8090/argocd`.
+Exposes ArgoCD at `http://localhost:8090/argocd/`.
 
 ---
 
 ### 4. Access ArgoCD
 
 ```
-http://localhost:8090/argocd
+http://localhost:8090/argocd/
 ```
 
 **Credentials:**
@@ -490,22 +490,15 @@ infrastructure/kubernetes/platform/helm-values/dev/
 # http://localhost:8090/argocd/
 ```
 
-### Ingress Method (Clean URLs, requires setup)
+### Access Recommendation
 
-Edit `C:\Windows\System32\drivers\etc\hosts` and add:
-
-```
-127.0.0.1 argocd.local
-127.0.0.1 agro.local
-```
-
-Then access:
+Use ArgoCD via port-forward for local k3d:
 
 ```
-http://localhost:8090/argocd/  (ArgoCD via port-forward)
+http://localhost:8090/argocd/
 ```
 
-**Note:** Port-forward is the reliable method for accessing ArgoCD in k3d. Run `.\port-forward.ps1 argocd` first.
+**Note:** This is the reliable and supported access method in the current local setup. Run `.\port-forward.ps1 argocd` first.
 
 ---
 

@@ -3,7 +3,7 @@
   Diagnose ArgoCD access issues and suggest fixes.
 
 .DESCRIPTION
-  Checks all components needed for ArgoCD to be accessible via http://localhost/argocd/
+    Checks all components needed for ArgoCD to be accessible via http://localhost:8090/argocd/
 
 .EXAMPLE
   .\diagnose-argocd.ps1
@@ -92,10 +92,10 @@ $traefikOk = Check-Status "Traefik pods are Running" {
 }
 $allOk = $allOk -and $traefikOk
 
-$portOk = Check-Status "Port 80 is exposed (localhost)" {
-    $connections = Get-NetTCPConnection -LocalPort 80 -State Listen -ErrorAction SilentlyContinue
+$portOk = Check-Status "Port-forward 8090 is listening (localhost)" {
+    $connections = Get-NetTCPConnection -LocalPort 8090 -State Listen -ErrorAction SilentlyContinue
     if ($connections) {
-        Write-Host "   Port 80 is in use (Traefik loadbalancer)" -ForegroundColor $Color.Muted
+        Write-Host "   Port 8090 is listening (ArgoCD port-forward)" -ForegroundColor $Color.Muted
         return $true
     }
     return $false
@@ -162,30 +162,17 @@ $allOk = $allOk -and $middlewareOk
 Write-Section "5️⃣  CONNECTIVITY TEST"
 
 Write-Host ""
-Write-Host "🌐 Testing HTTP access to localhost:80" -ForegroundColor $Color.Info
+Write-Host "🌐 Testing HTTP access to localhost:8090/argocd/" -ForegroundColor $Color.Info
 
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost/" -TimeoutSec 3 -ErrorAction Stop
-    Write-Host "   ✅ localhost:80 is responding" -ForegroundColor $Color.Success
+    $response = Invoke-WebRequest -Uri "http://localhost:8090/argocd/" -TimeoutSec 3 -ErrorAction Stop
+    Write-Host "   ✅ localhost:8090/argocd/ is responding" -ForegroundColor $Color.Success
     Write-Host "   Status: $($response.StatusCode)" -ForegroundColor $Color.Muted
 }
 catch {
-    Write-Host "   ❌ localhost:80 is NOT responding" -ForegroundColor $Color.Error
+    Write-Host "   ❌ localhost:8090/argocd/ is NOT responding" -ForegroundColor $Color.Error
     Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor $Color.Muted
-    $allOk = $false
-}
-
-Write-Host ""
-Write-Host "🌐 Testing HTTP access to localhost/argocd/" -ForegroundColor $Color.Info
-
-try {
-    $response = Invoke-WebRequest -Uri "http://localhost/argocd/" -TimeoutSec 3 -ErrorAction Stop
-    Write-Host "   ✅ localhost/argocd/ is responding" -ForegroundColor $Color.Success
-    Write-Host "   Status: $($response.StatusCode)" -ForegroundColor $Color.Muted
-}
-catch {
-    Write-Host "   ❌ localhost/argocd/ is NOT responding" -ForegroundColor $Color.Error
-    Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor $Color.Muted
+    Write-Host "   Tip: run .\port-forward.ps1 argocd and retry" -ForegroundColor $Color.Muted
     $allOk = $false
 }
 
@@ -200,7 +187,7 @@ if ($allOk) {
     Write-Host "✅ All checks passed!" -ForegroundColor $Color.Success
     Write-Host ""
     Write-Host "   Access ArgoCD at:" -ForegroundColor $Color.Info
-    Write-Host "   http://localhost/argocd/" -ForegroundColor $Color.Success
+    Write-Host "   http://localhost:8090/argocd/" -ForegroundColor $Color.Success
     Write-Host ""
     Write-Host "   Default credentials:" -ForegroundColor $Color.Muted
     Write-Host "   - Username: admin" -ForegroundColor $Color.Muted
@@ -227,9 +214,9 @@ else {
     }
     
     if (-not $portOk) {
-        Write-Host "3️⃣  Port 80 not available:" -ForegroundColor $Color.Error
-        Write-Host "   Run: netstat -ano | findstr :80" -ForegroundColor $Color.Muted
-        Write-Host "   Stop the service using port 80 or use different port" -ForegroundColor $Color.Muted
+        Write-Host "3️⃣  Port-forward not available:" -ForegroundColor $Color.Error
+        Write-Host "   Run: .\port-forward.ps1 argocd" -ForegroundColor $Color.Muted
+        Write-Host "   Verify: netstat -ano | findstr :8090" -ForegroundColor $Color.Muted
         Write-Host ""
     }
     

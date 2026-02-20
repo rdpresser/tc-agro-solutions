@@ -31,7 +31,7 @@ Write-Host "=== Starting cluster '$clusterName' ===" -ForegroundColor $Color.Inf
 # Check if Docker is running
 Write-Host "   Checking Docker daemon..." -ForegroundColor $Color.Muted
 try {
-    $dockerCheck = docker ps 2>&1
+    docker ps 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Docker daemon not responding" -ForegroundColor $Color.Error
         Write-Host "   Please start Docker Desktop and wait a few seconds" -ForegroundColor $Color.Warning
@@ -80,6 +80,37 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Failed to start cluster" -ForegroundColor $Color.Error
     Write-Host "   Output: $startOutput" -ForegroundColor $Color.Muted
     Write-Host ""
+
+    $startOutputText = ($startOutput | Out-String)
+    if ($startOutputText -match "network\s+[a-f0-9]{12,}\s+not\s+found") {
+        Write-Host "🔧 Root cause detected: orphaned Docker network reference in k3d containers." -ForegroundColor $Color.Warning
+        Write-Host "   This happens when tc-agro-network was removed while cluster was running." -ForegroundColor $Color.Muted
+        Write-Host "" 
+        Write-Host "✅ Recommended fix:" -ForegroundColor $Color.Info
+        Write-Host "   1) Run manager option 22 (Diagnose & fix cluster network issues)" -ForegroundColor $Color.Muted
+        Write-Host "   2) If cluster is deleted during fix, run option 20 (Full Rebuild) or option 1 (Bootstrap)" -ForegroundColor $Color.Muted
+        Write-Host "" 
+
+        $autoFix = Read-Host "Apply automatic fix now (delete cluster '$clusterName')? (yes/no)"
+        if ($autoFix -eq "yes") {
+            Write-Host "" 
+            Write-Host "🗑️  Deleting broken cluster '$clusterName'..." -ForegroundColor $Color.Warning
+            k3d cluster delete $clusterName 2>&1 | Out-Null
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ Cluster deleted successfully" -ForegroundColor $Color.Success
+                Write-Host "" 
+                Write-Host "🚀 Next step: run option 20 (Full Rebuild) or option 1 (Bootstrap)." -ForegroundColor $Color.Info
+                exit 2
+            }
+            else {
+                Write-Host "❌ Failed to delete cluster automatically" -ForegroundColor $Color.Error
+                Write-Host "   Try manually: k3d cluster delete $clusterName" -ForegroundColor $Color.Muted
+                exit 1
+            }
+        }
+    }
+
     Write-Host "🔧 Troubleshooting:" -ForegroundColor $Color.Warning
     Write-Host "   1) Check Docker Desktop status (should show 'Running')" -ForegroundColor $Color.Muted
     Write-Host "   2) Try manual k3d command: k3d cluster start $clusterName" -ForegroundColor $Color.Muted
@@ -118,7 +149,7 @@ else {
 Write-Host ""
 Write-Host "=== Fixing kubeconfig context ===" -ForegroundColor $Color.Info
 try {
-    $contextOutput = kubectl config use-context "k3d-$clusterName" 2>&1
+    kubectl config use-context "k3d-$clusterName" 2>&1 | Out-Null
     Write-Host "   ✅ Context set to k3d-$clusterName" -ForegroundColor $Color.Success
 }
 catch {

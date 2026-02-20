@@ -1,61 +1,133 @@
 # Domain Map and API Ownership
 
-Purpose: clarify ownership, entities, and relationships across the microservices for the Hackathon 8NETT scope. All names align with the existing roadmap, ADRs, and the frontend POC in `poc/frontend`.
+Purpose: clarify ownership, entities, and relationships across the microservices for the Hackathon scope. This version is simplified for localhost execution with:
+
+- Infrastructure in Docker Compose
+- Applications in a local k3d cluster
+- GitOps deployment via ArgoCD
 
 ## High-Level Domains
 
-- Identity.Api: Users, roles, authentication, JWT issuance.
-- Farm.Api: Producers, properties, plots (with crop type), sensors registry.
-- Sensor.Ingest.Api: Time-series readings ingestion (TimescaleDB hypertable) and event publication.
-- Analytics.Worker: Rule evaluation and alert generation over readings.
-- Dashboard.Api: Read-optimized projections, aggregates, and alert/status views for UI.
+- Identity.Api: authentication and authorization
+- Farm.Api: system topology and sensor registration
+- Sensor.Ingest.Api: time-series ingestion and reading storage
+- Analytics.Worker: rule evaluation and alert generation
+- Dashboard.Api: read-optimized API for frontend (optional for hackathon)
+  - For hackathon simplicity, dashboard endpoints may live inside Sensor.Ingest.Api
+
+## Service Repositories (Current Workspace)
+
+- services/identity-service
+- services/farm-service
+- services/sensor-ingest-service
+- services/analytics-worker
+- services/dashboard-service
+
+These repositories represent the current microservice landscape for this solution.
 
 ## Core Entities (per service)
 
 - Identity.Api
-
   - User (Id, Email, PasswordHash, Status, CreatedAt)
   - Role (Id, Name)
   - UserRole (UserId, RoleId)
   - AuthToken (JWT payload: sub, email, roles, exp)
 
 - Farm.Api
-
-  - Producer (Id, Name, Email) // optional for ownership grouping
+  - Producer (Id, Name, Email)
   - Property (Id, Name, Location, AreaHectares, OwnerId)
   - Plot (Id, PropertyId, Name, CropType, AreaHectares)
   - Sensor (Id, PlotId, Type, Status, InstalledAt)
+  - Source of truth for: SensorId, PlotId, PropertyId
 
 - Sensor.Ingest.Api
-
   - SensorReading (Id, SensorId, PlotId, Time, Temperature, Humidity, SoilMoisture, Rainfall, BatteryLevel?)
-    - Stored as TimescaleDB hypertable `sensor_readings` (indexed on sensor_id, time; time_bucket for aggregations)
-  - IngestEvent (ReadingId, SensorId, PlotId, Time)
+  - Stored in TimescaleDB hypertable `sensor_readings` (indexed on sensor_id, time)
+  - Responsibilities: ingest readings, persist time-series data, expose history, publish ingestion events
 
 - Analytics.Worker
-
   - Rule (Id, PlotId, Metric, Condition, Threshold, WindowMinutes, Severity)
   - Alert (Id, RuleId, PlotId, SensorId, Message, Severity, Status, CreatedAt, ResolvedAt?)
-  - RuleEvaluationWindow (materialized window to track 24h breaches, etc.)
+  - Responsibilities: consume ingestion events, evaluate rules, generate alerts
 
-- Dashboard.Api
-  - PlotStatus (PlotId, StatusBadge, LastComputedAt, Reason)
-  - AlertView (AlertId, PlotId, SensorId, Severity, Status, CreatedAt)
-  - ReadingAggregate (SensorId, Interval, AvgTemp, MaxTemp, MinTemp, AvgHumidity, AvgSoil)
-  - LatestReadingView (SensorId, PlotId, Time, Temperature, Humidity, SoilMoisture, BatteryLevel?)
-  - DashboardStats (Properties, Plots, Sensors, AlertsOpen)
+- Dashboard.Api (optional)
+  - PlotStatus, AlertView, ReadingAggregate, LatestReadingView, DashboardStats
+  - Responsibilities: aggregate data from other services, provide cached read models
+
+## Infrastructure Layout (Localhost)
+
+Docker Compose runs outside the cluster:
+
+- PostgreSQL (Farm, Identity, Analytics)
+- TimescaleDB (Sensor readings)
+- Redis (cache)
+- RabbitMQ (events)
+- Grafana stack (observability)
+- OpenTelemetry collector
+
+k3d runs application workloads:
+
+- Identity.Api
+- Farm.Api
+- Sensor.Ingest.Api
+- Analytics.Worker
+- Dashboard.Api (optional)
+- ArgoCD
 
 ## Relationships and Data Flow
 
-- Identity owns users and roles; all APIs enforce JWT from Identity.
-- Farm owns the catalog of properties, plots, and sensors; Sensor.Id and PlotId originate here.
-- Sensor.Ingest persists readings and emits IngestEvent to Service Bus.
-- Analytics.Worker consumes IngestEvent, applies Rule over recent readings, and creates Alert.
-- Dashboard.Api queries:
-  - Farm for topology (properties/plots/sensors)
-  - Sensor.Ingest DB for history/aggregates
-  - Analytics DB for alerts/status
-  - Redis caches hot queries
+Write side:
+
+- Identity -> Farm -> Sensor.Ingest -> Analytics
+  - Identity manages users
+  - Farm manages properties, plots, and sensors
+  - Sensors send readings to Sensor.Ingest
+  - Sensor.Ingest publishes events
+  - Analytics consumes events and creates alerts
+
+Read side (hackathon mode):
+
+- Frontend reads directly from services
+  - Farm.Api (topology)
+  - Sensor.Ingest.Api (readings)
+  - Analytics.Worker (alerts)
+  - Dashboard.Api is optional
+
+Each service owns its own database. No shared tables across services.
+
+## Mermaid Bounded Contexts
+
+```mermaid
+flowchart LR
+  FE[Frontend POC] --> DASH[Dashboard.Api]
+  FE --> FARM[Farm.Api]
+  FE --> INGEST[Sensor.Ingest.Api]
+  FE --> ANALYTICS[Analytics.Worker]
+
+  ID[Identity.Api] -. JWT issuance/validation .-> FARM
+  ID -. JWT issuance/validation .-> INGEST
+  ID -. JWT issuance/validation .-> ANALYTICS
+  ID -. JWT issuance/validation .-> DASH
+
+  SENSORS[IoT Sensors] --> INGEST
+  FARM --> INGEST
+  INGEST -->|SensorIngested event| MQ[(RabbitMQ)]
+  MQ --> ANALYTICS
+  ANALYTICS -->|AlertGenerated| MQ
+  MQ --> DASH
+
+  PG[(PostgreSQL/TimescaleDB)]:::db
+  REDIS[(Redis)]:::cache
+
+  FARM --- PG
+  ID --- PG
+  INGEST --- PG
+  ANALYTICS --- PG
+  DASH --- REDIS
+
+  classDef db fill:#eef,stroke:#88a;
+  classDef cache fill:#efe,stroke:#6a6;
+```
 
 ## Mermaid Overview
 
@@ -143,40 +215,25 @@ classDiagram
     PlotStatus --> Plot : summarizes
 ```
 
-## Service Responsibilities and Ownership
-
-- Identity.Api: source of truth for authentication/authorization; emits user-related events if needed.
-- Farm.Api: source of truth for topology; Sensor.Id/PlotId/PropertyId originate here.
-- Sensor.Ingest.Api: owns time-series storage and schema; publishes ingestion events.
-- Analytics.Worker: owns rules and alerts; writes to its own DB; can publish AlertGenerated events.
-- Dashboard.Api: owns read models/caches; does not own canonical data; subscribes/queries others.
-
 ## Events and Contracts (suggested)
 
 - SensorIngested (ReadingId, SensorId, PlotId, Time, Metrics...)
 - AlertGenerated (AlertId, PlotId, SensorId, Severity, Message, CreatedAt)
 - AlertResolved (AlertId, PlotId, ResolvedAt)
 - SensorRegistered (SensorId, PlotId, Type, Status)
-- PlotUpdated (PlotId, PropertyId, CropType, AreaHectares)
 
-## Alignment with Frontend POC (poc/frontend)
+## Service Responsibilities Summary
 
-- `dashboard.html`: map to Dashboard.Api endpoints `GET /dashboard/stats`, `GET /dashboard/latest`, `GET /dashboard/history/{sensorId}`.
-- `properties*.html` and `plots*.html`: map to Farm.Api CRUD for properties/plots; ensure CropType is mandatory and displayed.
-- `sensors.html`: map to Farm.Api sensors listing and Sensor.Ingest history per sensor; surface status badges from PlotStatus/Alert.
-- `alerts.html`: map to Analytics alerts list and resolution endpoint.
-
-## Suggested Frontend Improvements (keep mock-ready)
-
-1. Surface plot status badge (e.g., OK/Warning/Critical) using Dashboard.Api PlotStatus; show reason text.
-2. Add sensor health indicators (battery level, last seen timestamp) fed by Sensor.Ingest latest reading.
-3. In history charts, expose selectable metric (temperature, humidity, soil moisture) and interval (1h, 24h, 7d) aligning with time_bucket queries.
-4. In properties/plots forms, enforce CropType selection and show attached sensors count; this matches mandatory crop_type in ADR-002.
-5. Alerts page: add filter by severity/status and a Resolve action that calls Analytics alert resolution.
-6. Add a small legend on dashboard cards clarifying data freshness (e.g., updated_at from latest reading).
+| Service           | Owns Data                  |
+| ----------------- | -------------------------- |
+| Identity.Api      | Users, roles               |
+| Farm.Api          | Properties, plots, sensors |
+| Sensor.Ingest.Api | Time-series readings       |
+| Analytics.Worker  | Rules and alerts           |
+| Dashboard.Api     | Read models (optional)     |
 
 ## How to Read the Model
 
-- Write side: Identity -> Farm (topology) -> Sensor.Ingest (readings) -> Analytics (alerts).
-- Read side: Dashboard consumes Farm topology + Sensor.Ingest aggregates + Analytics alerts, exposes cached views for UI.
-- Each service owns its persistence; cross-service reads happen via HTTP/queries or subscribed events; no shared tables.
+- Write side: Identity -> Farm -> Sensor.Ingest -> Analytics
+- Read side: Dashboard.Api (or frontend) aggregates read models
+- Each service owns its own database; no shared tables

@@ -135,16 +135,45 @@ function Test-ClusterNetworkHealth {
     $orphanedNetworks = @()
     
     foreach ($container in $containers) {
-        $networkInfo = docker inspect $container --format "{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}" 2>$null
-        
-        if ($networkInfo) {
-            # Check if network still exists
-            $networkExists = docker network inspect $networkInfo 2>$null
-            if (-not $networkExists) {
+        $networkMode = (docker inspect $container --format "{{.HostConfig.NetworkMode}}" 2>$null).Trim()
+
+        if ($networkMode -and
+            $networkMode -notin @("default", "bridge", "host", "none") -and
+            -not ($networkMode -like "container:*")) {
+
+            $networkModeExists = docker network inspect $networkMode 2>$null
+            if (-not $networkModeExists) {
                 $orphanedNetworks += @{
                     Container = $container
-                    NetworkID = $networkInfo
+                    NetworkID = $networkMode
+                    Source    = "HostConfig.NetworkMode"
                 }
+                continue
+            }
+        }
+
+        $networksJson = docker inspect $container --format "{{json .NetworkSettings.Networks}}" 2>$null
+        if ($networksJson -and $networksJson -ne "null" -and $networksJson -ne "{}") {
+            try {
+                $networks = $networksJson | ConvertFrom-Json
+                $networkProperties = $networks.PSObject.Properties
+
+                foreach ($property in $networkProperties) {
+                    $networkId = $property.Value.NetworkID
+                    if (-not [string]::IsNullOrWhiteSpace($networkId)) {
+                        $networkExists = docker network inspect $networkId 2>$null
+                        if (-not $networkExists) {
+                            $orphanedNetworks += @{
+                                Container = $container
+                                NetworkID = $networkId
+                                Source    = "NetworkSettings.Networks"
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Host "⚠️  Could not parse network settings for container '$container'" -ForegroundColor $Color.Warning
             }
         }
     }
@@ -172,6 +201,9 @@ function Test-ClusterNetworkHealth {
     foreach ($item in $orphanedNetworks) {
         Write-Host "   Container: $($item.Container)" -ForegroundColor $Color.Muted
         Write-Host "   Network ID: $($item.NetworkID) (DELETED)" -ForegroundColor $Color.Error
+        if ($item.Source) {
+            Write-Host "   Source: $($item.Source)" -ForegroundColor $Color.Muted
+        }
         Write-Host ""
     }
     
@@ -326,6 +358,37 @@ function Invoke-Script {
     return $true
 }
 
+function Prompt-BootstrapAfterDiagnostics {
+    param(
+        [string]$Reason = "cluster not available after diagnostics"
+    )
+
+    Write-Host "" 
+    Write-Host "💡 Cluster is not ready ($Reason)." -ForegroundColor $Color.Info
+    $runBootstrap = Read-Host "Proceed with bootstrap now? (yes/no)"
+
+    if ($runBootstrap -eq "yes") {
+        Write-Host "" 
+        Write-Host "🚀 Starting bootstrap flow..." -ForegroundColor $Color.Info
+
+        $bootstrapSteps = @(
+            @{ name = "Bootstrap cluster (k3d + ArgoCD + manifests + secrets)"; action = { Invoke-Script "bootstrap.ps1" } },
+            @{ name = "Sync ArgoCD applications"; action = { Invoke-Script "sync-argocd.ps1" -Arguments @("all") } },
+            @{ name = "Port-forward ArgoCD"; action = { Invoke-Script "port-forward.ps1" -Arguments @("argocd") } }
+        )
+
+        $result = Invoke-BootstrapPipeline -Steps $bootstrapSteps
+        if ($result) {
+            Write-Host "" 
+            Write-Host "✅ Bootstrap completed successfully!" -ForegroundColor $Color.Success
+            Write-Host "   🌐 ArgoCD: http://localhost:8090/argocd/" -ForegroundColor $Color.Muted
+        }
+    }
+    else {
+        Write-Host "ℹ️  Bootstrap skipped by user." -ForegroundColor $Color.Muted
+    }
+}
+
 # =====================================================
 # === Main Menu Loop
 # =====================================================
@@ -364,7 +427,7 @@ else {
             $result = Invoke-BootstrapPipeline -Steps $bootstrapSteps
             if ($result) {
                 Write-Host ""; Write-Host "✅ Bootstrap completed successfully!" -ForegroundColor $Color.Success
-                Write-Host "   🌐 ArgoCD: http://localhost:8080" -ForegroundColor $Color.Muted
+                Write-Host "   🌐 ArgoCD: http://localhost:8090/argocd/" -ForegroundColor $Color.Muted
                 Write-Host "   📋 Default credentials: admin / (reset via manager menu option 7)" -ForegroundColor $Color.Muted
             }
             
@@ -372,7 +435,34 @@ else {
         }
     
         "2" {
-            $null = Invoke-Script "start-cluster.ps1"
+            $networkHealthy = Test-ClusterNetworkHealth
+
+            if ($networkHealthy) {
+                $clusterExistsAfterCheck = k3d cluster list 2>$null | Select-String -Pattern "^dev\s"
+
+                if (-not $clusterExistsAfterCheck) {
+                    Write-Host "" 
+                    Write-Host "ℹ️  Cluster 'dev' is not present after network diagnostics." -ForegroundColor $Color.Info
+                    Write-Host "   Run option 1 (Bootstrap) or option 20 (Full Rebuild) to recreate it." -ForegroundColor $Color.Muted
+                    Prompt-BootstrapAfterDiagnostics -Reason "cluster deleted during network fix"
+                }
+                else {
+                    $startResult = Invoke-Script "start-cluster.ps1"
+
+                    if (-not $startResult) {
+                        $clusterExistsAfterStart = k3d cluster list 2>$null | Select-String -Pattern "^dev\s"
+                        if (-not $clusterExistsAfterStart) {
+                            Prompt-BootstrapAfterDiagnostics -Reason "cluster deleted during start recovery"
+                        }
+                    }
+                }
+            }
+            else {
+                Write-Host "" 
+                Write-Host "⚠️  Start cancelled due to unresolved network issue." -ForegroundColor $Color.Warning
+                Write-Host "   Resolve diagnostics first, then run option 2 again." -ForegroundColor $Color.Muted
+            }
+
             $null = Read-Host "`nPress Enter to continue"
         }
     
@@ -647,7 +737,7 @@ else {
             $result = Invoke-BootstrapPipeline -Steps $fullRebuildSteps
             if ($result) {
                 Write-Host ""; Write-Host "✅ Full rebuild pipeline completed successfully!" -ForegroundColor $Color.Success
-                Write-Host "   🌐 ArgoCD: http://localhost:8090/argocd" -ForegroundColor $Color.Muted
+                Write-Host "   🌐 ArgoCD: http://localhost:8090/argocd/" -ForegroundColor $Color.Muted
                 Write-Host "   📦 Images: Use CI/CD pipelines or option 13 for manual build" -ForegroundColor $Color.Muted
                 Write-Host "   📋 Next: verify pods are running: kubectl get pods -n agro-apps -w" -ForegroundColor $Color.Muted
             }

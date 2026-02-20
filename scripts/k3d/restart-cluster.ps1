@@ -136,8 +136,8 @@ Write-Host "║          ✅ CLUSTER RESTART COMPLETE                      ║" 
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Color.Success
 Write-Host ""
 Write-Host "🌐 ACCESS URLS:" -ForegroundColor $Color.Info
-Write-Host "   ArgoCD: http://localhost/argocd/" -ForegroundColor $Color.Success
-Write-Host "   (Ingress via Traefik - no port-forward needed)" -ForegroundColor $Color.Muted
+Write-Host "   ArgoCD: http://localhost:8090/argocd/" -ForegroundColor $Color.Success
+Write-Host "   (via port-forward; run .\port-forward.ps1 argocd if needed)" -ForegroundColor $Color.Muted
 Write-Host ""
 Write-Host "💡 NEXT STEPS:" -ForegroundColor $Color.Info
 Write-Host "   1. Verify ArgoCD Applications:" -ForegroundColor $Color.Muted
