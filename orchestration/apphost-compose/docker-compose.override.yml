@@ -253,42 +253,38 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  # # Analytics Worker - Development Mode (Uncomment when ready)
-  # tc-agro-analytics-worker:
-  #   build:
-  #     context: ../../
-  #     dockerfile: services/analytics-worker/src/TC.Agro.AnalyticsWorker/Dockerfile
-  #     args:
-  #       BUILD_CONFIGURATION: Debug
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
-  #     - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
-  #     - Serilog__MinimumLevel__Default=Debug
-  #   volumes:
-  #     # - ../../services/analytics-worker/src:/app/src:ro
-  #     - analytics_worker_nuget_cache:/root/.nuget/packages
-  #   restart: on-failure:3
-
-  # # Dashboard Service - Development Mode (Uncomment when ready)
-  # tc-agro-dashboard-service:
-  #   build:
-  #     context: ../../
-  #     dockerfile: services/dashboard-service/src/Adapters/Inbound/TC.Agro.Dashboard.Service/Dockerfile
-  #     args:
-  #       BUILD_CONFIGURATION: Debug
-  #   ports:
-  #     - "5005:8080"
-  #     - "15005:15001"  # Debug port
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
-  #     - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
-  #     - Serilog__MinimumLevel__Default=Debug
-  #   volumes:
-  #     # - ../../services/dashboard-service/src:/app/src:ro
-  #     - dashboard_nuget_cache:/root/.nuget/packages
-  #   restart: on-failure:3
+  # Analytics Worker - Development Mode
+  tc-agro-analytics-worker:
+    image: tc-agro-analytics-worker:dev-local
+    restart: "no"
+    build:
+      context: ../../
+      dockerfile: services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Debug
+    ports:
+      - "5004:8080" # HTTP
+      - "5014:8081" # HTTPS
+      - "15004:15001" # VS Debugger port
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - Serilog__MinimumLevel__Default=Debug
+      - Serilog__MinimumLevel__Override__Microsoft=Information
+      - Serilog__MinimumLevel__Override__System=Information
+      - Telemetry__Grafana__Agent__Enabled=${TELEMETRY_GRAFANA_AGENT_ENABLED}
+    volumes:
+      - analytics_logs:/app/logs
+      - analytics_worker_nuget_cache:/root/.nuget/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
 # =====================================================
 # VOLUMES - Development Additional Volumes
@@ -307,7 +303,5 @@ volumes:
     name: tc-agro-farm-nuget-cache
   sensor_ingest_nuget_cache:
     name: tc-agro-sensor-ingest-nuget-cache
-  # analytics_worker_nuget_cache:
-  #   name: tc-agro-analytics-worker-nuget-cache
-  # dashboard_nuget_cache:
-  #   name: tc-agro-dashboard-nuget-cache
+  analytics_worker_nuget_cache:
+    name: tc-agro-analytics-worker-nuget-cache
