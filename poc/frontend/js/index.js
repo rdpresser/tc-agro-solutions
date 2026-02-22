@@ -89,6 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = loginForm?.querySelector('button[type="submit"]');
   const errorMessage = $('.error-message');
 
+  const params = new URLSearchParams(window.location.search);
+  const prefilledEmail = params.get('email');
+  if (prefilledEmail && emailInput) {
+    emailInput.value = prefilledEmail;
+    passwordInput?.focus();
+  }
+
   if (!loginForm) return;
 
   loginForm.addEventListener('submit', async (e) => {

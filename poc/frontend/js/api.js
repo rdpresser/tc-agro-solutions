@@ -556,6 +556,11 @@ export async function registerUser(payload) {
   return data;
 }
 
+export async function checkEmailAvailability(email) {
+  const { data } = await identityApi.get(`/auth/check-email/${encodeURIComponent(email)}`);
+  return data;
+}
+
 export async function getUsers({
   pageNumber = 1,
   pageSize = 10,

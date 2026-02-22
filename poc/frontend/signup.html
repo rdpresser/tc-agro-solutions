@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - User Sign Up" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Sign Up | TC Agro Solutions</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="login-box signup-box fade-in">
+        <div class="login-header">
+          <div class="login-logo">🌾</div>
+          <h1 class="login-title">Create Account</h1>
+          <p class="login-subtitle">Join TC Agro Solutions</p>
+        </div>
+
+        <form id="signupForm">
+          <div id="formErrors" class="alert alert-danger" style="display: none">
+            <span class="alert-icon">❌</span>
+            <span id="formErrorsText"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="name" class="form-label required">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              class="form-control"
+              placeholder="e.g., John Producer"
+              required
+              maxlength="200"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label required">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control"
+              placeholder="e.g., john@farm.com"
+              required
+            />
+            <div id="emailAvailability" class="email-availability">
+              <span id="emailAvailabilityIcon" class="availability-indicator" aria-hidden="true">●</span>
+              <span id="emailAvailabilityText" class="form-helper"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="username" class="form-label required">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="e.g., johnproducer"
+              required
+              maxlength="100"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="role" class="form-label required">Role</label>
+            <select id="role" name="role" class="form-control form-select" disabled>
+              <option value="Producer" selected>Producer</option>
+            </select>
+            <span class="form-helper">Default role for self-registration</span>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label required">Password</label>
+            <div style="display: flex; gap: 8px; align-items: center">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="form-control"
+                placeholder="Create a strong password"
+                required
+              />
+              <button type="button" id="togglePassword" class="btn btn-outline btn-sm">👁️</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 24px">
+            <button type="submit" id="signupBtn" class="btn btn-primary btn-block btn-lg">
+              ✨ Create Account
+            </button>
+          </div>
+        </form>
+
+        <div class="text-center" style="margin-top: 12px">
+          <p class="text-muted" style="margin: 0; font-size: 0.9rem">
+            Already have an account?
+            <a href="index.html" style="font-weight: 600">Sign In</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/signup.js?v=20260222"></script>
+  </body>
+</html>

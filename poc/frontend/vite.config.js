@@ -39,6 +39,7 @@ export default defineConfig(({ mode }) => ({
         plotsForm: resolve(__dirname, 'plots-form.html'),
         users: resolve(__dirname, 'users.html'),
         usersForm: resolve(__dirname, 'users-form.html'),
+        signup: resolve(__dirname, 'signup.html'),
         sensors: resolve(__dirname, 'sensors.html'),
         alerts: resolve(__dirname, 'alerts.html')
       },
