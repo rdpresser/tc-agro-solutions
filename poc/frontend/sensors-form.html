@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Sensor Form" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Sensor Details | TC Agro Solutions</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
+            <a href="sensors.html" class="nav-item active">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="users.html" class="nav-item">
+              <span class="nav-icon">👥</span>
+              <span class="nav-text">Users</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors-monitoring.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title" id="pageTitle">Edit Sensor</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="content">
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">📡</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <a href="sensors.html">Sensors</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span id="breadcrumbCurrent">Edit</span>
+                </div>
+                <h2 id="formTitle" style="margin: 0">Edit Sensor</h2>
+              </div>
+            </div>
+            <div class="page-header-actions">
+              <a href="sensors.html" class="btn btn-outline"> ← Back to List </a>
+            </div>
+          </div>
+
+          <form id="sensorForm" class="card">
+            <input type="hidden" id="sensorId" name="id" />
+
+            <div id="formErrors" class="alert alert-danger" style="display: none"></div>
+
+            <div class="form-section">
+              <h3 class="form-section-title">📡 Sensor Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="label" class="form-label">Label</label>
+                  <input type="text" id="label" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label for="type" class="form-label">Type</label>
+                  <input type="text" id="type" class="form-control" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="status" class="form-label">Status</label>
+                  <input type="text" id="status" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label for="installedAt" class="form-label">Installed At</label>
+                  <input type="text" id="installedAt" class="form-control" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="form-section-title">🏘️ Location</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="propertyName" class="form-label">Property</label>
+                  <input type="text" id="propertyName" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label for="plotName" class="form-label">Plot</label>
+                  <input type="text" id="plotName" class="form-control" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="propertyId" class="form-label">Property ID</label>
+                  <input type="text" id="propertyId" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label for="plotId" class="form-label">Plot ID</label>
+                  <input type="text" id="plotId" class="form-control" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <a href="sensors.html" class="btn btn-outline">Cancel</a>
+              <button type="button" id="readOnlyBtn" class="btn btn-primary" disabled>
+                🔒 Read-only
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./js/sensors-form.js"></script>
+  </body>
+</html>

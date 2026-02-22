@@ -375,6 +375,44 @@ export function deletePlot(_id) {
 // SENSORS API
 // ============================================
 
+export async function getSensorsPaginated({
+  pageNumber = 1,
+  pageSize = 10,
+  sortBy = 'installedAt',
+  sortDirection = 'desc',
+  filter = '',
+  propertyId = '',
+  plotId = '',
+  type = '',
+  status = ''
+} = {}) {
+  const params = {
+    pageNumber,
+    pageSize,
+    sortBy,
+    sortDirection,
+    filter,
+    propertyId,
+    plotId,
+    type,
+    status
+  };
+
+  Object.keys(params).forEach((key) => {
+    if (params[key] === '' || params[key] === null || params[key] === undefined) {
+      delete params[key];
+    }
+  });
+
+  const { data } = await farmApi.get('/api/sensors', { params });
+  return data;
+}
+
+export async function getSensorById(id) {
+  const { data } = await farmApi.get(`/api/sensors/${encodeURIComponent(id)}`);
+  return data;
+}
+
 /**
  * Get sensors filtered by plot
  * @param {string|null} plotId - Plot ID to filter by (default: null = all)

@@ -1,224 +1,402 @@
 /**
- * TC Agro Solutions - Sensors Page Entry Point
+ * TC Agro Solutions - Sensors List Page Entry Point
  */
 
-import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
+import {
+  fetchFarmSwagger,
+  getSensorsPaginated,
+  getProperties,
+  getPlotsPaginated,
+  normalizeError
+} from './api.js';
 import { initProtectedPage } from './common.js';
-import { toast, t } from './i18n.js';
-import { $, $$, formatRelativeTime } from './utils.js';
+import { toast } from './i18n.js';
+import { $, debounce, getPageUrl } from './utils.js';
 
-// ============================================
-// PAGE INITIALIZATION
-// ============================================
+let lastPageState = {
+  pageNumber: 1,
+  pageCount: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+  totalCount: 0
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Check auth and setup page (must be inside DOMContentLoaded for sidebar elements)
   if (!initProtectedPage()) {
     return;
   }
 
+  await checkFarmApi();
+  await Promise.all([loadPropertyFilter(), loadPlotFilter()]);
   await loadSensors();
-  setupRealTimeUpdates();
   setupEventListeners();
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  stopSignalRConnection();
-});
-
-// ============================================
-// DATA LOADING
-// ============================================
-
-async function loadSensors() {
-  const grid = $('#sensors-grid');
-  if (!grid) return;
-
-  grid.innerHTML = '<div class="loading">Loading sensors...</div>';
-
+async function checkFarmApi() {
   try {
-    const sensors = await getSensors();
-    renderSensorsGrid(sensors);
+    await fetchFarmSwagger();
   } catch (error) {
-    console.error('Error loading sensors:', error);
-    grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
-    toast('sensors.load_failed', 'error');
+    const { message } = normalizeError(error);
+    toast(message || 'Farm API is not reachable', 'warning');
   }
 }
 
-function renderSensorsGrid(sensors) {
-  const grid = $('#sensors-grid');
-  if (!grid) return;
+function getCurrentFilters() {
+  return {
+    pageNumber: Number($('#sensors-page-number')?.value || 1),
+    pageSize: Number($('#sensors-page-size')?.value || 10),
+    sortBy: $('#sensors-sort-by')?.value || 'installedAt',
+    sortDirection: $('#sensors-sort-direction')?.value || 'desc',
+    filter: $('#search-sensors')?.value?.trim() || '',
+    propertyId: $('#filter-property')?.value || '',
+    plotId: $('#filter-plot')?.value || '',
+    type: $('#filter-type')?.value || '',
+    status: $('#filter-status')?.value || ''
+  };
+}
+
+async function loadSensors() {
+  const tbody = $('#sensors-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+
+  try {
+    const filters = getCurrentFilters();
+    const data = await getSensorsPaginated(filters);
+    const normalized = normalizeSensorsResponse(data, filters);
+
+    renderSensorsTable(normalized.items);
+    updatePageOptions(normalized.pageCount, normalized.pageNumber);
+    updatePagerControls(normalized);
+    renderSummary(normalized);
+    lastPageState = normalized;
+  } catch (error) {
+    const { message } = normalizeError(error);
+    console.error('Error loading sensors:', error);
+    tbody.innerHTML =
+      '<tr><td colspan="8" class="text-center text-danger">Error loading sensors</td></tr>';
+    renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
+    toast(message || 'sensors.load_failed', 'error');
+  }
+}
+
+function normalizeSensorsResponse(data, filters) {
+  if (Array.isArray(data)) {
+    const totalCount = data.length;
+    const pageSize = filters?.pageSize || 10;
+    const pageNumber = filters?.pageNumber || 1;
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const safePage = Math.min(Math.max(1, pageNumber), pageCount);
+    const start = (safePage - 1) * pageSize;
+
+    return {
+      items: data.slice(start, start + pageSize),
+      totalCount,
+      pageNumber: safePage,
+      pageSize,
+      pageCount,
+      hasPreviousPage: safePage > 1,
+      hasNextPage: safePage < pageCount
+    };
+  }
+
+  const items = data?.data || data?.items || data?.results || [];
+  const totalCount = Number(data?.totalCount ?? items.length);
+  const pageNumber = Number(data?.pageNumber || filters?.pageNumber || 1);
+  const pageSize = Number(data?.pageSize || filters?.pageSize || 10);
+  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
+  const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;
+
+  return {
+    items,
+    totalCount,
+    pageNumber,
+    pageSize,
+    pageCount,
+    hasPreviousPage,
+    hasNextPage
+  };
+}
+
+function renderSensorsTable(sensors) {
+  const tbody = $('#sensors-tbody');
+  if (!tbody) return;
 
   if (!sensors.length) {
-    grid.innerHTML = '<div class="empty">No sensors registered</div>';
+    tbody.innerHTML =
+      '<tr><td colspan="8" class="text-center text-muted">No sensors found</td></tr>';
     return;
   }
 
-  grid.innerHTML = sensors
-    .map(
-      (sensor) => `
-    <div class="sensor-card ${sensor.status}" data-sensor-id="${sensor.id}">
-      <div class="sensor-header">
-        <span class="sensor-id">${sensor.id}</span>
-        <span class="sensor-status ${sensor.status}">
-          ${getStatusIcon(sensor.status)}
-        </span>
-      </div>
-      
-      <div class="sensor-plot">📍 ${sensor.plotName}</div>
-      
-      <div class="sensor-readings">
-        <div class="reading">
-          <span class="reading-label">🌡️ Temp</span>
-          <span class="reading-value" data-metric="temperature">
-            ${sensor.temperature !== null ? `${sensor.temperature.toFixed(1)}°C` : '--'}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">💧 Humidity</span>
-          <span class="reading-value" data-metric="humidity">
-            ${sensor.humidity !== null ? `${sensor.humidity.toFixed(0)}%` : '--'}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">🌿 Soil</span>
-          <span class="reading-value" data-metric="soilMoisture">
-            ${sensor.soilMoisture !== null ? `${sensor.soilMoisture.toFixed(0)}%` : '--'}
-          </span>
-        </div>
-      </div>
-      
-      <div class="sensor-footer">
-        <span class="battery ${getBatteryClass(sensor.battery)}">
-          🔋 ${sensor.battery}%
-        </span>
-        <span class="last-update" title="${sensor.lastReading}">
-          ${formatRelativeTime(sensor.lastReading)}
-        </span>
-      </div>
-    </div>
-  `
-    )
+  tbody.innerHTML = sensors
+    .map((sensor) => {
+      const installedAt = sensor.installedAt
+        ? new Date(sensor.installedAt).toLocaleString('en-US')
+        : '-';
+
+      return `
+    <tr data-id="${sensor.id}">
+      <td><strong>${sensor.label || '-'}</strong></td>
+      <td>${sensor.type || '-'}</td>
+      <td>
+        <span class="badge ${getStatusBadgeClass(sensor.status)}">${sensor.status || '-'}</span>
+      </td>
+      <td>${sensor.plotName || '-'}</td>
+      <td>${sensor.propertyName || '-'}</td>
+      <td>${installedAt}</td>
+      <td><span title="${sensor.id || ''}">${truncateId(sensor.id)}</span></td>
+      <td class="actions">
+        <a href="${getPageUrl('sensors-form.html')}?id=${encodeURIComponent(sensor.id)}" class="btn btn-sm btn-outline">👁️ View</a>
+      </td>
+    </tr>
+  `;
+    })
     .join('');
 }
 
-// ============================================
-// HELPERS
-// ============================================
+function renderSummary(state) {
+  const summaryText = $('#sensors-summary-text');
+  const activeBadge = $('#sensors-summary-active');
+  const inactiveBadge = $('#sensors-summary-inactive');
+  const maintenanceBadge = $('#sensors-summary-maintenance');
 
-function getStatusIcon(status) {
-  const icons = {
-    online: '🟢 Online',
-    warning: '🟡 Warning',
-    offline: '🔴 Offline'
-  };
-  return icons[status] || status;
+  const sensors = state?.items || [];
+  const activeCount = sensors.filter((s) => normalizeStatus(s.status) === 'active').length;
+  const inactiveCount = sensors.filter((s) => normalizeStatus(s.status) === 'inactive').length;
+  const maintenanceCount = sensors.filter(
+    (s) => normalizeStatus(s.status) === 'maintenance'
+  ).length;
+
+  if (summaryText) {
+    summaryText.textContent = `Showing ${sensors.length} of ${state?.totalCount ?? sensors.length} sensor(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
+  }
+  if (activeBadge) activeBadge.textContent = `${activeCount} Active`;
+  if (inactiveBadge) inactiveBadge.textContent = `${inactiveCount} Inactive`;
+  if (maintenanceBadge) maintenanceBadge.textContent = `${maintenanceCount} Maintenance`;
 }
 
-function getBatteryClass(level) {
-  if (level < 20) return 'critical';
-  if (level < 50) return 'warning';
-  return 'good';
+function getStatusBadgeClass(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === 'active') return 'badge-success';
+  if (normalized === 'maintenance') return 'badge-warning';
+  if (normalized === 'inactive') return 'badge-danger';
+  return 'badge-secondary';
 }
 
-// ============================================
-// REAL-TIME UPDATES
-// ============================================
+function normalizeStatus(status) {
+  return String(status || '')
+    .trim()
+    .toLowerCase();
+}
 
-function setupRealTimeUpdates() {
-  initSignalRConnection({
-    onSensorReading: (reading) => {
-      updateSensorCard(reading.sensorId, reading);
-    },
-    onSensorStatus: (data) => {
-      const card = $(`[data-sensor-id="${data.sensorId}"]`);
-      if (card) {
-        card.className = `sensor-card ${data.status}`;
-        const statusEl = card.querySelector('.sensor-status');
-        if (statusEl) {
-          statusEl.className = `sensor-status ${data.status}`;
-          statusEl.textContent = getStatusIcon(data.status);
-        }
-      }
+function truncateId(id) {
+  if (!id) return '-';
+  const value = String(id);
+  return value.length > 8 ? `${value.slice(0, 8)}...` : value;
+}
+
+function updatePageOptions(pageCount, currentPage) {
+  const pageSelect = $('#sensors-page-number');
+  if (!pageSelect) return;
+
+  const pages = Math.max(1, pageCount || 1);
+  pageSelect.innerHTML = Array.from({ length: pages }, (_, index) => {
+    const page = index + 1;
+    return `<option value="${page}">${page}</option>`;
+  }).join('');
+
+  const safePage = Math.min(Math.max(1, currentPage || 1), pages);
+  pageSelect.value = String(safePage);
+}
+
+function updatePagerControls(state) {
+  const prevBtn = $('#sensors-prev');
+  const nextBtn = $('#sensors-next');
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.disabled = !state.hasPreviousPage;
+  nextBtn.disabled = !state.hasNextPage;
+}
+
+async function fetchAllPages(fetchFn, baseParams = {}) {
+  const allItems = [];
+  let pageNumber = 1;
+  const pageSize = 100;
+  let keepFetching = true;
+  let maxPagesSafety = 25;
+
+  while (keepFetching && maxPagesSafety > 0) {
+    const response = await fetchFn({ ...baseParams, pageNumber, pageSize });
+    const items = response?.data || response?.items || response?.results || [];
+    allItems.push(...(Array.isArray(items) ? items : []));
+
+    if (response?.hasNextPage === true) {
+      pageNumber += 1;
+      maxPagesSafety -= 1;
+    } else {
+      keepFetching = false;
     }
-  });
+  }
+
+  return allItems;
 }
 
-function updateSensorCard(sensorId, reading) {
-  const card = $(`[data-sensor-id="${sensorId}"]`);
-  if (!card) return;
+async function loadPropertyFilter() {
+  const select = $('#filter-property');
+  if (!select) return;
 
-  // Update readings with animation
-  const metrics = ['temperature', 'humidity', 'soilMoisture'];
+  const currentValue = select.value;
 
-  metrics.forEach((metric) => {
-    const el = card.querySelector(`[data-metric="${metric}"]`);
-    if (el && reading[metric] !== null) {
-      el.classList.add('pulse');
+  try {
+    const properties = await fetchAllPages((params) => getProperties(params), {
+      sortBy: 'name',
+      sortDirection: 'asc',
+      filter: ''
+    });
 
-      const value = reading[metric];
-      if (metric === 'temperature') {
-        el.textContent = `${value.toFixed(1)}°C`;
-      } else {
-        el.textContent = `${value.toFixed(0)}%`;
-      }
+    select.innerHTML = `<option value="">All Properties</option>${properties
+      .map((property) => `<option value="${property.id}">${property.name}</option>`)
+      .join('')}`;
 
-      setTimeout(() => el.classList.remove('pulse'), 500);
+    if (currentValue) {
+      select.value = currentValue;
     }
-  });
-
-  // Update last update time
-  const timeEl = card.querySelector('.last-update');
-  if (timeEl) {
-    timeEl.textContent = 'now';
-    timeEl.title = new Date().toISOString();
+  } catch (error) {
+    console.error('Error loading property filter options:', error);
   }
 }
 
-// ============================================
-// EVENT LISTENERS
-// ============================================
+async function loadPlotFilter(propertyId = '') {
+  const select = $('#filter-plot');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  try {
+    const plots = await fetchAllPages((params) => getPlotsPaginated(params), {
+      sortBy: 'name',
+      sortDirection: 'asc',
+      filter: '',
+      propertyId: propertyId || ''
+    });
+
+    select.innerHTML = `<option value="">All Plots</option>${plots
+      .map((plot) => `<option value="${plot.id}">${plot.name} • ${plot.propertyName}</option>`)
+      .join('')}`;
+
+    if (currentValue && !propertyId) {
+      select.value = currentValue;
+    }
+  } catch (error) {
+    console.error('Error loading plot filter options:', error);
+  }
+}
 
 function setupEventListeners() {
-  // Refresh button
-  const refreshBtn = $('#refresh-sensors');
-  refreshBtn?.addEventListener('click', async () => {
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = '⟳ Updating...';
-
+  const filterForm = $('#sensorsFilterForm');
+  filterForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
     await loadSensors();
-
-    refreshBtn.disabled = false;
-    refreshBtn.textContent = '⟳ Refresh';
-    toast('sensors.updated', 'success');
   });
 
-  // Status filter
-  const filterBtns = $$('[data-filter-status]');
-  filterBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // Update active state
-      filterBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+  const propertyFilter = $('#filter-property');
+  propertyFilter?.addEventListener('change', async () => {
+    const selectedPropertyId = propertyFilter.value || '';
+    await loadPlotFilter(selectedPropertyId);
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    await loadSensors();
+  });
 
-      // Filter cards
-      const status = btn.dataset.filterStatus;
-      const cards = $$('.sensor-card');
+  const plotFilter = $('#filter-plot');
+  plotFilter?.addEventListener('change', async () => {
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    await loadSensors();
+  });
 
-      cards.forEach((card) => {
-        if (status === 'all' || card.classList.contains(status)) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
+  const typeFilter = $('#filter-type');
+  typeFilter?.addEventListener('change', async () => {
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    await loadSensors();
+  });
+
+  const statusFilter = $('#filter-status');
+  statusFilter?.addEventListener('change', async () => {
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    await loadSensors();
+  });
+
+  const pageNumber = $('#sensors-page-number');
+  pageNumber?.addEventListener('change', async () => {
+    await loadSensors();
+  });
+
+  const pageSize = $('#sensors-page-size');
+  pageSize?.addEventListener('change', async () => {
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    await loadSensors();
+  });
+
+  const sortBy = $('#sensors-sort-by');
+  sortBy?.addEventListener('change', async () => {
+    await loadSensors();
+  });
+
+  const sortDirection = $('#sensors-sort-direction');
+  sortDirection?.addEventListener('change', async () => {
+    await loadSensors();
+  });
+
+  const searchInput = $('#search-sensors');
+  const debouncedSearch = debounce(() => {
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadSensors();
+  }, 300);
+
+  searchInput?.addEventListener('input', () => {
+    debouncedSearch();
+  });
+
+  searchInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const pageSelect = $('#sensors-page-number');
+    if (pageSelect) pageSelect.value = '1';
+    loadSensors();
+  });
+
+  const prevBtn = $('#sensors-prev');
+  prevBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasPreviousPage) return;
+    const pageSelect = $('#sensors-page-number');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current > 1) {
+      pageSelect.value = String(current - 1);
+      await loadSensors();
+    }
+  });
+
+  const nextBtn = $('#sensors-next');
+  nextBtn?.addEventListener('click', async () => {
+    if (!lastPageState.hasNextPage) return;
+    const pageSelect = $('#sensors-page-number');
+    const current = Number(pageSelect?.value || 1);
+    if (pageSelect && current < lastPageState.pageCount) {
+      pageSelect.value = String(current + 1);
+      await loadSensors();
+    }
   });
 }
 
-// Export for debugging
 if (import.meta.env.DEV) {
-  window.sensorsDebug = { loadSensors, updateSensorCard };
+  window.sensorsDebug = { loadSensors };
 }

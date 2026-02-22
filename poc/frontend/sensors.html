@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TC Agro Solutions - Sensor Management" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Sensors | TC Agro Solutions</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">🌾</span>
+          <span class="sidebar-brand">TC Agro</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="dashboard.html" class="nav-item">
+              <span class="nav-icon">📊</span>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="properties.html" class="nav-item">
+              <span class="nav-icon">🏘️</span>
+              <span class="nav-text">Properties</span>
+            </a>
+            <a href="plots.html" class="nav-item">
+              <span class="nav-icon">🌱</span>
+              <span class="nav-text">Plots</span>
+            </a>
+            <a href="sensors.html" class="nav-item active">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="users.html" class="nav-item">
+              <span class="nav-icon">👥</span>
+              <span class="nav-text">Users</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Monitoring</div>
+            <a href="sensors-monitoring.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
+            <a href="alerts.html" class="nav-item">
+              <span class="nav-icon">🔔</span>
+              <span class="nav-text">Alerts</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a href="#" class="nav-item" data-action="logout">
+              <span class="nav-icon">🚪</span>
+              <span class="nav-text">Logout</span>
+            </a>
+          </div>
+        </nav>
+      </aside>
+
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="menuToggle" class="menu-toggle">☰</button>
+            <h1 class="page-title">Sensors</h1>
+          </div>
+          <div class="topbar-right">
+            <div class="user-menu">
+              <div class="user-avatar">👤</div>
+              <span id="userDisplay" class="user-name">User</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="content">
+          <div class="page-header">
+            <div class="page-header-title">
+              <span class="page-header-icon">📡</span>
+              <div>
+                <div class="breadcrumb">
+                  <a href="dashboard.html">Dashboard</a>
+                  <span class="breadcrumb-separator">/</span>
+                  <span>Sensors</span>
+                </div>
+                <h2 style="margin: 0">Sensor Management</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 24px">
+            <form id="sensorsFilterForm">
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0">
+                  <input
+                    type="text"
+                    id="search-sensors"
+                    class="form-control"
+                    placeholder="🔍 Filter by label, plot or property"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Property</label>
+                  <select id="filter-property" class="form-control form-select">
+                    <option value="">All Properties</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Plot</label>
+                  <select id="filter-plot" class="form-control form-select">
+                    <option value="">All Plots</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Type</label>
+                  <select id="filter-type" class="form-control form-select">
+                    <option value="">All Types</option>
+                    <option value="Temperature">Temperature</option>
+                    <option value="Humidity">Humidity</option>
+                    <option value="SoilMoisture">Soil Moisture</option>
+                    <option value="Rainfall">Rainfall</option>
+                    <option value="WindSpeed">Wind Speed</option>
+                    <option value="SolarRadiation">Solar Radiation</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Status</label>
+                  <select id="filter-status" class="form-control form-select">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Faulty">Faulty</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top: 12px">
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page</label>
+                  <select id="sensors-page-number" class="form-control form-select">
+                    <option value="1">1</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Page Size</label>
+                  <select id="sensors-page-size" class="form-control form-select">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Sort By</label>
+                  <select id="sensors-sort-by" class="form-control form-select">
+                    <option value="installedAt">Installed At</option>
+                    <option value="label">Label</option>
+                    <option value="type">Type</option>
+                    <option value="status">Status</option>
+                    <option value="createdAt">Created At</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0">
+                  <label class="form-label">Direction</label>
+                  <select id="sensors-sort-direction" class="form-control form-select">
+                    <option value="asc">Ascending</option>
+                    <option value="desc" selected>Descending</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; align-self: flex-end">
+                  <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Plot</th>
+                  <th>Property</th>
+                  <th>Installed At</th>
+                  <th>Sensor ID</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sensors-tbody">
+                <tr>
+                  <td colspan="8" class="text-center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card" style="margin-top: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
+              <span id="sensors-summary-text" class="text-muted">Showing 0 sensor(s)</span>
+              <div class="d-flex gap-2" style="flex-wrap: wrap">
+                <span id="sensors-summary-active" class="badge badge-success">0 Active</span>
+                <span id="sensors-summary-inactive" class="badge badge-danger">0 Inactive</span>
+                <span id="sensors-summary-maintenance" class="badge badge-warning"
+                  >0 Maintenance</span
+                >
+              </div>
+              <div class="d-flex align-center" style="gap: 8px">
+                <button type="button" id="sensors-prev" class="btn btn-outline btn-sm">◀ Prev</button>
+                <button type="button" id="sensors-next" class="btn btn-outline btn-sm">Next ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./js/sensors.js"></script>
+  </body>
+</html>
