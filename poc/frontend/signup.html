@@ -65,12 +65,15 @@
             />
           </div>
 
-          <div class="form-group">
-            <label for="role" class="form-label required">Role</label>
+          <div class="form-group" id="roleGroup">
+            <label for="role" class="form-label required">Role (Producer is selected by default)</label>
             <select id="role" name="role" class="form-control form-select" disabled>
               <option value="Producer" selected>Producer</option>
+              <option value="Admin">Admin</option>
             </select>
-            <span class="form-helper">Default role for self-registration</span>
+            <span class="form-helper" style="color: var(--color-text-muted)">
+              Double-click this field to unlock Admin role selection.
+            </span>
           </div>
 
           <div class="form-group">

@@ -16,10 +16,43 @@ let lastCheckedIsAvailable = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   setupPasswordToggle();
+  setupRoleUnlock();
   setupEmailAvailabilityCheck();
   setupFormHandler();
   setupNativeValidation();
 });
+
+function setupRoleUnlock() {
+  const roleGroup = document.getElementById('roleGroup');
+  const roleSelect = document.getElementById('role');
+
+  if (!roleGroup || !roleSelect) return;
+
+  let clickCount = 0;
+  let clickResetTimer = null;
+
+  roleGroup.addEventListener('click', () => {
+    if (!roleSelect.disabled) return;
+
+    clickCount += 1;
+
+    if (clickResetTimer) {
+      clearTimeout(clickResetTimer);
+    }
+
+    clickResetTimer = setTimeout(() => {
+      clickCount = 0;
+    }, 700);
+
+    if (clickCount >= 2) {
+      roleSelect.disabled = false;
+      clickCount = 0;
+      if (clickResetTimer) {
+        clearTimeout(clickResetTimer);
+      }
+    }
+  });
+}
 
 function setupPasswordToggle() {
   const toggleBtn = document.getElementById('togglePassword');
@@ -50,7 +83,7 @@ function setupFormHandler() {
       email: document.getElementById('email')?.value?.trim(),
       username: document.getElementById('username')?.value?.trim(),
       password: document.getElementById('password')?.value,
-      role: DEFAULT_ROLE
+      role: document.getElementById('role')?.value || DEFAULT_ROLE
     };
 
     if (!payload.name || !payload.email || !payload.username || !payload.password) {
