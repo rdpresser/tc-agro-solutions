@@ -4,6 +4,7 @@
 
 import { getPlotsPaginated, getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
+import { COMMON_CROP_TYPES, CROP_TYPE_ICONS } from './crop-types.js';
 import { toast } from './i18n.js';
 import { $, getPageUrl, debounce } from './utils.js';
 // import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  loadCropFilterOptions();
   await Promise.all([loadPropertyFilter(), loadPlots()]);
   setupEventListeners();
 });
@@ -30,29 +32,6 @@ let lastPageState = {
   hasPreviousPage: false,
   totalCount: 0
 };
-
-const COMMON_CROP_TYPES = [
-  'Soy',
-  'Corn',
-  'Wheat',
-  'Cotton',
-  'Coffee',
-  'Sugarcane',
-  'Rice',
-  'Beans',
-  'Potato',
-  'Tomato',
-  'Lettuce',
-  'Carrot',
-  'Onion',
-  'Orange',
-  'Grape',
-  'Apple',
-  'Banana',
-  'Mango',
-  'Pasture',
-  'Other'
-];
 
 // ============================================
 // DATA LOADING
@@ -212,6 +191,26 @@ async function loadPropertyFilter() {
       .join('')}`;
   } catch (error) {
     console.error('Error loading properties for filter:', error);
+  }
+}
+
+function loadCropFilterOptions() {
+  const select = $('#filter-crop');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">All Crops</option>`]
+    .concat(
+      COMMON_CROP_TYPES.map((cropType) => {
+        const icon = CROP_TYPE_ICONS[cropType] || '🌿';
+        return `<option value="${cropType}">${icon} ${cropType}</option>`;
+      })
+    )
+    .join('');
+
+  if (currentValue) {
+    select.value = currentValue;
   }
 }
 

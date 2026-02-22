@@ -32,6 +32,10 @@
               <span class="nav-icon">🌱</span>
               <span class="nav-text">Plots</span>
             </a>
+            <a href="sensors.html" class="nav-item">
+              <span class="nav-icon">📡</span>
+              <span class="nav-text">Sensors</span>
+            </a>
             <a href="users.html" class="nav-item">
               <span class="nav-icon">👥</span>
               <span class="nav-text">Users</span>
@@ -40,7 +44,7 @@
 
           <div class="nav-section">
             <div class="nav-section-title">Monitoring</div>
-            <a href="sensors.html" class="nav-item">
+            <a href="sensors-monitoring.html" class="nav-item">
               <span class="nav-icon">📡</span>
               <span class="nav-text">Sensors</span>
             </a>
@@ -101,6 +105,8 @@
           <!-- Form Card -->
           <form id="plotForm" class="card">
             <input type="hidden" id="plotId" name="id" />
+
+            <div id="formErrors" class="alert alert-danger" style="display: none"></div>
 
             <!-- Property Selection -->
             <div class="form-section">
@@ -167,16 +173,6 @@
                   <label for="cropType" class="form-label required">Crop Type</label>
                   <select id="cropType" name="cropType" class="form-control form-select" required>
                     <option value="">Select crop type...</option>
-                    <option value="soybean">🌿 Soybean</option>
-                    <option value="corn">🌽 Corn</option>
-                    <option value="coffee">☕ Coffee</option>
-                    <option value="sugarcane">🎋 Sugarcane</option>
-                    <option value="cotton">🌸 Cotton</option>
-                    <option value="wheat">🌾 Wheat</option>
-                    <option value="rice">🍚 Rice</option>
-                    <option value="bean">🫘 Bean</option>
-                    <option value="orange">🍊 Orange</option>
-                    <option value="other">📦 Other</option>
                   </select>
                   <span class="form-helper required-note">
                     ⚠️ Required: Type of crop planted in this plot

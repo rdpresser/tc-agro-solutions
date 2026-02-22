@@ -27,6 +27,11 @@ export const api = createApiClient(APP_CONFIG.apiBaseUrl);
 export const identityApi = createApiClient(APP_CONFIG.identityApiBaseUrl);
 export const farmApi = createApiClient(APP_CONFIG.farmApiBaseUrl);
 
+export async function fetchFarmSwagger() {
+  const { data } = await farmApi.get('/swagger/v1/swagger.json');
+  return data;
+}
+
 // Simple helpers for retry policy
 function isIdempotent(method) {
   const m = (method || 'get').toLowerCase();
@@ -330,13 +335,9 @@ export async function getPlotsPaginated({
  * @returns {Promise<Object>} Created plot (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function createPlot(plotData) {
-  return { id: `plot-${Date.now()}`, ...plotData };
-
-  /* REAL API
-  const { data } = await api.post('/plots', plotData);
+export async function createPlot(plotData) {
+  const { data } = await farmApi.post('/api/plots', plotData);
   return data;
-  */
 }
 
 /**

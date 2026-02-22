@@ -3,10 +3,12 @@
  * Entry point script for plot create/edit
  */
 
+import { createPlot, fetchFarmSwagger, getPlot, getProperties, normalizeError } from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
+import { COMMON_CROP_TYPES, CROP_TYPE_ICONS, normalizeCropType } from './crop-types.js';
 import { toast, t } from './i18n.js';
-import { $id, getQueryParam, navigateTo } from './utils.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
 // ============================================
 // Page State
@@ -15,109 +17,70 @@ import { $id, getQueryParam, navigateTo } from './utils.js';
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
 
-// Mock data for edit mode (until backend is ready)
-const mockPlots = {
-  1: {
-    id: '1',
-    propertyId: 'prop-001',
-    name: 'North Field',
-    areaHectares: 85.5,
-    cropType: 'soybean',
-    plantingDate: '2025-10-15',
-    expectedHarvest: '2026-03-15',
-    irrigationType: 'pivot',
-    minSoilMoisture: 30,
-    maxTemperature: 35,
-    minHumidity: 40,
-    status: 'active',
-    notes: 'High-yield soybean variety. Requires moisture monitoring.'
-  },
-  2: {
-    id: '2',
-    propertyId: 'prop-001',
-    name: 'South Valley',
-    areaHectares: 120.0,
-    cropType: 'corn',
-    plantingDate: '2025-11-01',
-    expectedHarvest: '2026-04-20',
-    irrigationType: 'sprinkler',
-    minSoilMoisture: 35,
-    maxTemperature: 32,
-    minHumidity: 45,
-    status: 'active',
-    notes: ''
-  },
-  3: {
-    id: '3',
-    propertyId: 'prop-002',
-    name: 'East Slope',
-    areaHectares: 45.2,
-    cropType: 'coffee',
-    plantingDate: '2023-06-01',
-    expectedHarvest: '2026-06-01',
-    irrigationType: 'drip',
-    minSoilMoisture: 40,
-    maxTemperature: 30,
-    minHumidity: 50,
-    status: 'active',
-    notes: 'Specialty coffee. Shaded area.'
-  },
-  4: {
-    id: '4',
-    propertyId: 'prop-002',
-    name: 'West Woods',
-    areaHectares: 95.8,
-    cropType: 'sugarcane',
-    plantingDate: '2025-09-01',
-    expectedHarvest: '2026-08-01',
-    irrigationType: 'flood',
-    minSoilMoisture: 25,
-    maxTemperature: 38,
-    minHumidity: 35,
-    status: 'active',
-    notes: ''
-  },
-  5: {
-    id: '5',
-    propertyId: 'prop-003',
-    name: 'Central Plain',
-    areaHectares: 200.0,
-    cropType: 'cotton',
-    plantingDate: '2025-12-01',
-    expectedHarvest: '2026-05-15',
-    irrigationType: 'pivot',
-    minSoilMoisture: 25,
-    maxTemperature: 40,
-    minHumidity: 30,
-    status: 'active',
-    notes: 'Large-scale cotton production. Sensor issues reported.'
-  }
-};
-
 // ============================================
 // Page Initialization
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Verify authentication
   if (!requireAuth()) return;
 
   // Initialize protected page (sidebar, user display)
   initProtectedPage();
 
+  await checkFarmApi();
+
+  loadCropTypeOptions();
+  await loadPropertyOptions();
+
   if (isEditMode) {
-    setupEditMode();
+    await setupEditMode();
   }
 
   // Setup form handler
   setupFormHandler();
 });
 
+async function checkFarmApi() {
+  try {
+    await fetchFarmSwagger();
+  } catch (error) {
+    const { message } = normalizeError(error);
+    toast(message || 'Farm API is not reachable', 'warning');
+  }
+}
+
+async function loadPropertyOptions() {
+  const select = $id('propertyId');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  try {
+    const response = await getProperties();
+    const properties = response?.data || response || [];
+
+    if (!Array.isArray(properties) || properties.length === 0) {
+      return;
+    }
+
+    select.innerHTML = `<option value="">Select a property...</option>${properties
+      .map((property) => `<option value="${property.id}">${property.name}</option>`)
+      .join('')}`;
+
+    if (currentValue) {
+      select.value = currentValue;
+    }
+  } catch (error) {
+    console.error('Error loading properties for plot form:', error);
+  }
+}
+
 // ============================================
 // Edit Mode Setup
 // ============================================
 
-function setupEditMode() {
+async function setupEditMode() {
   const pageTitle = $id('pageTitle');
   const formTitle = $id('formTitle');
   const breadcrumbCurrent = $id('breadcrumbCurrent');
@@ -128,28 +91,54 @@ function setupEditMode() {
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
   if (sensorsSection) sensorsSection.style.display = 'block';
 
-  // Load plot data (mock)
-  const plot = mockPlots[editId];
-  if (plot) {
-    populateForm(plot);
-    loadSensors();
-  } else {
-    toast('plot.not_found', 'error');
-    navigateTo('plots.html');
-  }
+  setReadOnlyEditMode();
 
-  /* ============================================
-   * REAL API CALL (uncomment when backend ready)
-   * ============================================
   try {
     const plot = await getPlot(editId);
     populateForm(plot);
     loadSensors();
+    toast('Edit mode is not available yet. Fields are read-only.', 'warning');
   } catch (error) {
-    showToast('Failed to load plot', 'error');
-    navigateTo('plots.html');
+    const { message } = normalizeError(error);
+    showFormError(message || 'Failed to load plot');
+    toast(message || 'Failed to load plot', 'error');
   }
-   */
+}
+
+function setReadOnlyEditMode() {
+  const form = $id('plotForm');
+  if (!form) return;
+
+  const interactiveElements = form.querySelectorAll('input, select, textarea, button');
+  interactiveElements.forEach((element) => {
+    element.disabled = true;
+  });
+
+  const formLinks = form.querySelectorAll('a');
+  formLinks.forEach((link) => {
+    const isCancelLink =
+      link.closest('.form-actions') && link.getAttribute('href') === 'plots.html';
+    if (isCancelLink) {
+      return;
+    }
+
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('tabindex', '-1');
+    link.style.pointerEvents = 'none';
+    link.style.opacity = '0.6';
+  });
+
+  const sensorsSection = $id('sensorsSection');
+  const sensorsButtons = sensorsSection?.querySelectorAll('button') || [];
+  sensorsButtons.forEach((button) => {
+    button.disabled = true;
+  });
+
+  const formError = $id('formErrors');
+  if (formError) {
+    formError.textContent = 'Edit mode is not available yet. This screen is read-only.';
+    formError.style.display = 'block';
+  }
 }
 
 // ============================================
@@ -157,12 +146,14 @@ function setupEditMode() {
 // ============================================
 
 function populateForm(plot) {
+  const normalizedCropType = normalizeCropType(plot.cropType);
+
   const fields = {
     plotId: plot.id,
     propertyId: plot.propertyId,
     name: plot.name,
     areaHectares: plot.areaHectares,
-    cropType: plot.cropType,
+    cropType: normalizedCropType,
     plantingDate: plot.plantingDate || '',
     expectedHarvest: plot.expectedHarvest || '',
     irrigationType: plot.irrigationType || '',
@@ -177,6 +168,27 @@ function populateForm(plot) {
     const element = $id(id);
     if (element) element.value = value;
   });
+}
+
+function loadCropTypeOptions() {
+  const select = $id('cropType');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">Select crop type...</option>`]
+    .concat(
+      COMMON_CROP_TYPES.map((cropType) => {
+        const icon = CROP_TYPE_ICONS[cropType] || '🌿';
+        return `<option value="${cropType}">${icon} ${cropType}</option>`;
+      })
+    )
+    .join('');
+
+  const normalizedCurrent = normalizeCropType(currentValue);
+  if (normalizedCurrent) {
+    select.value = normalizedCurrent;
+  }
 }
 
 // ============================================
@@ -218,25 +230,22 @@ function setupFormHandler() {
   const form = $id('plotForm');
   if (!form) return;
 
+  if (isEditMode) {
+    return;
+  }
+
   form.addEventListener('submit', handleSubmit);
 }
 
-function handleSubmit(e) {
+async function handleSubmit(e) {
   e.preventDefault();
+  clearFormErrors();
 
   const formData = {
     propertyId: $id('propertyId')?.value,
     name: $id('name')?.value,
     areaHectares: parseFloat($id('areaHectares')?.value) || 0,
-    cropType: $id('cropType')?.value,
-    plantingDate: $id('plantingDate')?.value || null,
-    expectedHarvest: $id('expectedHarvest')?.value || null,
-    irrigationType: $id('irrigationType')?.value || null,
-    minSoilMoisture: parseInt($id('minSoilMoisture')?.value) || 30,
-    maxTemperature: parseInt($id('maxTemperature')?.value) || 35,
-    minHumidity: parseInt($id('minHumidity')?.value) || 40,
-    status: $id('status')?.value || 'active',
-    notes: $id('notes')?.value || ''
+    cropType: $id('cropType')?.value
   };
 
   // Validation
@@ -253,29 +262,69 @@ function handleSubmit(e) {
     return;
   }
 
-  // Mock save
-  toast(isEditMode ? 'plot.updated_success' : 'plot.created_success', 'success');
-
-  setTimeout(() => {
-    navigateTo('plots.html');
-  }, 1500);
-
-  /* ============================================
-   * REAL API CALL (uncomment when backend ready)
-   * ============================================
-  try {
-    if (isEditMode) {
-      await updatePlot(editId, formData);
-      showToast('Plot updated successfully!', 'success');
-    } else {
-      await createPlot(formData);
-      showToast('Plot created successfully!', 'success');
-    }
-    setTimeout(() => navigateTo('plots.html'), 1500);
-  } catch (error) {
-    showToast(error.message || 'Failed to save plot', 'error');
+  if (isEditMode) {
+    showFormError('Plot update is not available yet in this screen.');
+    return;
   }
-   */
+
+  showLoading('Saving plot...');
+
+  try {
+    await createPlot({
+      propertyId: formData.propertyId,
+      name: formData.name,
+      areaHectares: formData.areaHectares,
+      cropType: formData.cropType
+    });
+
+    toast('Plot created successfully', 'success');
+    navigateTo('plots.html');
+  } catch (error) {
+    const message = extractApiErrorMessage(error);
+    showFormError(message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function extractApiErrorMessage(error) {
+  const fallback = 'An error occurred. Please try again.';
+
+  if (error?.response?.data) {
+    const data = error.response.data;
+
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      const reasons = data.errors.map((err) => err.reason || err.message).filter(Boolean);
+      if (reasons.length > 0) {
+        return reasons.join('\n');
+      }
+    } else if (data.message) {
+      return data.message;
+    } else if (data.title || data.detail) {
+      return data.detail || data.title;
+    }
+  }
+
+  const normalized = normalizeError(error);
+  return normalized?.message || fallback;
+}
+
+function showFormError(message) {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) {
+    toast(message, 'error');
+    return;
+  }
+
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+}
+
+function clearFormErrors() {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
 }
 
 // Also show English toasts when native validation triggers
