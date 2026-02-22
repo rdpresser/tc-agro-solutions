@@ -413,6 +413,11 @@ export async function getSensorById(id) {
   return data;
 }
 
+export async function createSensor(payload) {
+  const { data } = await farmApi.post('/api/sensors', payload);
+  return data;
+}
+
 /**
  * Get sensors filtered by plot
  * @param {string|null} plotId - Plot ID to filter by (default: null = all)

@@ -1,30 +1,40 @@
 /**
- * Sensors Form Page - Read-only view
+ * Sensors Form Page - Create + Read-only Edit
  */
 
-import { fetchFarmSwagger, getSensorById, normalizeError } from './api.js';
+import {
+  createSensor,
+  fetchFarmSwagger,
+  getPlotsPaginated,
+  getSensorById,
+  normalizeError
+} from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $id, getQueryParam, navigateTo } from './utils.js';
+import { normalizeSensorType, SENSOR_TYPES } from './sensor-types.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
-const viewId = getQueryParam('id');
+const editId = getQueryParam('id');
+const isEditMode = !!editId;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return;
 
   initProtectedPage();
-
-  setReadOnlyViewMode();
   await checkFarmApi();
+  loadSensorTypeOptions();
 
-  if (!viewId) {
-    showFormError('Sensor ID is required to view details.');
-    toast('Sensor ID is required to view details.', 'error');
+  if (isEditMode) {
+    setEditModeUI();
+    setReadOnlyEditMode();
+    await loadSensor(editId);
     return;
   }
 
-  await loadSensor(viewId);
+  setCreateModeUI();
+  await loadPlotOptions();
+  setupFormHandler();
 });
 
 async function checkFarmApi() {
@@ -36,7 +46,27 @@ async function checkFarmApi() {
   }
 }
 
-function setReadOnlyViewMode() {
+function setCreateModeUI() {
+  const pageTitle = $id('pageTitle');
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+
+  if (pageTitle) pageTitle.textContent = 'Add Sensor';
+  if (formTitle) formTitle.textContent = 'Add New Sensor';
+  if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Add New';
+}
+
+function setEditModeUI() {
+  const pageTitle = $id('pageTitle');
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+
+  if (pageTitle) pageTitle.textContent = 'Edit Sensor';
+  if (formTitle) formTitle.textContent = 'Edit Sensor';
+  if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
+}
+
+function setReadOnlyEditMode() {
   const form = $id('sensorForm');
   if (!form) return;
 
@@ -66,6 +96,108 @@ function setReadOnlyViewMode() {
   }
 }
 
+async function fetchAllPages(fetchFn, baseParams = {}) {
+  const allItems = [];
+  let pageNumber = 1;
+  const pageSize = 100;
+  let keepFetching = true;
+  let maxPagesSafety = 25;
+
+  while (keepFetching && maxPagesSafety > 0) {
+    const response = await fetchFn({ ...baseParams, pageNumber, pageSize });
+    const items = response?.data || response?.items || response?.results || [];
+    allItems.push(...(Array.isArray(items) ? items : []));
+
+    if (response?.hasNextPage === true) {
+      pageNumber += 1;
+      maxPagesSafety -= 1;
+    } else {
+      keepFetching = false;
+    }
+  }
+
+  return allItems;
+}
+
+function loadSensorTypeOptions() {
+  const select = $id('type');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">Select sensor type...</option>`]
+    .concat(SENSOR_TYPES.map((type) => `<option value="${type}">${type}</option>`))
+    .join('');
+
+  const normalizedCurrent = normalizeSensorType(currentValue);
+  if (normalizedCurrent) {
+    select.value = normalizedCurrent;
+  }
+}
+
+async function loadPlotOptions() {
+  const select = $id('plotId');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  try {
+    const plots = await fetchAllPages((params) => getPlotsPaginated(params), {
+      sortBy: 'name',
+      sortDirection: 'asc',
+      filter: ''
+    });
+
+    select.innerHTML = `<option value="">Select a plot...</option>${plots
+      .map((plot) => `<option value="${plot.id}">${plot.name} • ${plot.propertyName}</option>`)
+      .join('')}`;
+
+    if (currentValue) {
+      select.value = currentValue;
+    }
+  } catch (error) {
+    const { message } = normalizeError(error);
+    console.error('Error loading plot options:', error);
+    toast(message || 'Failed to load plots', 'error');
+  }
+}
+
+function setupFormHandler() {
+  const form = $id('sensorForm');
+  if (!form) return;
+
+  form.addEventListener('submit', handleSubmit);
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  clearFormErrors();
+
+  const payload = {
+    plotId: $id('plotId')?.value,
+    type: $id('type')?.value,
+    label: $id('label')?.value?.trim() || null
+  };
+
+  if (!payload.plotId || !payload.type) {
+    showFormError('Plot and type are required fields.');
+    return;
+  }
+
+  showLoading('Saving sensor...');
+
+  try {
+    await createSensor(payload);
+    toast('Sensor created successfully', 'success');
+    navigateTo('sensors.html');
+  } catch (error) {
+    const message = extractApiErrorMessage(error);
+    showFormError(message);
+  } finally {
+    hideLoading();
+  }
+}
+
 async function loadSensor(id) {
   try {
     const sensor = await getSensorById(id);
@@ -84,31 +216,48 @@ function populateForm(sensor) {
     return;
   }
 
+  const plotIdSelect = $id('plotId');
+  if (plotIdSelect) {
+    plotIdSelect.innerHTML = `<option value="${sensor.plotId}">${sensor.plotName} • ${sensor.propertyName}</option>`;
+    plotIdSelect.value = sensor.plotId;
+  }
+
+  const typeSelect = $id('type');
+  if (typeSelect) {
+    typeSelect.value = normalizeSensorType(sensor.type);
+  }
+
   const fields = {
     sensorId: sensor.id || '',
-    label: sensor.label || '-',
-    type: sensor.type || '-',
-    status: sensor.status || '-',
-    installedAt: sensor.installedAt ? new Date(sensor.installedAt).toLocaleString('en-US') : '-',
-    propertyName: sensor.propertyName || '-',
-    plotName: sensor.plotName || '-',
-    propertyId: sensor.propertyId || '-',
-    plotId: sensor.plotId || '-'
+    label: sensor.label || ''
   };
 
   Object.entries(fields).forEach(([id, value]) => {
     const element = $id(id);
     if (element) element.value = value;
   });
+}
 
-  const breadcrumbCurrent = $id('breadcrumbCurrent');
-  if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
+function extractApiErrorMessage(error) {
+  const fallback = 'An error occurred. Please try again.';
 
-  const formTitle = $id('formTitle');
-  if (formTitle) formTitle.textContent = 'Edit Sensor';
+  if (error?.response?.data) {
+    const data = error.response.data;
 
-  const pageTitle = $id('pageTitle');
-  if (pageTitle) pageTitle.textContent = 'Edit Sensor';
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      const reasons = data.errors.map((err) => err.reason || err.message).filter(Boolean);
+      if (reasons.length > 0) {
+        return reasons.join('\n');
+      }
+    } else if (data.message) {
+      return data.message;
+    } else if (data.title || data.detail) {
+      return data.detail || data.title;
+    }
+  }
+
+  const normalized = normalizeError(error);
+  return normalized?.message || fallback;
 }
 
 function showFormError(message) {
@@ -118,6 +267,13 @@ function showFormError(message) {
   errorDiv.style.display = 'block';
 }
 
+function clearFormErrors() {
+  const errorDiv = $id('formErrors');
+  if (!errorDiv) return;
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+}
+
 if (import.meta.env.DEV) {
-  window.sensorsFormDebug = { loadSensor, navigateTo };
+  window.sensorsFormDebug = { loadSensor, loadPlotOptions };
 }

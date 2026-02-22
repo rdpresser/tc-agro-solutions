@@ -11,6 +11,7 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
+import { SENSOR_TYPES } from './sensor-types.js';
 import { $, debounce, getPageUrl } from './utils.js';
 
 let lastPageState = {
@@ -27,10 +28,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await checkFarmApi();
+  loadTypeFilterOptions();
   await Promise.all([loadPropertyFilter(), loadPlotFilter()]);
   await loadSensors();
   setupEventListeners();
 });
+
+function loadTypeFilterOptions() {
+  const select = $('#filter-type');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">All Types</option>`]
+    .concat(SENSOR_TYPES.map((type) => `<option value="${type}">${type}</option>`))
+    .join('');
+
+  if (currentValue) {
+    select.value = currentValue;
+  }
+}
 
 async function checkFarmApi() {
   try {
@@ -59,7 +76,7 @@ async function loadSensors() {
   const tbody = $('#sensors-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
 
   try {
     const filters = getCurrentFilters();
@@ -75,7 +92,7 @@ async function loadSensors() {
     const { message } = normalizeError(error);
     console.error('Error loading sensors:', error);
     tbody.innerHTML =
-      '<tr><td colspan="8" class="text-center text-danger">Error loading sensors</td></tr>';
+      '<tr><td colspan="7" class="text-center text-danger">Error loading sensors</td></tr>';
     renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
     toast(message || 'sensors.load_failed', 'error');
   }
@@ -126,7 +143,7 @@ function renderSensorsTable(sensors) {
 
   if (!sensors.length) {
     tbody.innerHTML =
-      '<tr><td colspan="8" class="text-center text-muted">No sensors found</td></tr>';
+      '<tr><td colspan="7" class="text-center text-muted">No sensors found</td></tr>';
     return;
   }
 
@@ -146,7 +163,6 @@ function renderSensorsTable(sensors) {
       <td>${sensor.plotName || '-'}</td>
       <td>${sensor.propertyName || '-'}</td>
       <td>${installedAt}</td>
-      <td><span title="${sensor.id || ''}">${truncateId(sensor.id)}</span></td>
       <td class="actions">
         <a href="${getPageUrl('sensors-form.html')}?id=${encodeURIComponent(sensor.id)}" class="btn btn-sm btn-outline">👁️ View</a>
       </td>
@@ -189,12 +205,6 @@ function normalizeStatus(status) {
   return String(status || '')
     .trim()
     .toLowerCase();
-}
-
-function truncateId(id) {
-  if (!id) return '-';
-  const value = String(id);
-  return value.length > 8 ? `${value.slice(0, 8)}...` : value;
 }
 
 function updatePageOptions(pageCount, currentPage) {

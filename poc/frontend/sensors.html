@@ -92,6 +92,9 @@
                 <h2 style="margin: 0">Sensor Management</h2>
               </div>
             </div>
+            <div class="page-header-actions">
+              <a href="sensors-form.html" class="btn btn-primary"> ➕ Add Sensor </a>
+            </div>
           </div>
 
           <div class="card" style="margin-bottom: 24px">
@@ -121,15 +124,9 @@
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label">Type</label>
+                  <label class="form-label">Sensor Type</label>
                   <select id="filter-type" class="form-control form-select">
                     <option value="">All Types</option>
-                    <option value="Temperature">Temperature</option>
-                    <option value="Humidity">Humidity</option>
-                    <option value="SoilMoisture">Soil Moisture</option>
-                    <option value="Rainfall">Rainfall</option>
-                    <option value="WindSpeed">Wind Speed</option>
-                    <option value="SolarRadiation">Solar Radiation</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
@@ -196,13 +193,12 @@
                   <th>Plot</th>
                   <th>Property</th>
                   <th>Installed At</th>
-                  <th>Sensor ID</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="sensors-tbody">
                 <tr>
-                  <td colspan="8" class="text-center">Loading...</td>
+                  <td colspan="7" class="text-center">Loading...</td>
                 </tr>
               </tbody>
             </table>

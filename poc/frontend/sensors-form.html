@@ -69,7 +69,7 @@
         <header class="topbar">
           <div class="topbar-left">
             <button id="menuToggle" class="menu-toggle">☰</button>
-            <h1 class="page-title" id="pageTitle">Edit Sensor</h1>
+            <h1 class="page-title" id="pageTitle">Add Sensor</h1>
           </div>
           <div class="topbar-right">
             <div class="user-menu">
@@ -89,9 +89,9 @@
                   <span class="breadcrumb-separator">/</span>
                   <a href="sensors.html">Sensors</a>
                   <span class="breadcrumb-separator">/</span>
-                  <span id="breadcrumbCurrent">Edit</span>
+                  <span id="breadcrumbCurrent">Add New</span>
                 </div>
-                <h2 id="formTitle" style="margin: 0">Edit Sensor</h2>
+                <h2 id="formTitle" style="margin: 0">Add New Sensor</h2>
               </div>
             </div>
             <div class="page-header-actions">
@@ -110,53 +110,34 @@
                 <div class="form-group">
                   <label for="label" class="form-label">Label</label>
                   <input type="text" id="label" class="form-control" />
+                  <span class="form-helper">Optional name to identify the sensor</span>
                 </div>
                 <div class="form-group">
-                  <label for="type" class="form-label">Type</label>
-                  <input type="text" id="type" class="form-control" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="status" class="form-label">Status</label>
-                  <input type="text" id="status" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label for="installedAt" class="form-label">Installed At</label>
-                  <input type="text" id="installedAt" class="form-control" />
+                  <label for="type" class="form-label required">Sensor Type</label>
+                  <select id="type" class="form-control form-select" required>
+                    <option value="">Select sensor type...</option>
+                  </select>
+                  <span class="form-helper">Required sensor measurement type</span>
                 </div>
               </div>
             </div>
 
             <div class="form-section">
-              <h3 class="form-section-title">🏘️ Location</h3>
+              <h3 class="form-section-title">🏘️ Plot Association</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="propertyName" class="form-label">Property</label>
-                  <input type="text" id="propertyName" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label for="plotName" class="form-label">Plot</label>
-                  <input type="text" id="plotName" class="form-control" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="propertyId" class="form-label">Property ID</label>
-                  <input type="text" id="propertyId" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label for="plotId" class="form-label">Plot ID</label>
-                  <input type="text" id="plotId" class="form-control" />
+                  <label for="plotId" class="form-label required">Plot</label>
+                  <select id="plotId" class="form-control form-select" required>
+                    <option value="">Select a plot...</option>
+                  </select>
+                  <span class="form-helper">Required plot where sensor will be installed</span>
                 </div>
               </div>
             </div>
 
             <div class="form-actions">
               <a href="sensors.html" class="btn btn-outline">Cancel</a>
-              <button type="button" id="readOnlyBtn" class="btn btn-primary" disabled>
-                🔒 Read-only
-              </button>
+              <button type="submit" id="submitBtn" class="btn btn-primary">💾 Save Sensor</button>
             </div>
           </form>
         </div>
