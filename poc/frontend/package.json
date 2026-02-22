@@ -7,6 +7,7 @@
     "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
     "dev": "vite",
     "build": "node --no-deprecation -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
+    "build:watch": "vite build --watch",
     "build:k8s": "cross-env VITE_BASE_PATH=/agro/ npm run build",
     "build:root": "cross-env VITE_BASE_PATH=/ npm run build",
     "build-and-preview": "npm run build:k8s && npm run preview",

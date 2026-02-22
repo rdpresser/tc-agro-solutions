@@ -6,7 +6,7 @@ import { fetchIdentitySwagger, getUsers, deleteUser, normalizeError } from './ap
 import { getTokenInfo } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, showConfirm, getPageUrl } from './utils.js';
+import { $, showConfirm, getPageUrl, debounce } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -193,6 +193,8 @@ function setupEventListeners() {
   const filterForm = $('#usersFilterForm');
   filterForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
     await loadUsers();
   });
 
@@ -203,7 +205,40 @@ function setupEventListeners() {
 
   const pageSize = $('#pageSize');
   pageSize?.addEventListener('change', async () => {
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
     await loadUsers();
+  });
+
+  const sortBy = $('#sortBy');
+  sortBy?.addEventListener('change', async () => {
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
+    await loadUsers();
+  });
+
+  const sortDirection = $('#sortDirection');
+  sortDirection?.addEventListener('change', async () => {
+    await loadUsers();
+  });
+
+  const filterInput = $('#filterInput');
+  const debouncedSearch = debounce(() => {
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
+    loadUsers();
+  }, 300);
+
+  filterInput?.addEventListener('input', () => {
+    debouncedSearch();
+  });
+
+  filterInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const pageSelect = $('#pageNumber');
+    if (pageSelect) pageSelect.value = '1';
+    loadUsers();
   });
 
   const prevBtn = $('#usersPrev');
