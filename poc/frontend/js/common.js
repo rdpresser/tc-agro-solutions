@@ -65,10 +65,18 @@ function setupLogout() {
 
 // Highlight current page in navigation
 function updateActiveNavItem() {
-  const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
+  const currentPage = (window.location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+
   document.querySelectorAll('.nav-item').forEach((item) => {
+    item.classList.remove('active');
+
     const href = item.getAttribute('href');
-    if (href && currentPage.includes(href.replace('.html', ''))) {
+    if (!href || href === '#') {
+      return;
+    }
+
+    const targetPage = href.split('?')[0].split('/').pop()?.toLowerCase();
+    if (targetPage && targetPage === currentPage) {
       item.classList.add('active');
     }
   });
