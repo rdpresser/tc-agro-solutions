@@ -11,7 +11,7 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { SENSOR_TYPES } from './sensor-types.js';
+import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
 import { $, debounce, getPageUrl } from './utils.js';
 
 let lastPageState = {
@@ -41,7 +41,9 @@ function loadTypeFilterOptions() {
   const currentValue = select.value;
 
   select.innerHTML = [`<option value="">All Types</option>`]
-    .concat(SENSOR_TYPES.map((type) => `<option value="${type}">${type}</option>`))
+    .concat(
+      SENSOR_TYPES.map((type) => `<option value="${type}">${getSensorTypeDisplay(type)}</option>`)
+    )
     .join('');
 
   if (currentValue) {
@@ -156,7 +158,7 @@ function renderSensorsTable(sensors) {
       return `
     <tr data-id="${sensor.id}">
       <td><strong>${sensor.label || '-'}</strong></td>
-      <td>${sensor.type || '-'}</td>
+      <td>${sensor.type ? getSensorTypeDisplay(sensor.type) : '-'}</td>
       <td>
         <span class="badge ${getStatusBadgeClass(sensor.status)}">${sensor.status || '-'}</span>
       </td>

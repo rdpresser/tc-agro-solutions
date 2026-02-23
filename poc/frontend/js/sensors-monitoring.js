@@ -5,6 +5,7 @@
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
+import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
 import { $, $$, formatRelativeTime } from './utils.js';
 
 // ============================================
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  loadTypeFilterOptions();
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
@@ -30,6 +32,23 @@ window.addEventListener('beforeunload', () => {
 // ============================================
 // DATA LOADING
 // ============================================
+
+function loadTypeFilterOptions() {
+  const select = $('#typeFilter');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">All Types</option>`]
+    .concat(
+      SENSOR_TYPES.map((type) => `<option value="${type}">${getSensorTypeDisplay(type)}</option>`)
+    )
+    .join('');
+
+  if (currentValue) {
+    select.value = currentValue;
+  }
+}
 
 async function loadSensors() {
   const grid = $('#sensors-grid');

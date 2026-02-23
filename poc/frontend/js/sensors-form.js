@@ -12,7 +12,7 @@ import {
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { normalizeSensorType, SENSOR_TYPES } from './sensor-types.js';
+import { getSensorTypeDisplay, normalizeSensorType, SENSOR_TYPES } from './sensor-types.js';
 import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
 const editId = getQueryParam('id');
@@ -126,7 +126,9 @@ function loadSensorTypeOptions() {
   const currentValue = select.value;
 
   select.innerHTML = [`<option value="">Select sensor type...</option>`]
-    .concat(SENSOR_TYPES.map((type) => `<option value="${type}">${type}</option>`))
+    .concat(
+      SENSOR_TYPES.map((type) => `<option value="${type}">${getSensorTypeDisplay(type)}</option>`)
+    )
     .join('');
 
   const normalizedCurrent = normalizeSensorType(currentValue);
