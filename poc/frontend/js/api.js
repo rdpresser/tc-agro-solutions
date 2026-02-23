@@ -26,6 +26,7 @@ function createApiClient(baseURL) {
 export const api = createApiClient(APP_CONFIG.apiBaseUrl);
 export const identityApi = createApiClient(APP_CONFIG.identityApiBaseUrl);
 export const farmApi = createApiClient(APP_CONFIG.farmApiBaseUrl);
+export const sensorApi = createApiClient(APP_CONFIG.sensorApiBaseUrl);
 
 export async function fetchFarmSwagger() {
   const { data } = await farmApi.get('/swagger/v1/swagger.json');
@@ -102,6 +103,7 @@ function attachInterceptors(client) {
 attachInterceptors(api);
 attachInterceptors(identityApi);
 attachInterceptors(farmApi);
+attachInterceptors(sensorApi);
 
 // ============================================
 // DASHBOARD API
@@ -285,11 +287,11 @@ export async function deleteProperty(id) {
 /**
  * Get plots filtered by property
  * @param {string|null} propertyId - Property ID to filter by (default: null = all)
- * @returns {Promise<Array>} List of plots (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @returns {Promise<Array>} List of plots (returns items from paginated response)
  */
-export function getPlots(propertyId = null) {
-  return getPlotsPaginated({ propertyId });
+export async function getPlots(propertyId = null) {
+  const response = await getPlotsPaginated({ propertyId, pageSize: 1000 }); // Large page size to get all
+  return response?.items || response?.data || response?.results || [];
 }
 
 export async function getPlot(id) {
@@ -639,6 +641,14 @@ export async function deleteUser(id) {
 
 let signalRConnection = null;
 
+/**
+ * Initialize SignalR connection to Sensor Hub
+ * @param {Object} handlers - Event handlers
+ * @param {Function} handlers.onSensorReading - Handler for sensor reading events (data: { sensorId, temperature, humidity, soilMoisture, timestamp })
+ * @param {Function} handlers.onSensorStatus - Handler for sensor status change events (data: { sensorId, status })
+ * @param {Function} handlers.onConnectionChange - Handler for connection state changes (state: 'connected' | 'reconnecting' | 'disconnected')
+ * @returns {Promise<Object>} SignalR connection object
+ */
 export async function initSignalRConnection(handlers = {}) {
   // Use mock if SignalR is disabled
   if (!APP_CONFIG.signalREnabled) {
@@ -647,24 +657,20 @@ export async function initSignalRConnection(handlers = {}) {
 
   try {
     signalRConnection = new HubConnectionBuilder()
-      .withUrl(`${APP_CONFIG.apiBaseUrl.replace('/api', '')}/sensorHub`, {
+      .withUrl(`${APP_CONFIG.sensorApiBaseUrl}/dashboard/sensorshub`, {
         accessTokenFactory: () => getToken()
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(LogLevel.Warning)
       .build();
 
-    // Register event handlers
+    // Register event handlers (camelCase as per SignalR convention)
     if (handlers.onSensorReading) {
-      signalRConnection.on('SensorReading', handlers.onSensorReading);
-    }
-
-    if (handlers.onAlert) {
-      signalRConnection.on('NewAlert', handlers.onAlert);
+      signalRConnection.on('sensorReading', handlers.onSensorReading);
     }
 
     if (handlers.onSensorStatus) {
-      signalRConnection.on('SensorStatusChanged', handlers.onSensorStatus);
+      signalRConnection.on('sensorStatusChanged', handlers.onSensorStatus);
     }
 
     // Connection state handlers
@@ -713,8 +719,40 @@ function initMockSignalR(handlers = {}) {
   return {
     stop: () => clearInterval(mockInterval),
     state: 'Connected',
-    isMock: true
+    isMock: true,
+    // Mock join/leave methods
+    invoke: async () => Promise.resolve()
   };
+}
+
+/**
+ * Join a plot group to receive real-time updates for sensors in that plot
+ * @param {string} plotId - Plot ID to join
+ * @returns {Promise<void>}
+ */
+export async function joinPlotGroup(plotId) {
+  if (signalRConnection && !signalRConnection.isMock) {
+    try {
+      await signalRConnection.invoke('JoinPlotGroup', plotId);
+    } catch (error) {
+      console.error(`Failed to join plot group ${plotId}:`, error);
+    }
+  }
+}
+
+/**
+ * Leave a plot group to stop receiving real-time updates for sensors in that plot
+ * @param {string} plotId - Plot ID to leave
+ * @returns {Promise<void>}
+ */
+export async function leavePlotGroup(plotId) {
+  if (signalRConnection && !signalRConnection.isMock) {
+    try {
+      await signalRConnection.invoke('LeavePlotGroup', plotId);
+    } catch (error) {
+      console.error(`Failed to leave plot group ${plotId}:`, error);
+    }
+  }
 }
 
 export function stopSignalRConnection() {

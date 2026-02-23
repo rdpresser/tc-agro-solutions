@@ -97,10 +97,37 @@ function detectFarmApiBaseUrl() {
   return 'http://localhost:5002';
 }
 
+/**
+ * Detect Sensor API base URL based on context:
+ * 1. Manual override: VITE_SENSOR_API_BASE_URL env var
+ * 2. Cluster context: BASE_URL === '/agro/' -> Sensor API at '/sensor-ingest'
+ * 3. Dev mode: localhost:3000 -> Sensor API at 'http://localhost:5003'
+ * 4. Docker Compose or other: default to 'http://localhost:5003'
+ */
+function detectSensorApiBaseUrl() {
+  if (import.meta.env.VITE_SENSOR_API_BASE_URL) {
+    return import.meta.env.VITE_SENSOR_API_BASE_URL;
+  }
+
+  const base = import.meta.env.BASE_URL || '/';
+  const currentHost = window.location.host;
+
+  if (base === '/agro/') {
+    return '/sensor-ingest';
+  }
+
+  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
+    return 'http://localhost:5003';
+  }
+
+  return 'http://localhost:5003';
+}
+
 export const APP_CONFIG = {
   apiBaseUrl: detectApiBaseUrl(),
   identityApiBaseUrl: detectIdentityApiBaseUrl(),
   farmApiBaseUrl: detectFarmApiBaseUrl(),
+  sensorApiBaseUrl: detectSensorApiBaseUrl(),
   tokenKey: 'agro_token',
   userKey: 'agro_user',
   signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true',

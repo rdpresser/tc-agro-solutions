@@ -32,7 +32,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', () => {
+window.addEventListener('beforeunload', async () => {
+  // Leave all plot groups before disconnecting
+  if (window.joinedPlotIds && window.joinedPlotIds.length > 0) {
+    const { leavePlotGroup } = await import('./api.js');
+    for (const plotId of window.joinedPlotIds) {
+      try {
+        await leavePlotGroup(plotId);
+      } catch (error) {
+        console.warn(`Failed to leave plot ${plotId}:`, error);
+      }
+    }
+    window.joinedPlotIds = [];
+  }
+
   stopSignalRConnection();
 });
 
@@ -85,6 +98,7 @@ async function loadSensors() {
   try {
     const sensors = await getSensors();
     renderSensorsGrid(sensors);
+    updateStatusSummary(sensors);
   } catch (error) {
     console.error('Error loading sensors:', error);
     grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
@@ -155,30 +169,147 @@ function getBatteryClass(level) {
   return 'good';
 }
 
+/**
+ * Update status summary KPI cards based on sensor array or rendered cards
+ * @param {Array} [sensors] - Array of sensor objects. If not provided, counts from rendered cards
+ */
+function updateStatusSummary(sensors = null) {
+  let counts;
+
+  if (sensors) {
+    // Count from provided array
+    counts = {
+      total: sensors.length,
+      Active: 0,
+      Inactive: 0,
+      Maintenance: 0,
+      Faulty: 0
+    };
+
+    sensors.forEach((sensor) => {
+      const normalized = normalizeSensorStatus(sensor.status);
+      if (counts[normalized] !== undefined) {
+        counts[normalized]++;
+      }
+    });
+  } else {
+    // Count from rendered cards in DOM
+    const cards = $$('.sensor-card');
+    counts = {
+      total: cards.length,
+      Active: 0,
+      Inactive: 0,
+      Maintenance: 0,
+      Faulty: 0
+    };
+
+    cards.forEach((card) => {
+      const normalized = normalizeSensorStatus(card.dataset.status);
+      if (counts[normalized] !== undefined) {
+        counts[normalized]++;
+      }
+    });
+  }
+
+  // Update KPI elements
+  const totalEl = $('#stat-total-sensors');
+  if (totalEl) totalEl.textContent = counts.total;
+
+  const activeEl = $('#stat-active-sensors');
+  if (activeEl) activeEl.textContent = counts.Active;
+
+  const inactiveEl = $('#stat-inactive-sensors');
+  if (inactiveEl) inactiveEl.textContent = counts.Inactive;
+
+  const maintenanceEl = $('#stat-maintenance-sensors');
+  if (maintenanceEl) maintenanceEl.textContent = counts.Maintenance;
+
+  const faultyEl = $('#stat-faulty-sensors');
+  if (faultyEl) faultyEl.textContent = counts.Faulty;
+}
+
 // ============================================
 // REAL-TIME UPDATES
 // ============================================
 
-function setupRealTimeUpdates() {
-  initSignalRConnection({
+window.joinedPlotIds = []; // Track joined plot groups
+
+async function setupRealTimeUpdates() {
+  const connection = await initSignalRConnection({
     onSensorReading: (reading) => {
       updateSensorCard(reading.sensorId, reading);
     },
     onSensorStatus: (data) => {
       const card = $(`[data-sensor-id="${data.sensorId}"]`);
       if (card) {
-        const normalizedStatus = normalizeSensorStatus(data.status);
-        const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+        // Store old status for KPI updates
+        const oldStatus = normalizeSensorStatus(card.dataset.status);
+        const newStatus = normalizeSensorStatus(data.status);
+
+        // Update card visual state
+        const badgeClass = getSensorStatusBadgeClass(newStatus);
         card.className = `sensor-card ${badgeClass}`;
-        card.dataset.status = normalizedStatus;
+        card.dataset.status = newStatus;
+
         const statusEl = card.querySelector('.sensor-status');
         if (statusEl) {
           statusEl.className = `sensor-status ${badgeClass}`;
-          statusEl.textContent = getSensorStatusDisplay(normalizedStatus);
+          statusEl.textContent = getSensorStatusDisplay(newStatus);
         }
+
+        // Update KPIs if status changed
+        if (oldStatus !== newStatus) {
+          updateStatusSummary();
+        }
+      }
+    },
+    onConnectionChange: (state) => {
+      console.log(`SignalR connection state: ${state}`);
+      // Optional: Add visual indicator for connection state
+      const indicator = $('#connection-status');
+      if (indicator) {
+        indicator.className = `connection-status ${state}`;
+      }
+
+      // Rejoin plot groups after reconnection
+      if (state === 'connected' && window.joinedPlotIds.length === 0) {
+        setTimeout(() => joinAllPlotGroups(connection), 1000);
       }
     }
   });
+
+  // After connection, join all plot groups to receive sensor readings
+  if (connection && !connection.isMock) {
+    await joinAllPlotGroups(connection);
+  }
+}
+
+async function joinAllPlotGroups(connection) {
+  try {
+    // Fetch all plots to join their groups
+    const { getPlots, joinPlotGroup } = await import('./api.js');
+    const plots = await getPlots();
+
+    if (plots && plots.length > 0) {
+      console.log(`[SignalR] Joining ${plots.length} plot groups...`);
+
+      for (const plot of plots) {
+        try {
+          await joinPlotGroup(plot.id);
+          window.joinedPlotIds.push(plot.id);
+          console.log(`[SignalR] ✅ Joined plot group: ${plot.id}`);
+        } catch (error) {
+          console.warn(`[SignalR] Failed to join plot ${plot.id}:`, error);
+        }
+      }
+
+      console.log(`[SignalR] Successfully joined ${window.joinedPlotIds.length} plot groups`);
+    } else {
+      console.log('[SignalR] No plots found to join');
+    }
+  } catch (error) {
+    console.error('[SignalR] Error joining plot groups:', error);
+  }
 }
 
 function updateSensorCard(sensorId, reading) {

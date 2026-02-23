@@ -39,7 +39,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', () => {
+window.addEventListener('beforeunload', async () => {
+  // Leave all plot groups before disconnecting
+  if (joinedPlotIds.length > 0) {
+    const { leavePlotGroup } = await import('./api.js');
+    for (const plotId of joinedPlotIds) {
+      try {
+        await leavePlotGroup(plotId);
+      } catch (error) {
+        console.warn(`Failed to leave plot ${plotId}:`, error);
+      }
+    }
+    joinedPlotIds = [];
+  }
+
   stopSignalRConnection();
   // Charts cleanup disabled (not currently used)
   // destroyAllCharts();
@@ -184,12 +197,65 @@ function getSeverityLabel(severity) {
 // REAL-TIME UPDATES (SIGNALR)
 // ============================================
 
-function setupRealTimeUpdates() {
-  initSignalRConnection({
+let joinedPlotIds = []; // Track joined plot groups
+let isJoiningPlotGroups = false;
+
+async function setupRealTimeUpdates() {
+  const connection = await initSignalRConnection({
     onSensorReading: handleSensorReading,
     onAlert: handleNewAlert,
     onConnectionChange: handleConnectionChange
   });
+
+  // After connection, join all plot groups to receive sensor readings
+  if (connection && !connection.isMock) {
+    await joinAllPlotGroups();
+  }
+}
+
+async function joinAllPlotGroups() {
+  if (isJoiningPlotGroups) {
+    return;
+  }
+
+  isJoiningPlotGroups = true;
+
+  try {
+    // Fetch plots for the current user; fallback to sensors list if plots is empty
+    const { getPlots, getSensorsPaginated, joinPlotGroup } = await import('./api.js');
+    const plots = await getPlots();
+    let plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
+
+    if (plotIds.length === 0) {
+      const sensorsResponse = await getSensorsPaginated({ pageSize: 1000 });
+      const sensors =
+        sensorsResponse?.items || sensorsResponse?.data || sensorsResponse?.results || [];
+      plotIds = [...new Set(sensors.map((sensor) => sensor?.plotId).filter(Boolean))];
+    }
+
+    if (plotIds.length > 0) {
+      console.warn(`[SignalR] Joining ${plotIds.length} plot groups...`);
+
+      joinedPlotIds = [];
+      for (const plotId of plotIds) {
+        try {
+          await joinPlotGroup(plotId);
+          joinedPlotIds.push(plotId);
+          console.warn(`[SignalR] ✅ Joined plot group: ${plotId}`);
+        } catch (error) {
+          console.warn(`[SignalR] Failed to join plot ${plotId}:`, error);
+        }
+      }
+
+      console.warn(`[SignalR] Successfully joined ${joinedPlotIds.length} plot groups`);
+    } else {
+      console.warn('[SignalR] No plots found to join');
+    }
+  } catch (error) {
+    console.error('[SignalR] Error joining plot groups:', error);
+  } finally {
+    isJoiningPlotGroups = false;
+  }
 }
 
 const handleSensorReading = debounce((reading) => {
@@ -261,6 +327,12 @@ function handleConnectionChange(state) {
           ? t('connection.reconnecting')
           : t('connection.disconnected');
   }
+
+  // Rejoin plot groups after reconnection (without creating a new connection)
+  if (state === 'connected') {
+    console.warn('[SignalR] Connected, (re)joining plot groups...');
+    joinAllPlotGroups();
+  }
 }
 
 function updateMetricCard(metric, value) {
@@ -277,15 +349,6 @@ function updateMetricCard(metric, value) {
 // ============================================
 // INITIALIZATION
 // ============================================
-
-// Initialize protected page (sidebar, logout, auth check)
-if (!initProtectedPage()) {
-  // Redirect to login handled by initProtectedPage
-} else {
-  // Load dashboard data and setup real-time updates
-  loadDashboardData();
-  setupRealTimeUpdates();
-}
 
 // ============================================
 // EXPORT FOR DEBUGGING
