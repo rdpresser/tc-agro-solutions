@@ -11,6 +11,12 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
+import {
+  getSensorStatusBadgeClass,
+  getSensorStatusDisplay,
+  normalizeSensorStatus,
+  SENSOR_STATUSES
+} from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
 import { $, debounce, getPageUrl } from './utils.js';
 
@@ -28,11 +34,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await checkFarmApi();
+  loadStatusFilterOptions();
   loadTypeFilterOptions();
   await Promise.all([loadPropertyFilter(), loadPlotFilter()]);
   await loadSensors();
   setupEventListeners();
 });
+
+function loadStatusFilterOptions() {
+  const select = $('#filter-status');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">All Status</option>`]
+    .concat(
+      SENSOR_STATUSES.map(
+        (status) => `<option value="${status}">${getSensorStatusDisplay(status)}</option>`
+      )
+    )
+    .join('');
+
+  if (currentValue) {
+    select.value = normalizeSensorStatus(currentValue);
+  }
+}
 
 function loadTypeFilterOptions() {
   const select = $('#filter-type');
@@ -160,7 +186,7 @@ function renderSensorsTable(sensors) {
       <td><strong>${sensor.label || '-'}</strong></td>
       <td>${sensor.type ? getSensorTypeDisplay(sensor.type) : '-'}</td>
       <td>
-        <span class="badge ${getStatusBadgeClass(sensor.status)}">${sensor.status || '-'}</span>
+        <span class="badge ${getSensorStatusBadgeClass(sensor.status)}">${getSensorStatusDisplay(sensor.status)}</span>
       </td>
       <td>${sensor.plotName || '-'}</td>
       <td>${sensor.propertyName || '-'}</td>
@@ -181,10 +207,12 @@ function renderSummary(state) {
   const maintenanceBadge = $('#sensors-summary-maintenance');
 
   const sensors = state?.items || [];
-  const activeCount = sensors.filter((s) => normalizeStatus(s.status) === 'active').length;
-  const inactiveCount = sensors.filter((s) => normalizeStatus(s.status) === 'inactive').length;
+  const activeCount = sensors.filter((s) => normalizeSensorStatus(s.status) === 'Active').length;
+  const inactiveCount = sensors.filter(
+    (s) => normalizeSensorStatus(s.status) === 'Inactive'
+  ).length;
   const maintenanceCount = sensors.filter(
-    (s) => normalizeStatus(s.status) === 'maintenance'
+    (s) => normalizeSensorStatus(s.status) === 'Maintenance'
   ).length;
 
   if (summaryText) {
@@ -193,20 +221,6 @@ function renderSummary(state) {
   if (activeBadge) activeBadge.textContent = `${activeCount} Active`;
   if (inactiveBadge) inactiveBadge.textContent = `${inactiveCount} Inactive`;
   if (maintenanceBadge) maintenanceBadge.textContent = `${maintenanceCount} Maintenance`;
-}
-
-function getStatusBadgeClass(status) {
-  const normalized = normalizeStatus(status);
-  if (normalized === 'active') return 'badge-success';
-  if (normalized === 'maintenance') return 'badge-warning';
-  if (normalized === 'inactive') return 'badge-danger';
-  return 'badge-secondary';
-}
-
-function normalizeStatus(status) {
-  return String(status || '')
-    .trim()
-    .toLowerCase();
 }
 
 function updatePageOptions(pageCount, currentPage) {

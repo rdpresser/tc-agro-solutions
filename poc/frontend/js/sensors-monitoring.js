@@ -5,6 +5,12 @@
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
+import {
+  getSensorStatusBadgeClass,
+  getSensorStatusDisplay,
+  normalizeSensorStatus,
+  SENSOR_STATUSES
+} from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
 import { $, $$, formatRelativeTime } from './utils.js';
 
@@ -18,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  loadStatusFilterOptions();
   loadTypeFilterOptions();
   await loadSensors();
   setupRealTimeUpdates();
@@ -32,6 +39,25 @@ window.addEventListener('beforeunload', () => {
 // ============================================
 // DATA LOADING
 // ============================================
+
+function loadStatusFilterOptions() {
+  const select = $('#statusFilter');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = [`<option value="">All Status</option>`]
+    .concat(
+      SENSOR_STATUSES.map(
+        (status) => `<option value="${status}">${getSensorStatusDisplay(status)}</option>`
+      )
+    )
+    .join('');
+
+  if (currentValue) {
+    select.value = normalizeSensorStatus(currentValue);
+  }
+}
 
 function loadTypeFilterOptions() {
   const select = $('#typeFilter');
@@ -78,11 +104,11 @@ function renderSensorsGrid(sensors) {
   grid.innerHTML = sensors
     .map(
       (sensor) => `
-    <div class="sensor-card ${sensor.status}" data-sensor-id="${sensor.id}">
+    <div class="sensor-card ${getSensorStatusBadgeClass(sensor.status)}" data-sensor-id="${sensor.id}" data-status="${normalizeSensorStatus(sensor.status)}">
       <div class="sensor-header">
         <span class="sensor-id">${sensor.id}</span>
-        <span class="sensor-status ${sensor.status}">
-          ${getStatusIcon(sensor.status)}
+        <span class="sensor-status ${getSensorStatusBadgeClass(sensor.status)}">
+          ${getSensorStatusDisplay(sensor.status)}
         </span>
       </div>
       
@@ -123,19 +149,6 @@ function renderSensorsGrid(sensors) {
     .join('');
 }
 
-// ============================================
-// HELPERS
-// ============================================
-
-function getStatusIcon(status) {
-  const icons = {
-    online: '🟢 Online',
-    warning: '🟡 Warning',
-    offline: '🔴 Offline'
-  };
-  return icons[status] || status;
-}
-
 function getBatteryClass(level) {
   if (level < 20) return 'critical';
   if (level < 50) return 'warning';
@@ -154,11 +167,14 @@ function setupRealTimeUpdates() {
     onSensorStatus: (data) => {
       const card = $(`[data-sensor-id="${data.sensorId}"]`);
       if (card) {
-        card.className = `sensor-card ${data.status}`;
+        const normalizedStatus = normalizeSensorStatus(data.status);
+        const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+        card.className = `sensor-card ${badgeClass}`;
+        card.dataset.status = normalizedStatus;
         const statusEl = card.querySelector('.sensor-status');
         if (statusEl) {
-          statusEl.className = `sensor-status ${data.status}`;
-          statusEl.textContent = getStatusIcon(data.status);
+          statusEl.className = `sensor-status ${badgeClass}`;
+          statusEl.textContent = getSensorStatusDisplay(normalizedStatus);
         }
       }
     }
@@ -215,6 +231,21 @@ function setupEventListeners() {
   });
 
   // Status filter
+  const statusFilter = $('#statusFilter');
+  statusFilter?.addEventListener('change', () => {
+    const selectedStatus = normalizeSensorStatus(statusFilter.value);
+    const cards = $$('.sensor-card');
+
+    cards.forEach((card) => {
+      const cardStatus = normalizeSensorStatus(card.dataset.status);
+      if (!selectedStatus || selectedStatus === cardStatus) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+
   const filterBtns = $$('[data-filter-status]');
   filterBtns.forEach((btn) => {
     btn.addEventListener('click', () => {

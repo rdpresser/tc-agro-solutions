@@ -122,8 +122,15 @@
                 ✅
               </div>
               <div class="stat-info">
-                <span class="stat-value">9</span>
-                <span class="stat-label">Online</span>
+                <span class="stat-value">8</span>
+                <span class="stat-label">Active</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⚪</div>
+              <div class="stat-info">
+                <span class="stat-value">1</span>
+                <span class="stat-label">Inactive</span>
               </div>
             </div>
             <div class="stat-card">
@@ -135,7 +142,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">2</span>
-                <span class="stat-label">Warning</span>
+                <span class="stat-label">Maintenance</span>
               </div>
             </div>
             <div class="stat-card">
@@ -147,7 +154,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">1</span>
-                <span class="stat-label">Offline</span>
+                <span class="stat-label">Faulty</span>
               </div>
             </div>
           </div>
@@ -166,9 +173,6 @@
               <div class="form-group" style="margin-bottom: 0">
                 <select id="statusFilter" class="form-control form-select">
                   <option value="">All Status</option>
-                  <option value="online">🟢 Online</option>
-                  <option value="warning">🟡 Warning</option>
-                  <option value="offline">🔴 Offline</option>
                 </select>
               </div>
               <div class="form-group" style="margin-bottom: 0">
@@ -182,9 +186,9 @@
           <!-- Sensors Grid -->
           <div class="sensor-grid" id="sensorGrid">
             <!-- Sensor Card 1 -->
-            <div class="card sensor-card" data-status="online">
+            <div class="card sensor-card" data-status="Active">
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-success">🟢 Online</span>
+                <span class="badge badge-success">🟢 Active</span>
                 <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-001</h3>
@@ -211,9 +215,9 @@
             </div>
 
             <!-- Sensor Card 2 -->
-            <div class="card sensor-card" data-status="online">
+            <div class="card sensor-card" data-status="Active">
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-success">🟢 Online</span>
+                <span class="badge badge-success">🟢 Active</span>
                 <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-002</h3>
@@ -239,14 +243,14 @@
               </div>
             </div>
 
-            <!-- Sensor Card 3 - Warning -->
+            <!-- Sensor Card 3 - Maintenance -->
             <div
               class="card sensor-card"
-              data-status="warning"
+              data-status="Maintenance"
               style="border-left: 4px solid #ffc107"
             >
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-warning">⚠️ Warning</span>
+                <span class="badge badge-warning">🟡 Maintenance</span>
                 <span class="text-muted" style="font-size: 0.85em">15 min ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-003</h3>
@@ -279,9 +283,9 @@
             </div>
 
             <!-- Sensor Card 4 -->
-            <div class="card sensor-card" data-status="online">
+            <div class="card sensor-card" data-status="Active">
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-success">🟢 Online</span>
+                <span class="badge badge-success">🟢 Active</span>
                 <span class="text-muted" style="font-size: 0.85em">5 min ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-004</h3>
@@ -307,14 +311,14 @@
               </div>
             </div>
 
-            <!-- Sensor Card 5 - Offline -->
+            <!-- Sensor Card 5 - Faulty -->
             <div
               class="card sensor-card"
-              data-status="offline"
+              data-status="Faulty"
               style="border-left: 4px solid #dc3545; opacity: 0.8"
             >
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-danger">🔴 Offline</span>
+                <span class="badge badge-danger">🔴 Faulty</span>
                 <span class="text-muted" style="font-size: 0.85em">2 hours ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-005</h3>
@@ -347,14 +351,14 @@
               </div>
             </div>
 
-            <!-- Sensor Card 6 - Warning (Battery Low) -->
+            <!-- Sensor Card 6 - Maintenance (Battery Low) -->
             <div
               class="card sensor-card"
-              data-status="warning"
+              data-status="Maintenance"
               style="border-left: 4px solid #ffc107"
             >
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
-                <span class="badge badge-warning">⚠️ Low Battery</span>
+                <span class="badge badge-warning">🟡 Maintenance</span>
                 <span class="text-muted" style="font-size: 0.85em">10 min ago</span>
               </div>
               <h3 style="margin: 0 0 4px 0">📡 SENSOR-006</h3>
