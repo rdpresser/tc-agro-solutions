@@ -4,7 +4,7 @@
 
 import { registerUser, checkEmailAvailability, normalizeError } from './api.js';
 import { toast, t } from './i18n.js';
-import { navigateTo } from './utils.js';
+import { getPageUrl, navigateTo } from './utils.js';
 
 const DEFAULT_ROLE = 'Producer';
 const EMAIL_CHECK_DEBOUNCE_MS = 450;
@@ -15,6 +15,12 @@ let lastCheckedEmail = null;
 let lastCheckedIsAvailable = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  const signInLink = document.querySelector('a[href="index.html"]');
+
+  if (signInLink) {
+    signInLink.setAttribute('href', getPageUrl('index.html'));
+  }
+
   setupPasswordToggle();
   setupRoleUnlock();
   setupEmailAvailabilityCheck();

@@ -4,7 +4,7 @@
 
 import { handleLogin, isAuthenticated, redirectToDashboard } from './auth.js';
 import { toast, t } from './i18n.js';
-import { $ } from './utils.js';
+import { $, getPageUrl } from './utils.js';
 
 // ============================================
 // ERROR HANDLING UTILITIES
@@ -83,11 +83,16 @@ if (isAuthenticated()) {
 
 // Setup login form
 document.addEventListener('DOMContentLoaded', () => {
+  const signupLink = document.querySelector('a[href="signup.html"]');
   const loginForm = $('#login-form');
   const emailInput = $('#email');
   const passwordInput = $('#password');
   const submitBtn = loginForm?.querySelector('button[type="submit"]');
   const errorMessage = $('.error-message');
+
+  if (signupLink) {
+    signupLink.setAttribute('href', getPageUrl('signup.html'));
+  }
 
   const params = new URLSearchParams(window.location.search);
   const prefilledEmail = params.get('email');
