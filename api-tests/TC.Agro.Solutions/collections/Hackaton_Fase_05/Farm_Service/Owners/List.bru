@@ -1,0 +1,28 @@
+meta {
+  name: List
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{farm_service_url}}/api/properties?pageNumber=1&pageSize=10&sortBy=updatedAt&sortDirection=desc&filter
+  body: none
+  auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 10
+  sortBy: updatedAt
+  sortDirection: desc
+  filter: 
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

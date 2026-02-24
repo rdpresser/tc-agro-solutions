@@ -3,7 +3,14 @@
  * Entry point script for property create/edit
  */
 
-import { getProperty, createProperty, updateProperty, normalizeError } from './api.js';
+import {
+  getProperty,
+  createProperty,
+  updateProperty,
+  normalizeError,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger
+} from './api.js';
 import { initProtectedPage } from './common.js';
 import { searchAddressWithMeta, reverseGeocodeDetails } from './geocoding.js';
 import { toast, t } from './i18n.js';
@@ -13,7 +20,7 @@ import {
   setupMapModalListeners,
   selectSearchResult
 } from './map-picker.js';
-import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } from './utils.js';
 
 // ============================================
 // Page State
@@ -22,6 +29,9 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './util
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
 let autoFillIndicatorTimeoutId = null;
+const OWNER_PAGE_SIZE = 1000;
+const OWNER_SORT_BY = 'name';
+const OWNER_SORT_DIRECTION = 'asc';
 
 // ============================================
 // Page Initialization
@@ -29,6 +39,8 @@ let autoFillIndicatorTimeoutId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) return;
+
+  await setupOwnerSelector();
 
   setupMapModalListeners();
   setupMapButtonHandler();
@@ -39,6 +51,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupFormHandler();
 });
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) return false;
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+async function setupOwnerSelector() {
+  const ownerFieldGroup = $id('ownerFieldGroup');
+  const ownerSelect = $id('ownerId');
+
+  if (!ownerFieldGroup || !ownerSelect) return;
+
+  if (!isCurrentUserAdmin()) {
+    ownerFieldGroup.style.display = 'none';
+    return;
+  }
+
+  ownerFieldGroup.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwners(parameterMap);
+    renderOwnerOptions(owners);
+
+    if (isEditMode) {
+      ownerSelect.disabled = true;
+    }
+  } catch (error) {
+    const { message } = normalizeError(error);
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+    showFormError(message || 'Failed to load owners for admin selection.');
+  }
+}
+
+async function getAllOwners(parameterMap) {
+  const allOwners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: OWNER_PAGE_SIZE,
+        sortBy: OWNER_SORT_BY,
+        sortDirection: OWNER_SORT_DIRECTION,
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    allOwners.push(...items);
+
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  const uniqueOwners = Array.from(new Map(allOwners.map((owner) => [owner.id, owner])).values());
+
+  return uniqueOwners;
+}
+
+function renderOwnerOptions(owners) {
+  const ownerSelect = $id('ownerId');
+  if (!ownerSelect) return;
+
+  const sortedOwners = [...owners].sort((left, right) => {
+    const leftName = String(left?.name || '').toLowerCase();
+    const rightName = String(right?.name || '').toLowerCase();
+    return leftName.localeCompare(rightName);
+  });
+
+  ownerSelect.innerHTML = [
+    '<option value="">Select an owner</option>',
+    ...sortedOwners.map((owner) => {
+      const name = escapeHtml(owner?.name || 'Unnamed owner');
+      const email = escapeHtml(owner?.email || 'no-email');
+      return `<option value="${owner.id}">${name} (${email})</option>`;
+    })
+  ].join('');
+
+  ownerSelect.disabled = false;
+}
 
 // ============================================
 // Map Modal Handler
@@ -202,6 +313,7 @@ async function setupEditMode() {
 function populateForm(property) {
   const fields = {
     propertyId: property.id || '',
+    ownerId: property.ownerId || '',
     name: property.name || '',
     address: property.address || '',
     city: property.city || '',
@@ -230,6 +342,9 @@ function setupFormHandler() {
     e.preventDefault();
     clearFormErrors();
 
+    const isAdmin = isCurrentUserAdmin();
+    const selectedOwnerId = $id('ownerId')?.value?.trim() || '';
+
     const payload = {
       name: $id('name')?.value?.trim(),
       address: $id('address')?.value?.trim() || '',
@@ -241,6 +356,10 @@ function setupFormHandler() {
       longitude: $id('longitude')?.value ? parseFloat($id('longitude').value) : null
     };
 
+    if (isAdmin && !isEditMode && selectedOwnerId) {
+      payload.ownerId = selectedOwnerId;
+    }
+
     if (
       !payload.name ||
       !payload.city ||
@@ -249,6 +368,11 @@ function setupFormHandler() {
       !payload.areaHectares
     ) {
       showFormError('Please fill in all required fields.');
+      return;
+    }
+
+    if (isAdmin && !isEditMode && !selectedOwnerId) {
+      showFormError('Please select an owner.');
       return;
     }
 

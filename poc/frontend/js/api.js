@@ -281,6 +281,47 @@ export async function deleteProperty(id) {
 }
 
 // ============================================
+// OWNERS API
+// ============================================
+
+export async function getOwnersQueryParameterMapFromSwagger() {
+  const swagger = await fetchFarmSwagger();
+  const ownerGet = swagger?.paths?.['/api/owners']?.get;
+  const parameters = Array.isArray(ownerGet?.parameters) ? ownerGet.parameters : [];
+
+  const findParamName = (expectedName, fallback) => {
+    const param = parameters.find(
+      (item) => String(item?.name || '').toLowerCase() === expectedName.toLowerCase()
+    );
+    return param?.name || fallback;
+  };
+
+  return {
+    pageNumber: findParamName('pageNumber', 'pageNumber'),
+    pageSize: findParamName('pageSize', 'pageSize'),
+    sortBy: findParamName('sortBy', 'sortBy'),
+    sortDirection: findParamName('sortDirection', 'sortDirection'),
+    filter: findParamName('filter', 'filter')
+  };
+}
+
+export async function getOwnersPaginated(
+  { pageNumber = 1, pageSize = 10, sortBy = 'name', sortDirection = 'asc', filter = '' } = {},
+  parameterMap = null
+) {
+  const params = {
+    [parameterMap?.pageNumber || 'pageNumber']: pageNumber,
+    [parameterMap?.pageSize || 'pageSize']: pageSize,
+    [parameterMap?.sortBy || 'sortBy']: sortBy,
+    [parameterMap?.sortDirection || 'sortDirection']: sortDirection,
+    [parameterMap?.filter || 'filter']: filter
+  };
+
+  const { data } = await farmApi.get('/api/owners', { params });
+  return data;
+}
+
+// ============================================
 // PLOTS API
 // ============================================
 
