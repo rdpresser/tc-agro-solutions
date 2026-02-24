@@ -24,12 +24,20 @@ const editId = queryParams.get('id');
 const editEmail = queryParams.get('email');
 const isEditMode = queryParams.has('id') || queryParams.has('email');
 
+function isValidEmailFormat() {
+  const emailInput = $id('email');
+  if (!emailInput) return false;
+  const value = emailInput.value?.trim() || '';
+  if (!value) return false;
+  return emailInput.validity.valid;
+}
+
 // ============================================
 // Page Initialization
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!initProtectedPage()) return;
+  if (!initProtectedPage({ requireAdmin: true })) return;
 
   await checkIdentityApi();
 
@@ -167,6 +175,11 @@ function setupFormHandler() {
       return;
     }
 
+    if (!isValidEmailFormat()) {
+      showFormError(t('validation.user.email_invalid'));
+      return;
+    }
+
     if (!isEditMode) {
       payload.password = $id('password')?.value;
       payload.role = $id('role')?.value;
@@ -243,49 +256,4 @@ function clearFormErrors() {
   if (!errorDiv) return;
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
-}
-
-// ============================================
-// Native Form Validation with i18n Messages
-// ============================================
-
-const userForm = document.getElementById('userForm');
-if (userForm) {
-  userForm.addEventListener(
-    'invalid',
-    (e) => {
-      const el = e.target;
-      const id = el.id;
-      if (el.validity.valueMissing) {
-        if (id === 'name') {
-          el.setCustomValidity(t('validation.user.name_required'));
-          toast('validation.user.name_required', 'warning');
-        } else if (id === 'email') {
-          el.setCustomValidity(t('validation.user.email_required'));
-          toast('validation.user.email_required', 'warning');
-        } else if (id === 'username') {
-          el.setCustomValidity(t('validation.user.username_required'));
-          toast('validation.user.username_required', 'warning');
-        } else if (id === 'password') {
-          el.setCustomValidity(t('validation.user.password_required'));
-          toast('validation.user.password_required', 'warning');
-        } else if (id === 'role') {
-          el.setCustomValidity(t('validation.user.role_required'));
-          toast('validation.user.role_required', 'warning');
-        } else {
-          el.setCustomValidity(t('validation.user.required_fields'));
-          toast('validation.user.required_fields', 'warning');
-        }
-      } else if (el.validity.typeMismatch && el.type === 'email') {
-        el.setCustomValidity(t('validation.user.email_invalid'));
-        toast('validation.user.email_invalid', 'warning');
-      }
-    },
-    true
-  );
-
-  // Clear custom messages on input
-  userForm.addEventListener('input', (e) => {
-    e.target.setCustomValidity('');
-  });
 }

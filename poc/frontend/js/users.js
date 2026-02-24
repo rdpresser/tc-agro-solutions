@@ -13,7 +13,7 @@ import { $, showConfirm, getPageUrl, debounce } from './utils.js';
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!initProtectedPage()) {
+  if (!initProtectedPage({ requireAdmin: true })) {
     return;
   }
 

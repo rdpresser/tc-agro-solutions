@@ -90,6 +90,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = loginForm?.querySelector('button[type="submit"]');
   const errorMessage = $('.error-message');
 
+  const getErrorTextElement = () => {
+    if (!errorMessage) return null;
+    return errorMessage.querySelector('span:last-child') || errorMessage;
+  };
+
+  const showTopError = (message) => {
+    if (!errorMessage) return;
+    const errorText = getErrorTextElement();
+    if (errorText) {
+      errorText.innerText = message;
+      errorText.style.whiteSpace = 'pre-line';
+    }
+    errorMessage.style.display = 'block';
+  };
+
+  const clearTopError = () => {
+    if (!errorMessage) return;
+    errorMessage.style.display = 'none';
+  };
+
   if (signupLink) {
     signupLink.setAttribute('href', getPageUrl('signup.html'));
   }
@@ -103,6 +123,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!loginForm) return;
 
+  const isValidEmailFormat = () => {
+    if (!emailInput) return false;
+    const value = emailInput.value?.trim() || '';
+    if (!value) return false;
+    return emailInput.validity.valid;
+  };
+
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -111,10 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Basic validation
     if (!email || !password) {
-      if (errorMessage) {
-        errorMessage.textContent = t('validation.auth.fill_fields');
-        errorMessage.style.display = 'block';
-      }
+      showTopError(t('validation.auth.fill_fields'));
+      return;
+    }
+
+    if (!isValidEmailFormat()) {
+      showTopError(t('validation.auth.email_invalid'));
       return;
     }
 
@@ -125,9 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerHTML = `<span class="spinner"></span> ${t('auth.signing_in')}`;
     }
 
-    if (errorMessage) {
-      errorMessage.style.display = 'none';
-    }
+    clearTopError();
 
     try {
       await handleLogin(email, password);
@@ -142,76 +169,68 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       document.querySelectorAll('.field-error-icon').forEach((el) => el.remove());
 
-      if (errorMessage) {
-        // Extract meaningful error message from backend response
-        let displayMessage = t('auth.invalid_credentials');
+      // Extract meaningful error message from backend response
+      let displayMessage = t('auth.invalid_credentials');
 
-        if (error.response?.data) {
-          const data = error.response.data;
+      if (error.response?.data) {
+        const data = error.response.data;
 
-          // 1. FastEndpoints/ASP.NET Validation Errors (array of { name, reason, code })
-          if (Array.isArray(data.errors) && data.errors.length > 0) {
-            const firstError = data.errors[0];
+        // 1. FastEndpoints/ASP.NET Validation Errors (array of { name, reason, code })
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+          const firstError = data.errors[0];
 
-            // Check if this is the new grouped format { name, reason, code }
-            if (firstError.name && firstError.reason) {
-              // Group and apply field-level errors
-              const groupedErrors = groupErrorsByField(data.errors);
-              applyFieldErrors(groupedErrors);
+          // Check if this is the new grouped format { name, reason, code }
+          if (firstError.name && firstError.reason) {
+            // Group and apply field-level errors
+            const groupedErrors = groupErrorsByField(data.errors);
+            applyFieldErrors(groupedErrors);
 
-              // Show summary in alert box
-              const fieldSummary = Object.entries(groupedErrors)
-                .map(([field, reasons]) => `${field}: ${reasons.join(', ')}`)
-                .join('\n');
-              displayMessage = fieldSummary;
-            } else {
-              // Fallback: old format (array of strings)
-              const cleanMessages = data.errors.map((err) => {
-                if (typeof err === 'string') return err;
-                if (err && typeof err === 'object') {
-                  return (
-                    err.message ||
-                    err.errorMessage ||
-                    err.detail ||
-                    err.title ||
-                    JSON.stringify(err)
-                  );
-                }
-                return String(err);
-              });
-
-              if (cleanMessages.length > 0) {
-                displayMessage = cleanMessages.join('\n');
+            // Show summary in alert box
+            const fieldSummary = Object.entries(groupedErrors)
+              .map(([field, reasons]) => `${field}: ${reasons.join(', ')}`)
+              .join('\n');
+            displayMessage = fieldSummary;
+          } else {
+            // Fallback: old format (array of strings)
+            const cleanMessages = data.errors.map((err) => {
+              if (typeof err === 'string') return err;
+              if (err && typeof err === 'object') {
+                return (
+                  err.message || err.errorMessage || err.detail || err.title || JSON.stringify(err)
+                );
               }
-            }
-          }
-          // 2. Old format: errors object as { field: ["msg"] }
-          else if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
-            const details = Object.values(data.errors).flat();
-            if (details.length > 0) {
-              displayMessage = details.join('\n');
-            }
-          }
-          // 3. Standard error message ({ message: "..." })
-          else if (data.message) {
-            displayMessage = data.message;
-          }
-          // 4. ProblemDetails ({ title: "...", detail: "..." })
-          else if (data.title || data.detail) {
-            displayMessage = data.detail || data.title;
-          }
-        }
-        // 5. Fallback to generic status text if available
-        else if (error.message && error.message !== 'Network Error') {
-          if (!error.message.includes('status code')) {
-            displayMessage = error.message;
-          }
-        }
+              return String(err);
+            });
 
-        errorMessage.innerText = displayMessage;
-        errorMessage.style.display = 'block';
-        errorMessage.style.whiteSpace = 'pre-line'; // Enable newlines
+            if (cleanMessages.length > 0) {
+              displayMessage = cleanMessages.join('\n');
+            }
+          }
+        }
+        // 2. Old format: errors object as { field: ["msg"] }
+        else if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+          const details = Object.values(data.errors).flat();
+          if (details.length > 0) {
+            displayMessage = details.join('\n');
+          }
+        }
+        // 3. Standard error message ({ message: "..." })
+        else if (data.message) {
+          displayMessage = data.message;
+        }
+        // 4. ProblemDetails ({ title: "...", detail: "..." })
+        else if (data.title || data.detail) {
+          displayMessage = data.detail || data.title;
+        }
       }
+      // 5. Fallback to generic status text if available
+      else if (error.message && error.message !== 'Network Error') {
+        if (!error.message.includes('status code')) {
+          displayMessage = error.message;
+        }
+      }
+
+      showTopError(displayMessage);
 
       // Reset button
       if (submitBtn) {
@@ -225,35 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Clear error on input
   [emailInput, passwordInput].forEach((input) => {
     input?.addEventListener('input', () => {
-      if (errorMessage) {
-        errorMessage.style.display = 'none';
-      }
+      clearTopError();
     });
-  });
-
-  // Override native validation messages to English and show toast
-  loginForm.addEventListener(
-    'invalid',
-    (e) => {
-      const el = e.target;
-      if (el.validity.valueMissing) {
-        if (el.id === 'password') {
-          el.setCustomValidity(t('validation.auth.password_required'));
-          toast('validation.auth.password_required', 'warning');
-        } else {
-          el.setCustomValidity(t('validation.auth.fill_fields'));
-          toast('validation.auth.fill_fields', 'warning');
-        }
-      } else if (el.validity.typeMismatch && el.type === 'email') {
-        el.setCustomValidity(t('validation.auth.email_invalid'));
-        toast('validation.auth.email_invalid', 'warning');
-      }
-    },
-    true
-  );
-
-  // Clear custom validity on input
-  loginForm.addEventListener('input', (e) => {
-    e.target.setCustomValidity('');
   });
 });

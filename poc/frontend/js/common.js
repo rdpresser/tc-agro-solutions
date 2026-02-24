@@ -5,11 +5,17 @@
 
 import { handleLogout, requireAuth, getTokenInfo } from './auth.js';
 import { initSidebar } from './sidebar.js';
-import { $, APP_CONFIG } from './utils.js';
+import { $, APP_CONFIG, getUser, navigateTo } from './utils.js';
 
 // Check authentication for protected pages
-export function initProtectedPage() {
+export function initProtectedPage(options = {}) {
   if (!requireAuth()) {
+    return false;
+  }
+
+  const requireAdmin = options?.requireAdmin === true;
+  if (requireAdmin && !isCurrentUserAdmin()) {
+    navigateTo('dashboard.html');
     return false;
   }
 
@@ -17,10 +23,37 @@ export function initProtectedPage() {
   initSidebar();
   setupLogout();
   setupUserDisplay();
+  setupRoleBasedMenuVisibility();
   updateActiveNavItem();
   rewriteNavLinks();
 
   return true;
+}
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+
+  if (!currentUser) {
+    return false;
+  }
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function setupRoleBasedMenuVisibility() {
+  const isAdmin = isCurrentUserAdmin();
+
+  const usersNavItems = document.querySelectorAll('.sidebar .nav-item[href$="users.html"]');
+  usersNavItems.forEach((item) => {
+    item.style.display = isAdmin ? '' : 'none';
+    if (!isAdmin) {
+      item.classList.remove('active');
+    }
+  });
 }
 
 // Rewrite navigation links to include base path

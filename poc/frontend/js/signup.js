@@ -14,6 +14,13 @@ let latestEmailCheckRequestId = 0;
 let lastCheckedEmail = null;
 let lastCheckedIsAvailable = null;
 
+function isValidEmailFormat(emailInput) {
+  if (!emailInput) return false;
+  const value = emailInput.value?.trim() || '';
+  if (!value) return false;
+  return emailInput.validity.valid;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const signInLink = document.querySelector('a[href="index.html"]');
 
@@ -97,6 +104,12 @@ function setupFormHandler() {
       return;
     }
 
+    if (!isValidEmailFormat(emailInput)) {
+      setEmailAvailabilityState('unavailable', 'Enter a valid email address', emailInput, false);
+      showFormError(t('validation.user.email_invalid'));
+      return;
+    }
+
     const isEmailAvailable = await ensureEmailAvailableBeforeSubmit(payload.email, emailInput);
     if (!isEmailAvailable) {
       showFormError('This email is already registered. Please use another email.');
@@ -144,11 +157,13 @@ function setupEmailAvailabilityCheck() {
       return;
     }
 
-    if (!emailInput.checkValidity()) {
+    if (!isValidEmailFormat(emailInput)) {
       setEmailAvailabilityState('unavailable', 'Enter a valid email address', emailInput, false);
+      showFormError(t('validation.user.email_invalid'));
       return;
     }
 
+    clearFormError();
     setEmailAvailabilityState('checking', 'Checking availability...', emailInput, null);
 
     emailCheckTimer = setTimeout(async () => {
@@ -160,7 +175,7 @@ function setupEmailAvailabilityCheck() {
 async function ensureEmailAvailableBeforeSubmit(email, emailInput) {
   const normalizedEmail = (email || '').trim();
 
-  if (!normalizedEmail || !emailInput || !emailInput.checkValidity()) {
+  if (!normalizedEmail || !emailInput || !isValidEmailFormat(emailInput)) {
     return false;
   }
 
@@ -299,27 +314,28 @@ function setupNativeValidation() {
     (e) => {
       const element = e.target;
       const id = element.id;
+      let validationMessage = '';
 
       if (element.validity.valueMissing) {
         if (id === 'name') {
-          element.setCustomValidity(t('validation.user.name_required'));
-          toast('validation.user.name_required', 'warning');
+          validationMessage = t('validation.user.name_required');
         } else if (id === 'email') {
-          element.setCustomValidity(t('validation.user.email_required'));
-          toast('validation.user.email_required', 'warning');
+          validationMessage = t('validation.user.email_required');
         } else if (id === 'username') {
-          element.setCustomValidity(t('validation.user.username_required'));
-          toast('validation.user.username_required', 'warning');
+          validationMessage = t('validation.user.username_required');
         } else if (id === 'password') {
-          element.setCustomValidity(t('validation.user.password_required'));
-          toast('validation.user.password_required', 'warning');
+          validationMessage = t('validation.user.password_required');
         } else {
-          element.setCustomValidity(t('validation.user.required_fields'));
-          toast('validation.user.required_fields', 'warning');
+          validationMessage = t('validation.user.required_fields');
         }
       } else if (element.validity.typeMismatch && element.type === 'email') {
-        element.setCustomValidity(t('validation.user.email_invalid'));
-        toast('validation.user.email_invalid', 'warning');
+        validationMessage = t('validation.user.email_invalid');
+      }
+
+      if (validationMessage) {
+        element.setCustomValidity(validationMessage);
+        showFormError(validationMessage);
+        e.preventDefault();
       }
     },
     true
