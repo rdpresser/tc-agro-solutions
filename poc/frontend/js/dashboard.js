@@ -6,6 +6,7 @@ import {
   getDashboardStats,
   getLatestReadings,
   getAlerts,
+  getPlots,
   initSignalRConnection,
   stopSignalRConnection
 } from './api.js';
@@ -43,8 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Load dashboard data
-  await loadDashboardData();
-  setupRealTimeUpdates();
+  const shouldEnableRealtime = await loadDashboardData();
+  if (shouldEnableRealtime) {
+    setupRealTimeUpdates();
+  }
 });
 
 // Cleanup on page unload
@@ -73,6 +76,15 @@ window.addEventListener('beforeunload', async () => {
 
 async function loadDashboardData() {
   try {
+    const userPlots = await getPlots();
+    const hasPlots = Array.isArray(userPlots) && userPlots.length > 0;
+
+    if (!hasPlots) {
+      hasSetupForRealtime = false;
+      renderInitialSetupState();
+      return false;
+    }
+
     // Load all data in parallel
     const [stats, readings, alerts] = await Promise.all([
       getDashboardStats(),
@@ -85,9 +97,88 @@ async function loadDashboardData() {
     updateStatCards(stats);
     updateReadingsTable(readings);
     updateAlertsSection(alerts);
+    return true;
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     toast('dashboard.load_failed', 'error');
+    return false;
+  }
+}
+
+function renderInitialSetupState() {
+  const statProperties = $('#stat-properties');
+  const statPlots = $('#stat-plots');
+  const statSensors = $('#stat-sensors');
+  const statAlerts = $('#stat-alerts');
+
+  if (statProperties) statProperties.textContent = '0';
+  if (statPlots) statPlots.textContent = '0';
+  if (statSensors) statSensors.textContent = '0';
+  if (statAlerts) statAlerts.textContent = '0';
+
+  const readingsBody = $('#readings-tbody');
+  if (readingsBody) {
+    readingsBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center text-muted">
+          No readings yet. Create a property, plot and sensor to start collecting data.
+        </td>
+      </tr>
+    `;
+  }
+
+  const pendingAlerts = $('#pending-alerts');
+  if (pendingAlerts) {
+    pendingAlerts.innerHTML =
+      '<p class="text-center text-muted" style="padding: 20px">No alerts yet. Alerts will appear after sensors start sending data.</p>';
+  }
+
+  const readingsChartContainer = $('#readings-chart-container');
+  if (readingsChartContainer) {
+    readingsChartContainer.innerHTML = `
+      <div class="chart-placeholder">
+        <div class="chart-placeholder-icon">📊</div>
+        <p>Initial setup required</p>
+        <p class="text-muted" style="font-size: 0.85rem">
+          Create property, plot and sensor to visualize readings.
+        </p>
+      </div>
+    `;
+  }
+
+  const alertsChartContainer = $('#alerts-chart-container');
+  if (alertsChartContainer) {
+    alertsChartContainer.innerHTML = `
+      <div class="chart-placeholder">
+        <div class="chart-placeholder-icon">📈</div>
+        <p>Initial setup required</p>
+        <p class="text-muted" style="font-size: 0.85rem">
+          Alert distribution appears after sensor data starts flowing.
+        </p>
+      </div>
+    `;
+  }
+
+  const metricIds = [
+    'metric-temperature',
+    'metric-humidity',
+    'metric-soil-moisture',
+    'metric-rainfall'
+  ];
+
+  metricIds.forEach((id) => {
+    const metricElement = $(`#${id}`);
+    if (metricElement) {
+      metricElement.textContent = '--';
+    }
+  });
+
+  const connectionStatus = $('#connection-status');
+  if (connectionStatus) {
+    connectionStatus.className = 'badge badge-warning';
+    connectionStatus.textContent = '● Setup required';
+    connectionStatus.title =
+      'Create properties, plots and sensors before real-time metrics can be displayed.';
   }
 }
 
@@ -117,6 +208,15 @@ function updateStatCards(stats) {
 function updateReadingsTable(readings) {
   const tbody = $('#readings-tbody');
   if (!tbody) return;
+
+  if (!Array.isArray(readings) || readings.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center text-muted">No readings available yet.</td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = readings
     .map(
@@ -208,6 +308,7 @@ function getSeverityLabel(severity) {
 
 let joinedPlotIds = []; // Track joined plot groups
 let isJoiningPlotGroups = false;
+let hasSetupForRealtime = true;
 
 async function setupRealTimeUpdates() {
   const connection = await initSignalRConnection({
@@ -227,20 +328,16 @@ async function joinAllPlotGroups() {
     return;
   }
 
+  if (!hasSetupForRealtime) {
+    return;
+  }
+
   isJoiningPlotGroups = true;
 
   try {
-    // Fetch plots for the current user; fallback to sensors list if plots is empty
-    const { getPlots, getSensorsPaginated, joinPlotGroup } = await import('./api.js');
+    const { joinPlotGroup } = await import('./api.js');
     const plots = await getPlots();
-    let plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
-
-    if (plotIds.length === 0) {
-      const sensorsResponse = await getSensorsPaginated({ pageSize: 1000 });
-      const sensors =
-        sensorsResponse?.items || sensorsResponse?.data || sensorsResponse?.results || [];
-      plotIds = [...new Set(sensors.map((sensor) => sensor?.plotId).filter(Boolean))];
-    }
+    const plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
 
     if (plotIds.length > 0) {
       console.warn(`[SignalR] Joining ${plotIds.length} plot groups...`);
@@ -258,9 +355,17 @@ async function joinAllPlotGroups() {
 
       console.warn(`[SignalR] Successfully joined ${joinedPlotIds.length} plot groups`);
     } else {
-      console.warn('[SignalR] No plots found to join');
+      hasSetupForRealtime = false;
+      console.warn('[SignalR] No plots found. Skipping realtime plot group subscriptions.');
     }
   } catch (error) {
+    const statusCode = error?.response?.status;
+    if (statusCode === 400 || statusCode === 404) {
+      hasSetupForRealtime = false;
+      console.warn('[SignalR] No plot context available for current user yet.');
+      return;
+    }
+
     console.error('[SignalR] Error joining plot groups:', error);
   } finally {
     isJoiningPlotGroups = false;
@@ -338,7 +443,7 @@ function handleConnectionChange(state) {
   }
 
   // Rejoin plot groups after reconnection (without creating a new connection)
-  if (state === 'connected') {
+  if (state === 'connected' && hasSetupForRealtime) {
     console.warn('[SignalR] Connected, (re)joining plot groups...');
     joinAllPlotGroups();
   }
