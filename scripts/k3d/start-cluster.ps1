@@ -25,6 +25,50 @@ $Color = @{
     Warning = "Yellow"
 }
 
+function Ensure-ClusterLoadBalancerRunning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ClusterName,
+        [int]$MaxAttempts = 5,
+        [int]$DelaySeconds = 2
+    )
+
+    $lbName = "k3d-$ClusterName-serverlb"
+    $lbEntry = docker ps -a --format "{{.ID}} {{.Names}}" 2>$null |
+    Where-Object {
+        $parts = $_ -split "\s+", 2
+        $parts.Length -eq 2 -and $parts[1] -eq $lbName
+    } |
+    Select-Object -First 1
+
+    if (-not $lbEntry) {
+        Write-Host "   ⚠️  Load-balancer container '$lbName' not found; cluster networking may be impaired" -ForegroundColor $Color.Warning
+        return $false
+    }
+
+    $lbId = ($lbEntry -split "\s+", 2)[0]
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $isRunning = (docker inspect $lbId --format "{{.State.Running}}" 2>$null).Trim()
+        if ($isRunning -eq "true") {
+            if ($attempt -eq 1) {
+                Write-Host "   ✅ Load-balancer already running" -ForegroundColor $Color.Success
+            }
+            else {
+                Write-Host "   ✅ Load-balancer running (attempt $attempt/$MaxAttempts)" -ForegroundColor $Color.Success
+            }
+            return $true
+        }
+
+        Write-Host "   Starting load-balancer container (attempt $attempt/$MaxAttempts)..." -ForegroundColor $Color.Muted
+        docker start $lbId 2>&1 | Out-Null
+        Start-Sleep -Seconds $DelaySeconds
+    }
+
+    Write-Host "   ⚠️  Failed to keep load-balancer '$lbName' running after $MaxAttempts attempts" -ForegroundColor $Color.Warning
+    return $false
+}
+
 Write-Host ""
 Write-Host "=== Starting cluster '$clusterName' ===" -ForegroundColor $Color.Info
 
@@ -121,29 +165,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "✅ Cluster started" -ForegroundColor $Color.Success
 
 # Ensure server load-balancer container is running (k3d-$clusterName-serverlb)
-$lbName = "k3d-$clusterName-serverlb"
-$lbContainer = docker ps -a --filter "name=$lbName" --format "{{.ID}} {{.Status}}" 2>$null
-if ($lbContainer) {
-    $parts = $lbContainer.Trim() -split "\s+"
-    $cid = $parts[0]
-    $cstatus = ($parts[1..($parts.Length - 1)] -join " ")
-    if ($cstatus -notlike "Up*") {
-        Write-Host "   Starting load-balancer container (docker start $cid)..." -ForegroundColor $Color.Muted
-        docker start $cid 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ Load-balancer started" -ForegroundColor $Color.Success
-        }
-        else {
-            Write-Host "   ⚠️  Failed to start load-balancer $lbName" -ForegroundColor $Color.Warning
-        }
-    }
-    else {
-        Write-Host "   ✅ Load-balancer already running" -ForegroundColor $Color.Success
-    }
-}
-else {
-    Write-Host "   ⚠️  Load-balancer container $lbName not found; cluster networking may be impaired" -ForegroundColor $Color.Warning
-}
+$null = Ensure-ClusterLoadBalancerRunning -ClusterName $clusterName
 
 # Fix kubeconfig for Docker Desktop (if needed)
 Write-Host ""

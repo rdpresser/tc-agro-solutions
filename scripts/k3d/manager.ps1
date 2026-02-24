@@ -21,6 +21,8 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
+$script:LastScriptExitCode = 0
+$script:LastScriptName = ""
 
 $Color = @{
     Title   = "Green"
@@ -74,7 +76,7 @@ function Show-Menu {
     Write-Host ""
 }
 
-function Check-Prerequisites {
+function Test-Prerequisites {
     Write-Host "🔍 Checking prerequisites..." -ForegroundColor $Color.Info
     $missing = @()
     
@@ -337,6 +339,9 @@ function Invoke-Script {
     )
     
     $script = Get-ScriptPath $ScriptName
+    $script:LastScriptName = $ScriptName
+    $script:LastScriptExitCode = 1
+
     if (-not (Test-Path $script)) {
         Write-Host "❌ Script not found: $script" -ForegroundColor $Color.Error
         return $false
@@ -347,6 +352,13 @@ function Invoke-Script {
     Write-Host "───────────────────────────────────────────────────────────" -ForegroundColor $Color.Muted
     
     & $script @Arguments
+
+    if ($null -eq $LASTEXITCODE) {
+        $script:LastScriptExitCode = 0
+    }
+    else {
+        $script:LastScriptExitCode = $LASTEXITCODE
+    }
     
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
         Write-Host "❌ Script failed with exit code $LASTEXITCODE" -ForegroundColor $Color.Error
@@ -358,7 +370,7 @@ function Invoke-Script {
     return $true
 }
 
-function Prompt-BootstrapAfterDiagnostics {
+function Request-BootstrapAfterDiagnostics {
     param(
         [string]$Reason = "cluster not available after diagnostics"
     )
@@ -399,7 +411,7 @@ if ($Command) {
 }
 else {
     # Check prerequisites once at startup
-    if (-not (Check-Prerequisites)) {
+    if (-not (Test-Prerequisites)) {
         exit 1
     }
     
@@ -444,15 +456,21 @@ else {
                     Write-Host "" 
                     Write-Host "ℹ️  Cluster 'dev' is not present after network diagnostics." -ForegroundColor $Color.Info
                     Write-Host "   Run option 1 (Bootstrap) or option 20 (Full Rebuild) to recreate it." -ForegroundColor $Color.Muted
-                    Prompt-BootstrapAfterDiagnostics -Reason "cluster deleted during network fix"
+                    Request-BootstrapAfterDiagnostics -Reason "cluster deleted during network fix"
                 }
                 else {
                     $startResult = Invoke-Script "start-cluster.ps1"
 
                     if (-not $startResult) {
+                        Write-Host "" 
+                        Write-Host "⚠️  Start failed in manager option 2" -ForegroundColor $Color.Warning
+                        Write-Host "   Script: $script:LastScriptName" -ForegroundColor $Color.Muted
+                        Write-Host "   Exit code: $script:LastScriptExitCode" -ForegroundColor $Color.Warning
+                        Write-Host "   Tip: run .\start-cluster.ps1 directly for full output details." -ForegroundColor $Color.Muted
+
                         $clusterExistsAfterStart = k3d cluster list 2>$null | Select-String -Pattern "^dev\s"
                         if (-not $clusterExistsAfterStart) {
-                            Prompt-BootstrapAfterDiagnostics -Reason "cluster deleted during start recovery"
+                            Request-BootstrapAfterDiagnostics -Reason "cluster deleted during start recovery"
                         }
                     }
                 }
@@ -467,12 +485,26 @@ else {
         }
     
         "3" {
-            $null = Invoke-Script "stop-cluster.ps1"
+            $stopResult = Invoke-Script "stop-cluster.ps1"
+            if (-not $stopResult) {
+                Write-Host "" 
+                Write-Host "⚠️  Stop failed in manager option 3" -ForegroundColor $Color.Warning
+                Write-Host "   Script: $script:LastScriptName" -ForegroundColor $Color.Muted
+                Write-Host "   Exit code: $script:LastScriptExitCode" -ForegroundColor $Color.Warning
+                Write-Host "   Tip: run .\stop-cluster.ps1 directly for full output details." -ForegroundColor $Color.Muted
+            }
             $null = Read-Host "`nPress Enter to continue"
         }
     
         "4" {
-            $null = Invoke-Script "restart-cluster.ps1"
+            $restartResult = Invoke-Script "restart-cluster.ps1"
+            if (-not $restartResult) {
+                Write-Host "" 
+                Write-Host "⚠️  Restart failed in manager option 4" -ForegroundColor $Color.Warning
+                Write-Host "   Script: $script:LastScriptName" -ForegroundColor $Color.Muted
+                Write-Host "   Exit code: $script:LastScriptExitCode" -ForegroundColor $Color.Warning
+                Write-Host "   Tip: run .\restart-cluster.ps1 directly for full output details." -ForegroundColor $Color.Muted
+            }
             $null = Read-Host "`nPress Enter to continue"
         }
     
