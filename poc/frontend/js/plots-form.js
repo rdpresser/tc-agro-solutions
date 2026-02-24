@@ -8,6 +8,11 @@ import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { COMMON_CROP_TYPES, CROP_TYPE_ICONS, normalizeCropType } from './crop-types.js';
 import { toast, t } from './i18n.js';
+import {
+  IRRIGATION_TYPES,
+  IRRIGATION_TYPE_ICONS,
+  normalizeIrrigationType
+} from './irrigation-types.js';
 import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
 // ============================================
@@ -31,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await checkFarmApi();
 
   loadCropTypeOptions();
+  loadIrrigationTypeOptions();
   await loadPropertyOptions();
 
   if (isEditMode) {
@@ -154,9 +160,9 @@ function populateForm(plot) {
     name: plot.name,
     areaHectares: plot.areaHectares,
     cropType: normalizedCropType,
-    plantingDate: plot.plantingDate || '',
-    expectedHarvest: plot.expectedHarvest || '',
-    irrigationType: plot.irrigationType || '',
+    plantingDate: formatDateForInput(plot.plantingDate),
+    expectedHarvest: formatDateForInput(plot.expectedHarvestDate || plot.expectedHarvest),
+    irrigationType: normalizeIrrigationType(plot.irrigationType || ''),
     minSoilMoisture: plot.minSoilMoisture || 30,
     maxTemperature: plot.maxTemperature || 35,
     minHumidity: plot.minHumidity || 40,
@@ -188,6 +194,26 @@ function loadCropTypeOptions() {
   const normalizedCurrent = normalizeCropType(currentValue);
   if (normalizedCurrent) {
     select.value = normalizedCurrent;
+  }
+}
+
+function loadIrrigationTypeOptions() {
+  const select = $id('irrigationType');
+  if (!select) return;
+
+  const currentValue = normalizeIrrigationType(select.value);
+
+  select.innerHTML = [`<option value="">Select...</option>`]
+    .concat(
+      IRRIGATION_TYPES.map((type) => {
+        const icon = IRRIGATION_TYPE_ICONS[type] || '💦';
+        return `<option value="${type}">${icon} ${type}</option>`;
+      })
+    )
+    .join('');
+
+  if (currentValue) {
+    select.value = currentValue;
   }
 }
 
@@ -241,11 +267,17 @@ async function handleSubmit(e) {
   e.preventDefault();
   clearFormErrors();
 
+  const plantingDateValue = $id('plantingDate')?.value?.trim() || '';
+  const expectedHarvestValue = $id('expectedHarvest')?.value?.trim() || '';
+
   const formData = {
     propertyId: $id('propertyId')?.value,
     name: $id('name')?.value,
     areaHectares: parseFloat($id('areaHectares')?.value) || 0,
-    cropType: $id('cropType')?.value
+    cropType: $id('cropType')?.value,
+    plantingDate: toDateTimeOffset(plantingDateValue),
+    expectedHarvestDate: toDateTimeOffset(expectedHarvestValue),
+    irrigationType: normalizeIrrigationType($id('irrigationType')?.value)
   };
 
   // Validation
@@ -274,7 +306,10 @@ async function handleSubmit(e) {
       propertyId: formData.propertyId,
       name: formData.name,
       areaHectares: formData.areaHectares,
-      cropType: formData.cropType
+      cropType: formData.cropType,
+      plantingDate: formData.plantingDate,
+      expectedHarvestDate: formData.expectedHarvestDate,
+      irrigationType: formData.irrigationType
     });
 
     toast('Plot created successfully', 'success');
@@ -325,6 +360,29 @@ function clearFormErrors() {
   if (!errorDiv) return;
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
+}
+
+function formatDateForInput(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function toDateTimeOffset(dateInputValue) {
+  if (!dateInputValue) return null;
+
+  const date = new Date(`${dateInputValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
 }
 
 // Also show English toasts when native validation triggers

@@ -6,6 +6,7 @@ import { getPlotsPaginated, getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { COMMON_CROP_TYPES, CROP_TYPE_ICONS } from './crop-types.js';
 import { toast } from './i18n.js';
+import { getIrrigationTypeDisplay, normalizeIrrigationType } from './irrigation-types.js';
 import { $, getPageUrl, debounce } from './utils.js';
 // import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
 // import { deletePlot } from './api.js'; // Commented out - no delete route available
@@ -54,7 +55,7 @@ async function loadPlots() {
   const tbody = $('#plots-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" class="text-center">Loading...</td></tr>';
 
   try {
     const filters = getCurrentFilters();
@@ -72,7 +73,7 @@ async function loadPlots() {
     const { message } = normalizeError(error);
     console.error('Error loading plots:', error);
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center text-danger">Error loading plots</td></tr>';
+      '<tr><td colspan="10" class="text-center text-danger">Error loading plots</td></tr>';
     renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
     toast(message || 'plots.load_failed', 'error');
   }
@@ -163,6 +164,9 @@ function normalizePlotItem(plot) {
     name: plot?.name || '-',
     propertyName: plot?.propertyName || plot?.property?.name || '-',
     cropType: plot?.cropType || '-',
+    plantingDate: plot?.plantingDate || null,
+    expectedHarvestDate: plot?.expectedHarvestDate || plot?.expectedHarvest || null,
+    irrigationType: normalizeIrrigationType(plot?.irrigationType || ''),
     areaHectares: Number.isFinite(area) ? area : 0,
     sensorsCount: Number.isFinite(sensorsCount) ? sensorsCount : 0,
     status: normalizeStatus(plot)
@@ -219,7 +223,8 @@ function renderPlotsTable(plots) {
   if (!tbody) return;
 
   if (!plots.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No plots found</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="10" class="text-center text-muted">No plots found</td></tr>';
     return;
   }
 
@@ -232,6 +237,9 @@ function renderPlotsTable(plots) {
       <td>
         <span class="badge badge-info">${formatCropType(plot.cropType)}</span>
       </td>
+      <td>${formatDateColumn(plot.plantingDate)}</td>
+      <td>${formatDateColumn(plot.expectedHarvestDate)}</td>
+      <td>${getIrrigationTypeDisplay(plot.irrigationType)}</td>
       <td>${plot.areaHectares.toLocaleString('en-US')} ha</td>
       <td>${plot.sensorsCount} sensor(es)</td>
       <td>
@@ -315,6 +323,15 @@ function getStatusIcon(status) {
     critical: '🔴'
   };
   return icons[status] || '';
+}
+
+function formatDateColumn(value) {
+  if (!value) return '-';
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+
+  return parsed.toLocaleDateString('en-US');
 }
 
 // ============================================
