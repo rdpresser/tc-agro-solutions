@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: agro-apps
+  labels:
+    app: frontend
+    component: web
+data:
+  VITE_SIGNALR_ENABLED: "true"
+  VITE_API_BASE_URL: ""
+  VITE_IDENTITY_API_BASE_URL: ""
+  VITE_FARM_API_BASE_URL: ""
+  VITE_SENSOR_API_BASE_URL: ""
+  VITE_BASE_PATH: "/agro/"
+  VITE_MAPSCO_API_KEY: ""

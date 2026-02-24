@@ -196,6 +196,22 @@
                 </div>
               </div>
 
+              <div class="form-group">
+                <label class="form-label">Location on Map</label>
+                <button
+                  type="button"
+                  id="openMapBtn"
+                  class="btn btn-secondary"
+                  style="width: 100%; margin-bottom: 12px"
+                >
+                  📍 Locate on Map
+                </button>
+                <span class="form-text">Click to pick coordinates using interactive map</span>
+                <div id="addressAutoFillIndicator" class="address-autofill-indicator" style="display: none">
+                  ✅ Address fields were auto-filled.
+                </div>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label for="latitude" class="form-label">Latitude</label>
@@ -205,8 +221,9 @@
                     class="form-control"
                     placeholder="e.g., -23.5505"
                     step="0.0001"
+                    readonly
                   />
-                  <span class="form-text">Optional GPS coordinate</span>
+                  <span class="form-text">GPS coordinate (set via map)</span>
                 </div>
 
                 <div class="form-group">
@@ -217,8 +234,9 @@
                     class="form-control"
                     placeholder="e.g., -46.6333"
                     step="0.0001"
+                    readonly
                   />
-                  <span class="form-text">Optional GPS coordinate</span>
+                  <span class="form-text">GPS coordinate (set via map)</span>
                 </div>
               </div>
 
@@ -242,6 +260,55 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Location Modal -->
+    <div id="locationModal" class="modal">
+      <div id="locationModalContent" class="modal-content">
+        <div class="modal-header">
+          <h3>📍 Select Location</h3>
+          <button
+            type="button"
+            id="closeLocationBtn"
+            class="modal-close"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Search Section -->
+          <div class="location-search-wrapper">
+            <div class="location-search">
+              <input
+                type="text"
+                id="addressSearchInput"
+                class="form-control"
+                placeholder="Search for address (e.g., 'Ribeirão Preto, SP')..."
+              />
+              <button type="button" id="searchBtn" class="btn btn-outline">🔍 Search</button>
+            </div>
+
+            <!-- Search Results -->
+            <div id="searchResults" class="search-results" style="display: none">
+              <div class="search-results-title">Results:</div>
+              <div id="resultsList" class="results-list"></div>
+            </div>
+          </div>
+
+          <!-- Map -->
+          <div id="locationInfo" class="location-info">📍 Select location on map</div>
+          <div id="mapContainer" class="map-container"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="confirmLocationBtn" class="btn btn-primary">
+            ✓ Confirm Location
+          </button>
+          <button type="button" id="closeLocationBtn2" class="btn btn-outline">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts (ES Module) -->

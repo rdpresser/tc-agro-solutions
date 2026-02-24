@@ -5,7 +5,14 @@
 
 import { getProperty, createProperty, updateProperty, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
+import { searchAddressWithMeta, reverseGeocodeDetails } from './geocoding.js';
 import { toast, t } from './i18n.js';
+import {
+  openMapModal,
+  closeMapModal,
+  setupMapModalListeners,
+  selectSearchResult
+} from './map-picker.js';
 import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
 
 // ============================================
@@ -14,6 +21,7 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './util
 
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
+let autoFillIndicatorTimeoutId = null;
 
 // ============================================
 // Page Initialization
@@ -22,12 +30,141 @@ const isEditMode = !!editId;
 document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) return;
 
+  setupMapModalListeners();
+  setupMapButtonHandler();
+
   if (isEditMode) {
     await setupEditMode();
   }
 
   setupFormHandler();
 });
+
+// ============================================
+// Map Modal Handler
+// ============================================
+
+function setupMapButtonHandler() {
+  const openMapBtn = $id('openMapBtn');
+  const searchBtn = $id('searchBtn');
+  const searchBtnDefaultHtml = searchBtn?.innerHTML || '🔍 Search';
+  const addressSearchInput = $id('addressSearchInput');
+  const closeLocationBtn2 = $id('closeLocationBtn2');
+
+  if (openMapBtn) {
+    openMapBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const lat = $id('latitude')?.value ? parseFloat($id('latitude').value) : null;
+      const lon = $id('longitude')?.value ? parseFloat($id('longitude').value) : null;
+      openMapModal(lat, lon);
+    });
+  }
+
+  if (searchBtn) {
+    searchBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const query = addressSearchInput?.value?.trim();
+      if (!query) {
+        toast('Please enter an address to search', 'warning');
+        return;
+      }
+
+      if (searchBtn.disabled) {
+        return;
+      }
+
+      const resultsDiv = $id('searchResults');
+      const resultsList = $id('resultsList');
+
+      if (resultsDiv && resultsList) {
+        searchBtn.disabled = true;
+        searchBtn.classList.add('btn-loading');
+        searchBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Searching...';
+        resultsDiv.style.display = 'block';
+        resultsList.innerHTML = '<div class="loading-text">Searching...</div>';
+
+        try {
+          const { results, warning, error } = await searchAddressWithMeta(query);
+
+          if (results.length === 0) {
+            const emptyMessage = error || 'No results found. Try a different address.';
+            resultsList.innerHTML = `<div class="empty-text">${escapeHtml(emptyMessage)}</div>`;
+            return;
+          }
+
+          const feedbackBlock = buildSearchFeedbackBlock(warning, error);
+
+          resultsList.innerHTML =
+            feedbackBlock +
+            results
+              .map(
+                (result, index) => `
+            <div class="result-item" data-index="${index}">
+              <div class="result-title">${escapeHtml(result.display_name)}</div>
+              <div class="result-coords">📍 ${result.lat.toFixed(6)}, ${result.lon.toFixed(6)}</div>
+            </div>
+          `
+              )
+              .join('');
+
+          resultsList.querySelectorAll('.result-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+              const selected = results[index];
+              selectSearchResult(results, index);
+              fillAddressFields(selected);
+              showAddressAutoFillIndicator('Address fields auto-filled from search result.');
+
+              const latInput = $id('latitude');
+              const lonInput = $id('longitude');
+              if (latInput) latInput.value = selected.lat;
+              if (lonInput) lonInput.value = selected.lon;
+
+              resultsDiv.style.display = 'none';
+            });
+          });
+        } catch (searchError) {
+          console.error('Search error:', searchError);
+          resultsList.innerHTML = '<div class="error-text">Search failed. Try again.</div>';
+        } finally {
+          searchBtn.disabled = false;
+          searchBtn.classList.remove('btn-loading');
+          searchBtn.innerHTML = searchBtnDefaultHtml;
+        }
+      }
+    });
+  }
+
+  if (addressSearchInput) {
+    addressSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchBtn?.click();
+      }
+    });
+  }
+
+  if (closeLocationBtn2) {
+    closeLocationBtn2.addEventListener('click', closeMapModal);
+  }
+
+  document.addEventListener('locationSelected', async (event) => {
+    const { lat, lon, address, display_name: displayName } = event.detail || {};
+
+    if (address) {
+      fillAddressFields({ address, display_name: displayName, lat, lon });
+      showAddressAutoFillIndicator('Address fields auto-filled from map selection.');
+      return;
+    }
+
+    if (typeof lat === 'number' && typeof lon === 'number') {
+      const details = await reverseGeocodeDetails(lat, lon);
+      if (details) {
+        fillAddressFields(details);
+        showAddressAutoFillIndicator('Address fields auto-filled from map selection.');
+      }
+    }
+  });
+}
 
 // ============================================
 // Edit Mode Setup
@@ -166,6 +303,10 @@ function setupFormHandler() {
 
   form.addEventListener('input', (e) => {
     e.target.setCustomValidity('');
+
+    if (['address', 'city', 'state', 'country'].includes(e.target?.id)) {
+      hideAddressAutoFillIndicator();
+    }
   });
 }
 
@@ -205,4 +346,82 @@ function clearFormErrors() {
   if (!errorDiv) return;
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
+}
+
+function showAddressAutoFillIndicator(message) {
+  const indicator = $id('addressAutoFillIndicator');
+  if (!indicator) return;
+
+  indicator.textContent = `✅ ${message}`;
+  indicator.style.display = 'block';
+
+  if (autoFillIndicatorTimeoutId) {
+    clearTimeout(autoFillIndicatorTimeoutId);
+  }
+
+  autoFillIndicatorTimeoutId = setTimeout(() => {
+    hideAddressAutoFillIndicator();
+  }, 5000);
+}
+
+function hideAddressAutoFillIndicator() {
+  const indicator = $id('addressAutoFillIndicator');
+  if (!indicator) return;
+
+  indicator.style.display = 'none';
+
+  if (autoFillIndicatorTimeoutId) {
+    clearTimeout(autoFillIndicatorTimeoutId);
+    autoFillIndicatorTimeoutId = null;
+  }
+}
+
+function buildSearchFeedbackBlock(warning, error) {
+  const blocks = [];
+
+  if (warning) {
+    blocks.push(`<div class="warning-text">${escapeHtml(warning)}</div>`);
+  }
+
+  if (error) {
+    blocks.push(`<div class="error-text">${escapeHtml(error)}</div>`);
+  }
+
+  return blocks.join('');
+}
+
+function fillAddressFields(locationData) {
+  if (!locationData) return;
+
+  const addressObj = locationData.address || {};
+
+  const addressInput = $id('address');
+  const cityInput = $id('city');
+  const stateInput = $id('state');
+  const countryInput = $id('country');
+  const latInput = $id('latitude');
+  const lonInput = $id('longitude');
+
+  if (addressInput) {
+    addressInput.value =
+      addressObj.street ||
+      locationData.display_name ||
+      [addressObj.neighbourhood, addressObj.city].filter(Boolean).join(' - ') ||
+      addressInput.value;
+  }
+
+  if (cityInput && addressObj.city) cityInput.value = addressObj.city;
+  if (stateInput && addressObj.state) stateInput.value = addressObj.state;
+  if (countryInput && addressObj.country) countryInput.value = addressObj.country;
+  if (latInput && typeof locationData.lat === 'number') latInput.value = locationData.lat;
+  if (lonInput && typeof locationData.lon === 'number') lonInput.value = locationData.lon;
+}
+// ============================================
+// Utilities
+// ============================================
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

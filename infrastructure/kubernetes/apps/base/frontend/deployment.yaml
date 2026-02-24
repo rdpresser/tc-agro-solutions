@@ -21,6 +21,9 @@ spec:
       - name: frontend
         image: rdpresser/frontend-service:cf03e339
         imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: frontend-config
         ports:
         - name: http
           containerPort: 8080

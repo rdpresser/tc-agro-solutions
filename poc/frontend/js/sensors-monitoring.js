@@ -264,7 +264,7 @@ async function setupRealTimeUpdates() {
       }
     },
     onConnectionChange: (state) => {
-      console.log(`SignalR connection state: ${state}`);
+      console.warn(`SignalR connection state: ${state}`);
       // Optional: Add visual indicator for connection state
       const indicator = $('#connection-status');
       if (indicator) {
@@ -291,21 +291,21 @@ async function joinAllPlotGroups(connection) {
     const plots = await getPlots();
 
     if (plots && plots.length > 0) {
-      console.log(`[SignalR] Joining ${plots.length} plot groups...`);
+      console.warn(`[SignalR] Joining ${plots.length} plot groups...`);
 
       for (const plot of plots) {
         try {
           await joinPlotGroup(plot.id);
           window.joinedPlotIds.push(plot.id);
-          console.log(`[SignalR] ✅ Joined plot group: ${plot.id}`);
+          console.warn(`[SignalR] ✅ Joined plot group: ${plot.id}`);
         } catch (error) {
           console.warn(`[SignalR] Failed to join plot ${plot.id}:`, error);
         }
       }
 
-      console.log(`[SignalR] Successfully joined ${window.joinedPlotIds.length} plot groups`);
+      console.warn(`[SignalR] Successfully joined ${window.joinedPlotIds.length} plot groups`);
     } else {
-      console.log('[SignalR] No plots found to join');
+      console.warn('[SignalR] No plots found to join');
     }
   } catch (error) {
     console.error('[SignalR] Error joining plot groups:', error);

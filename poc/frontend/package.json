@@ -26,7 +26,8 @@
     "@microsoft/signalr": "^10.0.0",
     "axios": "^1.13.2",
     "chart.js": "^4.5.1",
-    "dayjs": "^1.11.19"
+    "dayjs": "^1.11.19",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
