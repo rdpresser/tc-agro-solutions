@@ -18,7 +18,7 @@ import {
   SENSOR_STATUSES
 } from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
-import { $, debounce, getPageUrl } from './utils.js';
+import { $, debounce, formatDateTime, getPageUrl } from './utils.js';
 
 let lastPageState = {
   pageNumber: 1,
@@ -177,9 +177,7 @@ function renderSensorsTable(sensors) {
 
   tbody.innerHTML = sensors
     .map((sensor) => {
-      const installedAt = sensor.installedAt
-        ? new Date(sensor.installedAt).toLocaleString('en-US')
-        : '-';
+      const installedAt = formatDateTime(sensor.installedAt);
 
       return `
     <tr data-id="${sensor.id}">

@@ -53,6 +53,7 @@ const COLORS = {
 const commonOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  locale: 'pt-BR',
   plugins: {
     legend: {
       position: 'bottom',
@@ -96,7 +97,12 @@ export function createReadingsChart(canvasId, data = []) {
   // Process data for chart
   const labels = data.map((d) => {
     const date = new Date(d.timestamp);
-    return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+    const raw = date.toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short'
+    });
+    return raw.replace(/\./g, '');
   });
 
   const chart = new Chart(ctx, {
@@ -107,7 +113,7 @@ export function createReadingsChart(canvasId, data = []) {
         {
           label: 'Temperature (°C)',
           data: data.length
-            ? data.map((d) => d.temperature?.toFixed(1))
+            ? data.map((d) => Number(d.temperature ?? 0))
             : [28, 27, 29, 31, 30, 28, 27],
           borderColor: COLORS.temperature,
           backgroundColor: `${COLORS.temperature}20`,
@@ -120,7 +126,7 @@ export function createReadingsChart(canvasId, data = []) {
         {
           label: 'Humidity (%)',
           data: data.length
-            ? data.map((d) => d.humidity?.toFixed(1))
+            ? data.map((d) => Number(d.humidity ?? 0))
             : [65, 68, 62, 58, 55, 60, 63],
           borderColor: COLORS.humidity,
           backgroundColor: `${COLORS.humidity}20`,
@@ -133,7 +139,7 @@ export function createReadingsChart(canvasId, data = []) {
         {
           label: 'Soil Moisture (%)',
           data: data.length
-            ? data.map((d) => d.soilMoisture?.toFixed(1))
+            ? data.map((d) => Number(d.soilMoisture ?? 0))
             : [42, 40, 38, 45, 48, 46, 44],
           borderColor: COLORS.soilMoisture,
           backgroundColor: `${COLORS.soilMoisture}20`,

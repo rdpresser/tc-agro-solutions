@@ -5,11 +5,11 @@
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/en';
+import 'dayjs/locale/pt-br';
 
 // Configure dayjs
 dayjs.extend(relativeTime);
-dayjs.locale('en');
+dayjs.locale('pt-br');
 
 // ============================================
 // APP CONFIGURATION
@@ -417,28 +417,33 @@ export function setFormData(form, data) {
 
 export function formatNumber(num, decimals = 0) {
   if (num === null || num === undefined) return '--';
-  return new Intl.NumberFormat('en-US', {
+  const parsedNumber = Number(num);
+  if (!Number.isFinite(parsedNumber)) return '--';
+
+  return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
-  }).format(num);
+  }).format(parsedNumber);
 }
 
 export function formatCurrency(num) {
   if (num === null || num === undefined) return '--';
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'BRL'
   }).format(num);
 }
 
-export function formatDate(date, format = 'DD/MM/YYYY') {
+export function formatDate(date, format = 'DD/MMM/YYYY') {
   if (!date) return '--';
-  return dayjs(date).format(format);
+  const parsedDate = dayjs(date);
+  return parsedDate.isValid() ? parsedDate.format(format) : '--';
 }
 
 export function formatDateTime(date) {
   if (!date) return '--';
-  return dayjs(date).format('DD/MM/YYYY HH:mm');
+  const parsedDate = dayjs(date);
+  return parsedDate.isValid() ? parsedDate.format('DD/MMM/YYYY HH:mm') : '--';
 }
 
 export function formatRelativeTime(date) {

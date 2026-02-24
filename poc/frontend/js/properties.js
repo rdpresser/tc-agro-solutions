@@ -5,7 +5,7 @@
 import { getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, getPageUrl, debounce } from './utils.js';
+import { $, getPageUrl, debounce, formatDate, formatArea } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -136,14 +136,14 @@ function renderPropertiesTable(properties) {
       const area = Number(prop.areaHectares || 0);
       const plots = Number(prop.plotCount || 0);
       const isActive = prop.isActive !== false;
-      const createdAt = prop.createdAt ? new Date(prop.createdAt).toLocaleDateString('en-US') : '-';
+      const createdAt = formatDate(prop.createdAt);
 
       return `
     <tr data-id="${id}">
       <td><strong>${ownerName}</strong></td>
       <td>${prop.name || '-'}</td>
       <td>${location}</td>
-      <td>${area.toLocaleString('en-US')} ha</td>
+      <td>${formatArea(area)}</td>
       <td>${plots} plot(s)</td>
       <td>
         <span class="badge ${isActive ? 'badge-success' : 'badge-secondary'}">

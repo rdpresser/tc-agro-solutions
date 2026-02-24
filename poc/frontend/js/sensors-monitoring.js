@@ -12,7 +12,7 @@ import {
   SENSOR_STATUSES
 } from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
-import { $, $$, formatRelativeTime } from './utils.js';
+import { $, $$, formatPercentage, formatRelativeTime, formatTemperature } from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -132,26 +132,26 @@ function renderSensorsGrid(sensors) {
         <div class="reading">
           <span class="reading-label">🌡️ Temp</span>
           <span class="reading-value" data-metric="temperature">
-            ${sensor.temperature !== null ? `${sensor.temperature.toFixed(1)}°C` : '--'}
+            ${formatTemperature(sensor.temperature)}
           </span>
         </div>
         <div class="reading">
           <span class="reading-label">💧 Humidity</span>
           <span class="reading-value" data-metric="humidity">
-            ${sensor.humidity !== null ? `${sensor.humidity.toFixed(0)}%` : '--'}
+            ${formatPercentage(sensor.humidity)}
           </span>
         </div>
         <div class="reading">
           <span class="reading-label">🌿 Soil</span>
           <span class="reading-value" data-metric="soilMoisture">
-            ${sensor.soilMoisture !== null ? `${sensor.soilMoisture.toFixed(0)}%` : '--'}
+            ${formatPercentage(sensor.soilMoisture)}
           </span>
         </div>
       </div>
       
       <div class="sensor-footer">
         <span class="battery ${getBatteryClass(sensor.battery)}">
-          🔋 ${sensor.battery}%
+          🔋 ${formatPercentage(sensor.battery)}
         </span>
         <span class="last-update" title="${sensor.lastReading}">
           ${formatRelativeTime(sensor.lastReading)}
@@ -326,9 +326,9 @@ function updateSensorCard(sensorId, reading) {
 
       const value = reading[metric];
       if (metric === 'temperature') {
-        el.textContent = `${value.toFixed(1)}°C`;
+        el.textContent = formatTemperature(value);
       } else {
-        el.textContent = `${value.toFixed(0)}%`;
+        el.textContent = formatPercentage(value);
       }
 
       setTimeout(() => el.classList.remove('pulse'), 500);

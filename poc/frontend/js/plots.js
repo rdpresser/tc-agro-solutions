@@ -7,7 +7,7 @@ import { initProtectedPage } from './common.js';
 import { COMMON_CROP_TYPES, CROP_TYPE_ICONS } from './crop-types.js';
 import { toast } from './i18n.js';
 import { getIrrigationTypeDisplay, normalizeIrrigationType } from './irrigation-types.js';
-import { $, getPageUrl, debounce } from './utils.js';
+import { $, getPageUrl, debounce, formatArea, formatDate } from './utils.js';
 // import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
 // import { deletePlot } from './api.js'; // Commented out - no delete route available
 
@@ -237,10 +237,10 @@ function renderPlotsTable(plots) {
       <td>
         <span class="badge badge-info">${formatCropType(plot.cropType)}</span>
       </td>
-      <td>${formatDateColumn(plot.plantingDate)}</td>
-      <td>${formatDateColumn(plot.expectedHarvestDate)}</td>
+      <td>${formatDate(plot.plantingDate)}</td>
+      <td>${formatDate(plot.expectedHarvestDate)}</td>
       <td>${getIrrigationTypeDisplay(plot.irrigationType)}</td>
-      <td>${plot.areaHectares.toLocaleString('en-US')} ha</td>
+      <td>${formatArea(plot.areaHectares)}</td>
       <td>${plot.sensorsCount} sensor(es)</td>
       <td>
         <span class="badge ${getStatusBadgeClass(plot.status)}">
@@ -276,7 +276,7 @@ function renderSummary(state) {
   if (summaryText) {
     summaryText.textContent = `Showing ${plots.length} of ${state?.totalCount ?? plots.length} plot(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
   }
-  if (summaryArea) summaryArea.textContent = `Total Area: ${totalArea.toLocaleString('en-US')} ha`;
+  if (summaryArea) summaryArea.textContent = `Total Area: ${formatArea(totalArea)}`;
   if (healthyBadge) healthyBadge.textContent = `${healthyCount} Healthy`;
   if (warningBadge) warningBadge.textContent = `${warningCount} Warning`;
   if (alertBadge) alertBadge.textContent = `${alertCount} Alert`;
@@ -323,15 +323,6 @@ function getStatusIcon(status) {
     critical: '🔴'
   };
   return icons[status] || '';
-}
-
-function formatDateColumn(value) {
-  if (!value) return '-';
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '-';
-
-  return parsed.toLocaleDateString('en-US');
 }
 
 // ============================================

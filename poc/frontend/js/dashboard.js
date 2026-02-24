@@ -11,7 +11,16 @@ import {
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
-import { $, formatDate, formatRelativeTime, debounce, getUser } from './utils.js';
+import {
+  $,
+  formatDate,
+  formatNumber,
+  formatPercentage,
+  formatRelativeTime,
+  formatTemperature,
+  debounce,
+  getUser
+} from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -115,9 +124,9 @@ function updateReadingsTable(readings) {
     <tr>
       <td><strong>${reading.sensorId}</strong></td>
       <td>${reading.plotName}</td>
-      <td class="${getTemperatureClass(reading.temperature)}">${reading.temperature?.toFixed(1) ?? '-'}°C</td>
-      <td class="${getHumidityClass(reading.humidity)}">${reading.humidity?.toFixed(0) ?? '-'}%</td>
-      <td class="${getSoilMoistureClass(reading.soilMoisture)}">${reading.soilMoisture?.toFixed(0) ?? '-'}%</td>
+      <td class="${getTemperatureClass(reading.temperature)}">${formatTemperature(reading.temperature)}</td>
+      <td class="${getHumidityClass(reading.humidity)}">${formatPercentage(reading.humidity)}</td>
+      <td class="${getSoilMoistureClass(reading.soilMoisture)}">${formatPercentage(reading.soilMoisture)}</td>
       <td title="${formatDate(reading.timestamp)}">${formatRelativeTime(reading.timestamp)}</td>
     </tr>
   `
@@ -282,9 +291,9 @@ const handleSensorReading = debounce((reading) => {
     row.innerHTML = `
       <td><strong>${reading.sensorId}</strong></td>
       <td>-</td>
-      <td>${reading.temperature?.toFixed(1)}°C</td>
-      <td>${reading.humidity?.toFixed(0)}%</td>
-      <td>${reading.soilMoisture?.toFixed(0)}%</td>
+      <td>${formatTemperature(reading.temperature)}</td>
+      <td>${formatPercentage(reading.humidity)}</td>
+      <td>${formatPercentage(reading.soilMoisture)}</td>
       <td>now</td>
     `;
     row.style.backgroundColor = '#e8f5e9';
@@ -338,7 +347,7 @@ function handleConnectionChange(state) {
 function updateMetricCard(metric, value) {
   const el = $(`#metric-${metric}`);
   if (el && value !== null) {
-    el.textContent = value.toFixed(1);
+    el.textContent = formatNumber(value, 1);
 
     // Add pulse animation
     el.classList.add('pulse');

@@ -21,6 +21,7 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './util
 
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
+const ADDITIONAL_NOTES_MAX_LENGTH = 1000;
 
 // ============================================
 // Page Initialization
@@ -167,7 +168,7 @@ function populateForm(plot) {
     maxTemperature: plot.maxTemperature || 35,
     minHumidity: plot.minHumidity || 40,
     status: plot.status || 'active',
-    notes: plot.notes || ''
+    notes: plot.additionalNotes || ''
   };
 
   Object.entries(fields).forEach(([id, value]) => {
@@ -269,6 +270,13 @@ async function handleSubmit(e) {
 
   const plantingDateValue = $id('plantingDate')?.value?.trim() || '';
   const expectedHarvestValue = $id('expectedHarvest')?.value?.trim() || '';
+  const notesValidation = sanitizeAndValidateAdditionalNotes($id('notes')?.value ?? '');
+
+  if (notesValidation.error) {
+    showFormError(notesValidation.error);
+    toast(notesValidation.error, 'error');
+    return;
+  }
 
   const formData = {
     propertyId: $id('propertyId')?.value,
@@ -277,7 +285,8 @@ async function handleSubmit(e) {
     cropType: $id('cropType')?.value,
     plantingDate: toDateTimeOffset(plantingDateValue),
     expectedHarvestDate: toDateTimeOffset(expectedHarvestValue),
-    irrigationType: normalizeIrrigationType($id('irrigationType')?.value)
+    irrigationType: normalizeIrrigationType($id('irrigationType')?.value),
+    additionalNotes: notesValidation.value
   };
 
   // Validation
@@ -309,7 +318,8 @@ async function handleSubmit(e) {
       cropType: formData.cropType,
       plantingDate: formData.plantingDate,
       expectedHarvestDate: formData.expectedHarvestDate,
-      irrigationType: formData.irrigationType
+      irrigationType: formData.irrigationType,
+      additionalNotes: formData.additionalNotes
     });
 
     toast('Plot created successfully', 'success');
@@ -385,6 +395,48 @@ function toDateTimeOffset(dateInputValue) {
   return date.toISOString();
 }
 
+function sanitizeAndValidateAdditionalNotes(rawValue) {
+  if (typeof rawValue !== 'string') {
+    return { value: null, error: null };
+  }
+
+  if (rawValue.length > ADDITIONAL_NOTES_MAX_LENGTH) {
+    return {
+      value: null,
+      error: `Additional notes must be at most ${ADDITIONAL_NOTES_MAX_LENGTH} characters.`
+    };
+  }
+
+  const suspiciousPatterns = [
+    /<\s*script/gi,
+    /<\s*\/\s*script\s*>/gi,
+    /javascript\s*:/gi,
+    /on\w+\s*=/gi
+  ];
+  if (suspiciousPatterns.some((pattern) => pattern.test(rawValue))) {
+    return {
+      value: null,
+      error:
+        'Additional notes contain unsafe content. Please remove scripts or HTML event attributes.'
+    };
+  }
+
+  const withoutControlChars = Array.from(rawValue)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+    })
+    .join('');
+  const withoutHtmlTags = withoutControlChars.replace(/<[^>]*>/g, '');
+  const normalized = withoutHtmlTags.trim();
+
+  if (!normalized) {
+    return { value: null, error: null };
+  }
+
+  return { value: normalized, error: null };
+}
+
 // Also show English toasts when native validation triggers
 const plotsForm = document.getElementById('plotForm');
 if (plotsForm) {
@@ -407,6 +459,14 @@ if (plotsForm) {
           el.setCustomValidity(t('validation.property.required_fields'));
           toast('validation.property.required_fields', 'warning');
         }
+      } else if (id === 'notes' && el.validity.tooLong) {
+        el.setCustomValidity(
+          `Additional notes must be at most ${ADDITIONAL_NOTES_MAX_LENGTH} characters.`
+        );
+        toast(
+          `Additional notes must be at most ${ADDITIONAL_NOTES_MAX_LENGTH} characters.`,
+          'warning'
+        );
       }
     },
     true
