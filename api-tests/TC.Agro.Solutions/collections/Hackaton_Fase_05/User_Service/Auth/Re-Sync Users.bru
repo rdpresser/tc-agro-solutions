@@ -1,0 +1,16 @@
+meta {
+  name: Re-Sync Users
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{identity_service_url}}/auth/resync/users
+  body: json
+  auth: bearer
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
