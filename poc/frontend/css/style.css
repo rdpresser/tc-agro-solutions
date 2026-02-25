@@ -833,6 +833,77 @@ p {
   margin-bottom: 4px;
 }
 
+/* Pending alerts list (dashboard) */
+#pending-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#pending-alerts .alert-item {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--border-radius);
+  background: rgba(23, 162, 184, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+#pending-alerts .alert-item.alert-warning {
+  border-color: rgba(255, 193, 7, 0.45);
+  border-left-color: var(--color-warning);
+  background: rgba(255, 193, 7, 0.12);
+}
+
+#pending-alerts .alert-item.alert-danger {
+  border-color: rgba(220, 53, 69, 0.45);
+  border-left-color: var(--color-danger);
+  background: rgba(220, 53, 69, 0.12);
+}
+
+#pending-alerts .alert-item.alert-info {
+  border-color: rgba(23, 162, 184, 0.45);
+  border-left-color: var(--color-info);
+  background: rgba(23, 162, 184, 0.12);
+}
+
+#pending-alerts .alert-item.alert-success {
+  border-color: rgba(40, 167, 69, 0.45);
+  border-left-color: var(--color-success);
+  background: rgba(40, 167, 69, 0.12);
+}
+
+#pending-alerts .alert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#pending-alerts .alert-time {
+  color: var(--color-text-light);
+  font-size: 0.85rem;
+}
+
+#pending-alerts .alert-title {
+  margin-bottom: 6px;
+}
+
+#pending-alerts .alert-message {
+  margin-bottom: 10px;
+  color: var(--color-text-light);
+}
+
+#pending-alerts .alert-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
 /* --------------------------------------------------------------------------
    Charts Placeholder
    -------------------------------------------------------------------------- */

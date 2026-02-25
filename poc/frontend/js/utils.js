@@ -16,33 +16,40 @@ dayjs.locale('pt-br');
 // ============================================
 
 /**
- * Detect API base URL based on context:
- * 1. Manual override: VITE_API_BASE_URL env var (for debugging)
- * 2. Cluster context: BASE_URL === '/agro/' → API at '/identity'
- * 3. Dev mode: localhost:3000 → API at 'http://localhost:5001'
- * 4. Docker Compose: default to 'http://localhost:5001' (browser access)
+ * Shared detector for service API base URLs.
  */
-function detectApiBaseUrl() {
-  // Manual override for debugging (e.g., frontend local + identity in cluster)
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-
+function detectServiceApiBaseUrl({ envKey, clusterPath, localUrl }) {
   const base = import.meta.env.BASE_URL || '/';
   const currentHost = window.location.host;
 
-  // Cluster context: Vite base is '/agro/' → identity is at '/identity'
+  const envOverride = import.meta.env[envKey];
+  if (envOverride) {
+    return envOverride;
+  }
+
   if (base === '/agro/') {
-    return '/identity';
+    return clusterPath;
   }
 
-  // Dev mode: running on localhost:3000 → identity on localhost:5001
   if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
-    return 'http://localhost:5001';
+    return localUrl;
   }
 
-  // Docker Compose or other: default to localhost:5001 (external port)
-  return 'http://localhost:5001';
+  return localUrl;
+}
+
+/**
+ * Detect API base URL based on context:
+ * 1. Manual override: VITE_API_BASE_URL env var
+ * 2. Cluster context: BASE_URL === '/agro/' → API at '/identity'
+ * 3. Local/dev context: default to 'http://localhost:5001'
+ */
+function detectApiBaseUrl() {
+  return detectServiceApiBaseUrl({
+    envKey: 'VITE_API_BASE_URL',
+    clusterPath: '/identity',
+    localUrl: 'http://localhost:5001'
+  });
 }
 
 /**
@@ -53,22 +60,11 @@ function detectApiBaseUrl() {
  * 4. Docker Compose or other: default to 'http://localhost:5001'
  */
 function detectIdentityApiBaseUrl() {
-  if (import.meta.env.VITE_IDENTITY_API_BASE_URL) {
-    return import.meta.env.VITE_IDENTITY_API_BASE_URL;
-  }
-
-  const base = import.meta.env.BASE_URL || '/';
-  const currentHost = window.location.host;
-
-  if (base === '/agro/') {
-    return '/identity';
-  }
-
-  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
-    return 'http://localhost:5001';
-  }
-
-  return 'http://localhost:5001';
+  return detectServiceApiBaseUrl({
+    envKey: 'VITE_IDENTITY_API_BASE_URL',
+    clusterPath: '/identity',
+    localUrl: 'http://localhost:5001'
+  });
 }
 
 /**
@@ -79,22 +75,11 @@ function detectIdentityApiBaseUrl() {
  * 4. Docker Compose or other: default to 'http://localhost:5002'
  */
 function detectFarmApiBaseUrl() {
-  if (import.meta.env.VITE_FARM_API_BASE_URL) {
-    return import.meta.env.VITE_FARM_API_BASE_URL;
-  }
-
-  const base = import.meta.env.BASE_URL || '/';
-  const currentHost = window.location.host;
-
-  if (base === '/agro/') {
-    return '/farm';
-  }
-
-  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
-    return 'http://localhost:5002';
-  }
-
-  return 'http://localhost:5002';
+  return detectServiceApiBaseUrl({
+    envKey: 'VITE_FARM_API_BASE_URL',
+    clusterPath: '/farm',
+    localUrl: 'http://localhost:5002'
+  });
 }
 
 /**
@@ -105,22 +90,11 @@ function detectFarmApiBaseUrl() {
  * 4. Docker Compose or other: default to 'http://localhost:5003'
  */
 function detectSensorApiBaseUrl() {
-  if (import.meta.env.VITE_SENSOR_API_BASE_URL) {
-    return import.meta.env.VITE_SENSOR_API_BASE_URL;
-  }
-
-  const base = import.meta.env.BASE_URL || '/';
-  const currentHost = window.location.host;
-
-  if (base === '/agro/') {
-    return '/sensor-ingest';
-  }
-
-  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
-    return 'http://localhost:5003';
-  }
-
-  return 'http://localhost:5003';
+  return detectServiceApiBaseUrl({
+    envKey: 'VITE_SENSOR_API_BASE_URL',
+    clusterPath: '/sensor-ingest',
+    localUrl: 'http://localhost:5003'
+  });
 }
 
 /**
@@ -131,22 +105,11 @@ function detectSensorApiBaseUrl() {
  * 4. Docker Compose or other: default to 'http://localhost:5004'
  */
 function detectAnalyticsApiBaseUrl() {
-  if (import.meta.env.VITE_ANALYTICS_API_BASE_URL) {
-    return import.meta.env.VITE_ANALYTICS_API_BASE_URL;
-  }
-
-  const base = import.meta.env.BASE_URL || '/';
-  const currentHost = window.location.host;
-
-  if (base === '/agro/') {
-    return '/analytics-worker';
-  }
-
-  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
-    return 'http://localhost:5004';
-  }
-
-  return 'http://localhost:5004';
+  return detectServiceApiBaseUrl({
+    envKey: 'VITE_ANALYTICS_API_BASE_URL',
+    clusterPath: '/analytics-worker',
+    localUrl: 'http://localhost:5004'
+  });
 }
 
 export const APP_CONFIG = {
