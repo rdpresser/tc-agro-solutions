@@ -7,22 +7,28 @@ import {
   fetchFarmSwagger,
   getPlotsPaginated,
   getSensorById,
-  normalizeError
+  normalizeError,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger
 } from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { getSensorTypeDisplay, normalizeSensorType, SENSOR_TYPES } from './sensor-types.js';
-import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } from './utils.js';
 
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
+const OWNER_PAGE_SIZE = 1000;
+const OWNER_SORT_BY = 'name';
+const OWNER_SORT_DIRECTION = 'asc';
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return;
 
   initProtectedPage();
   await checkFarmApi();
+  await setupOwnerSelector();
   loadSensorTypeOptions();
 
   if (isEditMode) {
@@ -36,6 +42,106 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadPlotOptions();
   setupFormHandler();
 });
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) return false;
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+async function setupOwnerSelector() {
+  const ownerFieldGroup = $id('ownerFieldGroup');
+  const ownerSelect = $id('ownerId');
+
+  if (!ownerFieldGroup || !ownerSelect) return;
+
+  if (!isCurrentUserAdmin()) {
+    ownerFieldGroup.style.display = 'none';
+    ownerSelect.required = false;
+    return;
+  }
+
+  ownerFieldGroup.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwners(parameterMap);
+    renderOwnerOptions(owners);
+
+    ownerSelect.required = !isEditMode;
+
+    if (isEditMode) {
+      ownerSelect.disabled = true;
+    }
+  } catch (error) {
+    const { message } = normalizeError(error);
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+    showFormError(message || 'Failed to load owners for admin selection.');
+  }
+}
+
+async function getAllOwners(parameterMap) {
+  const allOwners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: OWNER_PAGE_SIZE,
+        sortBy: OWNER_SORT_BY,
+        sortDirection: OWNER_SORT_DIRECTION,
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    allOwners.push(...items);
+
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(allOwners.map((owner) => [owner.id, owner])).values());
+}
+
+function renderOwnerOptions(owners) {
+  const ownerSelect = $id('ownerId');
+  if (!ownerSelect) return;
+
+  const sortedOwners = [...owners].sort((left, right) => {
+    const leftName = String(left?.name || '').toLowerCase();
+    const rightName = String(right?.name || '').toLowerCase();
+    return leftName.localeCompare(rightName);
+  });
+
+  ownerSelect.innerHTML = [
+    '<option value="">Select an owner</option>',
+    ...sortedOwners.map((owner) => {
+      const name = escapeHtml(owner?.name || 'Unnamed owner');
+      const email = escapeHtml(owner?.email || 'no-email');
+      return `<option value="${owner.id}">${name} (${email})</option>`;
+    })
+  ].join('');
+
+  ownerSelect.disabled = false;
+}
 
 async function checkFarmApi() {
   try {
@@ -169,11 +275,21 @@ function setupFormHandler() {
   if (!form) return;
 
   form.addEventListener('submit', handleSubmit);
+
+  const ownerSelect = $id('ownerId');
+  if (ownerSelect) {
+    ownerSelect.addEventListener('change', () => {
+      ownerSelect.setCustomValidity('');
+    });
+  }
 }
 
 async function handleSubmit(e) {
   e.preventDefault();
   clearFormErrors();
+
+  const isAdmin = isCurrentUserAdmin();
+  const selectedOwnerId = $id('ownerId')?.value?.trim() || '';
 
   const payload = {
     plotId: $id('plotId')?.value,
@@ -181,8 +297,22 @@ async function handleSubmit(e) {
     label: $id('label')?.value?.trim() || null
   };
 
+  if (isAdmin && !isEditMode && selectedOwnerId) {
+    payload.ownerId = selectedOwnerId;
+  }
+
   if (!payload.plotId || !payload.type) {
     showFormError('Plot and type are required fields.');
+    return;
+  }
+
+  if (isAdmin && !isEditMode && !selectedOwnerId) {
+    const ownerSelect = $id('ownerId');
+    if (ownerSelect) {
+      ownerSelect.setCustomValidity('Please select an owner.');
+      ownerSelect.reportValidity();
+    }
+    showFormError('Please select an owner.');
     return;
   }
 
@@ -231,6 +361,7 @@ function populateForm(sensor) {
 
   const fields = {
     sensorId: sensor.id || '',
+    ownerId: sensor.ownerId || '',
     label: sensor.label || ''
   };
 
@@ -278,4 +409,10 @@ function clearFormErrors() {
 
 if (import.meta.env.DEV) {
   window.sensorsFormDebug = { loadSensor, loadPlotOptions };
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

@@ -108,6 +108,19 @@
 
             <div id="formErrors" class="alert alert-danger" style="display: none"></div>
 
+            <div id="ownerFieldGroup" class="form-section" style="display: none">
+              <h3 class="form-section-title">👤 Owner Association</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ownerId" class="form-label required">Owner</label>
+                  <select id="ownerId" name="ownerId" class="form-control form-select">
+                    <option value="">Select an owner</option>
+                  </select>
+                  <span class="form-helper">Admin only: create plot on behalf of an active owner</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Property Selection -->
             <div class="form-section">
               <h3 class="form-section-title">🏘️ Property Association</h3>

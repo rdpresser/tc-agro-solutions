@@ -71,6 +71,7 @@ async function setupOwnerSelector() {
 
   if (!isCurrentUserAdmin()) {
     ownerFieldGroup.style.display = 'none';
+    ownerSelect.required = false;
     return;
   }
 
@@ -88,6 +89,8 @@ async function setupOwnerSelector() {
 
     const owners = await getAllOwners(parameterMap);
     renderOwnerOptions(owners);
+
+    ownerSelect.required = !isEditMode;
 
     if (isEditMode) {
       ownerSelect.disabled = true;
@@ -372,6 +375,11 @@ function setupFormHandler() {
     }
 
     if (isAdmin && !isEditMode && !selectedOwnerId) {
+      const ownerSelect = $id('ownerId');
+      if (ownerSelect) {
+        ownerSelect.setCustomValidity('Please select an owner.');
+        ownerSelect.reportValidity();
+      }
       showFormError('Please select an owner.');
       return;
     }
@@ -432,6 +440,13 @@ function setupFormHandler() {
       hideAddressAutoFillIndicator();
     }
   });
+
+  const ownerSelect = $id('ownerId');
+  if (ownerSelect) {
+    ownerSelect.addEventListener('change', () => {
+      ownerSelect.setCustomValidity('');
+    });
+  }
 }
 
 // ============================================

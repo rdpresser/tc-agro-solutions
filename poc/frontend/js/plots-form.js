@@ -3,7 +3,15 @@
  * Entry point script for plot create/edit
  */
 
-import { createPlot, fetchFarmSwagger, getPlot, getProperties, normalizeError } from './api.js';
+import {
+  createPlot,
+  fetchFarmSwagger,
+  getPlot,
+  getProperties,
+  normalizeError,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger
+} from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { COMMON_CROP_TYPES, CROP_TYPE_ICONS, normalizeCropType } from './crop-types.js';
@@ -13,7 +21,7 @@ import {
   IRRIGATION_TYPE_ICONS,
   normalizeIrrigationType
 } from './irrigation-types.js';
-import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './utils.js';
+import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } from './utils.js';
 
 // ============================================
 // Page State
@@ -22,6 +30,9 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading } from './util
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
 const ADDITIONAL_NOTES_MAX_LENGTH = 1000;
+const OWNER_PAGE_SIZE = 1000;
+const OWNER_SORT_BY = 'name';
+const OWNER_SORT_DIRECTION = 'asc';
 
 // ============================================
 // Page Initialization
@@ -35,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initProtectedPage();
 
   await checkFarmApi();
+  await setupOwnerSelector();
 
   loadCropTypeOptions();
   loadIrrigationTypeOptions();
@@ -47,6 +59,106 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup form handler
   setupFormHandler();
 });
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) return false;
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+async function setupOwnerSelector() {
+  const ownerFieldGroup = $id('ownerFieldGroup');
+  const ownerSelect = $id('ownerId');
+
+  if (!ownerFieldGroup || !ownerSelect) return;
+
+  if (!isCurrentUserAdmin()) {
+    ownerFieldGroup.style.display = 'none';
+    ownerSelect.required = false;
+    return;
+  }
+
+  ownerFieldGroup.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwners(parameterMap);
+    renderOwnerOptions(owners);
+
+    ownerSelect.required = !isEditMode;
+
+    if (isEditMode) {
+      ownerSelect.disabled = true;
+    }
+  } catch (error) {
+    const { message } = normalizeError(error);
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+    showFormError(message || 'Failed to load owners for admin selection.');
+  }
+}
+
+async function getAllOwners(parameterMap) {
+  const allOwners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: OWNER_PAGE_SIZE,
+        sortBy: OWNER_SORT_BY,
+        sortDirection: OWNER_SORT_DIRECTION,
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    allOwners.push(...items);
+
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(allOwners.map((owner) => [owner.id, owner])).values());
+}
+
+function renderOwnerOptions(owners) {
+  const ownerSelect = $id('ownerId');
+  if (!ownerSelect) return;
+
+  const sortedOwners = [...owners].sort((left, right) => {
+    const leftName = String(left?.name || '').toLowerCase();
+    const rightName = String(right?.name || '').toLowerCase();
+    return leftName.localeCompare(rightName);
+  });
+
+  ownerSelect.innerHTML = [
+    '<option value="">Select an owner</option>',
+    ...sortedOwners.map((owner) => {
+      const name = escapeHtml(owner?.name || 'Unnamed owner');
+      const email = escapeHtml(owner?.email || 'no-email');
+      return `<option value="${owner.id}">${name} (${email})</option>`;
+    })
+  ].join('');
+
+  ownerSelect.disabled = false;
+}
 
 async function checkFarmApi() {
   try {
@@ -157,6 +269,7 @@ function populateForm(plot) {
 
   const fields = {
     plotId: plot.id,
+    ownerId: plot.ownerId || '',
     propertyId: plot.propertyId,
     name: plot.name,
     areaHectares: plot.areaHectares,
@@ -268,6 +381,9 @@ async function handleSubmit(e) {
   e.preventDefault();
   clearFormErrors();
 
+  const isAdmin = isCurrentUserAdmin();
+  const selectedOwnerId = $id('ownerId')?.value?.trim() || '';
+
   const plantingDateValue = $id('plantingDate')?.value?.trim() || '';
   const expectedHarvestValue = $id('expectedHarvest')?.value?.trim() || '';
   const notesValidation = sanitizeAndValidateAdditionalNotes($id('notes')?.value ?? '');
@@ -289,6 +405,10 @@ async function handleSubmit(e) {
     additionalNotes: notesValidation.value
   };
 
+  if (isAdmin && !isEditMode && selectedOwnerId) {
+    formData.ownerId = selectedOwnerId;
+  }
+
   // Validation
   if (!formData.propertyId) {
     toast('validation.plot.property_required', 'error');
@@ -303,6 +423,16 @@ async function handleSubmit(e) {
     return;
   }
 
+  if (isAdmin && !isEditMode && !selectedOwnerId) {
+    const ownerSelect = $id('ownerId');
+    if (ownerSelect) {
+      ownerSelect.setCustomValidity('Please select an owner.');
+      ownerSelect.reportValidity();
+    }
+    showFormError('Please select an owner.');
+    return;
+  }
+
   if (isEditMode) {
     showFormError('Plot update is not available yet in this screen.');
     return;
@@ -312,6 +442,7 @@ async function handleSubmit(e) {
 
   try {
     await createPlot({
+      ownerId: formData.ownerId,
       propertyId: formData.propertyId,
       name: formData.name,
       areaHectares: formData.areaHectares,
@@ -437,6 +568,12 @@ function sanitizeAndValidateAdditionalNotes(rawValue) {
   return { value: normalized, error: null };
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Also show English toasts when native validation triggers
 const plotsForm = document.getElementById('plotForm');
 if (plotsForm) {
@@ -476,4 +613,11 @@ if (plotsForm) {
   plotsForm.addEventListener('input', (e) => {
     e.target.setCustomValidity('');
   });
+
+  const ownerSelect = $id('ownerId');
+  if (ownerSelect) {
+    ownerSelect.addEventListener('change', () => {
+      ownerSelect.setCustomValidity('');
+    });
+  }
 }
