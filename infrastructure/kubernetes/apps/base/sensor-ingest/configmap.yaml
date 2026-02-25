@@ -47,6 +47,10 @@ data:
   Services__AnalyticsWorker__HttpPort: "5004"
   Services__Dashboard__HttpPort: "5005"
 
+  # Weather Provider
+  WeatherProvider__Latitude: "-22.7256"
+  WeatherProvider__Longitude: "-47.6492"
+
   # Logging
   Logging__LogLevel__Default: "Information"
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
@@ -54,6 +58,10 @@ data:
 
   # Auth / JWT (non-sensitive)
   Auth__Jwt__ExpirationInMinutes: "60"
+
+  # Jobs
+  Jobs__SensorReadings__Enabled: "true"
+  Jobs__SensorReadings__IntervalSeconds: "5"
 
   # ═══════════════════════════════════════════════════════════════════════════════════
   # Telemetry / OpenTelemetry Configuration

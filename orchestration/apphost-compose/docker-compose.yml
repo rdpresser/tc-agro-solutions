@@ -347,6 +347,10 @@ services:
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
+      # .NET Configuration - Jobs (Jobs.SensorReadings.*)
+      - Jobs__SensorReadings__Enabled=true
+      - Jobs__SensorReadings__IntervalSeconds=5
+
       # .NET Configuration - Telemetry (Grafana Agent)
       - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
       - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
@@ -618,6 +622,10 @@ services:
       - Services__SensorIngest__HttpPort=${Services__SensorIngest__HttpPort}
       - Services__AnalyticsWorker__HttpPort=${Services__AnalyticsWorker__HttpPort}
       - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
+
+      # .NET Configuration - Weather Provider (WeatherProvider.*)
+      - WeatherProvider__Latitude=-22.7256
+      - WeatherProvider__Longitude=-47.6492
 
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
