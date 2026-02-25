@@ -5,6 +5,9 @@
 
 import {
   Chart,
+  LineController,
+  BarController,
+  DoughnutController,
   CategoryScale,
   LinearScale,
   PointElement,
@@ -19,6 +22,9 @@ import {
 
 // Register Chart.js components (tree-shaking friendly)
 Chart.register(
+  LineController,
+  BarController,
+  DoughnutController,
   CategoryScale,
   LinearScale,
   PointElement,

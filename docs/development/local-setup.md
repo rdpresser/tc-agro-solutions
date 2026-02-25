@@ -209,7 +209,10 @@ curl -X POST http://localhost:5003/sensors/readings \
 ### 5. Query Dashboard (Dashboard API)
 
 ```bash
-curl -X GET http://localhost:5004/dashboard/latest \
+curl -X GET "http://localhost:5004/dashboard/latest?pageNumber=1&pageSize=10" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -X GET "http://localhost:5004/api/sensors/{sensorId}/readings?days=7&pageNumber=1&pageSize=50" \
   -H "Authorization: Bearer $TOKEN"
 ```
 

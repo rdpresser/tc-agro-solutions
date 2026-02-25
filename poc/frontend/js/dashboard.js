@@ -5,13 +5,19 @@
 import {
   getDashboardStats,
   getLatestReadings,
+  getReadingsLatest,
+  getHistoricalData,
   getAlerts,
   getPlots,
   initSignalRConnection,
-  stopSignalRConnection
+  initAlertSignalRConnection,
+  stopSignalRConnection,
+  stopAlertSignalRConnection
 } from './api.js';
+import { addDataPoint, createReadingsChart, destroyAllCharts } from './charts.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
+import { createFallbackPoller } from './realtime-fallback.js';
 import {
   $,
   formatDate,
@@ -28,13 +34,10 @@ import {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize protected page (sidebar, logout, auth check)
   if (!initProtectedPage()) {
-    // Redirect to login handled by initProtectedPage
     return;
   }
 
-  // Update user display with JWT claim (name from token)
   const user = getUser();
   if (user && user.name) {
     const userDisplay = $('#userDisplay');
@@ -43,36 +46,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Load dashboard data
   const shouldEnableRealtime = await loadDashboardData();
   if (shouldEnableRealtime) {
     setupRealTimeUpdates();
   }
 });
 
-// Cleanup on page unload
 window.addEventListener('beforeunload', async () => {
-  // Leave all plot groups before disconnecting
   if (joinedPlotIds.length > 0) {
-    const { leavePlotGroup } = await import('./api.js');
+    const { leavePlotGroup, leaveAlertPlotGroup } = await import('./api.js');
     for (const plotId of joinedPlotIds) {
       try {
         await leavePlotGroup(plotId);
       } catch (error) {
         console.warn(`Failed to leave plot ${plotId}:`, error);
       }
+
+      try {
+        await leaveAlertPlotGroup(plotId);
+      } catch (error) {
+        console.warn(`Failed to leave alert plot ${plotId}:`, error);
+      }
     }
     joinedPlotIds = [];
+    joinedAlertPlotIds = [];
   }
 
+  stopFallbackPollingSilently();
   stopSignalRConnection();
-  // Charts cleanup disabled (not currently used)
-  // destroyAllCharts();
+  stopAlertSignalRConnection();
+  destroyAllCharts();
 });
-
-// ============================================
-// DATA LOADING
-// ============================================
 
 async function loadDashboardData() {
   try {
@@ -86,23 +90,65 @@ async function loadDashboardData() {
     }
 
     // Load all data in parallel
-    const [stats, readings, alerts] = await Promise.all([
+    const [stats, dashboardReadings, latestReadings, alerts] = await Promise.all([
       getDashboardStats(),
       getLatestReadings(5),
+      getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
       getAlerts('pending').catch(() => [])
-      // Historical data disabled - not currently used
-      // getHistoricalData('SENSOR-001', 7)
     ]);
 
     updateStatCards(stats);
-    updateReadingsTable(readings);
+    const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
+    updateReadingsTable(readingsForTable);
     updateAlertsSection(alerts);
+    const alertStat = $('#stat-alerts');
+    if (alertStat) {
+      alertStat.textContent = String(alerts.length);
+    }
+
+    const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
+    if (freshestReading) {
+      applyLatestReadingToMetrics(freshestReading);
+    }
+
+    const chartSensorId = freshestReading?.sensorId;
+    if (chartSensorId) {
+      const history = await getHistoricalData(chartSensorId, 7, 168);
+      renderReadingsChart(history);
+    } else {
+      renderReadingsChart([]);
+    }
+
     return true;
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     toast('dashboard.load_failed', 'error');
     return false;
   }
+}
+
+function pickFreshestReading(...readingCollections) {
+  const allReadings = readingCollections.flat().filter(Boolean);
+  if (!allReadings.length) return null;
+
+  return allReadings
+    .slice()
+    .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())[0];
+}
+
+function applyLatestReadingToMetrics(reading) {
+  updateMetricCard('temperature', reading.temperature ?? null);
+  updateMetricCard('humidity', reading.humidity ?? null);
+  updateMetricCard('soil-moisture', reading.soilMoisture ?? null);
+  updateMetricCard('rainfall', reading.rainfall ?? null);
+}
+
+function renderReadingsChart(history) {
+  const container = $('#readings-chart-container');
+  if (!container) return;
+
+  container.innerHTML = '<canvas id="readings-chart"></canvas>';
+  createReadingsChart('readings-chart', history || []);
 }
 
 function renderInitialSetupState() {
@@ -222,8 +268,8 @@ function updateReadingsTable(readings) {
     .map(
       (reading) => `
     <tr>
-      <td><strong>${reading.label || reading.sensorId || '-'}</strong></td>
-      <td>${reading.plotName}</td>
+      <td><strong>${getSensorDisplayName(reading)}</strong></td>
+      <td>${formatPlotDisplay(reading)}</td>
       <td class="${getTemperatureClass(reading.temperature)}">${formatTemperature(reading.temperature)}</td>
       <td class="${getHumidityClass(reading.humidity)}">${formatPercentage(reading.humidity)}</td>
       <td class="${getSoilMoistureClass(reading.soilMoisture)}">${formatPercentage(reading.soilMoisture)}</td>
@@ -232,6 +278,21 @@ function updateReadingsTable(readings) {
   `
     )
     .join('');
+}
+
+function getSensorDisplayName(reading) {
+  return reading.sensorLabel || reading.SensorLabel || reading.sensorId || reading.SensorId || '-';
+}
+
+function formatPlotDisplay(reading) {
+  const plotName = reading.plotName || reading.PlotName || '-';
+  const propertyName = reading.propertyName || reading.PropertyName || '';
+
+  if (!propertyName || propertyName === '-') {
+    return plotName;
+  }
+
+  return `${plotName} - ${propertyName}`;
 }
 
 function getTemperatureClass(temp) {
@@ -271,16 +332,19 @@ function updateAlertsSection(alerts) {
     .slice(0, 5)
     .map(
       (alert) => `
-    <div class="alert-item alert-${alert.severity}">
+    <div class="alert-item alert-${alert.severity}" data-alert-id="${alert.id || alert.Id || ''}">
       <div class="alert-header">
         <span class="alert-badge badge-${alert.severity}">
           ${getSeverityIcon(alert.severity)} ${getSeverityLabel(alert.severity)}
+        </span>
+        <span class="alert-badge ${getAlertStatusBadgeClass(alert.status || alert.Status)}" data-alert-status>
+          ${getAlertStatusLabel(alert.status || alert.Status)}
         </span>
         <span class="alert-time" title="${formatDate(alert.createdAt)}">
           ${formatRelativeTime(alert.createdAt)}
         </span>
       </div>
-      <h4 class="alert-title">${alert.title}</h4>
+      <h4 class="alert-title">${alert.title || alert.alertType || 'Alert'}</h4>
       <p class="alert-message">${alert.message}</p>
       <div class="alert-meta">
         <span>📍 ${alert.plotName}</span>
@@ -302,25 +366,176 @@ function getSeverityLabel(severity) {
   return labels[severity] || severity;
 }
 
+function getAlertStatusLabel(status) {
+  const normalized = String(status || 'Pending').toLowerCase();
+  if (normalized === 'acknowledged') return 'Acknowledged';
+  if (normalized === 'resolved') return 'Resolved';
+  return 'Pending';
+}
+
+function getAlertStatusBadgeClass(status) {
+  const normalized = String(status || 'Pending').toLowerCase();
+  if (normalized === 'resolved') return 'badge-success';
+  if (normalized === 'acknowledged') return 'badge-warning';
+  return 'badge-danger';
+}
+
+function extractAlertId(payload) {
+  return payload?.alertId || payload?.AlertId || payload?.id || payload?.Id || null;
+}
+
+function extractAlertStatus(payload, fallbackStatus = 'Pending') {
+  return payload?.status || payload?.Status || fallbackStatus;
+}
+
+function updateAlertCardVisualStatus(alertId, nextStatus) {
+  if (!alertId) {
+    return;
+  }
+
+  const card = document.querySelector(`[data-alert-id="${alertId}"]`);
+  if (!card) {
+    return;
+  }
+
+  const statusBadge = card.querySelector('[data-alert-status]');
+  if (statusBadge) {
+    statusBadge.className = `alert-badge ${getAlertStatusBadgeClass(nextStatus)}`;
+    statusBadge.textContent = getAlertStatusLabel(nextStatus);
+  }
+
+  if (String(nextStatus).toLowerCase() === 'resolved') {
+    card.style.opacity = '0.55';
+    setTimeout(() => {
+      card.remove();
+      const alertStat = $('#stat-alerts');
+      if (alertStat) {
+        const current = parseInt(alertStat.textContent || '0', 10);
+        if (current > 0) {
+          alertStat.textContent = String(current - 1);
+        }
+      }
+    }, 800);
+  }
+}
+
 // ============================================
 // REAL-TIME UPDATES (SIGNALR)
 // ============================================
 
+const DASHBOARD_REALTIME_CONTEXT = {
+  page: 'dashboard',
+  hub: '/dashboard/sensorshub',
+  events: ['sensorReading', 'sensorStatusChanged'],
+  fallbackRoutes: ['/api/dashboard/latest', '/api/readings/latest']
+};
+
+const DASHBOARD_ALERTS_REALTIME_CONTEXT = {
+  page: 'dashboard',
+  hub: '/dashboard/alertshub',
+  events: ['alertCreated', 'alertAcknowledged', 'alertResolved'],
+  fallbackRoutes: ['/api/alerts/pending']
+};
+
 let joinedPlotIds = []; // Track joined plot groups
+let joinedAlertPlotIds = [];
 let isJoiningPlotGroups = false;
 let hasSetupForRealtime = true;
+let sensorRealtimeState = 'disconnected';
+let alertsRealtimeState = 'disconnected';
+const fallbackPoller = createFallbackPoller({
+  refresh: refreshDashboardFromFallback,
+  intervalMs: 15000,
+  context: 'DashboardRealtime',
+  connection: DASHBOARD_REALTIME_CONTEXT,
+  onError: (error) => {
+    console.warn('[DashboardRealtime] HTTP fallback refresh failed.', {
+      ...DASHBOARD_REALTIME_CONTEXT,
+      error
+    });
+  }
+});
 
 async function setupRealTimeUpdates() {
-  const connection = await initSignalRConnection({
+  const sensorConnection = await initSignalRConnection({
     onSensorReading: handleSensorReading,
-    onAlert: handleNewAlert,
-    onConnectionChange: handleConnectionChange
+    onConnectionChange: handleSensorConnectionChange
+  });
+
+  const alertsConnection = await initAlertSignalRConnection({
+    onAlertCreated: (payload) => handleAlertRealtime('created', payload),
+    onAlertAcknowledged: (payload) => handleAlertRealtime('acknowledged', payload),
+    onAlertResolved: (payload) => handleAlertRealtime('resolved', payload),
+    onConnectionChange: handleAlertConnectionChange
   });
 
   // After connection, join all plot groups to receive sensor readings
-  if (connection && !connection.isMock) {
+  if (sensorConnection && !sensorConnection.isMock) {
     await joinAllPlotGroups();
   }
+
+  if (!sensorConnection || sensorConnection.isMock) {
+    fallbackPoller.start('sensor-initial-connect-failed');
+  }
+
+  if (!alertsConnection || alertsConnection.isMock) {
+    fallbackPoller.start('alerts-initial-connect-failed');
+  }
+}
+
+async function refreshDashboardFromFallback() {
+  const [dashboardReadingsResult, latestReadingsResult, alertsResult] = await Promise.allSettled([
+    getLatestReadings(5),
+    getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
+    getAlerts('pending').catch(() => [])
+  ]);
+
+  if (dashboardReadingsResult.status === 'rejected') {
+    console.warn('[DashboardRealtime] Fallback route failed: /api/dashboard/latest', {
+      hub: DASHBOARD_REALTIME_CONTEXT.hub,
+      eventStream: DASHBOARD_REALTIME_CONTEXT.events,
+      error: dashboardReadingsResult.reason
+    });
+  }
+
+  if (latestReadingsResult.status === 'rejected') {
+    console.warn('[DashboardRealtime] Fallback route failed: /api/readings/latest', {
+      hub: DASHBOARD_REALTIME_CONTEXT.hub,
+      eventStream: DASHBOARD_REALTIME_CONTEXT.events,
+      error: latestReadingsResult.reason
+    });
+  }
+
+  if (alertsResult.status === 'rejected') {
+    console.warn('[DashboardRealtime] Fallback route failed: /api/alerts/pending', {
+      hub: DASHBOARD_ALERTS_REALTIME_CONTEXT.hub,
+      eventStream: DASHBOARD_ALERTS_REALTIME_CONTEXT.events,
+      error: alertsResult.reason
+    });
+  }
+
+  const dashboardReadings =
+    dashboardReadingsResult.status === 'fulfilled' ? dashboardReadingsResult.value : [];
+  const latestReadings =
+    latestReadingsResult.status === 'fulfilled' ? latestReadingsResult.value : [];
+  const alerts = alertsResult.status === 'fulfilled' ? alertsResult.value : [];
+
+  const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
+  updateReadingsTable(readingsForTable);
+  updateAlertsSection(alerts);
+  const alertStat = $('#stat-alerts');
+  if (alertStat) {
+    alertStat.textContent = String(alerts.length);
+  }
+
+  const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
+  if (freshestReading) {
+    applyLatestReadingToMetrics(freshestReading);
+  }
+}
+
+function stopFallbackPollingSilently() {
+  fallbackPoller.stop('page-unload', { silent: true });
 }
 
 async function joinAllPlotGroups() {
@@ -335,7 +550,7 @@ async function joinAllPlotGroups() {
   isJoiningPlotGroups = true;
 
   try {
-    const { joinPlotGroup } = await import('./api.js');
+    const { joinPlotGroup, joinAlertPlotGroup } = await import('./api.js');
     const plots = await getPlots();
     const plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
 
@@ -343,6 +558,7 @@ async function joinAllPlotGroups() {
       console.warn(`[SignalR] Joining ${plotIds.length} plot groups...`);
 
       joinedPlotIds = [];
+      joinedAlertPlotIds = [];
       for (const plotId of plotIds) {
         try {
           await joinPlotGroup(plotId);
@@ -350,6 +566,14 @@ async function joinAllPlotGroups() {
           console.warn(`[SignalR] ✅ Joined plot group: ${plotId}`);
         } catch (error) {
           console.warn(`[SignalR] Failed to join plot ${plotId}:`, error);
+        }
+
+        try {
+          await joinAlertPlotGroup(plotId);
+          joinedAlertPlotIds.push(plotId);
+          console.warn(`[AlertSignalR] ✅ Joined plot group: ${plotId}`);
+        } catch (error) {
+          console.warn(`[AlertSignalR] Failed to join plot ${plotId}:`, error);
         }
       }
 
@@ -373,32 +597,44 @@ async function joinAllPlotGroups() {
 }
 
 const handleSensorReading = debounce((reading) => {
-  // Update metric cards
-  updateMetricCard('temperature', reading.temperature);
-  updateMetricCard('humidity', reading.humidity);
-  updateMetricCard('soil-moisture', reading.soilMoisture);
+  const normalized = {
+    ...reading,
+    sensorId: reading.sensorId || reading.SensorId,
+    plotId: reading.plotId || reading.PlotId,
+    plotName: reading.plotName || reading.PlotName || '-',
+    propertyName: reading.propertyName || reading.PropertyName || '-',
+    sensorLabel: reading.sensorLabel || reading.SensorLabel || null,
+    timestamp: reading.timestamp || reading.Timestamp || new Date().toISOString(),
+    temperature: reading.temperature ?? reading.Temperature ?? null,
+    humidity: reading.humidity ?? reading.Humidity ?? null,
+    soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
+    rainfall: reading.rainfall ?? reading.Rainfall ?? null
+  };
 
-  // Chart updates disabled (not currently used)
-  // const timeLabel = new Date().toLocaleTimeString('en-US', {
-  //   hour: '2-digit',
-  //   minute: '2-digit'
-  // });
-  // addDataPoint('readings-chart', timeLabel, [
-  //   reading.temperature,
-  //   reading.humidity,
-  //   reading.soilMoisture
-  // ]);
+  // Update metric cards
+  applyLatestReadingToMetrics(normalized);
+
+  const timeLabel = new Date(normalized.timestamp).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  addDataPoint(
+    'readings-chart',
+    timeLabel,
+    [normalized.temperature ?? 0, normalized.humidity ?? 0, normalized.soilMoisture ?? 0],
+    168
+  );
 
   // Update readings table (prepend new reading)
   const tbody = $('#readings-tbody');
   if (tbody && tbody.firstChild) {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><strong>${reading.label || reading.sensorId || '-'}</strong></td>
-      <td>-</td>
-      <td>${formatTemperature(reading.temperature)}</td>
-      <td>${formatPercentage(reading.humidity)}</td>
-      <td>${formatPercentage(reading.soilMoisture)}</td>
+      <td><strong>${getSensorDisplayName(normalized)}</strong></td>
+      <td>${formatPlotDisplay(normalized)}</td>
+      <td>${formatTemperature(normalized.temperature)}</td>
+      <td>${formatPercentage(normalized.humidity)}</td>
+      <td>${formatPercentage(normalized.soilMoisture)}</td>
       <td>now</td>
     `;
     row.style.backgroundColor = '#e8f5e9';
@@ -416,24 +652,19 @@ const handleSensorReading = debounce((reading) => {
   }
 }, 500);
 
-function handleNewAlert(alert) {
-  toast('alerts.new', alert.severity === 'critical' ? 'error' : 'warning', { title: alert.title });
+function handleSensorConnectionChange(state) {
+  sensorRealtimeState = state;
 
-  // Reload alerts section
-  getAlerts('pending').then(updateAlertsSection);
-
-  // Update alert count
-  const alertStat = $('#stat-alerts');
-  if (alertStat) {
-    const current = parseInt(alertStat.textContent) || 0;
-    alertStat.textContent = current + 1;
-  }
-}
-
-function handleConnectionChange(state) {
   const indicator = $('#connection-status');
   if (indicator) {
-    indicator.className = `connection-indicator ${state}`;
+    indicator.className =
+      state === 'connected'
+        ? 'badge badge-success'
+        : state === 'reconnecting'
+          ? 'badge badge-warning'
+          : 'badge badge-danger';
+    indicator.textContent =
+      state === 'connected' ? '● Live' : state === 'reconnecting' ? '● Reconnecting' : '● Offline';
     indicator.title =
       state === 'connected'
         ? t('connection.connected')
@@ -446,6 +677,91 @@ function handleConnectionChange(state) {
   if (state === 'connected' && hasSetupForRealtime) {
     console.warn('[SignalR] Connected, (re)joining plot groups...');
     joinAllPlotGroups();
+  }
+
+  if (state === 'reconnecting' || state === 'disconnected') {
+    console.warn(
+      '[DashboardRealtime] SignalR stream degraded. HTTP fallback remains active until recovery.',
+      {
+        state,
+        hub: DASHBOARD_REALTIME_CONTEXT.hub,
+        signalrEvents: DASHBOARD_REALTIME_CONTEXT.events,
+        fallbackRoutes: DASHBOARD_REALTIME_CONTEXT.fallbackRoutes
+      }
+    );
+  }
+
+  syncFallbackMode('sensor');
+}
+
+function handleAlertConnectionChange(state) {
+  alertsRealtimeState = state;
+
+  if (state === 'connected' && hasSetupForRealtime) {
+    console.warn('[AlertSignalR] Connected, (re)joining plot groups...');
+    joinAllPlotGroups();
+  }
+
+  if (state === 'reconnecting' || state === 'disconnected') {
+    console.warn(
+      '[DashboardAlertsRealtime] AlertHub stream degraded. HTTP fallback remains active until recovery.',
+      {
+        state,
+        hub: DASHBOARD_ALERTS_REALTIME_CONTEXT.hub,
+        signalrEvents: DASHBOARD_ALERTS_REALTIME_CONTEXT.events,
+        fallbackRoutes: DASHBOARD_ALERTS_REALTIME_CONTEXT.fallbackRoutes
+      }
+    );
+  }
+
+  syncFallbackMode('alerts');
+}
+
+function syncFallbackMode(source) {
+  const sensorConnected = sensorRealtimeState === 'connected';
+  const alertsConnected = alertsRealtimeState === 'connected';
+
+  if (sensorConnected && alertsConnected) {
+    if (fallbackPoller.isRunning()) {
+      fallbackPoller.stop(`${source}-connection-state-connected`);
+    }
+    return;
+  }
+
+  fallbackPoller.start(`sensor:${sensorRealtimeState}|alerts:${alertsRealtimeState}`);
+}
+
+async function handleAlertRealtime(eventType, payload) {
+  const alertId = extractAlertId(payload);
+  const fallbackStatus =
+    eventType === 'resolved'
+      ? 'Resolved'
+      : eventType === 'acknowledged'
+        ? 'Acknowledged'
+        : 'Pending';
+  const nextStatus = extractAlertStatus(payload, fallbackStatus);
+
+  if (eventType === 'acknowledged' || eventType === 'resolved') {
+    updateAlertCardVisualStatus(alertId, nextStatus);
+  }
+
+  try {
+    const alerts = await getAlerts('pending');
+    updateAlertsSection(alerts);
+
+    const alertStat = $('#stat-alerts');
+    if (alertStat) {
+      alertStat.textContent = String(alerts.length);
+    }
+  } catch (error) {
+    console.warn(
+      '[DashboardAlertsRealtime] Failed to refresh pending alerts after AlertHub event.',
+      {
+        hub: DASHBOARD_ALERTS_REALTIME_CONTEXT.hub,
+        route: '/api/alerts/pending',
+        error
+      }
+    );
   }
 }
 

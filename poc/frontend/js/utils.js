@@ -123,11 +123,38 @@ function detectSensorApiBaseUrl() {
   return 'http://localhost:5003';
 }
 
+/**
+ * Detect Analytics API base URL based on context:
+ * 1. Manual override: VITE_ANALYTICS_API_BASE_URL env var
+ * 2. Cluster context: BASE_URL === '/agro/' -> Analytics API at '/analytics-worker'
+ * 3. Dev mode: localhost:3000 -> Analytics API at 'http://localhost:5004'
+ * 4. Docker Compose or other: default to 'http://localhost:5004'
+ */
+function detectAnalyticsApiBaseUrl() {
+  if (import.meta.env.VITE_ANALYTICS_API_BASE_URL) {
+    return import.meta.env.VITE_ANALYTICS_API_BASE_URL;
+  }
+
+  const base = import.meta.env.BASE_URL || '/';
+  const currentHost = window.location.host;
+
+  if (base === '/agro/') {
+    return '/analytics-worker';
+  }
+
+  if (currentHost.includes('localhost:3000') || currentHost.includes('127.0.0.1:3000')) {
+    return 'http://localhost:5004';
+  }
+
+  return 'http://localhost:5004';
+}
+
 export const APP_CONFIG = {
   apiBaseUrl: detectApiBaseUrl(),
   identityApiBaseUrl: detectIdentityApiBaseUrl(),
   farmApiBaseUrl: detectFarmApiBaseUrl(),
   sensorApiBaseUrl: detectSensorApiBaseUrl(),
+  analyticsApiBaseUrl: detectAnalyticsApiBaseUrl(),
   tokenKey: 'agro_token',
   userKey: 'agro_user',
   signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED !== 'false',

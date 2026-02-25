@@ -374,8 +374,8 @@ POST /auth/refresh
 GET /dashboard/stats
   Response: { properties, plots, sensors, alerts }
 
-GET /dashboard/latest?limit=5
-  Response: [{ sensorId, plotName, temperature, humidity, soilMoisture, timestamp }]
+GET /dashboard/latest?pageNumber=1&pageSize=5
+  Response: { data: [{ sensorId, plotName, temperature, humidity, soilMoisture, timestamp }], totalCount, pageNumber, pageSize }
 ```
 
 ### Properties
@@ -402,7 +402,8 @@ DELETE /plots/{id}
 
 ```
 GET /sensors?plotId={id}
-GET /sensors/{id}/readings?days=7
+GET /api/sensors/{id}/readings?days=7&pageNumber=1&pageSize=50
+  Response: { data: [{ sensorId, plotId, time, temperature, humidity, soilMoisture }], totalCount, pageNumber, pageSize }
 ```
 
 ### Alerts

@@ -27,6 +27,13 @@ export const api = createApiClient(APP_CONFIG.apiBaseUrl);
 export const identityApi = createApiClient(APP_CONFIG.identityApiBaseUrl);
 export const farmApi = createApiClient(APP_CONFIG.farmApiBaseUrl);
 export const sensorApi = createApiClient(APP_CONFIG.sensorApiBaseUrl);
+export const analyticsApi = createApiClient(APP_CONFIG.analyticsApiBaseUrl);
+
+const SENSOR_METADATA_TTL_MS = 5 * 60 * 1000;
+let sensorMetadataCache = {
+  expiresAt: 0,
+  map: new Map()
+};
 
 export async function fetchFarmSwagger() {
   const { data } = await farmApi.get('/swagger/v1/swagger.json');
@@ -104,6 +111,7 @@ attachInterceptors(api);
 attachInterceptors(identityApi);
 attachInterceptors(farmApi);
 attachInterceptors(sensorApi);
+attachInterceptors(analyticsApi);
 
 // ============================================
 // DASHBOARD API
@@ -120,8 +128,7 @@ export async function getDashboardStats() {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'name',
-        sortDirection: 'asc',
-        filter: ''
+        sortDirection: 'asc'
       }
     }),
     farmApi.get('/api/plots', {
@@ -129,8 +136,7 @@ export async function getDashboardStats() {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'name',
-        sortDirection: 'asc',
-        filter: ''
+        sortDirection: 'asc'
       }
     }),
     farmApi.get('/api/sensors', {
@@ -138,8 +144,7 @@ export async function getDashboardStats() {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'installedAt',
-        sortDirection: 'desc',
-        filter: ''
+        sortDirection: 'desc'
       }
     })
   ]);
@@ -158,63 +163,59 @@ export async function getDashboardStats() {
 
 /**
  * Get latest sensor readings
- * @param {number} limit - Max readings to return (default: 5)
+ * @param {number} pageSize - Max readings to return (default: 5)
  * @returns {Promise<Array>} Latest readings from Sensor Ingest API
  */
-export async function getLatestReadings(limit = 5) {
-  const { data } = await sensorApi.get('/api/dashboard/latest', { params: { limit } });
-  const readings = data?.readings || data?.Readings || data || [];
+export async function getLatestReadings(pageSize = 5) {
+  const { data } = await sensorApi.get('/api/dashboard/latest', {
+    params: { pageNumber: 1, pageSize }
+  });
+  return normalizeReadings(extractReadingsArray(data));
+}
 
-  if (!Array.isArray(readings)) {
-    return [];
-  }
+/**
+ * Get latest readings from generic readings endpoint (supports filters)
+ * @param {Object} params - Filter/pagination options
+ * @param {string|null} params.sensorId - Optional sensor filter
+ * @param {string|null} params.plotId - Optional plot filter
+ * @param {number} params.pageNumber - Page number (default: 1)
+ * @param {number} params.pageSize - Page size (default: 20)
+ * @returns {Promise<Array>} Normalized latest readings
+ */
+export async function getReadingsLatest({
+  sensorId = null,
+  plotId = null,
+  pageNumber = 1,
+  pageSize = 20
+} = {}) {
+  const params = { pageNumber, pageSize };
+  if (sensorId) params.sensorId = sensorId;
+  if (plotId) params.plotId = plotId;
 
-  return readings.map((reading) => ({
-    id: reading.id || reading.Id,
-    sensorId: reading.sensorId || reading.SensorId,
-    plotId: reading.plotId || reading.PlotId,
-    plotName: reading.plotName || reading.PlotName || '-',
-    label: reading.label || reading.Label || null,
-    temperature: reading.temperature ?? reading.Temperature ?? null,
-    humidity: reading.humidity ?? reading.Humidity ?? null,
-    soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
-    rainfall: reading.rainfall ?? reading.Rainfall ?? null,
-    batteryLevel: reading.batteryLevel ?? reading.BatteryLevel ?? null,
-    timestamp: reading.timestamp || reading.time || reading.Time
-  }));
+  const { data } = await sensorApi.get('/api/readings/latest', { params });
+  return normalizeReadings(extractReadingsArray(data));
 }
 
 /**
  * Get historical sensor data for plotting
  * @param {string} sensorId - Sensor ID
  * @param {number} days - Days of data to retrieve (default: 7)
- * @returns {Promise<Array>} Historical readings (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @returns {Promise<Array>} Historical readings from Sensor Ingest API
  */
-export function getHistoricalData(sensorId, days = 7) {
-  // MOCK DATA - Generate 7 days of hourly readings
-  const data = [];
-  const now = Date.now();
-
-  for (let d = days; d >= 0; d--) {
-    for (let h = 0; h < 24; h += 4) {
-      // Every 4 hours
-      const timestamp = new Date(now - (d * 24 + h) * 3600000);
-      data.push({
-        timestamp: timestamp.toISOString(),
-        temperature: 25 + Math.random() * 10,
-        humidity: 50 + Math.random() * 30,
-        soilMoisture: 30 + Math.random() * 40
-      });
-    }
+export async function getHistoricalData(sensorId, days = 7, pageSize = 200) {
+  if (!sensorId) {
+    return [];
   }
 
-  return data;
+  const { data } = await sensorApi.get(`/api/sensors/${encodeURIComponent(sensorId)}/readings`, {
+    params: { days, pageNumber: 1, pageSize }
+  });
 
-  /* REAL API (uncomment when backend ready)
-  const { data } = await api.get(`/sensors/${sensorId}/readings`, { params: { days } });
-  return data;
-  */
+  const history = (await normalizeReadings(extractReadingsArray(data))).sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  return history;
 }
 
 // ============================================
@@ -462,86 +463,155 @@ export async function createSensor(payload) {
 /**
  * Get sensors filtered by plot
  * @param {string|null} plotId - Plot ID to filter by (default: null = all)
- * @returns {Promise<Array>} List of sensors (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @returns {Promise<Array>} List of sensors derived from Sensor Ingest latest readings
  */
-export function getSensors(plotId = null) {
-  // MOCK DATA
-  const sensors = [
-    {
-      id: 'SENSOR-001',
-      plotId: 'plot-001',
-      plotName: 'North Field',
-      status: 'online',
-      battery: 85,
-      lastReading: new Date().toISOString(),
-      temperature: 28.5,
-      humidity: 65,
-      soilMoisture: 42
-    },
-    {
-      id: 'SENSOR-002',
-      plotId: 'plot-002',
-      plotName: 'South Valley',
-      status: 'online',
-      battery: 72,
-      lastReading: new Date().toISOString(),
-      temperature: 27.8,
-      humidity: 68,
-      soilMoisture: 45
-    },
-    {
-      id: 'SENSOR-003',
-      plotId: 'plot-003',
-      plotName: 'East Ridge',
-      status: 'warning',
-      battery: 60,
-      lastReading: new Date(Date.now() - 900000).toISOString(),
-      temperature: 36.2,
-      humidity: 38,
-      soilMoisture: 22
-    },
-    {
-      id: 'SENSOR-004',
-      plotId: 'plot-004',
-      plotName: 'West Grove',
-      status: 'online',
-      battery: 90,
-      lastReading: new Date().toISOString(),
-      temperature: 29.1,
-      humidity: 62,
-      soilMoisture: 48
-    },
-    {
-      id: 'SENSOR-005',
-      plotId: 'plot-005',
-      plotName: 'Central Plain',
-      status: 'offline',
-      battery: 45,
-      lastReading: new Date(Date.now() - 7200000).toISOString(),
-      temperature: null,
-      humidity: null,
-      soilMoisture: null
-    },
-    {
-      id: 'SENSOR-006',
-      plotId: 'plot-005',
-      plotName: 'Central Plain',
-      status: 'warning',
-      battery: 15,
-      lastReading: new Date(Date.now() - 600000).toISOString(),
-      temperature: 30.4,
-      humidity: 55,
-      soilMoisture: 38
+export async function getSensors(plotId = null) {
+  const readings = await getReadingsLatest({ plotId, pageNumber: 1, pageSize: 100 });
+
+  return readings.map((reading) => ({
+    id: reading.sensorId,
+    sensorLabel: reading.sensorLabel || null,
+    plotId: reading.plotId,
+    plotName: reading.plotName || reading.plotId || '-',
+    propertyName: reading.propertyName || '-',
+    status: deriveSensorStatusFromReading(reading.timestamp),
+    battery: reading.batteryLevel,
+    lastReading: reading.timestamp,
+    temperature: reading.temperature,
+    humidity: reading.humidity,
+    soilMoisture: reading.soilMoisture
+  }));
+}
+
+function extractReadingsArray(payload) {
+  const readings = payload?.data || payload?.Data || payload || [];
+  return Array.isArray(readings) ? readings : [];
+}
+
+async function normalizeReadings(readings) {
+  if (!Array.isArray(readings) || readings.length === 0) {
+    return [];
+  }
+
+  let metadataMap = new Map();
+  try {
+    metadataMap = await getSensorMetadataMap();
+  } catch (error) {
+    console.warn(
+      '[Readings] Could not load sensor metadata from Farm API. Continuing without enrichment.',
+      {
+        route: '/api/sensors',
+        error
+      }
+    );
+  }
+
+  return readings.map((reading) => {
+    const sensorId = reading?.sensorId || reading?.SensorId;
+    const metadata = sensorId ? metadataMap.get(String(sensorId).toLowerCase()) : null;
+    return normalizeSensorReading(reading, metadata);
+  });
+}
+
+function normalizeSensorReading(reading, metadata = null) {
+  const sensorId = reading.sensorId || reading.SensorId;
+  const plotId = reading.plotId || reading.PlotId;
+
+  return {
+    id: reading.id || reading.Id,
+    sensorId,
+    plotId,
+    plotName: reading.plotName || reading.PlotName || metadata?.plotName || '-',
+    propertyName: reading.propertyName || reading.PropertyName || metadata?.propertyName || '-',
+    sensorLabel:
+      reading.sensorLabel ||
+      reading.SensorLabel ||
+      reading.label ||
+      reading.Label ||
+      metadata?.sensorLabel ||
+      null,
+    temperature: reading.temperature ?? reading.Temperature ?? null,
+    humidity: reading.humidity ?? reading.Humidity ?? null,
+    soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
+    rainfall: reading.rainfall ?? reading.Rainfall ?? null,
+    batteryLevel: reading.batteryLevel ?? reading.BatteryLevel ?? null,
+    timestamp: reading.timestamp || reading.time || reading.Time
+  };
+}
+
+async function getSensorMetadataMap() {
+  const now = Date.now();
+  if (sensorMetadataCache.expiresAt > now && sensorMetadataCache.map.size > 0) {
+    return sensorMetadataCache.map;
+  }
+
+  const metadataMap = new Map();
+  let pageNumber = 1;
+  const pageSize = 100;
+  let hasNextPage = true;
+  let safetyCounter = 0;
+
+  while (hasNextPage && safetyCounter < 30) {
+    let data;
+    try {
+      const response = await farmApi.get('/api/sensors', {
+        params: {
+          pageNumber,
+          pageSize,
+          sortBy: 'installedAt',
+          sortDirection: 'desc'
+        }
+      });
+      data = response?.data;
+    } catch (error) {
+      console.warn('[Readings] Farm sensor metadata request failed.', {
+        route: '/api/sensors',
+        pageNumber,
+        pageSize,
+        error
+      });
+      break;
     }
-  ];
 
-  return plotId ? sensors.filter((s) => s.plotId === plotId) : sensors;
+    const sensors = data?.data || data?.items || data?.results || [];
+    sensors.forEach((sensor) => {
+      const sensorId = sensor?.id ? String(sensor.id).toLowerCase() : null;
+      if (!sensorId) return;
 
-  /* REAL API
-  const { data } = await api.get('/sensors', { params: { plotId } });
-  return data;
-  */
+      metadataMap.set(sensorId, {
+        sensorLabel: sensor?.label || null,
+        plotName: sensor?.plotName || '-',
+        propertyName: sensor?.propertyName || '-'
+      });
+    });
+
+    const explicitHasNext = data?.hasNextPage;
+    if (typeof explicitHasNext === 'boolean') {
+      hasNextPage = explicitHasNext;
+    } else {
+      hasNextPage = Array.isArray(sensors) && sensors.length === pageSize;
+    }
+
+    pageNumber += 1;
+    safetyCounter += 1;
+  }
+
+  sensorMetadataCache = {
+    expiresAt: now + SENSOR_METADATA_TTL_MS,
+    map: metadataMap
+  };
+
+  return metadataMap;
+}
+
+function deriveSensorStatusFromReading(timestamp) {
+  if (!timestamp) return 'Inactive';
+
+  const ageMs = Date.now() - new Date(timestamp).getTime();
+  if (Number.isNaN(ageMs)) return 'Inactive';
+  if (ageMs <= 15 * 60 * 1000) return 'Active';
+  if (ageMs <= 60 * 60 * 1000) return 'Maintenance';
+  return 'Inactive';
 }
 
 // ============================================
@@ -555,15 +625,29 @@ export function getSensors(plotId = null) {
  */
 export async function getAlerts(status = null) {
   try {
-    const { data } = await sensorApi.get('/alerts', {
-      params: status ? { status } : {}
-    });
-
-    if (Array.isArray(data)) {
-      return data;
+    if (status && status.toLowerCase() !== 'pending') {
+      console.warn(
+        '[Alerts] Dashboard supports pending alerts feed only. Requested status ignored.',
+        {
+          requestedStatus: status,
+          routeUsed: '/api/alerts/pending'
+        }
+      );
     }
 
-    return data?.items || data?.data || data?.results || [];
+    const { data } = await analyticsApi.get('/api/alerts/pending', {
+      params: { pageNumber: 1, pageSize: 20 }
+    });
+
+    const items = Array.isArray(data) ? data : data?.items || data?.data || data?.results || [];
+
+    return items.map((alert) => ({
+      ...alert,
+      severity: normalizeAlertSeverity(alert?.severity),
+      createdAt: alert?.createdAt || alert?.CreatedAt,
+      plotName: alert?.plotName || alert?.PlotName || '-',
+      sensorId: alert?.sensorId || alert?.SensorId || '-'
+    }));
   } catch (error) {
     const statusCode = error?.response?.status;
     if (statusCode === 404 || statusCode === 501) {
@@ -572,6 +656,16 @@ export async function getAlerts(status = null) {
 
     throw error;
   }
+}
+
+function normalizeAlertSeverity(severity) {
+  const value = String(severity || '').toLowerCase();
+  if (!value) return 'info';
+  if (value === 'critical') return 'critical';
+  if (value === 'high') return 'warning';
+  if (value === 'medium') return 'warning';
+  if (value === 'low') return 'info';
+  return value;
 }
 
 function getPaginatedTotal(responseData) {
@@ -658,6 +752,7 @@ export async function deleteUser(id) {
 // ============================================
 
 let signalRConnection = null;
+let alertSignalRConnection = null;
 
 /**
  * Initialize SignalR connection to Sensor Hub
@@ -669,7 +764,10 @@ let signalRConnection = null;
  */
 export async function initSignalRConnection(handlers = {}) {
   if (!APP_CONFIG.signalREnabled) {
-    console.warn('[SignalR] Disabled by VITE_SIGNALR_ENABLED. Realtime connection not started.');
+    console.warn('[SignalR] Disabled by VITE_SIGNALR_ENABLED. Realtime connection not started.', {
+      hub: '/dashboard/sensorshub',
+      action: 'caller should use HTTP fallback polling'
+    });
     handlers.onConnectionChange?.('disconnected');
     return null;
   }
@@ -713,8 +811,72 @@ export async function initSignalRConnection(handlers = {}) {
     return signalRConnection;
   } catch (error) {
     console.error('[SignalR] Failed to connect to /dashboard/sensorshub:', error);
+    console.warn('[SignalR] Falling back to HTTP polling handled by page module.', {
+      hub: '/dashboard/sensorshub',
+      action: 'switch-to-http-fallback'
+    });
     handlers.onConnectionChange?.('disconnected');
     toast('Real-time connection unavailable', 'warning');
+    return null;
+  }
+}
+
+export async function initAlertSignalRConnection(handlers = {}) {
+  if (!APP_CONFIG.signalREnabled) {
+    console.warn(
+      '[AlertSignalR] Disabled by VITE_SIGNALR_ENABLED. AlertHub connection not started.',
+      {
+        hub: '/dashboard/alertshub',
+        action: 'caller should use HTTP fallback polling'
+      }
+    );
+    handlers.onConnectionChange?.('disconnected');
+    return null;
+  }
+
+  try {
+    alertSignalRConnection = new HubConnectionBuilder()
+      .withUrl(`${APP_CONFIG.analyticsApiBaseUrl}/dashboard/alertshub`, {
+        accessTokenFactory: () => getToken()
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    if (handlers.onAlertCreated) {
+      alertSignalRConnection.on('alertCreated', handlers.onAlertCreated);
+    }
+
+    if (handlers.onAlertAcknowledged) {
+      alertSignalRConnection.on('alertAcknowledged', handlers.onAlertAcknowledged);
+    }
+
+    if (handlers.onAlertResolved) {
+      alertSignalRConnection.on('alertResolved', handlers.onAlertResolved);
+    }
+
+    alertSignalRConnection.onreconnecting(() => {
+      handlers.onConnectionChange?.('reconnecting');
+    });
+
+    alertSignalRConnection.onreconnected(() => {
+      handlers.onConnectionChange?.('connected');
+    });
+
+    alertSignalRConnection.onclose(() => {
+      handlers.onConnectionChange?.('disconnected');
+    });
+
+    await alertSignalRConnection.start();
+    handlers.onConnectionChange?.('connected');
+    return alertSignalRConnection;
+  } catch (error) {
+    console.error('[AlertSignalR] Failed to connect to /dashboard/alertshub:', error);
+    console.warn('[AlertSignalR] Falling back to HTTP alerts polling handled by page module.', {
+      hub: '/dashboard/alertshub',
+      route: '/api/alerts/pending'
+    });
+    handlers.onConnectionChange?.('disconnected');
     return null;
   }
 }
@@ -749,10 +911,37 @@ export async function leavePlotGroup(plotId) {
   }
 }
 
+export async function joinAlertPlotGroup(plotId) {
+  if (alertSignalRConnection && !alertSignalRConnection.isMock) {
+    try {
+      await alertSignalRConnection.invoke('JoinPlotGroup', plotId);
+    } catch (error) {
+      console.error(`Failed to join alert plot group ${plotId}:`, error);
+    }
+  }
+}
+
+export async function leaveAlertPlotGroup(plotId) {
+  if (alertSignalRConnection && !alertSignalRConnection.isMock) {
+    try {
+      await alertSignalRConnection.invoke('LeavePlotGroup', plotId);
+    } catch (error) {
+      console.error(`Failed to leave alert plot group ${plotId}:`, error);
+    }
+  }
+}
+
 export function stopSignalRConnection() {
   if (signalRConnection) {
     signalRConnection.stop();
     signalRConnection = null;
+  }
+}
+
+export function stopAlertSignalRConnection() {
+  if (alertSignalRConnection) {
+    alertSignalRConnection.stop();
+    alertSignalRConnection = null;
   }
 }
 

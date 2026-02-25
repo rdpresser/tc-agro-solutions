@@ -5,6 +5,7 @@
 import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
+import { createFallbackPoller } from './realtime-fallback.js';
 import {
   getSensorStatusBadgeClass,
   getSensorStatusDisplay,
@@ -45,6 +46,8 @@ window.addEventListener('beforeunload', async () => {
     }
     window.joinedPlotIds = [];
   }
+
+  stopFallbackPollingSilently();
 
   stopSignalRConnection();
 });
@@ -120,13 +123,13 @@ function renderSensorsGrid(sensors) {
       (sensor) => `
     <div class="sensor-card ${getSensorStatusBadgeClass(sensor.status)}" data-sensor-id="${sensor.id}" data-status="${normalizeSensorStatus(sensor.status)}">
       <div class="sensor-header">
-        <span class="sensor-id">${sensor.id}</span>
+        <span class="sensor-id">${getSensorDisplayName(sensor)}</span>
         <span class="sensor-status ${getSensorStatusBadgeClass(sensor.status)}">
           ${getSensorStatusDisplay(sensor.status)}
         </span>
       </div>
       
-      <div class="sensor-plot">📍 ${sensor.plotName}</div>
+      <div class="sensor-plot">📍 ${formatSensorLocation(sensor)}</div>
       
       <div class="sensor-readings">
         <div class="reading">
@@ -161,6 +164,16 @@ function renderSensorsGrid(sensors) {
   `
     )
     .join('');
+}
+
+function getSensorDisplayName(sensor) {
+  return sensor.sensorLabel || sensor.sensorId || sensor.id || '-';
+}
+
+function formatSensorLocation(sensor) {
+  const plotName = sensor.plotName || '-';
+  const propertyName = sensor.propertyName || '';
+  return propertyName ? `${plotName} - ${propertyName}` : plotName;
 }
 
 function getBatteryClass(level) {
@@ -232,21 +245,39 @@ function updateStatusSummary(sensors = null) {
 // REAL-TIME UPDATES
 // ============================================
 
+const SENSORS_REALTIME_CONTEXT = {
+  page: 'sensors-monitoring',
+  hub: '/dashboard/sensorshub',
+  events: ['sensorReading', 'sensorStatusChanged'],
+  fallbackRoutes: ['/api/readings/latest', '/api/sensors (metadata cache)']
+};
+
 window.joinedPlotIds = []; // Track joined plot groups
+const fallbackPoller = createFallbackPoller({
+  refresh: loadSensors,
+  intervalMs: 15000,
+  context: 'SensorsRealtime',
+  connection: SENSORS_REALTIME_CONTEXT,
+  onError: (error) => {
+    console.warn('[SensorsRealtime] HTTP fallback refresh failed.', {
+      ...SENSORS_REALTIME_CONTEXT,
+      error
+    });
+  }
+});
 
 async function setupRealTimeUpdates() {
   const connection = await initSignalRConnection({
     onSensorReading: (reading) => {
-      updateSensorCard(reading.sensorId, reading);
+      const normalized = normalizeRealtimeReading(reading);
+      updateSensorCard(normalized.sensorId, normalized);
     },
     onSensorStatus: (data) => {
       const card = $(`[data-sensor-id="${data.sensorId}"]`);
       if (card) {
-        // Store old status for KPI updates
         const oldStatus = normalizeSensorStatus(card.dataset.status);
         const newStatus = normalizeSensorStatus(data.status);
 
-        // Update card visual state
         const badgeClass = getSensorStatusBadgeClass(newStatus);
         card.className = `sensor-card ${badgeClass}`;
         card.dataset.status = newStatus;
@@ -257,7 +288,6 @@ async function setupRealTimeUpdates() {
           statusEl.textContent = getSensorStatusDisplay(newStatus);
         }
 
-        // Update KPIs if status changed
         if (oldStatus !== newStatus) {
           updateStatusSummary();
         }
@@ -265,23 +295,76 @@ async function setupRealTimeUpdates() {
     },
     onConnectionChange: (state) => {
       console.warn(`SignalR connection state: ${state}`);
-      // Optional: Add visual indicator for connection state
-      const indicator = $('#connection-status');
-      if (indicator) {
-        indicator.className = `connection-status ${state}`;
+      updateConnectionIndicator(state);
+
+      if (state === 'connected') {
+        if (fallbackPoller.isRunning()) {
+          stopFallbackPolling();
+        }
+      } else if (state === 'reconnecting' || state === 'disconnected') {
+        console.warn(
+          '[SensorsRealtime] SignalR stream degraded. HTTP fallback remains active until recovery.',
+          {
+            state,
+            hub: SENSORS_REALTIME_CONTEXT.hub,
+            signalrEvents: SENSORS_REALTIME_CONTEXT.events,
+            fallbackRoutes: SENSORS_REALTIME_CONTEXT.fallbackRoutes
+          }
+        );
+        fallbackPoller.start(state);
       }
 
-      // Rejoin plot groups after reconnection
       if (state === 'connected' && window.joinedPlotIds.length === 0) {
         setTimeout(() => joinAllPlotGroups(connection), 1000);
       }
     }
   });
 
-  // After connection, join all plot groups to receive sensor readings
   if (connection && !connection.isMock) {
     await joinAllPlotGroups(connection);
+  } else {
+    fallbackPoller.start('initial-connect-failed');
   }
+}
+
+function updateConnectionIndicator(state) {
+  const indicator = $('#connection-status');
+  if (!indicator) return;
+
+  indicator.className =
+    state === 'connected'
+      ? 'badge badge-success'
+      : state === 'reconnecting'
+        ? 'badge badge-warning'
+        : 'badge badge-danger';
+
+  indicator.textContent =
+    state === 'connected' ? '● Live' : state === 'reconnecting' ? '● Reconnecting' : '● Offline';
+}
+
+function stopFallbackPolling() {
+  fallbackPoller.stop('signalr-restored');
+}
+
+function stopFallbackPollingSilently() {
+  fallbackPoller.stop('page-unload', { silent: true });
+}
+
+function normalizeRealtimeReading(reading) {
+  return {
+    sensorId: reading.sensorId || reading.SensorId,
+    sensorLabel:
+      reading.sensorLabel || reading.SensorLabel || reading.label || reading.Label || null,
+    plotId: reading.plotId || reading.PlotId,
+    plotName: reading.plotName || reading.PlotName || '-',
+    propertyName: reading.propertyName || reading.PropertyName || '-',
+    temperature: reading.temperature ?? reading.Temperature ?? null,
+    humidity: reading.humidity ?? reading.Humidity ?? null,
+    soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
+    rainfall: reading.rainfall ?? reading.Rainfall ?? null,
+    batteryLevel: reading.batteryLevel ?? reading.BatteryLevel ?? null,
+    timestamp: reading.timestamp || reading.Timestamp || new Date().toISOString()
+  };
 }
 
 async function joinAllPlotGroups(connection) {
@@ -316,12 +399,22 @@ function updateSensorCard(sensorId, reading) {
   const card = $(`[data-sensor-id="${sensorId}"]`);
   if (!card) return;
 
+  const headerEl = card.querySelector('.sensor-id');
+  if (headerEl && reading.sensorLabel) {
+    headerEl.textContent = reading.sensorLabel;
+  }
+
+  const plotEl = card.querySelector('.sensor-plot');
+  if (plotEl) {
+    plotEl.textContent = `📍 ${formatSensorLocation(reading)}`;
+  }
+
   // Update readings with animation
   const metrics = ['temperature', 'humidity', 'soilMoisture'];
 
   metrics.forEach((metric) => {
     const el = card.querySelector(`[data-metric="${metric}"]`);
-    if (el && reading[metric] !== null) {
+    if (el && reading[metric] !== null && reading[metric] !== undefined) {
       el.classList.add('pulse');
 
       const value = reading[metric];

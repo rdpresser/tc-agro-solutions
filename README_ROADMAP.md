@@ -358,8 +358,8 @@ Azure Monitor Workbooks (visualizes)
 
 #### 📊 Dashboard
 
-- `GET /dashboard/latest` → latest readings
-- `GET /dashboard/history/{sensorId}` → history
+- `GET /dashboard/latest?pageNumber=1&pageSize=10` → latest readings (paginated)
+- `GET /api/sensors/{sensorId}/readings?days=7&pageNumber=1&pageSize=10` → history (paginated)
 - `GET /dashboard/analytics/{plotId}` → aggregated analyses
 - `GET /alerts/pending` → pending alerts
 
@@ -504,23 +504,22 @@ Content-Type: application/json
 #### 3.3 Dashboard Queries
 
 ```
-GET /dashboard/latest
+GET /dashboard/latest?pageNumber=1&pageSize=10
 Response:
 {
-  "plots": [
+  "data": [
     {
+      "sensorId": "Sensor123",
       "plotId": "Plot1",
-      "sensors": [
-        {
-          "sensorId": "Sensor123",
-          "lastReading": 28.5,
-          "timestamp": "2025-01-08T10:30:00Z",
-          "status": "OK"
-        }
-      ],
-      "alerts": 2
+      "time": "2025-01-08T10:30:00Z",
+      "temperature": 28.5,
+      "humidity": 65.2,
+      "soilMoisture": 42.1
     }
-  ]
+  ],
+  "totalCount": 1,
+  "pageNumber": 1,
+  "pageSize": 10
 }
 
 ✅ Read from Redis cache (TTL 5 min)
@@ -839,11 +838,11 @@ public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
 #### Endpoints
 
 ```
-GET /dashboard/latest
+GET /dashboard/latest?pageNumber=1&pageSize=10
   → Latest readings from all sensors (with cache)
 
-GET /dashboard/history/{sensorId}?days=7
-  → 7-day history aggregated by hour
+GET /api/sensors/{sensorId}/readings?days=7&pageNumber=1&pageSize=10
+  → Sensor reading history (paginated)
 
 GET /dashboard/analytics/{plotId}
   → Aggregated plot analyses (avg, max, min, trends)
