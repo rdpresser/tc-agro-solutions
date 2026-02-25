@@ -253,6 +253,7 @@ const SENSORS_REALTIME_CONTEXT = {
 };
 
 window.joinedPlotIds = []; // Track joined plot groups
+let realtimeConnectionState = 'disconnected';
 const fallbackPoller = createFallbackPoller({
   refresh: loadSensors,
   intervalMs: 15000,
@@ -267,6 +268,8 @@ const fallbackPoller = createFallbackPoller({
 });
 
 async function setupRealTimeUpdates() {
+  updateRealtimeBadges('reconnecting');
+
   const connection = await initSignalRConnection({
     onSensorReading: (reading) => {
       const normalized = normalizeRealtimeReading(reading);
@@ -295,7 +298,7 @@ async function setupRealTimeUpdates() {
     },
     onConnectionChange: (state) => {
       console.warn(`SignalR connection state: ${state}`);
-      updateConnectionIndicator(state);
+      realtimeConnectionState = state;
 
       if (state === 'connected') {
         if (fallbackPoller.isRunning()) {
@@ -314,6 +317,8 @@ async function setupRealTimeUpdates() {
         fallbackPoller.start(state);
       }
 
+      updateRealtimeBadges(state);
+
       if (state === 'connected' && window.joinedPlotIds.length === 0) {
         setTimeout(() => joinAllPlotGroups(connection), 1000);
       }
@@ -324,11 +329,18 @@ async function setupRealTimeUpdates() {
     await joinAllPlotGroups(connection);
   } else {
     fallbackPoller.start('initial-connect-failed');
+    realtimeConnectionState = 'disconnected';
+    updateRealtimeBadges('disconnected');
   }
 }
 
-function updateConnectionIndicator(state) {
-  const indicator = $('#connection-status');
+function getConnectionBadgeElement() {
+  return $('#connection-status') || $('#signalrStatus');
+}
+
+function updateRealtimeBadges(state = realtimeConnectionState) {
+  const indicator = getConnectionBadgeElement();
+  const transportIndicator = $('#transport-mode-status');
   if (!indicator) return;
 
   indicator.className =
@@ -339,7 +351,20 @@ function updateConnectionIndicator(state) {
         : 'badge badge-danger';
 
   indicator.textContent =
-    state === 'connected' ? '● Live' : state === 'reconnecting' ? '● Reconnecting' : '● Offline';
+    state === 'connected'
+      ? '🟢 Live Updates Active'
+      : state === 'reconnecting'
+        ? '🟡 Reconnecting'
+        : '🔶 HTTP Fallback Active';
+
+  if (transportIndicator) {
+    const usingSignalR = state === 'connected';
+    transportIndicator.className = usingSignalR ? 'badge badge-info' : 'badge badge-warning';
+    transportIndicator.textContent = usingSignalR ? 'SignalR' : 'HTTP Fallback';
+    transportIndicator.title = usingSignalR
+      ? 'Realtime transport: SignalR stream.'
+      : 'Realtime transport: HTTP polling fallback (15s interval).';
+  }
 }
 
 function stopFallbackPolling() {
