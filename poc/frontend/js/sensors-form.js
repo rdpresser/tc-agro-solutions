@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (isEditMode) {
     setEditModeUI();
-    setReadOnlyEditMode();
     await loadSensor(editId);
+    setReadOnlyEditMode();
     return;
   }
 
