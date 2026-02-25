@@ -16,7 +16,7 @@ import {
 } from './api.js';
 import { addDataPoint, createReadingsChart, destroyAllCharts } from './charts.js';
 import { initProtectedPage } from './common.js';
-import { toast, t } from './i18n.js';
+import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
 import {
   $,
@@ -225,6 +225,14 @@ function renderInitialSetupState() {
     connectionStatus.textContent = '● Setup required';
     connectionStatus.title =
       'Create properties, plots and sensors before real-time metrics can be displayed.';
+  }
+
+  const transportModeStatus = $('#transport-mode-status');
+  if (transportModeStatus) {
+    transportModeStatus.className = 'badge badge-warning';
+    transportModeStatus.textContent = 'Setup required';
+    transportModeStatus.title =
+      'Real-time transport mode will be displayed after setup is completed.';
   }
 }
 
@@ -654,24 +662,7 @@ const handleSensorReading = debounce((reading) => {
 
 function handleSensorConnectionChange(state) {
   sensorRealtimeState = state;
-
-  const indicator = $('#connection-status');
-  if (indicator) {
-    indicator.className =
-      state === 'connected'
-        ? 'badge badge-success'
-        : state === 'reconnecting'
-          ? 'badge badge-warning'
-          : 'badge badge-danger';
-    indicator.textContent =
-      state === 'connected' ? '● Live' : state === 'reconnecting' ? '● Reconnecting' : '● Offline';
-    indicator.title =
-      state === 'connected'
-        ? t('connection.connected')
-        : state === 'reconnecting'
-          ? t('connection.reconnecting')
-          : t('connection.disconnected');
-  }
+  updateRealtimeBadges();
 
   // Rejoin plot groups after reconnection (without creating a new connection)
   if (state === 'connected' && hasSetupForRealtime) {
@@ -696,6 +687,7 @@ function handleSensorConnectionChange(state) {
 
 function handleAlertConnectionChange(state) {
   alertsRealtimeState = state;
+  updateRealtimeBadges();
 
   if (state === 'connected' && hasSetupForRealtime) {
     console.warn('[AlertSignalR] Connected, (re)joining plot groups...');
@@ -725,10 +717,50 @@ function syncFallbackMode(source) {
     if (fallbackPoller.isRunning()) {
       fallbackPoller.stop(`${source}-connection-state-connected`);
     }
+    updateRealtimeBadges();
     return;
   }
 
   fallbackPoller.start(`sensor:${sensorRealtimeState}|alerts:${alertsRealtimeState}`);
+  updateRealtimeBadges();
+}
+
+function updateRealtimeBadges() {
+  const indicator = $('#connection-status');
+  const transportIndicator = $('#transport-mode-status');
+  const sensorConnected = sensorRealtimeState === 'connected';
+  const alertsConnected = alertsRealtimeState === 'connected';
+  const anyReconnecting =
+    sensorRealtimeState === 'reconnecting' || alertsRealtimeState === 'reconnecting';
+  const usingSignalR = sensorConnected && alertsConnected;
+
+  if (indicator) {
+    indicator.className = usingSignalR
+      ? 'badge badge-success'
+      : anyReconnecting
+        ? 'badge badge-warning'
+        : 'badge badge-danger';
+
+    indicator.textContent = usingSignalR
+      ? '● Live'
+      : anyReconnecting
+        ? '● Reconnecting'
+        : '● Fallback active';
+
+    indicator.title = usingSignalR
+      ? 'Realtime connected via SignalR hubs.'
+      : anyReconnecting
+        ? 'Realtime reconnecting. HTTP fallback polling remains active.'
+        : 'SignalR unavailable. Using HTTP fallback polling.';
+  }
+
+  if (transportIndicator) {
+    transportIndicator.className = usingSignalR ? 'badge badge-info' : 'badge badge-warning';
+    transportIndicator.textContent = usingSignalR ? 'SignalR' : 'HTTP Fallback';
+    transportIndicator.title = usingSignalR
+      ? 'Realtime transport: SignalR (WebSocket/SSE/LongPolling negotiation).'
+      : 'Realtime transport: HTTP polling fallback (15s interval).';
+  }
 }
 
 async function handleAlertRealtime(eventType, payload) {

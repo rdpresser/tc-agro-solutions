@@ -176,7 +176,10 @@
           <div class="card" style="margin-bottom: 24px">
             <div class="card-header">
               <h3 class="card-title">⚡ Real-Time Data</h3>
-              <span id="connection-status" class="badge badge-success">● Live</span>
+              <div style="display: flex; gap: 8px; align-items: center">
+                <span id="connection-status" class="badge badge-success">● Live</span>
+                <span id="transport-mode-status" class="badge badge-info">SignalR</span>
+              </div>
             </div>
             <div class="grid grid-4" id="metricsGrid">
               <!-- Temperature -->
