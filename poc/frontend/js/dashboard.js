@@ -89,7 +89,7 @@ async function loadDashboardData() {
     const [stats, readings, alerts] = await Promise.all([
       getDashboardStats(),
       getLatestReadings(5),
-      getAlerts('pending')
+      getAlerts('pending').catch(() => [])
       // Historical data disabled - not currently used
       // getHistoricalData('SENSOR-001', 7)
     ]);
@@ -222,7 +222,7 @@ function updateReadingsTable(readings) {
     .map(
       (reading) => `
     <tr>
-      <td><strong>${reading.sensorId}</strong></td>
+      <td><strong>${reading.label || reading.sensorId || '-'}</strong></td>
       <td>${reading.plotName}</td>
       <td class="${getTemperatureClass(reading.temperature)}">${formatTemperature(reading.temperature)}</td>
       <td class="${getHumidityClass(reading.humidity)}">${formatPercentage(reading.humidity)}</td>
@@ -394,7 +394,7 @@ const handleSensorReading = debounce((reading) => {
   if (tbody && tbody.firstChild) {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><strong>${reading.sensorId}</strong></td>
+      <td><strong>${reading.label || reading.sensorId || '-'}</strong></td>
       <td>-</td>
       <td>${formatTemperature(reading.temperature)}</td>
       <td>${formatPercentage(reading.humidity)}</td>

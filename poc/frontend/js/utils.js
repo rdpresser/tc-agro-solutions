@@ -130,7 +130,7 @@ export const APP_CONFIG = {
   sensorApiBaseUrl: detectSensorApiBaseUrl(),
   tokenKey: 'agro_token',
   userKey: 'agro_user',
-  signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED === 'true',
+  signalREnabled: import.meta.env.VITE_SIGNALR_ENABLED !== 'false',
   // Base path for navigation (Vite injects this at build time)
   basePath: import.meta.env.BASE_URL || '/'
 };

@@ -111,79 +111,77 @@ attachInterceptors(sensorApi);
 
 /**
  * Get dashboard statistics
- * @returns {Promise<Object>} Dashboard stats (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @returns {Promise<Object>} Dashboard stats from real APIs
  */
-export function getDashboardStats() {
-  // MOCK DATA (for demo)
-  return Promise.resolve({
-    properties: 4,
-    plots: 5,
-    sensors: 12,
-    alerts: 3
-  });
+export async function getDashboardStats() {
+  const [propertiesResponse, plotsResponse, sensorsResponse] = await Promise.all([
+    farmApi.get('/api/properties', {
+      params: {
+        pageNumber: 1,
+        pageSize: 1,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      }
+    }),
+    farmApi.get('/api/plots', {
+      params: {
+        pageNumber: 1,
+        pageSize: 1,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      }
+    }),
+    farmApi.get('/api/sensors', {
+      params: {
+        pageNumber: 1,
+        pageSize: 1,
+        sortBy: 'installedAt',
+        sortDirection: 'desc',
+        filter: ''
+      }
+    })
+  ]);
 
-  /* REAL API (uncomment when backend ready)
-  const { data } = await api.get('/dashboard/stats');
-  return data;
-  */
+  const propertiesTotal = getPaginatedTotal(propertiesResponse?.data);
+  const plotsTotal = getPaginatedTotal(plotsResponse?.data);
+  const sensorsTotal = getPaginatedTotal(sensorsResponse?.data);
+
+  return {
+    properties: propertiesTotal,
+    plots: plotsTotal,
+    sensors: sensorsTotal,
+    alerts: 0
+  };
 }
 
 /**
  * Get latest sensor readings
- * @param {number} _limit - Max readings to return (default: 5)
- * @returns {Promise<Array>} Latest readings (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @param {number} limit - Max readings to return (default: 5)
+ * @returns {Promise<Array>} Latest readings from Sensor Ingest API
  */
-export function getLatestReadings(_limit = 5) {
-  // MOCK DATA (for demo)
-  return [
-    {
-      sensorId: 'SENSOR-001',
-      plotName: 'North Field',
-      temperature: 28.5,
-      humidity: 65,
-      soilMoisture: 42,
-      timestamp: new Date().toISOString()
-    },
-    {
-      sensorId: 'SENSOR-002',
-      plotName: 'South Valley',
-      temperature: 27.8,
-      humidity: 68,
-      soilMoisture: 45,
-      timestamp: new Date(Date.now() - 300000).toISOString()
-    },
-    {
-      sensorId: 'SENSOR-003',
-      plotName: 'East Ridge',
-      temperature: 36.2,
-      humidity: 38,
-      soilMoisture: 22,
-      timestamp: new Date(Date.now() - 900000).toISOString()
-    },
-    {
-      sensorId: 'SENSOR-004',
-      plotName: 'West Grove',
-      temperature: 29.1,
-      humidity: 62,
-      soilMoisture: 48,
-      timestamp: new Date(Date.now() - 600000).toISOString()
-    },
-    {
-      sensorId: 'SENSOR-006',
-      plotName: 'Central Plain',
-      temperature: 30.4,
-      humidity: 55,
-      soilMoisture: 38,
-      timestamp: new Date(Date.now() - 600000).toISOString()
-    }
-  ];
+export async function getLatestReadings(limit = 5) {
+  const { data } = await sensorApi.get('/api/dashboard/latest', { params: { limit } });
+  const readings = data?.readings || data?.Readings || data || [];
 
-  /* REAL API (uncomment when backend ready)
-  const { data } = await api.get('/dashboard/latest', { params: { limit } });
-  return data;
-  */
+  if (!Array.isArray(readings)) {
+    return [];
+  }
+
+  return readings.map((reading) => ({
+    id: reading.id || reading.Id,
+    sensorId: reading.sensorId || reading.SensorId,
+    plotId: reading.plotId || reading.PlotId,
+    plotName: reading.plotName || reading.PlotName || '-',
+    label: reading.label || reading.Label || null,
+    temperature: reading.temperature ?? reading.Temperature ?? null,
+    humidity: reading.humidity ?? reading.Humidity ?? null,
+    soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
+    rainfall: reading.rainfall ?? reading.Rainfall ?? null,
+    batteryLevel: reading.batteryLevel ?? reading.BatteryLevel ?? null,
+    timestamp: reading.timestamp || reading.time || reading.Time
+  }));
 }
 
 /**
@@ -553,65 +551,44 @@ export function getSensors(plotId = null) {
 /**
  * Get alerts filtered by status
  * @param {string|null} status - Alert status filter (default: null = all)
- * @returns {Promise<Array>} List of alerts (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @returns {Promise<Array>} List of alerts from API (empty when endpoint is unavailable)
  */
-export function getAlerts(status = null) {
-  // MOCK DATA
-  const alerts = [
-    {
-      id: 'alert-001',
-      severity: 'critical',
-      title: 'Sensor Offline - SENSOR-005',
-      message: 'Sensor at Central Plain has not responded for over 2 hours.',
-      plotId: 'plot-005',
-      plotName: 'Central Plain',
-      sensorId: 'SENSOR-005',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 600000).toISOString()
-    },
-    {
-      id: 'alert-002',
-      severity: 'critical',
-      title: 'Low Soil Moisture - Extended Period',
-      message: 'Soil moisture at East Ridge has been below 30% for over 24 hours.',
-      plotId: 'plot-003',
-      plotName: 'East Ridge',
-      sensorId: 'SENSOR-003',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 1500000).toISOString()
-    },
-    {
-      id: 'alert-003',
-      severity: 'warning',
-      title: 'Low Battery - SENSOR-006',
-      message: 'Sensor at Central Plain has battery level at 15%.',
-      plotId: 'plot-005',
-      plotName: 'Central Plain',
-      sensorId: 'SENSOR-006',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 'alert-004',
-      severity: 'warning',
-      title: 'High Temperature Alert',
-      message: 'Temperature at North Field exceeded 35°C threshold.',
-      plotId: 'plot-001',
-      plotName: 'North Field',
-      sensorId: 'SENSOR-001',
-      status: 'resolved',
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      resolvedAt: new Date(Date.now() - 3600000).toISOString()
+export async function getAlerts(status = null) {
+  try {
+    const { data } = await sensorApi.get('/alerts', {
+      params: status ? { status } : {}
+    });
+
+    if (Array.isArray(data)) {
+      return data;
     }
-  ];
 
-  return status ? alerts.filter((a) => a.status === status) : alerts;
+    return data?.items || data?.data || data?.results || [];
+  } catch (error) {
+    const statusCode = error?.response?.status;
+    if (statusCode === 404 || statusCode === 501) {
+      return [];
+    }
 
-  /* REAL API
-  const { data } = await api.get('/alerts', { params: { status } });
-  return data;
-  */
+    throw error;
+  }
+}
+
+function getPaginatedTotal(responseData) {
+  if (!responseData || typeof responseData !== 'object') {
+    return 0;
+  }
+
+  if (typeof responseData.totalCount === 'number') {
+    return responseData.totalCount;
+  }
+
+  if (typeof responseData.TotalCount === 'number') {
+    return responseData.TotalCount;
+  }
+
+  const items = responseData.items || responseData.data || responseData.results || [];
+  return Array.isArray(items) ? items.length : 0;
 }
 
 /**
@@ -691,9 +668,10 @@ let signalRConnection = null;
  * @returns {Promise<Object>} SignalR connection object
  */
 export async function initSignalRConnection(handlers = {}) {
-  // Use mock if SignalR is disabled
   if (!APP_CONFIG.signalREnabled) {
-    return initMockSignalR(handlers);
+    console.warn('[SignalR] Disabled by VITE_SIGNALR_ENABLED. Realtime connection not started.');
+    handlers.onConnectionChange?.('disconnected');
+    return null;
   }
 
   try {
@@ -733,37 +711,12 @@ export async function initSignalRConnection(handlers = {}) {
     handlers.onConnectionChange?.('connected');
 
     return signalRConnection;
-  } catch {
-    toast('realtime.mock_fallback', 'warning');
-    // Fallback to mock
-    return initMockSignalR(handlers);
+  } catch (error) {
+    console.error('[SignalR] Failed to connect to /dashboard/sensorshub:', error);
+    handlers.onConnectionChange?.('disconnected');
+    toast('Real-time connection unavailable', 'warning');
+    return null;
   }
-}
-
-// Mock SignalR for demo purposes
-function initMockSignalR(handlers = {}) {
-  // Simulate sensor readings every 5 seconds
-  const mockInterval = setInterval(() => {
-    if (handlers.onSensorReading) {
-      const mockReading = {
-        sensorId: `SENSOR-00${Math.floor(Math.random() * 4) + 1}`,
-        temperature: 25 + Math.random() * 12,
-        humidity: 40 + Math.random() * 40,
-        soilMoisture: 25 + Math.random() * 50,
-        timestamp: new Date().toISOString()
-      };
-      handlers.onSensorReading(mockReading);
-    }
-  }, 5000);
-
-  // Return mock connection object
-  return {
-    stop: () => clearInterval(mockInterval),
-    state: 'Connected',
-    isMock: true,
-    // Mock join/leave methods
-    invoke: async () => Promise.resolve()
-  };
 }
 
 /**
