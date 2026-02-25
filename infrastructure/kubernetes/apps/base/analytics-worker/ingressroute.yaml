@@ -16,6 +16,11 @@ spec:
       services:
         - name: analytics-worker
           port: 80
+          sticky:
+            cookie:
+              name: analytics-worker-sticky
+              httpOnly: true
+              secure: false
       middlewares:
         - name: analytics-worker-stripprefix
           namespace: agro-apps

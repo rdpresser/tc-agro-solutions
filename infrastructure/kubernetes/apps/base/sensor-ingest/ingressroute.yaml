@@ -16,6 +16,11 @@ spec:
       services:
         - name: sensor-ingest-service
           port: 80
+          sticky:
+            cookie:
+              name: sensor-ingest-sticky
+              httpOnly: true
+              secure: false
       middlewares:
         - name: sensor-ingest-stripprefix
           namespace: agro-apps
