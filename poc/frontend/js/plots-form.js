@@ -210,11 +210,10 @@ async function setupEditMode() {
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
   if (sensorsSection) sensorsSection.style.display = 'block';
 
-  setReadOnlyEditMode();
-
   try {
     const plot = await getPlot(editId);
     populateForm(plot);
+    setReadOnlyEditMode();
     loadSensors();
     toast('Edit mode is not available yet. Fields are read-only.', 'warning');
   } catch (error) {
