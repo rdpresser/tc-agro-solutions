@@ -1,0 +1,30 @@
+meta {
+  name: Resolve Alert
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{analytics_service_url}}/api/alerts/a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d/resolve?alertId=a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+  body: json
+  auth: bearer
+}
+
+params:query {
+  alertId: a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "resolutionNotes": "Activated irrigation system. Soil moisture normalized after 2 hours."
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
