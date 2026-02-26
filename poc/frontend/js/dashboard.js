@@ -7,8 +7,11 @@ import {
   getLatestReadings,
   getReadingsLatest,
   getHistoricalData,
-  getAlerts,
+  getPendingAlertsPage,
+  getProperties,
   getPlots,
+  getPlotsPaginated,
+  getSensorsPaginated,
   getOwnersPaginated,
   getOwnersQueryParameterMapFromSwagger,
   joinOwnerGroup,
@@ -105,20 +108,40 @@ async function loadDashboardData() {
     }
 
     // Load all data in parallel
-    const [dashboardReadings, latestReadings, alerts] = await Promise.all([
-      getLatestReadings(5, ownerId),
-      getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
-      getAlerts('pending', ownerId).catch(() => [])
-    ]);
+    const [dashboardReadings, latestReadings, pendingAlertsPage, statSubtextData] =
+      await Promise.all([
+        getLatestReadings(5, ownerId),
+        getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+        getPendingAlertsPage({ ownerId, pageNumber: 1, pageSize: 500 }).catch(() => ({
+          items: [],
+          totalCount: 0,
+          pageNumber: 1,
+          pageSize: 500
+        })),
+        loadDashboardStatSubtextData(ownerId, stats)
+      ]);
+
+    const alerts = pendingAlertsPage?.items || [];
 
     const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
     syncRealtimeStateFromReadings(readingsForTable);
     updateReadingsTable(readingsForTable);
-    updateAlertsSection(alerts);
+    updateAlertsSection(alerts.slice(0, 20));
+    renderAlertsDistributionChart(alerts);
     const alertStat = $('#stat-alerts');
     if (alertStat) {
-      alertStat.textContent = String(alerts.length);
+      alertStat.textContent = String(pendingAlertsPage?.totalCount || 0);
     }
+    dashboardSubtextState = {
+      propertiesCreatedThisMonth: Number(statSubtextData?.propertiesCreatedThisMonth || 0),
+      plotsCreatedThisMonth: Number(statSubtextData?.plotsCreatedThisMonth || 0),
+      activeSensorsCount: Number(statSubtextData?.activeSensorsCount || 0),
+      sensorsTotal: Number(statSubtextData?.sensorsTotal || 0)
+    };
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts
+    });
 
     const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
     if (freshestReading) {
@@ -429,6 +452,146 @@ function updateStatCards(stats) {
   });
 }
 
+function updateStatSubtextsFromData(data) {
+  const propertiesSubtext = $('#stat-properties-subtext');
+  const plotsSubtext = $('#stat-plots-subtext');
+  const sensorsSubtext = $('#stat-sensors-subtext');
+  const alertsSubtext = $('#stat-alerts-subtext');
+
+  const propertiesCreatedThisMonth = Number(data?.propertiesCreatedThisMonth || 0);
+  const plotsCreatedThisMonth = Number(data?.plotsCreatedThisMonth || 0);
+  const sensorsTotal = Number(data?.sensorsTotal || 0);
+  const activeSensorsCount = Number(data?.activeSensorsCount || 0);
+  const pendingAlerts = Array.isArray(data?.pendingAlerts) ? data.pendingAlerts : [];
+
+  if (propertiesSubtext) {
+    propertiesSubtext.textContent = `↑ ${propertiesCreatedThisMonth} this month`;
+  }
+
+  if (plotsSubtext) {
+    plotsSubtext.textContent = `↑ ${plotsCreatedThisMonth} this month`;
+  }
+
+  if (sensorsSubtext) {
+    const onlinePercentage =
+      sensorsTotal > 0 ? Math.round((activeSensorsCount / sensorsTotal) * 100) : 0;
+    sensorsSubtext.textContent = `${onlinePercentage}% online`;
+  }
+
+  if (alertsSubtext) {
+    const since24h = Date.now() - 24 * 60 * 60 * 1000;
+    const newAlerts24h = pendingAlerts.filter((alert) => {
+      const raw = alert?.createdAt || alert?.CreatedAt;
+      const timestamp = new Date(raw || 0).getTime();
+      return !Number.isNaN(timestamp) && timestamp >= since24h;
+    }).length;
+
+    alertsSubtext.textContent = `↑ ${newAlerts24h} new (24h)`;
+  }
+}
+
+async function loadDashboardStatSubtextData(ownerId, stats) {
+  const [properties, plots, activeSensorsPage] = await Promise.all([
+    getAllPropertiesForDashboard(ownerId),
+    getAllPlotsForDashboard(ownerId),
+    getSensorsPaginated({
+      pageNumber: 1,
+      pageSize: 1,
+      sortBy: 'installedAt',
+      sortDirection: 'desc',
+      ownerId: ownerId || '',
+      status: 'Active'
+    }).catch(() => ({ totalCount: 0 }))
+  ]);
+
+  return {
+    propertiesCreatedThisMonth: countCreatedThisMonth(properties),
+    plotsCreatedThisMonth: countCreatedThisMonth(plots),
+    activeSensorsCount: getPaginatedTotal(activeSensorsPage),
+    sensorsTotal: Number(stats?.sensors || 0)
+  };
+}
+
+async function getAllPropertiesForDashboard(ownerId) {
+  const items = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage && pageNumber <= 50) {
+    const page = await getProperties({
+      pageNumber,
+      pageSize: 200,
+      sortBy: 'createdAt',
+      sortDirection: 'desc',
+      filter: '',
+      ownerId: ownerId || ''
+    });
+
+    const pageItems = page?.data || page?.items || page?.results || [];
+    items.push(...pageItems);
+    hasNextPage = Boolean(page?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return items;
+}
+
+async function getAllPlotsForDashboard(ownerId) {
+  const items = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage && pageNumber <= 50) {
+    const page = await getPlotsPaginated({
+      pageNumber,
+      pageSize: 200,
+      sortBy: 'createdat',
+      sortDirection: 'desc',
+      filter: '',
+      ownerId: ownerId || ''
+    });
+
+    const pageItems = page?.data || page?.items || page?.results || [];
+    items.push(...pageItems);
+    hasNextPage = Boolean(page?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return items;
+}
+
+function countCreatedThisMonth(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0;
+  }
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  return items.filter((item) => {
+    const createdAt = item?.createdAt || item?.CreatedAt;
+    const createdAtTs = new Date(createdAt || 0).getTime();
+    return !Number.isNaN(createdAtTs) && createdAtTs >= startOfMonth;
+  }).length;
+}
+
+function getPaginatedTotal(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return 0;
+  }
+
+  if (typeof payload.totalCount === 'number') {
+    return payload.totalCount;
+  }
+
+  if (typeof payload.TotalCount === 'number') {
+    return payload.TotalCount;
+  }
+
+  const items = payload?.items || payload?.data || payload?.results || [];
+  return Array.isArray(items) ? items.length : 0;
+}
+
 // ============================================
 // READINGS TABLE
 // ============================================
@@ -627,6 +790,12 @@ let ownerSubscriptionInFlight = null;
 let lastOwnerSubscriptionFailedAt = 0;
 let lastOwnerSubscriptionFailureKey = null;
 let latestMetricsTimestampMs = 0;
+let dashboardSubtextState = {
+  propertiesCreatedThisMonth: 0,
+  plotsCreatedThisMonth: 0,
+  activeSensorsCount: 0,
+  sensorsTotal: 0
+};
 const realtimeReadingsTimeline = [];
 const processedRealtimeEventKeys = new Map();
 const processedAlertRealtimeEventKeys = new Map();
@@ -680,11 +849,20 @@ async function setupRealTimeUpdates() {
 async function refreshDashboardFromFallback() {
   const ownerId = getSelectedOwnerIdForDashboard();
 
-  const [dashboardReadingsResult, latestReadingsResult, alertsResult] = await Promise.allSettled([
-    getLatestReadings(5, ownerId),
-    getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
-    getAlerts('pending', ownerId).catch(() => [])
-  ]);
+  const [dashboardReadingsResult, latestReadingsResult, alertsResult, statSubtextResult] =
+    await Promise.allSettled([
+      getLatestReadings(5, ownerId),
+      getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+      getPendingAlertsPage({ ownerId, pageNumber: 1, pageSize: 500 }).catch(() => ({
+        items: [],
+        totalCount: 0,
+        pageNumber: 1,
+        pageSize: 500
+      })),
+      loadDashboardStatSubtextData(ownerId, {
+        sensors: Number($('#stat-sensors')?.textContent || 0)
+      })
+    ]);
 
   if (dashboardReadingsResult.status === 'rejected') {
     console.warn('[DashboardRealtime] Fallback route failed: /api/dashboard/latest', {
@@ -714,17 +892,33 @@ async function refreshDashboardFromFallback() {
     dashboardReadingsResult.status === 'fulfilled' ? dashboardReadingsResult.value : [];
   const latestReadings =
     latestReadingsResult.status === 'fulfilled' ? latestReadingsResult.value : [];
-  const alerts = alertsResult.status === 'fulfilled' ? alertsResult.value : [];
+  const pendingAlertsPage =
+    alertsResult.status === 'fulfilled' ? alertsResult.value : { items: [], totalCount: 0 };
+  const alerts = pendingAlertsPage.items || [];
+  const statSubtextData = statSubtextResult.status === 'fulfilled' ? statSubtextResult.value : null;
 
   const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
   syncRealtimeStateFromReadings(readingsForTable);
   updateReadingsTable(readingsForTable);
-  updateAlertsSection(alerts);
-  renderAlertsDistributionChart(alerts);
+  updateAlertsSection(alerts.slice(0, 20));
   renderAlertsDistributionChart(alerts);
   const alertStat = $('#stat-alerts');
   if (alertStat) {
-    alertStat.textContent = String(alerts.length);
+    alertStat.textContent = String(pendingAlertsPage.totalCount || 0);
+  }
+
+  if (statSubtextData) {
+    dashboardSubtextState = {
+      propertiesCreatedThisMonth: Number(statSubtextData.propertiesCreatedThisMonth || 0),
+      plotsCreatedThisMonth: Number(statSubtextData.plotsCreatedThisMonth || 0),
+      activeSensorsCount: Number(statSubtextData.activeSensorsCount || 0),
+      sensorsTotal: Number(statSubtextData.sensorsTotal || 0)
+    };
+
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts
+    });
   }
 
   const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
@@ -1147,14 +1341,25 @@ async function handleAlertRealtime(eventType, payload) {
   }
 
   try {
-    const alerts = await getAlerts('pending', getSelectedOwnerIdForDashboard());
-    updateAlertsSection(alerts);
+    const alertsPage = await getPendingAlertsPage({
+      ownerId: getSelectedOwnerIdForDashboard(),
+      pageNumber: 1,
+      pageSize: 500
+    });
+    const alerts = alertsPage.items || [];
+
+    updateAlertsSection(alerts.slice(0, 20));
     renderAlertsDistributionChart(alerts);
 
     const alertStat = $('#stat-alerts');
     if (alertStat) {
-      alertStat.textContent = String(alerts.length);
+      alertStat.textContent = String(alertsPage.totalCount || 0);
     }
+
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts
+    });
   } catch (error) {
     console.warn(
       '[DashboardAlertsRealtime] Failed to refresh pending alerts after AlertHub event.',

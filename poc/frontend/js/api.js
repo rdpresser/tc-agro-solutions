@@ -245,10 +245,18 @@ export async function getProperties({
   pageSize = 10,
   sortBy = 'name',
   sortDirection = 'asc',
-  filter = ''
+  filter = '',
+  ownerId = ''
 } = {}) {
   const { data } = await farmApi.get('/api/properties', {
-    params: { pageNumber, pageSize, sortBy, sortDirection, filter }
+    params: {
+      pageNumber,
+      pageSize,
+      sortBy,
+      sortDirection,
+      filter,
+      ...(ownerId ? { ownerId } : {})
+    }
   });
   return data;
 }
@@ -438,6 +446,7 @@ export async function getSensorsPaginated({
   sortBy = 'installedAt',
   sortDirection = 'desc',
   filter = '',
+  ownerId = '',
   propertyId = '',
   plotId = '',
   type = '',
@@ -449,6 +458,7 @@ export async function getSensorsPaginated({
     sortBy,
     sortDirection,
     filter,
+    ownerId,
     propertyId,
     plotId,
     type,
@@ -643,6 +653,16 @@ function deriveSensorStatusFromReading(timestamp) {
  * @returns {Promise<Array>} List of alerts from API (empty when endpoint is unavailable)
  */
 export async function getAlerts(status = null, ownerId = null) {
+  const page = await getPendingAlertsPage({ ownerId, pageNumber: 1, pageSize: 20, status });
+  return page.items;
+}
+
+export async function getPendingAlertsPage({
+  ownerId = null,
+  pageNumber = 1,
+  pageSize = 20,
+  status = null
+} = {}) {
   try {
     if (status && status.toLowerCase() !== 'pending') {
       console.warn(
@@ -656,29 +676,44 @@ export async function getAlerts(status = null, ownerId = null) {
 
     const { data } = await analyticsApi.get('/api/alerts/pending', {
       params: {
-        pageNumber: 1,
-        pageSize: 20,
+        pageNumber,
+        pageSize,
         ...(ownerId ? { ownerId } : {})
       }
     });
 
-    const items = Array.isArray(data) ? data : data?.items || data?.data || data?.results || [];
+    const rawItems = Array.isArray(data) ? data : data?.items || data?.data || data?.results || [];
+    const items = rawItems.map(normalizePendingAlertItem);
 
-    return items.map((alert) => ({
-      ...alert,
-      severity: normalizeAlertSeverity(alert?.severity),
-      createdAt: alert?.createdAt || alert?.CreatedAt,
-      plotName: alert?.plotName || alert?.PlotName || '-',
-      sensorId: alert?.sensorId || alert?.SensorId || '-'
-    }));
+    return {
+      items,
+      totalCount: getPaginatedTotal(data),
+      pageNumber: data?.pageNumber || data?.PageNumber || pageNumber,
+      pageSize: data?.pageSize || data?.PageSize || pageSize
+    };
   } catch (error) {
     const statusCode = error?.response?.status;
     if (statusCode === 404 || statusCode === 501) {
-      return [];
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber,
+        pageSize
+      };
     }
 
     throw error;
   }
+}
+
+function normalizePendingAlertItem(alert) {
+  return {
+    ...alert,
+    severity: normalizeAlertSeverity(alert?.severity),
+    createdAt: alert?.createdAt || alert?.CreatedAt,
+    plotName: alert?.plotName || alert?.PlotName || '-',
+    sensorId: alert?.sensorId || alert?.SensorId || '-'
+  };
 }
 
 function normalizeAlertSeverity(severity) {
