@@ -23,6 +23,7 @@ export function initProtectedPage(options = {}) {
   initSidebar();
   setupLogout();
   setupUserDisplay();
+  setupUserMenuDropdown();
   setupRoleBasedMenuVisibility();
   updateActiveNavItem();
   rewriteNavLinks();
@@ -123,4 +124,110 @@ function setupUserDisplay() {
   if (userDisplay && userInfo?.name) {
     userDisplay.textContent = userInfo.name;
   }
+}
+
+function setupUserMenuDropdown() {
+  const userMenu = document.querySelector('.user-menu');
+  if (!userMenu) {
+    return;
+  }
+
+  const topbarRight = userMenu.closest('.topbar-right');
+  if (!topbarRight) {
+    return;
+  }
+
+  topbarRight.classList.add('user-menu-host');
+
+  const existingDropdown = topbarRight.querySelector('.user-menu-dropdown');
+  if (existingDropdown) {
+    existingDropdown.remove();
+  }
+
+  const tokenInfo = getTokenInfo() || {};
+  const currentUser = getUser() || {};
+  const userEmail = tokenInfo.email || currentUser.email || 'No email available';
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'user-menu-dropdown';
+  dropdown.setAttribute('aria-hidden', 'true');
+  dropdown.innerHTML = `
+    <div class="user-menu-dropdown-header">
+      <div class="user-menu-dropdown-title">Account</div>
+      <div class="user-menu-dropdown-email">${userEmail}</div>
+    </div>
+    <div class="user-menu-dropdown-actions">
+      <a href="#" class="user-menu-dropdown-link" data-action="change-password">🔐 Change password</a>
+      <a href="#" class="user-menu-dropdown-link" data-action="dropdown-logout">🚪 Logout</a>
+    </div>
+  `;
+
+  topbarRight.appendChild(dropdown);
+
+  const closeDropdown = () => {
+    userMenu.classList.remove('open');
+    dropdown.classList.remove('open');
+    userMenu.setAttribute('aria-expanded', 'false');
+    dropdown.setAttribute('aria-hidden', 'true');
+  };
+
+  const openDropdown = () => {
+    userMenu.classList.add('open');
+    dropdown.classList.add('open');
+    userMenu.setAttribute('aria-expanded', 'true');
+    dropdown.setAttribute('aria-hidden', 'false');
+  };
+
+  userMenu.setAttribute('role', 'button');
+  userMenu.setAttribute('tabindex', '0');
+  userMenu.setAttribute('aria-haspopup', 'menu');
+  userMenu.setAttribute('aria-expanded', 'false');
+
+  userMenu.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (dropdown.classList.contains('open')) {
+      closeDropdown();
+      return;
+    }
+
+    openDropdown();
+  });
+
+  userMenu.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      userMenu.click();
+    }
+  });
+
+  dropdown.addEventListener('click', (event) => {
+    event.stopPropagation();
+
+    const changePasswordLink = event.target.closest('[data-action="change-password"]');
+    if (changePasswordLink) {
+      event.preventDefault();
+      closeDropdown();
+      window.alert('Change password screen is not available yet.');
+      return;
+    }
+
+    const logoutLink = event.target.closest('[data-action="dropdown-logout"]');
+    if (logoutLink) {
+      event.preventDefault();
+      closeDropdown();
+      handleLogout();
+    }
+  });
+
+  document.addEventListener('click', () => {
+    closeDropdown();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeDropdown();
+    }
+  });
 }
