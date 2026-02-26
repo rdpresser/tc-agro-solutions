@@ -26,7 +26,9 @@ import {
   formatPercentage,
   formatRelativeTime,
   formatTemperature,
-  getUser
+  getUser,
+  getPaginatedTotalCount,
+  getPaginatedPageSize
 } from './utils.js';
 
 // ============================================
@@ -392,10 +394,10 @@ async function loadSensorSummaryStats(ownerId, viewState) {
   ]);
 
   const counts = {
-    Active: getPaginatedTotal(active),
-    Inactive: getPaginatedTotal(inactive),
-    Maintenance: getPaginatedTotal(maintenance),
-    Faulty: getPaginatedTotal(faulty)
+    Active: getPaginatedTotalCount(active),
+    Inactive: getPaginatedTotalCount(inactive),
+    Maintenance: getPaginatedTotalCount(maintenance),
+    Faulty: getPaginatedTotalCount(faulty)
   };
 
   if (selectedStatus) {
@@ -424,25 +426,9 @@ async function loadSensorSummaryStats(ownerId, viewState) {
   };
 }
 
-function getPaginatedTotal(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return 0;
-  }
-
-  if (typeof payload.totalCount === 'number') {
-    return payload.totalCount;
-  }
-
-  if (typeof payload.TotalCount === 'number') {
-    return payload.TotalCount;
-  }
-
-  const items = payload?.data || payload?.items || payload?.results || [];
-  return Array.isArray(items) ? items.length : 0;
-}
-
 function syncPaginationState(payload, currentItemsCount) {
-  const totalCount = getPaginatedTotal(payload);
+  const totalCount = getPaginatedTotalCount(payload, currentItemsCount);
+  monitoringViewState.pageSize = getPaginatedPageSize(payload, monitoringViewState.pageSize);
   const totalPagesRaw = payload?.totalPages || payload?.TotalPages;
   const hasPreviousPageRaw = payload?.hasPreviousPage || payload?.HasPreviousPage;
   const hasNextPageRaw = payload?.hasNextPage || payload?.HasNextPage;

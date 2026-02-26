@@ -18,7 +18,16 @@ import {
   SENSOR_STATUSES
 } from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
-import { $, debounce, formatDateTime, getPageUrl } from './utils.js';
+import {
+  $,
+  debounce,
+  formatDateTime,
+  getPageUrl,
+  getPaginatedItems,
+  getPaginatedTotalCount,
+  getPaginatedPageNumber,
+  getPaginatedPageSize
+} from './utils.js';
 
 let lastPageState = {
   pageNumber: 1,
@@ -129,8 +138,8 @@ async function loadSensors() {
 function normalizeSensorsResponse(data, filters) {
   if (Array.isArray(data)) {
     const totalCount = data.length;
-    const pageSize = filters?.pageSize || 10;
-    const pageNumber = filters?.pageNumber || 1;
+    const pageSize = getPaginatedPageSize(null, filters?.pageSize || 10);
+    const pageNumber = getPaginatedPageNumber(null, filters?.pageNumber || 1);
     const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
     const safePage = Math.min(Math.max(1, pageNumber), pageCount);
     const start = (safePage - 1) * pageSize;
@@ -146,10 +155,10 @@ function normalizeSensorsResponse(data, filters) {
     };
   }
 
-  const items = data?.data || data?.items || data?.results || [];
-  const totalCount = Number(data?.totalCount ?? items.length);
-  const pageNumber = Number(data?.pageNumber || filters?.pageNumber || 1);
-  const pageSize = Number(data?.pageSize || filters?.pageSize || 10);
+  const items = getPaginatedItems(data, []);
+  const totalCount = getPaginatedTotalCount(data, items.length);
+  const pageNumber = getPaginatedPageNumber(data, filters?.pageNumber || 1);
+  const pageSize = getPaginatedPageSize(data, filters?.pageSize || 10);
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
   const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;

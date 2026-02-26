@@ -14,7 +14,17 @@ import {
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
-import { $, $$, showConfirm, formatDate, formatRelativeTime, getUser } from './utils.js';
+import {
+  $,
+  $$,
+  showConfirm,
+  formatDate,
+  formatRelativeTime,
+  getUser,
+  getPaginatedTotalCount,
+  getPaginatedPageNumber,
+  getPaginatedPageSize
+} from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -558,9 +568,9 @@ function getRequestedAlertStatus() {
 }
 
 function applyAlertsPageState(alertsPage) {
-  const totalCount = Number(alertsPage?.totalCount || 0);
-  const pageSizeFromResponse = Number(alertsPage?.pageSize || alertsViewState.pageSize);
-  const pageNumberFromResponse = Number(alertsPage?.pageNumber || alertsViewState.pageNumber);
+  const totalCount = getPaginatedTotalCount(alertsPage, 0);
+  const pageSizeFromResponse = getPaginatedPageSize(alertsPage, alertsViewState.pageSize);
+  const pageNumberFromResponse = getPaginatedPageNumber(alertsPage, alertsViewState.pageNumber);
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSizeFromResponse));
 
   alertsViewState.totalCount = totalCount;

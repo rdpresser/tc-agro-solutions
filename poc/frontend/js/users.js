@@ -6,7 +6,16 @@ import { fetchIdentitySwagger, getUsers, deleteUser, normalizeError } from './ap
 import { getTokenInfo } from './auth.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
-import { $, showConfirm, getPageUrl, debounce } from './utils.js';
+import {
+  $,
+  showConfirm,
+  getPageUrl,
+  debounce,
+  getPaginatedItems,
+  getPaginatedTotalCount,
+  getPaginatedPageNumber,
+  getPaginatedPageSize
+} from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -109,20 +118,20 @@ async function loadUsers(filters = getFiltersFromUI()) {
 function normalizeUsersResponse(data, filters) {
   if (Array.isArray(data)) {
     const totalCount = data.length;
-    const pageSize = filters?.pageSize || totalCount || 1;
+    const pageSize = getPaginatedPageSize(null, filters?.pageSize || totalCount || 1);
     return {
       items: data,
       totalCount,
-      pageNumber: filters?.pageNumber || 1,
+      pageNumber: getPaginatedPageNumber(null, filters?.pageNumber || 1),
       pageSize,
       pageCount: Math.max(1, Math.ceil(totalCount / pageSize))
     };
   }
 
-  const items = data?.items || data?.data || data?.users || data?.results || [];
-  const totalCount = data?.totalCount ?? data?.total ?? data?.count ?? items.length;
-  const pageNumber = data?.pageNumber || filters?.pageNumber || 1;
-  const pageSize = data?.pageSize || filters?.pageSize || 10;
+  const items = getPaginatedItems(data, []);
+  const totalCount = getPaginatedTotalCount(data, items.length);
+  const pageNumber = getPaginatedPageNumber(data, filters?.pageNumber || 1);
+  const pageSize = getPaginatedPageSize(data, filters?.pageSize || 10);
   const pageCount = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
   const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
   const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;

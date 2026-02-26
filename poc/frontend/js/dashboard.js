@@ -40,6 +40,7 @@ import {
   formatPercentage,
   formatRelativeTime,
   formatTemperature,
+  getPaginatedTotalCount,
   getUser
 } from './utils.js';
 
@@ -515,7 +516,7 @@ async function loadDashboardAlertsData(ownerId) {
     summaryResult.status === 'fulfilled'
       ? summaryResult.value
       : {
-          pendingAlertsTotal: Number(page?.totalCount || 0),
+          pendingAlertsTotal: getPaginatedTotalCount(page),
           criticalPendingCount: 0,
           highPendingCount: 0,
           mediumPendingCount: 0,
@@ -530,12 +531,12 @@ async function loadDashboardAlertsData(ownerId) {
 }
 
 function resolvePendingAlertsTotal(summary, page) {
-  const summaryTotal = Number(summary?.pendingAlertsTotal || 0);
+  const summaryTotal = getPaginatedTotalCount({ totalCount: summary?.pendingAlertsTotal }, 0);
   if (summaryTotal > 0) {
     return summaryTotal;
   }
 
-  return Number(page?.totalCount || 0);
+  return getPaginatedTotalCount(page, 0);
 }
 
 async function loadDashboardStatSubtextData(ownerId, stats) {
@@ -555,7 +556,7 @@ async function loadDashboardStatSubtextData(ownerId, stats) {
   return {
     propertiesCreatedThisMonth: countCreatedThisMonth(properties),
     plotsCreatedThisMonth: countCreatedThisMonth(plots),
-    activeSensorsCount: getPaginatedTotal(activeSensorsPage),
+    activeSensorsCount: getPaginatedTotalCount(activeSensorsPage),
     sensorsTotal: Number(stats?.sensors || 0)
   };
 }
@@ -621,23 +622,6 @@ function countCreatedThisMonth(items) {
     const createdAtTs = new Date(createdAt || 0).getTime();
     return !Number.isNaN(createdAtTs) && createdAtTs >= startOfMonth;
   }).length;
-}
-
-function getPaginatedTotal(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return 0;
-  }
-
-  if (typeof payload.totalCount === 'number') {
-    return payload.totalCount;
-  }
-
-  if (typeof payload.TotalCount === 'number') {
-    return payload.TotalCount;
-  }
-
-  const items = payload?.items || payload?.data || payload?.results || [];
-  return Array.isArray(items) ? items.length : 0;
 }
 
 // ============================================

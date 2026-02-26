@@ -7,7 +7,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
 
 import { toast } from './i18n.js';
-import { APP_CONFIG, getToken, clearToken, navigateTo } from './utils.js';
+import { APP_CONFIG, getToken, clearToken, navigateTo, getPaginatedTotalCount } from './utils.js';
 
 // ============================================
 // AXIOS INSTANCE WITH INTERCEPTORS
@@ -151,9 +151,9 @@ export async function getDashboardStats(ownerId = null) {
     })
   ]);
 
-  const propertiesTotal = getPaginatedTotal(propertiesResponse?.data);
-  const plotsTotal = getPaginatedTotal(plotsResponse?.data);
-  const sensorsTotal = getPaginatedTotal(sensorsResponse?.data);
+  const propertiesTotal = getPaginatedTotalCount(propertiesResponse?.data);
+  const plotsTotal = getPaginatedTotalCount(plotsResponse?.data);
+  const sensorsTotal = getPaginatedTotalCount(sensorsResponse?.data);
 
   return {
     properties: propertiesTotal,
@@ -682,7 +682,7 @@ export async function getPendingAlertsPage({
 
     return {
       items,
-      totalCount: getPaginatedTotal(data),
+      totalCount: getPaginatedTotalCount(data),
       pageNumber: data?.pageNumber || data?.PageNumber || pageNumber,
       pageSize: data?.pageSize || data?.PageSize || pageSize
     };
@@ -761,23 +761,6 @@ function normalizeAlertSeverity(severity) {
   if (value === 'medium') return 'warning';
   if (value === 'low') return 'info';
   return value;
-}
-
-function getPaginatedTotal(responseData) {
-  if (!responseData || typeof responseData !== 'object') {
-    return 0;
-  }
-
-  if (typeof responseData.totalCount === 'number') {
-    return responseData.totalCount;
-  }
-
-  if (typeof responseData.TotalCount === 'number') {
-    return responseData.TotalCount;
-  }
-
-  const items = responseData.items || responseData.data || responseData.results || [];
-  return Array.isArray(items) ? items.length : 0;
 }
 
 /**
