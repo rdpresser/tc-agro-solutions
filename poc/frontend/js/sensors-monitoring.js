@@ -129,52 +129,7 @@ function renderSensorsGrid(sensors) {
     return;
   }
 
-  grid.innerHTML = sensors
-    .map(
-      (sensor) => `
-    <div class="sensor-card ${getSensorStatusBadgeClass(sensor.status)}" data-sensor-id="${sensor.id}" data-status="${normalizeSensorStatus(sensor.status)}">
-      <div class="sensor-header">
-        <span class="sensor-id">${getSensorDisplayName(sensor)}</span>
-        <span class="sensor-status ${getSensorStatusBadgeClass(sensor.status)}">
-          ${getSensorStatusDisplay(sensor.status)}
-        </span>
-      </div>
-      
-      <div class="sensor-plot">📍 ${formatSensorLocation(sensor)}</div>
-      
-      <div class="sensor-readings">
-        <div class="reading">
-          <span class="reading-label">🌡️ Temp</span>
-          <span class="reading-value" data-metric="temperature">
-            ${formatTemperature(sensor.temperature)}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">💧 Humidity</span>
-          <span class="reading-value" data-metric="humidity">
-            ${formatPercentage(sensor.humidity)}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">🌿 Soil</span>
-          <span class="reading-value" data-metric="soilMoisture">
-            ${formatPercentage(sensor.soilMoisture)}
-          </span>
-        </div>
-      </div>
-      
-      <div class="sensor-footer">
-        <span class="battery ${getBatteryClass(sensor.battery)}">
-          🔋 ${formatPercentage(sensor.battery)}
-        </span>
-        <span class="last-update" title="${sensor.lastReading}">
-          ${formatRelativeTime(sensor.lastReading)}
-        </span>
-      </div>
-    </div>
-  `
-    )
-    .join('');
+  grid.innerHTML = sensors.map((sensor) => createSensorCardHtml(sensor, sensor.status)).join('');
 }
 
 function getSensorDisplayName(sensor) {
@@ -185,12 +140,6 @@ function formatSensorLocation(sensor) {
   const plotName = sensor.plotName || '-';
   const propertyName = sensor.propertyName || '';
   return propertyName ? `${plotName} - ${propertyName}` : plotName;
-}
-
-function getBatteryClass(level) {
-  if (level < 20) return 'critical';
-  if (level < 50) return 'warning';
-  return 'good';
 }
 
 /**
@@ -297,7 +246,8 @@ async function setupRealTimeUpdates() {
         const newStatus = normalizeSensorStatus(data.status);
 
         const badgeClass = getSensorStatusBadgeClass(newStatus);
-        card.className = `sensor-card ${badgeClass}`;
+        card.className = 'card sensor-card';
+        card.style.cssText = getSensorCardStyle(newStatus);
         card.dataset.status = newStatus;
 
         const statusEl = card.querySelector('.sensor-status');
@@ -565,49 +515,56 @@ function handleRealtimeSensorReading(reading) {
 function createSensorCardHtml(sensor, status = 'Active') {
   const normalizedStatus = normalizeSensorStatus(status);
   const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+  const cardStyle = getSensorCardStyle(normalizedStatus);
 
   return `
-    <div class="sensor-card ${badgeClass}" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}">
-      <div class="sensor-header">
-        <span class="sensor-id">${getSensorDisplayName(sensor)}</span>
-        <span class="sensor-status ${badgeClass}">
-          ${getSensorStatusDisplay(normalizedStatus)}
+    <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" style="${cardStyle}">
+      <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+        <span class="badge ${badgeClass}">${getSensorStatusDisplay(normalizedStatus)}</span>
+        <span class="text-muted last-update" style="font-size: 0.85em" title="${sensor.lastReading}">
+          ${formatRelativeTime(sensor.lastReading)}
         </span>
       </div>
 
-      <div class="sensor-plot">📍 ${formatSensorLocation(sensor)}</div>
+      <h3 class="sensor-id" style="margin: 0 0 4px 0">📡 ${getSensorDisplayName(sensor)}</h3>
+      <p class="text-muted sensor-location" style="margin: 0 0 16px 0; font-size: 0.9em">
+        ${formatSensorLocation(sensor)}
+      </p>
 
       <div class="sensor-readings">
-        <div class="reading">
-          <span class="reading-label">🌡️ Temp</span>
-          <span class="reading-value" data-metric="temperature">
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">🌡️ Temperature</span>
+          <span class="sensor-reading-value" data-metric="temperature">
             ${formatTemperature(sensor.temperature)}
           </span>
         </div>
-        <div class="reading">
-          <span class="reading-label">💧 Humidity</span>
-          <span class="reading-value" data-metric="humidity">
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">💧 Humidity</span>
+          <span class="sensor-reading-value" data-metric="humidity">
             ${formatPercentage(sensor.humidity)}
           </span>
         </div>
-        <div class="reading">
-          <span class="reading-label">🌿 Soil</span>
-          <span class="reading-value" data-metric="soilMoisture">
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">🌱 Soil Moisture</span>
+          <span class="sensor-reading-value" data-metric="soilMoisture">
             ${formatPercentage(sensor.soilMoisture)}
           </span>
         </div>
       </div>
 
-      <div class="sensor-footer">
-        <span class="battery ${getBatteryClass(sensor.battery)}">
-          🔋 ${formatPercentage(sensor.battery)}
-        </span>
-        <span class="last-update" title="${sensor.lastReading}">
-          ${formatRelativeTime(sensor.lastReading)}
-        </span>
+      <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <span class="text-muted" style="font-size: 0.9em">🔋 ${formatPercentage(sensor.battery)}</span>
+        <button class="btn btn-outline btn-sm" type="button">📊 View History</button>
       </div>
     </div>
   `;
+}
+
+function getSensorCardStyle(status) {
+  if (status === 'Maintenance') return 'border-left: 4px solid #ffc107';
+  if (status === 'Faulty') return 'border-left: 4px solid #dc3545; opacity: 0.85';
+  if (status === 'Inactive') return 'border-left: 4px solid #adb5bd; opacity: 0.9';
+  return '';
 }
 
 function upsertSensorCard(reading) {
@@ -659,6 +616,11 @@ function updateSensorCard(sensorId, reading) {
   const plotEl = card.querySelector('.sensor-plot');
   if (plotEl) {
     plotEl.textContent = `📍 ${formatSensorLocation(reading)}`;
+  }
+
+  const locationEl = card.querySelector('.sensor-location');
+  if (locationEl) {
+    locationEl.textContent = formatSensorLocation(reading);
   }
 
   // Update readings with animation

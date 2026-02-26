@@ -706,6 +706,48 @@ export async function getPendingAlertsPage({
   }
 }
 
+export async function getPendingAlertsSummary({ ownerId = null, windowHours = 24 } = {}) {
+  try {
+    const { data } = await analyticsApi.get('/api/alerts/pending/summary', {
+      params: {
+        windowHours,
+        ...(ownerId ? { ownerId } : {})
+      }
+    });
+
+    return {
+      pendingAlertsTotal: Number(data?.pendingAlertsTotal || data?.PendingAlertsTotal || 0),
+      affectedPlotsCount: Number(data?.affectedPlotsCount || data?.AffectedPlotsCount || 0),
+      affectedSensorsCount: Number(data?.affectedSensorsCount || data?.AffectedSensorsCount || 0),
+      criticalPendingCount: Number(data?.criticalPendingCount || data?.CriticalPendingCount || 0),
+      highPendingCount: Number(data?.highPendingCount || data?.HighPendingCount || 0),
+      mediumPendingCount: Number(data?.mediumPendingCount || data?.MediumPendingCount || 0),
+      lowPendingCount: Number(data?.lowPendingCount || data?.LowPendingCount || 0),
+      newPendingInWindowCount: Number(
+        data?.newPendingInWindowCount || data?.NewPendingInWindowCount || 0
+      ),
+      windowHours: Number(data?.windowHours || data?.WindowHours || windowHours)
+    };
+  } catch (error) {
+    const statusCode = error?.response?.status;
+    if (statusCode === 404 || statusCode === 501) {
+      return {
+        pendingAlertsTotal: 0,
+        affectedPlotsCount: 0,
+        affectedSensorsCount: 0,
+        criticalPendingCount: 0,
+        highPendingCount: 0,
+        mediumPendingCount: 0,
+        lowPendingCount: 0,
+        newPendingInWindowCount: 0,
+        windowHours
+      };
+    }
+
+    throw error;
+  }
+}
+
 function normalizePendingAlertItem(alert) {
   return {
     ...alert,

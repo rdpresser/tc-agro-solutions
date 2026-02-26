@@ -96,7 +96,7 @@
               </div>
             </div>
             <div class="page-header-actions">
-              <button class="btn btn-outline" onclick="refreshSensors()">🔄 Refresh</button>
+              <button id="refresh-sensors" class="btn btn-outline">⟳ Refresh</button>
             </div>
           </div>
 
@@ -110,7 +110,7 @@
                 📡
               </div>
               <div class="stat-info">
-                <span class="stat-value">12</span>
+                <span id="stat-total-sensors" class="stat-value">0</span>
                 <span class="stat-label">Total Sensors</span>
               </div>
             </div>
@@ -122,14 +122,14 @@
                 ✅
               </div>
               <div class="stat-info">
-                <span class="stat-value">8</span>
+                <span id="stat-active-sensors" class="stat-value">0</span>
                 <span class="stat-label">Active</span>
               </div>
             </div>
             <div class="stat-card">
               <div class="stat-icon">⚪</div>
               <div class="stat-info">
-                <span class="stat-value">1</span>
+                <span id="stat-inactive-sensors" class="stat-value">0</span>
                 <span class="stat-label">Inactive</span>
               </div>
             </div>
@@ -141,7 +141,7 @@
                 ⚠️
               </div>
               <div class="stat-info">
-                <span class="stat-value">2</span>
+                <span id="stat-maintenance-sensors" class="stat-value">0</span>
                 <span class="stat-label">Maintenance</span>
               </div>
             </div>
@@ -153,7 +153,7 @@
                 ❌
               </div>
               <div class="stat-info">
-                <span class="stat-value">1</span>
+                <span id="stat-faulty-sensors" class="stat-value">0</span>
                 <span class="stat-label">Faulty</span>
               </div>
             </div>
@@ -184,7 +184,7 @@
           </div>
 
           <!-- Sensors Grid -->
-          <div class="sensor-grid" id="sensorGrid">
+          <div class="sensor-grid" id="sensors-grid">
             <!-- Sensor Card 1 -->
             <div class="card sensor-card" data-status="Active">
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">

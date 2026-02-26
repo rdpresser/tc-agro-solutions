@@ -54,10 +54,13 @@ export default defineConfig(({ mode }) => ({
       },
       // Suppress warnings
       onwarn(warning, warn) {
+        const message = String(warning?.message || '');
+
         // Ignore SignalR PURE comment warnings
         if (
           warning.code === 'SOURCEMAP_ERROR' ||
-          (warning.code === 'PLUGIN_WARNING' && warning.message.includes('PURE'))
+          (warning.code === 'PLUGIN_WARNING' && message.includes('PURE')) ||
+          message.includes('annotation that Rollup cannot interpret')
         ) {
           return;
         }
