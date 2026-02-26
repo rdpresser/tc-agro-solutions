@@ -391,6 +391,33 @@
             </div>
           </div>
 
+          <div class="card" style="margin-top: 16px; margin-bottom: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px">
+              <div class="d-flex align-center" style="gap: 8px">
+                <button id="sensors-prev-page" class="btn btn-outline btn-sm" type="button">
+                  ← Previous
+                </button>
+                <button id="sensors-next-page" class="btn btn-outline btn-sm" type="button">
+                  Next →
+                </button>
+              </div>
+
+              <span id="sensors-page-info" class="text-muted" style="font-size: 0.9em">
+                Showing 0-0 of 0
+              </span>
+
+              <div class="d-flex align-center" style="gap: 8px">
+                <label for="sensors-page-size" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
+                <select id="sensors-page-size" class="form-control form-select" style="width: 140px">
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- SignalR Status -->
           <div class="card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">

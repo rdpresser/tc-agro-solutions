@@ -3,7 +3,8 @@
  */
 
 import {
-  getSensors,
+  getSensorsPaginated,
+  getReadingsLatest,
   initSignalRConnection,
   stopSignalRConnection,
   joinOwnerGroup,
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadStatusFilterOptions();
   loadTypeFilterOptions();
+  hydrateInitialViewState();
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
@@ -66,6 +68,32 @@ window.addEventListener('beforeunload', async () => {
 // ============================================
 // DATA LOADING
 // ============================================
+
+const MONITORING_PAGE_SIZE_DEFAULT = 50;
+const MONITORING_PAGE_SIZE_OPTIONS = [50, 100];
+
+const monitoringViewState = {
+  search: '',
+  status: '',
+  type: '',
+  pageNumber: 1,
+  pageSize: MONITORING_PAGE_SIZE_DEFAULT,
+  totalCount: 0,
+  totalPages: 1,
+  hasPreviousPage: false,
+  hasNextPage: false
+};
+
+function hydrateInitialViewState() {
+  const pageSizeSelect = $('#sensors-page-size');
+
+  if (pageSizeSelect) {
+    pageSizeSelect.innerHTML = MONITORING_PAGE_SIZE_OPTIONS.map(
+      (size) => `<option value="${size}">${size} / page</option>`
+    ).join('');
+    pageSizeSelect.value = String(monitoringViewState.pageSize);
+  }
+}
 
 function loadStatusFilterOptions() {
   const select = $('#statusFilter');
@@ -110,14 +138,169 @@ async function loadSensors() {
   grid.innerHTML = '<div class="loading">Loading sensors...</div>';
 
   try {
-    const sensors = await getSensors();
+    const ownerId = getOwnerScopeIdForMonitoring();
+    const [sensorsPage, latestReadings, summaryStats] = await Promise.all([
+      getSensorsPaginated({
+        pageNumber: monitoringViewState.pageNumber,
+        pageSize: monitoringViewState.pageSize,
+        sortBy: 'installedAt',
+        sortDirection: 'desc',
+        filter: monitoringViewState.search,
+        ownerId: ownerId || '',
+        type: monitoringViewState.type,
+        status: monitoringViewState.status
+      }),
+      getReadingsLatest({
+        pageNumber: 1,
+        pageSize: 1000,
+        ownerId: ownerId || null
+      }).catch(() => []),
+      loadSensorSummaryStats(ownerId)
+    ]);
+
+    const latestReadingsMap = new Map(
+      (Array.isArray(latestReadings) ? latestReadings : [])
+        .filter((reading) => reading?.sensorId)
+        .map((reading) => [String(reading.sensorId).toLowerCase(), reading])
+    );
+
+    const rawItems = sensorsPage?.data || sensorsPage?.items || sensorsPage?.results || [];
+    const sensors = rawItems.map((sensor) => mapSensorForMonitoring(sensor, latestReadingsMap));
+
+    syncPaginationState(sensorsPage, sensors.length);
     renderSensorsGrid(sensors);
-    updateStatusSummary(sensors);
+    updateStatusSummary(summaryStats || null);
+    renderPaginationControls();
   } catch (error) {
     console.error('Error loading sensors:', error);
     grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
     toast('sensors.load_failed', 'error');
   }
+}
+
+function mapSensorForMonitoring(sensor, latestReadingsMap) {
+  const sensorId = sensor?.id || sensor?.sensorId || sensor?.SensorId;
+  const normalizedSensorId = String(sensorId || '').toLowerCase();
+  const reading = latestReadingsMap.get(normalizedSensorId) || null;
+  const timestamp = reading?.timestamp || reading?.time || reading?.Time || null;
+
+  return {
+    id: sensorId,
+    sensorId,
+    sensorLabel: sensor?.label || sensor?.sensorLabel || sensor?.name || null,
+    type: sensor?.type || sensor?.sensorType || '',
+    plotName: sensor?.plotName || reading?.plotName || '-',
+    propertyName: sensor?.propertyName || reading?.propertyName || '-',
+    status: sensor?.status || deriveSensorStatusFromTimestamp(timestamp),
+    battery: reading?.batteryLevel ?? reading?.battery ?? null,
+    lastReading: timestamp,
+    temperature: reading?.temperature ?? null,
+    humidity: reading?.humidity ?? null,
+    soilMoisture: reading?.soilMoisture ?? null
+  };
+}
+
+async function loadSensorSummaryStats(ownerId) {
+  const baseQuery = {
+    pageNumber: 1,
+    pageSize: 1,
+    sortBy: 'installedAt',
+    sortDirection: 'desc',
+    filter: '',
+    ownerId: ownerId || '',
+    type: ''
+  };
+
+  const [total, active, inactive, maintenance, faulty] = await Promise.all([
+    getSensorsPaginated({ ...baseQuery }),
+    getSensorsPaginated({ ...baseQuery, status: 'Active' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Inactive' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Maintenance' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Faulty' })
+  ]);
+
+  return {
+    total: getPaginatedTotal(total),
+    Active: getPaginatedTotal(active),
+    Inactive: getPaginatedTotal(inactive),
+    Maintenance: getPaginatedTotal(maintenance),
+    Faulty: getPaginatedTotal(faulty)
+  };
+}
+
+function getPaginatedTotal(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return 0;
+  }
+
+  if (typeof payload.totalCount === 'number') {
+    return payload.totalCount;
+  }
+
+  if (typeof payload.TotalCount === 'number') {
+    return payload.TotalCount;
+  }
+
+  const items = payload?.data || payload?.items || payload?.results || [];
+  return Array.isArray(items) ? items.length : 0;
+}
+
+function syncPaginationState(payload, currentItemsCount) {
+  const totalCount = getPaginatedTotal(payload);
+  const totalPagesRaw = payload?.totalPages || payload?.TotalPages;
+  const hasPreviousPageRaw = payload?.hasPreviousPage || payload?.HasPreviousPage;
+  const hasNextPageRaw = payload?.hasNextPage || payload?.HasNextPage;
+
+  monitoringViewState.totalCount = totalCount;
+  monitoringViewState.totalPages =
+    typeof totalPagesRaw === 'number' && totalPagesRaw > 0
+      ? totalPagesRaw
+      : Math.max(1, Math.ceil(totalCount / monitoringViewState.pageSize));
+  monitoringViewState.hasPreviousPage =
+    typeof hasPreviousPageRaw === 'boolean'
+      ? hasPreviousPageRaw
+      : monitoringViewState.pageNumber > 1;
+  monitoringViewState.hasNextPage =
+    typeof hasNextPageRaw === 'boolean'
+      ? hasNextPageRaw
+      : monitoringViewState.pageNumber < monitoringViewState.totalPages;
+
+  if (currentItemsCount === 0 && monitoringViewState.pageNumber > 1) {
+    monitoringViewState.pageNumber = 1;
+  }
+}
+
+function renderPaginationControls() {
+  const info = $('#sensors-page-info');
+  const previousButton = $('#sensors-prev-page');
+  const nextButton = $('#sensors-next-page');
+
+  if (info) {
+    const total = monitoringViewState.totalCount;
+    const from =
+      total === 0 ? 0 : (monitoringViewState.pageNumber - 1) * monitoringViewState.pageSize + 1;
+    const to = Math.min(total, monitoringViewState.pageNumber * monitoringViewState.pageSize);
+
+    info.textContent = `Showing ${from}-${to} of ${total}`;
+  }
+
+  if (previousButton) {
+    previousButton.disabled = !monitoringViewState.hasPreviousPage;
+  }
+
+  if (nextButton) {
+    nextButton.disabled = !monitoringViewState.hasNextPage;
+  }
+}
+
+function deriveSensorStatusFromTimestamp(timestamp) {
+  if (!timestamp) return 'Inactive';
+
+  const ageMs = Date.now() - new Date(timestamp).getTime();
+  if (Number.isNaN(ageMs)) return 'Inactive';
+  if (ageMs <= 15 * 60 * 1000) return 'Active';
+  if (ageMs <= 60 * 60 * 1000) return 'Maintenance';
+  return 'Inactive';
 }
 
 function renderSensorsGrid(sensors) {
@@ -146,36 +329,34 @@ function formatSensorLocation(sensor) {
  * Update status summary KPI cards based on sensor array or rendered cards
  * @param {Array} [sensors] - Array of sensor objects. If not provided, counts from rendered cards
  */
-function updateStatusSummary(sensors = null) {
-  let counts;
+function updateStatusSummary(summary = null) {
+  let counts = {
+    total: 0,
+    Active: 0,
+    Inactive: 0,
+    Maintenance: 0,
+    Faulty: 0
+  };
 
-  if (sensors) {
-    // Count from provided array
+  if (summary && typeof summary === 'object' && !Array.isArray(summary)) {
     counts = {
-      total: sensors.length,
-      Active: 0,
-      Inactive: 0,
-      Maintenance: 0,
-      Faulty: 0
+      total: Number(summary.total || 0),
+      Active: Number(summary.Active || 0),
+      Inactive: Number(summary.Inactive || 0),
+      Maintenance: Number(summary.Maintenance || 0),
+      Faulty: Number(summary.Faulty || 0)
     };
-
-    sensors.forEach((sensor) => {
+  } else if (Array.isArray(summary)) {
+    counts.total = summary.length;
+    summary.forEach((sensor) => {
       const normalized = normalizeSensorStatus(sensor.status);
       if (counts[normalized] !== undefined) {
         counts[normalized]++;
       }
     });
   } else {
-    // Count from rendered cards in DOM
     const cards = $$('.sensor-card');
-    counts = {
-      total: cards.length,
-      Active: 0,
-      Inactive: 0,
-      Maintenance: 0,
-      Faulty: 0
-    };
-
+    counts.total = cards.length;
     cards.forEach((card) => {
       const normalized = normalizeSensorStatus(card.dataset.status);
       if (counts[normalized] !== undefined) {
@@ -250,14 +431,14 @@ async function setupRealTimeUpdates() {
         card.style.cssText = getSensorCardStyle(newStatus);
         card.dataset.status = newStatus;
 
-        const statusEl = card.querySelector('.sensor-status');
+        const statusEl = card.querySelector('.badge');
         if (statusEl) {
-          statusEl.className = `sensor-status ${badgeClass}`;
+          statusEl.className = `badge ${badgeClass}`;
           statusEl.textContent = getSensorStatusDisplay(newStatus);
         }
 
         if (oldStatus !== newStatus) {
-          updateStatusSummary();
+          void loadSensors();
         }
       }
     },
@@ -574,34 +755,7 @@ function upsertSensorCard(reading) {
   const existingCard = $(`[data-sensor-id="${sensorId}"]`);
   if (existingCard) {
     updateSensorCard(sensorId, reading);
-    return;
   }
-
-  const grid = $('#sensors-grid');
-  if (!grid) return;
-
-  if (grid.querySelector('.empty')) {
-    grid.innerHTML = '';
-  }
-
-  const html = createSensorCardHtml(
-    {
-      id: sensorId,
-      sensorId,
-      sensorLabel: reading.sensorLabel || null,
-      plotName: reading.plotName || '-',
-      propertyName: reading.propertyName || '-',
-      temperature: reading.temperature,
-      humidity: reading.humidity,
-      soilMoisture: reading.soilMoisture,
-      battery: reading.batteryLevel ?? 0,
-      lastReading: reading.timestamp || new Date().toISOString()
-    },
-    'Active'
-  );
-
-  grid.insertAdjacentHTML('afterbegin', html);
-  updateStatusSummary();
 }
 
 function updateSensorCard(sensorId, reading) {
@@ -610,7 +764,7 @@ function updateSensorCard(sensorId, reading) {
 
   const headerEl = card.querySelector('.sensor-id');
   if (headerEl && reading.sensorLabel) {
-    headerEl.textContent = reading.sensorLabel;
+    headerEl.textContent = `📡 ${reading.sensorLabel}`;
   }
 
   const plotEl = card.querySelector('.sensor-plot');
@@ -656,7 +810,6 @@ function updateSensorCard(sensorId, reading) {
 // ============================================
 
 function setupEventListeners() {
-  // Refresh button
   const refreshBtn = $('#refresh-sensors');
   refreshBtn?.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -669,41 +822,63 @@ function setupEventListeners() {
     toast('sensors.updated', 'success');
   });
 
-  // Status filter
-  const statusFilter = $('#statusFilter');
-  statusFilter?.addEventListener('change', () => {
-    const selectedStatus = normalizeSensorStatus(statusFilter.value);
-    const cards = $$('.sensor-card');
+  const searchInput = $('#searchInput');
+  let searchDebounceTimer = null;
+  searchInput?.addEventListener('input', (event) => {
+    monitoringViewState.search = String(event?.target?.value || '').trim();
+    monitoringViewState.pageNumber = 1;
 
-    cards.forEach((card) => {
-      const cardStatus = normalizeSensorStatus(card.dataset.status);
-      if (!selectedStatus || selectedStatus === cardStatus) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
-    });
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+      void loadSensors();
+    }, 250);
   });
 
-  const filterBtns = $$('[data-filter-status]');
-  filterBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // Update active state
-      filterBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+  const statusFilter = $('#statusFilter');
+  statusFilter?.addEventListener('change', () => {
+    monitoringViewState.status = normalizeSensorStatus(statusFilter.value);
+    monitoringViewState.pageNumber = 1;
+    void loadSensors();
+  });
 
-      // Filter cards
-      const status = btn.dataset.filterStatus;
-      const cards = $$('.sensor-card');
+  const typeFilter = $('#typeFilter');
+  typeFilter?.addEventListener('change', () => {
+    monitoringViewState.type = String(typeFilter.value || '').trim();
+    monitoringViewState.pageNumber = 1;
+    void loadSensors();
+  });
 
-      cards.forEach((card) => {
-        if (status === 'all' || card.classList.contains(status)) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
+  const pageSizeSelect = $('#sensors-page-size');
+  pageSizeSelect?.addEventListener('change', () => {
+    const nextSize = Number(pageSizeSelect.value || MONITORING_PAGE_SIZE_DEFAULT);
+    monitoringViewState.pageSize = MONITORING_PAGE_SIZE_OPTIONS.includes(nextSize)
+      ? nextSize
+      : MONITORING_PAGE_SIZE_DEFAULT;
+    monitoringViewState.pageNumber = 1;
+    void loadSensors();
+  });
+
+  const previousButton = $('#sensors-prev-page');
+  previousButton?.addEventListener('click', () => {
+    if (!monitoringViewState.hasPreviousPage) {
+      return;
+    }
+
+    monitoringViewState.pageNumber -= 1;
+    void loadSensors();
+  });
+
+  const nextButton = $('#sensors-next-page');
+  nextButton?.addEventListener('click', () => {
+    if (!monitoringViewState.hasNextPage) {
+      return;
+    }
+
+    monitoringViewState.pageNumber += 1;
+    void loadSensors();
   });
 }
 
