@@ -160,8 +160,30 @@ function getSelectedOwnerIdForDashboard() {
   return selectedOwnerId || null;
 }
 
+function getCurrentUserOwnerIdFromClaims() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return null;
+  }
+
+  const ownerIdCandidates = [
+    currentUser.sub,
+    currentUser.id,
+    currentUser.userId,
+    currentUser.ownerId,
+    currentUser.nameIdentifier
+  ];
+
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+  return ownerId ? String(ownerId).trim() : null;
+}
+
 function getRealtimeOwnerScopeId() {
-  return isCurrentUserAdmin() ? getSelectedOwnerIdForDashboard() : null;
+  if (isCurrentUserAdmin()) {
+    return getSelectedOwnerIdForDashboard();
+  }
+
+  return getCurrentUserOwnerIdFromClaims();
 }
 
 async function setupOwnerSelectorForDashboard() {
@@ -601,12 +623,16 @@ let hasSetupForRealtime = true;
 let sensorRealtimeState = 'disconnected';
 let alertsRealtimeState = 'disconnected';
 let selectedOwnerId = null;
+let ownerSubscriptionInFlight = null;
+let lastOwnerSubscriptionFailedAt = 0;
+let lastOwnerSubscriptionFailureKey = null;
 let latestMetricsTimestampMs = 0;
 const realtimeReadingsTimeline = [];
 const processedRealtimeEventKeys = new Map();
 const processedAlertRealtimeEventKeys = new Map();
 const MAX_PROCESSED_REALTIME_EVENTS = 500;
 const MAX_REALTIME_TIMELINE_ITEMS = 100;
+const OWNER_SUBSCRIPTION_RETRY_COOLDOWN_MS = 8000;
 const fallbackPoller = createFallbackPoller({
   refresh: refreshDashboardFromFallback,
   intervalMs: 15000,
@@ -898,6 +924,8 @@ async function ensureOwnerGroupSubscriptions() {
   const realtimeOwnerId = getRealtimeOwnerScopeId();
   const shouldJoinSensor = sensorRealtimeState === 'connected';
   const shouldJoinAlerts = alertsRealtimeState === 'connected';
+  const ownerScopeKey = realtimeOwnerId || '__self__';
+  const attemptKey = `${ownerScopeKey}|sensor:${shouldJoinSensor}|alerts:${shouldJoinAlerts}`;
 
   if (isCurrentUserAdmin() && !realtimeOwnerId) {
     console.warn('[SignalR] Admin owner scope not selected. Skipping owner-group subscription.');
@@ -915,23 +943,49 @@ async function ensureOwnerGroupSubscriptions() {
     return;
   }
 
-  let sensorJoined = true;
-  let alertsJoined = true;
-
-  if (shouldJoinSensor) {
-    sensorJoined = await joinOwnerGroup(realtimeOwnerId);
+  if (ownerSubscriptionInFlight) {
+    return ownerSubscriptionInFlight;
   }
 
-  if (shouldJoinAlerts) {
-    alertsJoined = await joinAlertOwnerGroup(realtimeOwnerId);
+  if (
+    lastOwnerSubscriptionFailureKey === attemptKey &&
+    Date.now() - lastOwnerSubscriptionFailedAt < OWNER_SUBSCRIPTION_RETRY_COOLDOWN_MS
+  ) {
+    return;
   }
 
-  if (!sensorJoined || !alertsJoined) {
-    console.warn('[SignalR] Failed to join one or more owner groups.', {
-      sensorJoined,
-      alertsJoined,
-      ownerId: realtimeOwnerId
-    });
+  ownerSubscriptionInFlight = (async () => {
+    let sensorJoined = true;
+    let alertsJoined = true;
+
+    if (shouldJoinSensor) {
+      sensorJoined = await joinOwnerGroup(realtimeOwnerId);
+    }
+
+    if (shouldJoinAlerts) {
+      alertsJoined = await joinAlertOwnerGroup(realtimeOwnerId);
+    }
+
+    if (!sensorJoined || !alertsJoined) {
+      lastOwnerSubscriptionFailedAt = Date.now();
+      lastOwnerSubscriptionFailureKey = attemptKey;
+
+      console.warn('[SignalR] Failed to join one or more owner groups.', {
+        sensorJoined,
+        alertsJoined,
+        ownerId: realtimeOwnerId
+      });
+      return;
+    }
+
+    lastOwnerSubscriptionFailureKey = null;
+    lastOwnerSubscriptionFailedAt = 0;
+  })();
+
+  try {
+    await ownerSubscriptionInFlight;
+  } finally {
+    ownerSubscriptionInFlight = null;
   }
 }
 

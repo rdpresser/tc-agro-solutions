@@ -907,7 +907,11 @@ export async function initAlertSignalRConnection(handlers = {}) {
 export async function joinOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
-      await signalRConnection.invoke('JoinOwnerGroup', ownerId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await signalRConnection.invoke('JoinOwnerGroup');
+      } else {
+        await signalRConnection.invoke('JoinOwnerGroup', ownerId);
+      }
       return true;
     } catch (error) {
       console.error(`Failed to join owner group ${ownerId}:`, error);
@@ -921,7 +925,11 @@ export async function joinOwnerGroup(ownerId = null) {
 export async function leaveOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
-      await signalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await signalRConnection.invoke('LeaveOwnerGroup');
+      } else {
+        await signalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      }
       return true;
     } catch (error) {
       console.error(`Failed to leave owner group ${ownerId}:`, error);
@@ -934,7 +942,11 @@ export async function leaveOwnerGroup(ownerId = null) {
 export async function joinAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
-      await alertSignalRConnection.invoke('JoinOwnerGroup', ownerId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await alertSignalRConnection.invoke('JoinOwnerGroup');
+      } else {
+        await alertSignalRConnection.invoke('JoinOwnerGroup', ownerId);
+      }
       return true;
     } catch (error) {
       console.error(`Failed to join alert owner group ${ownerId}:`, error);
@@ -948,7 +960,11 @@ export async function joinAlertOwnerGroup(ownerId = null) {
 export async function leaveAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
-      await alertSignalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await alertSignalRConnection.invoke('LeaveOwnerGroup');
+      } else {
+        await alertSignalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      }
       return true;
     } catch (error) {
       console.error(`Failed to leave alert owner group ${ownerId}:`, error);

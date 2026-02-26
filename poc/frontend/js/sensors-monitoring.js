@@ -363,12 +363,26 @@ function isCurrentUserAdmin() {
 }
 
 function getOwnerScopeIdForMonitoring() {
-  if (!isCurrentUserAdmin()) {
+  if (isCurrentUserAdmin()) {
+    const ownerId = new URLSearchParams(window.location.search).get('ownerId');
+    return ownerId || null;
+  }
+
+  const currentUser = getUser();
+  if (!currentUser) {
     return null;
   }
 
-  const ownerId = new URLSearchParams(window.location.search).get('ownerId');
-  return ownerId || null;
+  const ownerIdCandidates = [
+    currentUser.sub,
+    currentUser.id,
+    currentUser.userId,
+    currentUser.ownerId,
+    currentUser.nameIdentifier
+  ];
+
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+  return ownerId ? String(ownerId).trim() : null;
 }
 
 async function ensureOwnerGroupSubscription() {
