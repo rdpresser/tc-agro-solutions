@@ -33,6 +33,18 @@ let hasPendingAlertsReload = false;
 let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
 
+const ALERTS_PAGE_SIZE_DEFAULT = 50;
+const ALERTS_PAGE_SIZE_OPTIONS = [50, 100];
+
+const alertsViewState = {
+  pageNumber: 1,
+  pageSize: ALERTS_PAGE_SIZE_DEFAULT,
+  totalCount: 0,
+  totalPages: 1,
+  hasPreviousPage: false,
+  hasNextPage: false
+};
+
 const fallbackPoller = createFallbackPoller({
   refresh: refreshAlertsFromHttp,
   intervalMs: 15000,
@@ -139,6 +151,13 @@ function hydrateInitialAlertsViewState() {
   searchTerm = String(params.get('search') || '').trim();
   severityFilter = normalizeAlertSeverityFilter(params.get('severity') || '');
   statusFilter = normalizeAlertStatusFilter(params.get('status') || '');
+  const pageNumber = Number(params.get('page') || 1);
+  const pageSize = Number(params.get('pageSize') || ALERTS_PAGE_SIZE_DEFAULT);
+
+  alertsViewState.pageNumber = Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+  alertsViewState.pageSize = ALERTS_PAGE_SIZE_OPTIONS.includes(pageSize)
+    ? pageSize
+    : ALERTS_PAGE_SIZE_DEFAULT;
 
   const searchInput = $('#search-alerts');
   if (searchInput) {
@@ -153,6 +172,14 @@ function hydrateInitialAlertsViewState() {
   const statusSelect = $('#alerts-status-filter');
   if (statusSelect) {
     statusSelect.value = statusFilter;
+  }
+
+  const pageSizeSelect = $('#alerts-page-size');
+  if (pageSizeSelect) {
+    pageSizeSelect.innerHTML = ALERTS_PAGE_SIZE_OPTIONS.map(
+      (size) => `<option value="${size}">${size} / page</option>`
+    ).join('');
+    pageSizeSelect.value = String(alertsViewState.pageSize);
   }
 
   const tabs = $$('[data-tab]');
@@ -187,6 +214,18 @@ function persistAlertsViewStateToUrl() {
     params.set('status', statusFilter);
   } else {
     params.delete('status');
+  }
+
+  if (alertsViewState.pageNumber > 1) {
+    params.set('page', String(alertsViewState.pageNumber));
+  } else {
+    params.delete('page');
+  }
+
+  if (alertsViewState.pageSize !== ALERTS_PAGE_SIZE_DEFAULT) {
+    params.set('pageSize', String(alertsViewState.pageSize));
+  } else {
+    params.delete('pageSize');
   }
 
   const next = `${url.pathname}${params.toString() ? `?${params.toString()}` : ''}${url.hash}`;
@@ -240,9 +279,13 @@ function renderAlertsForCurrentFilter() {
       search: searchTerm
     });
 
-    renderAlerts(alertsByTab, currentFilter);
+    const pagedAlerts = paginateAlerts(alertsByTab);
+
+    renderAlerts(pagedAlerts, currentFilter);
     renderStats(latestSummary, getAlertsForStats());
     updateTabCounts();
+    renderPaginationControls();
+    persistAlertsViewStateToUrl();
   } catch (error) {
     console.error('Error loading alerts:', error);
     container.innerHTML = '<div class="error">Error loading alerts</div>';
@@ -391,6 +434,9 @@ function setAlertsLoadingState(isLoading) {
   const indicator = $('#alerts-updating-indicator');
   const container = $('#alerts-container');
   const hasCards = Boolean(container?.querySelector('.alert-item'));
+  const previousButton = $('#alerts-prev-page');
+  const nextButton = $('#alerts-next-page');
+  const pageSizeSelect = $('#alerts-page-size');
 
   if (refreshButton) {
     refreshButton.disabled = isLoading;
@@ -410,6 +456,10 @@ function setAlertsLoadingState(isLoading) {
     container.style.opacity = isLoading ? '0.78' : '1';
     container.style.transition = 'opacity 0.2s ease';
   }
+
+  if (previousButton) previousButton.disabled = isLoading || !alertsViewState.hasPreviousPage;
+  if (nextButton) nextButton.disabled = isLoading || !alertsViewState.hasNextPage;
+  if (pageSizeSelect) pageSizeSelect.disabled = isLoading;
 }
 
 function updateLastAlertsSyncTimestamp(timestamp = null) {
@@ -471,6 +521,60 @@ function getAlertsForStats() {
     status: statusFilter,
     search: searchTerm
   });
+}
+
+function paginateAlerts(alerts) {
+  if (!Array.isArray(alerts)) {
+    alertsViewState.totalCount = 0;
+    alertsViewState.totalPages = 1;
+    alertsViewState.hasPreviousPage = false;
+    alertsViewState.hasNextPage = false;
+    alertsViewState.pageNumber = 1;
+    return [];
+  }
+
+  alertsViewState.totalCount = alerts.length;
+  alertsViewState.totalPages = Math.max(
+    1,
+    Math.ceil(alertsViewState.totalCount / alertsViewState.pageSize)
+  );
+
+  if (alertsViewState.pageNumber > alertsViewState.totalPages) {
+    alertsViewState.pageNumber = alertsViewState.totalPages;
+  }
+
+  if (alertsViewState.pageNumber < 1) {
+    alertsViewState.pageNumber = 1;
+  }
+
+  alertsViewState.hasPreviousPage = alertsViewState.pageNumber > 1;
+  alertsViewState.hasNextPage = alertsViewState.pageNumber < alertsViewState.totalPages;
+
+  const startIndex = (alertsViewState.pageNumber - 1) * alertsViewState.pageSize;
+  const endIndex = startIndex + alertsViewState.pageSize;
+  return alerts.slice(startIndex, endIndex);
+}
+
+function renderPaginationControls() {
+  const info = $('#alerts-page-info');
+  const previousButton = $('#alerts-prev-page');
+  const nextButton = $('#alerts-next-page');
+
+  if (info) {
+    const total = alertsViewState.totalCount;
+    const from = total === 0 ? 0 : (alertsViewState.pageNumber - 1) * alertsViewState.pageSize + 1;
+    const to = Math.min(total, alertsViewState.pageNumber * alertsViewState.pageSize);
+
+    info.textContent = `Showing ${from}-${to} of ${total} (Page ${alertsViewState.pageNumber}/${alertsViewState.totalPages})`;
+  }
+
+  if (previousButton) {
+    previousButton.disabled = !alertsViewState.hasPreviousPage;
+  }
+
+  if (nextButton) {
+    nextButton.disabled = !alertsViewState.hasNextPage;
+  }
 }
 
 function normalizeAlertSeverity(severity) {
@@ -651,6 +755,7 @@ function setupEventListeners() {
       tab.classList.add('active');
 
       currentFilter = tab.dataset.tab;
+      alertsViewState.pageNumber = 1;
       persistAlertsViewStateToUrl();
       renderAlertsForCurrentFilter();
     });
@@ -679,6 +784,7 @@ function setupEventListeners() {
   let searchDebounceTimer = null;
   searchInput?.addEventListener('input', (e) => {
     searchTerm = String(e?.target?.value || '').trim();
+    alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
 
     if (searchDebounceTimer) {
@@ -693,6 +799,7 @@ function setupEventListeners() {
   const severitySelect = $('#alerts-severity-filter');
   severitySelect?.addEventListener('change', () => {
     severityFilter = normalizeAlertSeverityFilter(severitySelect.value);
+    alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
     renderAlertsForCurrentFilter();
   });
@@ -700,6 +807,7 @@ function setupEventListeners() {
   const statusSelect = $('#alerts-status-filter');
   statusSelect?.addEventListener('change', () => {
     statusFilter = normalizeAlertStatusFilter(statusSelect.value);
+    alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
     renderAlertsForCurrentFilter();
   });
@@ -709,6 +817,7 @@ function setupEventListeners() {
     searchTerm = '';
     severityFilter = '';
     statusFilter = '';
+    alertsViewState.pageNumber = 1;
 
     if (searchInput) {
       searchInput.value = '';
@@ -722,6 +831,39 @@ function setupEventListeners() {
       statusSelect.value = '';
     }
 
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
+  });
+
+  const previousButton = $('#alerts-prev-page');
+  previousButton?.addEventListener('click', () => {
+    if (!alertsViewState.hasPreviousPage) {
+      return;
+    }
+
+    alertsViewState.pageNumber -= 1;
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
+  });
+
+  const nextButton = $('#alerts-next-page');
+  nextButton?.addEventListener('click', () => {
+    if (!alertsViewState.hasNextPage) {
+      return;
+    }
+
+    alertsViewState.pageNumber += 1;
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
+  });
+
+  const pageSizeSelect = $('#alerts-page-size');
+  pageSizeSelect?.addEventListener('change', () => {
+    const nextSize = Number(pageSizeSelect.value || ALERTS_PAGE_SIZE_DEFAULT);
+    alertsViewState.pageSize = ALERTS_PAGE_SIZE_OPTIONS.includes(nextSize)
+      ? nextSize
+      : ALERTS_PAGE_SIZE_DEFAULT;
+    alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
     renderAlertsForCurrentFilter();
   });

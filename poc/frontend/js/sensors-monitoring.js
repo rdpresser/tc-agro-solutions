@@ -97,7 +97,7 @@ const monitoringViewState = {
 let isSensorsLoading = false;
 let hasPendingReload = false;
 let cachedSummaryStats = null;
-let cachedSummaryOwnerScope = null;
+let cachedSummaryCacheKey = null;
 let summaryStatsLoadedAt = 0;
 let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
@@ -245,7 +245,7 @@ async function loadSensors({ forceSummaryRefresh = false } = {}) {
         pageSize: 1000,
         ownerId: ownerId || null
       }).catch(() => []),
-      getSummaryStatsWithCache(ownerId, forceSummaryRefresh)
+      getSummaryStatsWithCache(ownerId, monitoringViewState, forceSummaryRefresh)
     ]);
 
     const latestReadingsMap = new Map(
@@ -317,24 +317,37 @@ function setSensorsLoadingState(isLoading) {
   if (pageSizeSelect) pageSizeSelect.disabled = isLoading;
 }
 
-async function getSummaryStatsWithCache(ownerId, forceRefresh = false) {
+async function getSummaryStatsWithCache(ownerId, viewState, forceRefresh = false) {
   const now = Date.now();
-  const ownerScope = ownerId || '__self__';
+  const cacheKey = buildSummaryCacheKey(ownerId, viewState);
   const cacheValid =
     !forceRefresh &&
     cachedSummaryStats &&
-    cachedSummaryOwnerScope === ownerScope &&
+    cachedSummaryCacheKey === cacheKey &&
     now - summaryStatsLoadedAt < SUMMARY_REFRESH_INTERVAL_MS;
 
   if (cacheValid) {
     return cachedSummaryStats;
   }
 
-  const summary = await loadSensorSummaryStats(ownerId);
+  const summary = await loadSensorSummaryStats(ownerId, viewState);
   cachedSummaryStats = summary;
-  cachedSummaryOwnerScope = ownerScope;
+  cachedSummaryCacheKey = cacheKey;
   summaryStatsLoadedAt = now;
   return summary;
+}
+
+function buildSummaryCacheKey(ownerId, viewState) {
+  const ownerScope = ownerId || '__self__';
+  const search = String(viewState?.search || '')
+    .trim()
+    .toLowerCase();
+  const type = String(viewState?.type || '')
+    .trim()
+    .toLowerCase();
+  const status = normalizeSensorStatus(viewState?.status || '');
+
+  return `${ownerScope}|${search}|${type}|${status}`;
 }
 
 function mapSensorForMonitoring(sensor, latestReadingsMap) {
@@ -359,31 +372,55 @@ function mapSensorForMonitoring(sensor, latestReadingsMap) {
   };
 }
 
-async function loadSensorSummaryStats(ownerId) {
+async function loadSensorSummaryStats(ownerId, viewState) {
+  const selectedStatus = normalizeSensorStatus(viewState?.status || '');
   const baseQuery = {
     pageNumber: 1,
     pageSize: 1,
     sortBy: 'installedAt',
     sortDirection: 'desc',
-    filter: '',
+    filter: String(viewState?.search || '').trim(),
     ownerId: ownerId || '',
-    type: ''
+    type: String(viewState?.type || '').trim()
   };
 
-  const [total, active, inactive, maintenance, faulty] = await Promise.all([
-    getSensorsPaginated({ ...baseQuery }),
+  const [active, inactive, maintenance, faulty] = await Promise.all([
     getSensorsPaginated({ ...baseQuery, status: 'Active' }),
     getSensorsPaginated({ ...baseQuery, status: 'Inactive' }),
     getSensorsPaginated({ ...baseQuery, status: 'Maintenance' }),
     getSensorsPaginated({ ...baseQuery, status: 'Faulty' })
   ]);
 
-  return {
-    total: getPaginatedTotal(total),
+  const counts = {
     Active: getPaginatedTotal(active),
     Inactive: getPaginatedTotal(inactive),
     Maintenance: getPaginatedTotal(maintenance),
     Faulty: getPaginatedTotal(faulty)
+  };
+
+  if (selectedStatus) {
+    const scopedCounts = {
+      Active: 0,
+      Inactive: 0,
+      Maintenance: 0,
+      Faulty: 0
+    };
+
+    if (Object.prototype.hasOwnProperty.call(scopedCounts, selectedStatus)) {
+      scopedCounts[selectedStatus] = counts[selectedStatus];
+    }
+
+    return {
+      total: Object.values(scopedCounts).reduce((acc, value) => acc + value, 0),
+      ...scopedCounts
+    };
+  }
+
+  const total = Object.values(counts).reduce((acc, value) => acc + value, 0);
+
+  return {
+    total,
+    ...counts
   };
 }
 
@@ -1032,6 +1069,29 @@ function setupEventListeners() {
     monitoringViewState.pageNumber = 1;
     persistViewStateToUrl();
     void loadSensors();
+  });
+
+  const clearFiltersButton = $('#clear-alert-filters');
+  clearFiltersButton?.addEventListener('click', () => {
+    monitoringViewState.search = '';
+    monitoringViewState.status = '';
+    monitoringViewState.type = '';
+    monitoringViewState.pageNumber = 1;
+
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    if (statusFilter) {
+      statusFilter.value = '';
+    }
+
+    if (typeFilter) {
+      typeFilter.value = '';
+    }
+
+    persistViewStateToUrl();
+    void loadSensors({ forceSummaryRefresh: true });
   });
 
   const pageSizeSelect = $('#sensors-page-size');

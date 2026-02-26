@@ -168,8 +168,8 @@
 
           <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom: 0">
+            <div class="form-row sensors-filters-row">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <input
                   type="text"
                   id="searchInput"
@@ -177,15 +177,20 @@
                   placeholder="🔍 Search sensors..."
                 />
               </div>
-              <div class="form-group" style="margin-bottom: 0">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <select id="statusFilter" class="form-control form-select">
                   <option value="">All Status</option>
                 </select>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <select id="typeFilter" class="form-control form-select">
                   <option value="">All Types</option>
                 </select>
+              </div>
+              <div class="form-group sensors-filter-actions" style="margin-bottom: 0">
+                <button id="clear-alert-filters" class="btn btn-outline btn-sm" type="button">
+                  ✖ Clear filters
+                </button>
               </div>
             </div>
           </div>
@@ -489,9 +494,45 @@
         font-family: 'Consolas', 'Monaco', monospace;
       }
 
+      .sensors-filters-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sensors-filter-grow {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .sensors-filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .sensors-filter-actions .btn {
+        white-space: nowrap;
+      }
+
       @media (max-width: 768px) {
         .sensor-grid {
           grid-template-columns: 1fr;
+        }
+
+        .sensors-filters-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .sensors-filter-actions {
+          margin-left: 0;
+          justify-content: stretch;
+        }
+
+        .sensors-filter-actions .btn {
+          width: 100%;
         }
       }
     </style>

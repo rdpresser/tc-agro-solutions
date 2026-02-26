@@ -212,6 +212,33 @@
             <div class="loading">Loading alerts...</div>
           </div>
 
+          <div class="card alerts-pagination-sticky" style="margin-top: 16px; margin-bottom: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px">
+              <div class="d-flex align-center" style="gap: 8px">
+                <button id="alerts-prev-page" class="btn btn-outline btn-sm" type="button">
+                  ← Previous
+                </button>
+                <button id="alerts-next-page" class="btn btn-outline btn-sm" type="button">
+                  Next →
+                </button>
+              </div>
+
+              <span id="alerts-page-info" class="text-muted" style="font-size: 0.9em">
+                Showing 0-0 of 0
+              </span>
+
+              <div class="d-flex align-center" style="gap: 8px">
+                <label for="alerts-page-size" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
+                <select id="alerts-page-size" class="form-control form-select" style="width: 140px">
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- Alert Rules Info -->
           <div class="card" style="margin-top: 24px">
             <h3 style="margin-bottom: 16px">📋 Active Alert Rules</h3>
@@ -411,6 +438,26 @@
         white-space: nowrap;
       }
 
+      .alerts-pagination-sticky {
+        position: sticky;
+        bottom: 12px;
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .alerts-pagination-sticky::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -16px;
+        height: 16px;
+        pointer-events: none;
+        background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+      }
+
       @media (max-width: 768px) {
         .alert-item {
           flex-direction: column;
@@ -441,6 +488,15 @@
 
         .alerts-filter-actions .btn {
           width: 100%;
+        }
+
+        .alerts-pagination-sticky {
+          bottom: 8px;
+        }
+
+        .alerts-pagination-sticky::before {
+          top: -12px;
+          height: 12px;
         }
       }
     </style>
