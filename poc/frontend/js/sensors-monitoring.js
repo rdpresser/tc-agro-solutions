@@ -49,9 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.addEventListener('beforeunload', async () => {
   if (ownerGroupJoined) {
     try {
-      await leaveOwnerGroup(currentOwnerScopeId);
+      await leaveOwnerGroup(lastJoinedOwnerScopeId ?? currentOwnerScopeId);
     } catch (error) {
-      console.warn(`Failed to leave owner group ${currentOwnerScopeId}:`, error);
+      console.warn(
+        `Failed to leave owner group ${lastJoinedOwnerScopeId ?? currentOwnerScopeId}:`,
+        error
+      );
     }
   }
 
@@ -263,6 +266,10 @@ const SENSORS_REALTIME_CONTEXT = {
 let realtimeConnectionState = 'disconnected';
 let ownerGroupJoined = false;
 let currentOwnerScopeId = null;
+let lastJoinedOwnerScopeId = null;
+const processedRealtimeEventKeys = new Map();
+const latestRealtimeTimestampBySensor = new Map();
+const MAX_PROCESSED_REALTIME_EVENTS = 1000;
 const fallbackPoller = createFallbackPoller({
   refresh: loadSensors,
   intervalMs: 15000,
@@ -281,8 +288,7 @@ async function setupRealTimeUpdates() {
 
   const connection = await initSignalRConnection({
     onSensorReading: (reading) => {
-      const normalized = normalizeRealtimeReading(reading);
-      updateSensorCard(normalized.sensorId, normalized);
+      handleRealtimeSensorReading(reading);
     },
     onSensorStatus: (data) => {
       const card = $(`[data-sensor-id="${data.sensorId}"]`);
@@ -329,7 +335,7 @@ async function setupRealTimeUpdates() {
       updateRealtimeBadges(state);
 
       if (state === 'connected') {
-        setTimeout(() => ensureOwnerGroupSubscription(), 500);
+        void ensureOwnerGroupSubscription();
       }
     }
   });
@@ -366,6 +372,10 @@ function getOwnerScopeIdForMonitoring() {
 }
 
 async function ensureOwnerGroupSubscription() {
+  if (realtimeConnectionState !== 'connected') {
+    return;
+  }
+
   currentOwnerScopeId = getOwnerScopeIdForMonitoring();
 
   if (isCurrentUserAdmin() && !currentOwnerScopeId) {
@@ -377,6 +387,30 @@ async function ensureOwnerGroupSubscription() {
     return;
   }
 
+  if (isCurrentUserAdmin() && !isValidGuid(currentOwnerScopeId)) {
+    ownerGroupJoined = false;
+    console.warn(
+      '[SensorsRealtime] Invalid ownerId query param. Skipping owner-group subscription.',
+      {
+        ownerId: currentOwnerScopeId
+      }
+    );
+    fallbackPoller.start('admin-owner-scope-invalid');
+    return;
+  }
+
+  if (ownerGroupJoined && lastJoinedOwnerScopeId === currentOwnerScopeId) {
+    return;
+  }
+
+  if (
+    ownerGroupJoined &&
+    lastJoinedOwnerScopeId &&
+    lastJoinedOwnerScopeId !== currentOwnerScopeId
+  ) {
+    await leaveOwnerGroup(lastJoinedOwnerScopeId);
+  }
+
   ownerGroupJoined = await joinOwnerGroup(currentOwnerScopeId);
 
   if (!ownerGroupJoined) {
@@ -384,7 +418,10 @@ async function ensureOwnerGroupSubscription() {
       ownerId: currentOwnerScopeId
     });
     fallbackPoller.start('owner-join-failed');
+    return;
   }
+
+  lastJoinedOwnerScopeId = currentOwnerScopeId;
 }
 
 function getConnectionBadgeElement() {
@@ -445,6 +482,157 @@ function normalizeRealtimeReading(reading) {
   };
 }
 
+function isValidGuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || '').trim()
+  );
+}
+
+function parseReadingTimestampMs(reading) {
+  const parsed = new Date(reading?.timestamp || 0).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function buildRealtimeEventKey(reading) {
+  return `${reading?.sensorId || 'unknown'}:${parseReadingTimestampMs(reading)}`;
+}
+
+function markRealtimeEventProcessed(eventKey) {
+  processedRealtimeEventKeys.set(eventKey, Date.now());
+
+  if (processedRealtimeEventKeys.size <= MAX_PROCESSED_REALTIME_EVENTS) {
+    return;
+  }
+
+  const oldestKey = processedRealtimeEventKeys.keys().next().value;
+  if (oldestKey) {
+    processedRealtimeEventKeys.delete(oldestKey);
+  }
+}
+
+function isReadingStale(reading) {
+  const sensorId = reading?.sensorId;
+  if (!sensorId) return true;
+
+  const incomingTimestamp = parseReadingTimestampMs(reading);
+  const previousTimestamp = latestRealtimeTimestampBySensor.get(sensorId) || 0;
+
+  if (incomingTimestamp > 0 && incomingTimestamp < previousTimestamp) {
+    return true;
+  }
+
+  if (incomingTimestamp > 0) {
+    latestRealtimeTimestampBySensor.set(sensorId, incomingTimestamp);
+  }
+
+  return false;
+}
+
+function handleRealtimeSensorReading(reading) {
+  const normalized = normalizeRealtimeReading(reading);
+  if (!normalized.sensorId) {
+    return;
+  }
+
+  const eventKey = buildRealtimeEventKey(normalized);
+  if (processedRealtimeEventKeys.has(eventKey)) {
+    return;
+  }
+
+  markRealtimeEventProcessed(eventKey);
+
+  if (isReadingStale(normalized)) {
+    return;
+  }
+
+  upsertSensorCard(normalized);
+}
+
+function createSensorCardHtml(sensor, status = 'Active') {
+  const normalizedStatus = normalizeSensorStatus(status);
+  const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+
+  return `
+    <div class="sensor-card ${badgeClass}" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}">
+      <div class="sensor-header">
+        <span class="sensor-id">${getSensorDisplayName(sensor)}</span>
+        <span class="sensor-status ${badgeClass}">
+          ${getSensorStatusDisplay(normalizedStatus)}
+        </span>
+      </div>
+
+      <div class="sensor-plot">📍 ${formatSensorLocation(sensor)}</div>
+
+      <div class="sensor-readings">
+        <div class="reading">
+          <span class="reading-label">🌡️ Temp</span>
+          <span class="reading-value" data-metric="temperature">
+            ${formatTemperature(sensor.temperature)}
+          </span>
+        </div>
+        <div class="reading">
+          <span class="reading-label">💧 Humidity</span>
+          <span class="reading-value" data-metric="humidity">
+            ${formatPercentage(sensor.humidity)}
+          </span>
+        </div>
+        <div class="reading">
+          <span class="reading-label">🌿 Soil</span>
+          <span class="reading-value" data-metric="soilMoisture">
+            ${formatPercentage(sensor.soilMoisture)}
+          </span>
+        </div>
+      </div>
+
+      <div class="sensor-footer">
+        <span class="battery ${getBatteryClass(sensor.battery)}">
+          🔋 ${formatPercentage(sensor.battery)}
+        </span>
+        <span class="last-update" title="${sensor.lastReading}">
+          ${formatRelativeTime(sensor.lastReading)}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function upsertSensorCard(reading) {
+  const sensorId = reading.sensorId;
+  if (!sensorId) return;
+
+  const existingCard = $(`[data-sensor-id="${sensorId}"]`);
+  if (existingCard) {
+    updateSensorCard(sensorId, reading);
+    return;
+  }
+
+  const grid = $('#sensors-grid');
+  if (!grid) return;
+
+  if (grid.querySelector('.empty')) {
+    grid.innerHTML = '';
+  }
+
+  const html = createSensorCardHtml(
+    {
+      id: sensorId,
+      sensorId,
+      sensorLabel: reading.sensorLabel || null,
+      plotName: reading.plotName || '-',
+      propertyName: reading.propertyName || '-',
+      temperature: reading.temperature,
+      humidity: reading.humidity,
+      soilMoisture: reading.soilMoisture,
+      battery: reading.batteryLevel ?? 0,
+      lastReading: reading.timestamp || new Date().toISOString()
+    },
+    'Active'
+  );
+
+  grid.insertAdjacentHTML('afterbegin', html);
+  updateStatusSummary();
+}
+
 function updateSensorCard(sensorId, reading) {
   const card = $(`[data-sensor-id="${sensorId}"]`);
   if (!card) return;
@@ -481,8 +669,9 @@ function updateSensorCard(sensorId, reading) {
   // Update last update time
   const timeEl = card.querySelector('.last-update');
   if (timeEl) {
-    timeEl.textContent = 'now';
-    timeEl.title = new Date().toISOString();
+    const timestamp = reading.timestamp || new Date().toISOString();
+    timeEl.textContent = formatRelativeTime(timestamp);
+    timeEl.title = timestamp;
   }
 }
 
