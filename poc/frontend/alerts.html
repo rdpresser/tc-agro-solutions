@@ -97,13 +97,14 @@
               </div>
             </div>
             <div class="page-header-actions">
-              <input
-                type="text"
-                id="search-alerts"
-                class="form-control"
-                placeholder="🔍 Search alerts..."
-                style="min-width: 260px"
-              />
+              <span
+                id="alerts-updating-indicator"
+                class="text-muted"
+                style="font-size: 0.85em; display: none"
+              >
+                Updated just now
+              </span>
+              <button id="refresh-alerts" class="btn btn-outline" type="button">⟳ Refresh</button>
             </div>
           </div>
 
@@ -155,6 +156,20 @@
               <div class="stat-info">
                 <span id="alerts-stat-resolved-today" class="stat-value">0</span>
                 <span class="stat-label">Resolved Today</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0">
+                <input
+                  type="text"
+                  id="search-alerts"
+                  class="form-control"
+                  placeholder="🔍 Search alerts..."
+                />
               </div>
             </div>
           </div>

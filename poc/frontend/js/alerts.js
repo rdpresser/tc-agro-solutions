@@ -26,6 +26,10 @@ let latestSummary = null;
 let ownerGroupJoined = false;
 let ownerScopeId = null;
 let searchTerm = '';
+let isAlertsLoading = false;
+let hasPendingAlertsReload = false;
+let lastSyncTimestampIso = null;
+let syncIndicatorIntervalId = null;
 
 const fallbackPoller = createFallbackPoller({
   refresh: refreshAlertsFromHttp,
@@ -47,9 +51,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  hydrateInitialAlertsViewState();
   await loadAlertsData();
   await setupAlertRealtime();
   setupEventListeners();
+
+  syncIndicatorIntervalId = setInterval(() => {
+    refreshAlertHeaderSyncIndicator();
+    refreshAlertRelativeTimes();
+  }, 30000);
 });
 
 window.addEventListener('beforeunload', async () => {
@@ -63,6 +73,11 @@ window.addEventListener('beforeunload', async () => {
 
   fallbackPoller.stop('page-unload', { silent: true });
   stopAlertSignalRConnection();
+
+  if (syncIndicatorIntervalId) {
+    clearInterval(syncIndicatorIntervalId);
+    syncIndicatorIntervalId = null;
+  }
 });
 
 // ============================================
@@ -70,18 +85,86 @@ window.addEventListener('beforeunload', async () => {
 // ============================================
 
 async function loadAlertsData() {
+  if (isAlertsLoading) {
+    hasPendingAlertsReload = true;
+    return;
+  }
+
   const selectedOwnerId = getSelectedOwnerIdForAlerts();
+  const container = $('#alerts-container');
+  const hasRenderedAlerts = Boolean(container?.querySelector('.alert-item'));
 
-  const [alertsPage, summary] = await Promise.all([
-    getPendingAlertsPage({ ownerId: selectedOwnerId, pageNumber: 1, pageSize: 500 }),
-    getPendingAlertsSummary({ ownerId: selectedOwnerId, windowHours: 24 })
-  ]);
+  isAlertsLoading = true;
+  setAlertsLoadingState(true);
 
-  latestPendingAlerts = Array.isArray(alertsPage?.items) ? alertsPage.items : [];
-  latestSummary = summary;
+  if (!hasRenderedAlerts && container) {
+    container.innerHTML = '<div class="loading">Loading alerts...</div>';
+  }
 
-  renderStats(summary);
-  renderAlertsForCurrentFilter();
+  try {
+    const [alertsPage, summary] = await Promise.all([
+      getPendingAlertsPage({ ownerId: selectedOwnerId, pageNumber: 1, pageSize: 500 }),
+      getPendingAlertsSummary({ ownerId: selectedOwnerId, windowHours: 24 })
+    ]);
+
+    latestPendingAlerts = Array.isArray(alertsPage?.items) ? alertsPage.items : [];
+    latestSummary = summary;
+
+    renderStats(summary);
+    renderAlertsForCurrentFilter();
+    updateLastAlertsSyncTimestamp();
+    persistAlertsViewStateToUrl();
+  } finally {
+    isAlertsLoading = false;
+    setAlertsLoadingState(false);
+
+    if (hasPendingAlertsReload) {
+      hasPendingAlertsReload = false;
+      void loadAlertsData();
+    }
+  }
+}
+
+function hydrateInitialAlertsViewState() {
+  const params = new URLSearchParams(window.location.search);
+
+  const tab = String(params.get('tab') || 'pending')
+    .trim()
+    .toLowerCase();
+  const allowedTabs = ['pending', 'resolved', 'all'];
+  currentFilter = allowedTabs.includes(tab) ? tab : 'pending';
+
+  searchTerm = String(params.get('search') || '').trim();
+
+  const searchInput = $('#search-alerts');
+  if (searchInput) {
+    searchInput.value = searchTerm;
+  }
+
+  const tabs = $$('[data-tab]');
+  tabs.forEach((tabButton) => {
+    tabButton.classList.toggle('active', tabButton.dataset.tab === currentFilter);
+  });
+}
+
+function persistAlertsViewStateToUrl() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+
+  if (currentFilter && currentFilter !== 'pending') {
+    params.set('tab', currentFilter);
+  } else {
+    params.delete('tab');
+  }
+
+  if (searchTerm) {
+    params.set('search', searchTerm);
+  } else {
+    params.delete('search');
+  }
+
+  const next = `${url.pathname}${params.toString() ? `?${params.toString()}` : ''}${url.hash}`;
+  window.history.replaceState({}, '', next);
 }
 
 async function refreshAlertsFromHttp() {
@@ -124,8 +207,6 @@ function renderAlertsForCurrentFilter() {
   const container = $('#alerts-container');
   if (!container) return;
 
-  container.innerHTML = '<div class="loading">Loading alerts...</div>';
-
   try {
     const alerts = filterAlertsByCurrentTab(latestPendingAlerts, currentFilter);
     const filteredBySearch = filterAlertsBySearch(alerts, searchTerm);
@@ -158,14 +239,17 @@ function renderAlerts(alerts, activeFilter) {
   }
 
   container.innerHTML = alerts
-    .map(
-      (alert) => `
-    <div class="alert-item ${alert.severity}" data-alert-id="${alert.id}">
-      <div class="alert-item-icon">${getSeverityIcon(alert.severity)}</div>
+    .map((alert) => {
+      const normalizedSeverity = normalizeAlertSeverity(alert?.severity);
+      const normalizedStatus = normalizeAlertStatus(alert?.status);
+
+      return `
+    <div class="alert-item ${normalizedSeverity}" data-alert-id="${alert.id}">
+      <div class="alert-item-icon">${getSeverityIcon(normalizedSeverity)}</div>
       <div class="alert-item-content">
         <div class="alert-item-header">
-          <span class="badge ${getSeverityBadgeClass(alert.severity)}">${formatSeverity(alert.severity)}</span>
-          <span class="alert-item-time" title="${formatDate(alert.createdAt)}">
+          <span class="badge ${getSeverityBadgeClass(normalizedSeverity)}">${formatSeverity(normalizedSeverity)}</span>
+          <span class="alert-item-time" data-alert-time="${alert.createdAt || ''}" title="${formatDate(alert.createdAt)}">
             ${formatRelativeTime(alert.createdAt)}
           </span>
         </div>
@@ -180,7 +264,7 @@ function renderAlerts(alerts, activeFilter) {
 
         <div class="alert-item-actions">
         ${
-          String(alert.status || '').toLowerCase() === 'pending'
+          normalizedStatus === 'pending'
             ? `
           <button class="btn btn-success btn-sm" data-action="resolve" data-id="${alert.id}">
             ✅ Resolve
@@ -198,9 +282,11 @@ function renderAlerts(alerts, activeFilter) {
         </div>
       </div>
     </div>
-  `
-    )
+  `;
+    })
     .join('');
+
+  refreshAlertRelativeTimes();
 }
 
 function updateTabCounts() {
@@ -232,6 +318,64 @@ function renderStats(summary) {
   if (navPendingBadge) navPendingBadge.textContent = String(pendingTotal);
 }
 
+function setAlertsLoadingState(isLoading) {
+  const refreshButton = $('#refresh-alerts');
+  const indicator = $('#alerts-updating-indicator');
+  const container = $('#alerts-container');
+  const hasCards = Boolean(container?.querySelector('.alert-item'));
+
+  if (refreshButton) {
+    refreshButton.disabled = isLoading;
+    refreshButton.textContent = isLoading ? '⟳ Updating...' : '⟳ Refresh';
+  }
+
+  if (indicator) {
+    indicator.style.display = 'inline';
+    if (isLoading) {
+      indicator.textContent = '⟳ Updating data...';
+    } else {
+      refreshAlertHeaderSyncIndicator();
+    }
+  }
+
+  if (container && hasCards) {
+    container.style.opacity = isLoading ? '0.78' : '1';
+    container.style.transition = 'opacity 0.2s ease';
+  }
+}
+
+function updateLastAlertsSyncTimestamp(timestamp = null) {
+  lastSyncTimestampIso = timestamp || new Date().toISOString();
+  refreshAlertHeaderSyncIndicator();
+}
+
+function refreshAlertHeaderSyncIndicator() {
+  const indicator = $('#alerts-updating-indicator');
+  if (!indicator) {
+    return;
+  }
+
+  if (!lastSyncTimestampIso) {
+    indicator.textContent = 'Updated just now';
+    return;
+  }
+
+  indicator.textContent = `✓ Updated ${formatRelativeTime(lastSyncTimestampIso)}`;
+}
+
+function refreshAlertRelativeTimes() {
+  const timeNodes = $$('[data-alert-time]');
+  timeNodes.forEach((node) => {
+    const rawTime = node.getAttribute('data-alert-time');
+    if (!rawTime) {
+      return;
+    }
+
+    node.textContent = formatRelativeTime(rawTime);
+    node.title = formatDate(rawTime);
+  });
+}
+
 function filterAlertsByCurrentTab(alerts, tab) {
   if (!Array.isArray(alerts)) {
     return [];
@@ -242,6 +386,33 @@ function filterAlertsByCurrentTab(alerts, tab) {
   }
 
   return [];
+}
+
+function normalizeAlertSeverity(severity) {
+  const normalized = String(severity || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === 'critical' || normalized === 'high') {
+    return 'critical';
+  }
+
+  if (normalized === 'warning' || normalized === 'medium') {
+    return 'warning';
+  }
+
+  return 'info';
+}
+
+function normalizeAlertStatus(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
+  if (normalized === 'resolved' || normalized === 'acknowledged') {
+    return normalized;
+  }
+
+  return 'pending';
 }
 
 function filterAlertsBySearch(alerts, term) {
@@ -347,8 +518,14 @@ function setupEventListeners() {
       tab.classList.add('active');
 
       currentFilter = tab.dataset.tab;
+      persistAlertsViewStateToUrl();
       renderAlertsForCurrentFilter();
     });
+  });
+
+  const refreshButton = $('#refresh-alerts');
+  refreshButton?.addEventListener('click', async () => {
+    await loadAlertsData();
   });
 
   const container = $('#alerts-container');
@@ -366,9 +543,18 @@ function setupEventListeners() {
   });
 
   const searchInput = $('#search-alerts');
+  let searchDebounceTimer = null;
   searchInput?.addEventListener('input', (e) => {
     searchTerm = String(e?.target?.value || '').trim();
-    renderAlertsForCurrentFilter();
+    persistAlertsViewStateToUrl();
+
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+      renderAlertsForCurrentFilter();
+    }, 250);
   });
 }
 
@@ -380,15 +566,12 @@ async function handleResolve(alertId) {
       await resolveAlert(alertId);
       toast('alerts.resolve_success', 'success');
 
-      // Remove card with animation
-      const card = $(`[data-alert-id="${alertId}"]`);
-      if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'translateX(100%)';
-        setTimeout(() => card.remove(), 300);
-      }
-
-      setTimeout(() => void loadAlertsData(), 500);
+      latestPendingAlerts = latestPendingAlerts.filter(
+        (alert) => String(alert?.id) !== String(alertId)
+      );
+      renderStats(latestSummary);
+      renderAlertsForCurrentFilter();
+      setTimeout(() => void loadAlertsData(), 350);
     } catch (error) {
       console.error('Error resolving alert:', error);
       toast('alerts.resolve_failed', 'error');
