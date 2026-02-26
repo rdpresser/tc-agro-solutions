@@ -1,0 +1,25 @@
+meta {
+  name: Pending Alerts
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{analytics_service_url}}/api/alerts/pending?pageNumber=1&pageSize=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 20
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
