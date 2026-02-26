@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{farm_service_url}}/api/sensors?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter&propertyId&plotId&type&status
+  url: {{farm_service_url}}/api/sensors?pageNumber=1&pageSize=10&sortBy=installedAt&sortDirection=desc&filter&propertyId&plotId&type&status&ownerId=ca236603-2dea-4c12-aead-a7be4e70e725
   body: none
   auth: bearer
 }
@@ -20,6 +20,7 @@ params:query {
   plotId: 
   type: 
   status: 
+  ownerId: ca236603-2dea-4c12-aead-a7be4e70e725
 }
 
 auth:bearer {
