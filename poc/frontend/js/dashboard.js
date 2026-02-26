@@ -62,6 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await setupOwnerSelectorForDashboard();
+  setupDashboardAdminAlertsBell();
+  updateDashboardAlertsNavigationLinks();
 
   const shouldEnableRealtime = await loadDashboardData();
   if (shouldEnableRealtime) {
@@ -70,6 +72,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('beforeunload', async () => {
+  stopDashboardAdminAlertsBellRefresh();
+
   const realtimeOwnerId = getRealtimeOwnerScopeId();
   if (!isCurrentUserAdmin() || realtimeOwnerId) {
     try {
@@ -96,6 +100,10 @@ window.addEventListener('beforeunload', async () => {
 async function loadDashboardData() {
   try {
     const ownerId = getSelectedOwnerIdForDashboard();
+    if (isCurrentUserAdmin() && !ownerId) {
+      applyDashboardAdminAlertsBellCount(0);
+    }
+
     const stats = await getDashboardStats(ownerId);
     updateStatCards(stats);
 
@@ -119,6 +127,7 @@ async function loadDashboardData() {
 
     const alerts = alertsData?.page?.items || [];
     const alertSummary = alertsData?.summary || null;
+    syncDashboardAdminAlertsBellFromSummary(alertSummary, alertsData?.page);
 
     const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
     syncRealtimeStateFromReadings(readingsForTable);
@@ -218,6 +227,7 @@ async function setupOwnerSelectorForDashboard() {
   if (!isCurrentUserAdmin()) {
     filterContainer.style.display = 'none';
     selectedOwnerId = null;
+    updateDashboardAlertsNavigationLinks();
     return;
   }
 
@@ -260,6 +270,8 @@ async function setupOwnerSelectorForDashboard() {
     ownerSelect.addEventListener('change', async () => {
       const previousOwnerId = selectedOwnerId;
       selectedOwnerId = ownerSelect.value || null;
+      await refreshDashboardAdminAlertsBell();
+      updateDashboardAlertsNavigationLinks();
 
       const shouldEnableRealtime = await loadDashboardData();
 
@@ -289,6 +301,8 @@ async function setupOwnerSelectorForDashboard() {
     selectedOwnerId = null;
     ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
     ownerSelect.disabled = true;
+    applyDashboardAdminAlertsBellCount(0);
+    updateDashboardAlertsNavigationLinks();
   }
 }
 
@@ -818,6 +832,7 @@ let hasSetupForRealtime = true;
 let sensorRealtimeState = 'disconnected';
 let alertsRealtimeState = 'disconnected';
 let selectedOwnerId = null;
+let dashboardAdminAlertsBellRefreshIntervalId = null;
 let ownerSubscriptionInFlight = null;
 let lastOwnerSubscriptionFailedAt = 0;
 let lastOwnerSubscriptionFailureKey = null;
@@ -835,6 +850,7 @@ const MAX_PROCESSED_REALTIME_EVENTS = 500;
 const MAX_REALTIME_TIMELINE_ITEMS = 100;
 const DASHBOARD_ALERTS_PREVIEW_PAGE_SIZE = 20;
 const OWNER_SUBSCRIPTION_RETRY_COOLDOWN_MS = 8000;
+const DASHBOARD_ADMIN_ALERTS_BELL_REFRESH_INTERVAL_MS = 60000;
 const fallbackPoller = createFallbackPoller({
   refresh: refreshDashboardFromFallback,
   intervalMs: 15000,
@@ -934,6 +950,7 @@ async function refreshDashboardFromFallback() {
         };
   const alerts = alertsData.page.items || [];
   const alertSummary = alertsData.summary;
+  syncDashboardAdminAlertsBellFromSummary(alertSummary, alertsData.page);
   const statSubtextData = statSubtextResult.status === 'fulfilled' ? statSubtextResult.value : null;
 
   const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
@@ -969,6 +986,154 @@ async function refreshDashboardFromFallback() {
 
 function stopFallbackPollingSilently() {
   fallbackPoller.stop('page-unload', { silent: true });
+}
+
+function setupDashboardAdminAlertsBell() {
+  stopDashboardAdminAlertsBellRefresh();
+
+  if (!isCurrentUserAdmin()) {
+    removeDashboardAdminAlertsBell();
+    return;
+  }
+
+  ensureDashboardAdminAlertsBellElement();
+  void refreshDashboardAdminAlertsBell();
+
+  dashboardAdminAlertsBellRefreshIntervalId = setInterval(() => {
+    void refreshDashboardAdminAlertsBell();
+  }, DASHBOARD_ADMIN_ALERTS_BELL_REFRESH_INTERVAL_MS);
+}
+
+function stopDashboardAdminAlertsBellRefresh() {
+  if (dashboardAdminAlertsBellRefreshIntervalId) {
+    clearInterval(dashboardAdminAlertsBellRefreshIntervalId);
+    dashboardAdminAlertsBellRefreshIntervalId = null;
+  }
+}
+
+function getDashboardAdminAlertsBellElement() {
+  return document.querySelector('[data-role="dashboard-admin-alert-bell"]');
+}
+
+function removeDashboardAdminAlertsBell() {
+  const element = getDashboardAdminAlertsBellElement();
+  if (element) {
+    element.remove();
+  }
+}
+
+function ensureDashboardAdminAlertsBellElement() {
+  const topbarRight = document.querySelector('.topbar-right');
+  const userMenu = topbarRight?.querySelector('.user-menu');
+  if (!topbarRight || !userMenu) {
+    return null;
+  }
+
+  const existing = getDashboardAdminAlertsBellElement();
+  if (existing) {
+    return existing;
+  }
+
+  const alertsLink = document.createElement('a');
+  alertsLink.href = buildAlertsPageLinkForOwner(getSelectedOwnerIdForDashboard());
+  alertsLink.className = 'topbar-alert-link';
+  alertsLink.setAttribute('data-role', 'dashboard-admin-alert-bell');
+  alertsLink.setAttribute('aria-label', 'View pending alerts for selected owner');
+  alertsLink.style.display = 'none';
+  alertsLink.innerHTML = `
+    <span class="topbar-alert-icon" aria-hidden="true">🔔</span>
+    <span class="badge badge-danger topbar-alert-count" aria-live="polite">0</span>
+  `;
+
+  topbarRight.insertBefore(alertsLink, userMenu);
+  return alertsLink;
+}
+
+function applyDashboardAdminAlertsBellCount(count) {
+  if (!isCurrentUserAdmin()) {
+    removeDashboardAdminAlertsBell();
+    return;
+  }
+
+  const bell = ensureDashboardAdminAlertsBellElement();
+  if (!bell) {
+    return;
+  }
+
+  const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
+  const selectedOwnerId = getSelectedOwnerIdForDashboard();
+  bell.href = buildAlertsPageLinkForOwner(selectedOwnerId);
+  const countElement = bell.querySelector('.topbar-alert-count');
+
+  if (normalizedCount <= 0 || !selectedOwnerId) {
+    bell.style.display = 'none';
+    return;
+  }
+
+  if (countElement) {
+    countElement.textContent = normalizedCount > 99 ? '99+' : String(normalizedCount);
+  }
+
+  bell.style.display = 'inline-flex';
+}
+
+function buildAlertsPageLinkForOwner(ownerId) {
+  if (!ownerId) {
+    return 'alerts.html';
+  }
+
+  const encodedOwnerId = encodeURIComponent(String(ownerId).trim());
+  return `alerts.html?ownerId=${encodedOwnerId}`;
+}
+
+function updateDashboardAlertsNavigationLinks() {
+  const viewAllLink = document.getElementById('dashboard-alerts-view-all-link');
+  const sidebarAlertsLinks = Array.from(
+    document.querySelectorAll('.sidebar .nav-item[href$="alerts.html"]')
+  );
+
+  const applyHref = (href) => {
+    if (viewAllLink) {
+      viewAllLink.href = href;
+    }
+
+    sidebarAlertsLinks.forEach((link) => {
+      link.setAttribute('href', href);
+    });
+  };
+
+  if (!isCurrentUserAdmin()) {
+    applyHref('alerts.html');
+    return;
+  }
+
+  applyHref(buildAlertsPageLinkForOwner(getSelectedOwnerIdForDashboard()));
+}
+
+function syncDashboardAdminAlertsBellFromSummary(summary, page) {
+  const total = resolvePendingAlertsTotal(summary, page);
+  applyDashboardAdminAlertsBellCount(total);
+}
+
+async function refreshDashboardAdminAlertsBell() {
+  if (!isCurrentUserAdmin()) {
+    removeDashboardAdminAlertsBell();
+    return;
+  }
+
+  const ownerId = getSelectedOwnerIdForDashboard();
+  if (!ownerId) {
+    applyDashboardAdminAlertsBellCount(0);
+    return;
+  }
+
+  try {
+    const summary = await getPendingAlertsSummary({ ownerId, windowHours: 24 });
+    applyDashboardAdminAlertsBellCount(summary?.pendingAlertsTotal || 0);
+  } catch (error) {
+    console.warn('[DashboardAdminAlertsBell] Failed to refresh pending alerts count.', error);
+    applyDashboardAdminAlertsBellCount(0);
+  }
 }
 
 function normalizeRealtimeReadingPayload(reading) {
@@ -1395,6 +1560,7 @@ async function handleAlertRealtime(eventType, payload) {
     const alertsPage = alertsData.page;
     const alertSummary = alertsData.summary;
     const alerts = alertsPage.items || [];
+    syncDashboardAdminAlertsBellFromSummary(alertSummary, alertsPage);
 
     updateAlertsSection(alerts);
     renderAlertsDistributionChart(alertSummary, alerts);

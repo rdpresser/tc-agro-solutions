@@ -17,7 +17,6 @@ import { createFallbackPoller } from './realtime-fallback.js';
 import {
   $,
   $$,
-  showConfirm,
   formatDate,
   formatRelativeTime,
   getUser,
@@ -42,6 +41,8 @@ let isAlertsLoading = false;
 let hasPendingAlertsReload = false;
 let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
+let alertIdPendingResolution = null;
+let alertPendingDetails = null;
 
 const ALERTS_PAGE_SIZE_DEFAULT = 10;
 const ALERTS_PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50, 100];
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   hydrateInitialAlertsViewState();
+  setupAlertDialogs();
   await loadAlertsData();
   await setupAlertRealtime();
   setupEventListeners();
@@ -316,15 +318,10 @@ function renderAlerts(alerts, activeFilter) {
   if (!container) return;
 
   if (!alerts.length) {
-    const unavailableForFilter = activeFilter === 'resolved';
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">✅</div>
-        <p>${
-          unavailableForFilter
-            ? 'Resolved feed is not available on current API routes yet.'
-            : `No alerts ${activeFilter === 'pending' ? 'pending' : 'available'}`
-        }</p>
+        <p>No alerts ${activeFilter === 'pending' ? 'pending' : 'available'}</p>
       </div>
     `;
     return;
@@ -517,39 +514,6 @@ function refreshAlertRelativeTimes() {
   });
 }
 
-function filterAlertsByCurrentTab(alerts, tab) {
-  if (!Array.isArray(alerts)) {
-    return [];
-  }
-
-  if (tab === 'pending' || tab === 'all') {
-    return alerts;
-  }
-
-  return [];
-}
-
-function getAlertsForTab(tab, filters = {}) {
-  const tabAlerts = filterAlertsByCurrentTab(latestPendingAlerts, tab);
-  const filteredByAttributes = filterAlertsByAttributes(tabAlerts, {
-    severity: filters.severity,
-    status: filters.status
-  });
-  return filterAlertsBySearch(filteredByAttributes, filters.search || '');
-}
-
-function getAlertsForStats() {
-  return getAlertsForTab('pending', {
-    severity: severityFilter,
-    status: statusFilter,
-    search: searchTerm
-  });
-}
-
-function hasActiveStatsFilters() {
-  return Boolean(searchTerm || severityFilter || statusFilter);
-}
-
 function getRequestedAlertStatus() {
   const normalizedStatusFilter = normalizeAlertStatusFilter(statusFilter);
   if (normalizedStatusFilter) {
@@ -579,38 +543,6 @@ function applyAlertsPageState(alertsPage) {
   alertsViewState.totalPages = totalPages;
   alertsViewState.hasPreviousPage = alertsViewState.pageNumber > 1;
   alertsViewState.hasNextPage = alertsViewState.pageNumber < totalPages;
-}
-
-function paginateAlerts(alerts) {
-  if (!Array.isArray(alerts)) {
-    alertsViewState.totalCount = 0;
-    alertsViewState.totalPages = 1;
-    alertsViewState.hasPreviousPage = false;
-    alertsViewState.hasNextPage = false;
-    alertsViewState.pageNumber = 1;
-    return [];
-  }
-
-  alertsViewState.totalCount = alerts.length;
-  alertsViewState.totalPages = Math.max(
-    1,
-    Math.ceil(alertsViewState.totalCount / alertsViewState.pageSize)
-  );
-
-  if (alertsViewState.pageNumber > alertsViewState.totalPages) {
-    alertsViewState.pageNumber = alertsViewState.totalPages;
-  }
-
-  if (alertsViewState.pageNumber < 1) {
-    alertsViewState.pageNumber = 1;
-  }
-
-  alertsViewState.hasPreviousPage = alertsViewState.pageNumber > 1;
-  alertsViewState.hasNextPage = alertsViewState.pageNumber < alertsViewState.totalPages;
-
-  const startIndex = (alertsViewState.pageNumber - 1) * alertsViewState.pageSize;
-  const endIndex = startIndex + alertsViewState.pageSize;
-  return alerts.slice(startIndex, endIndex);
 }
 
 function renderPaginationControls() {
@@ -684,53 +616,6 @@ function normalizeAlertStatusFilter(value) {
   }
 
   return '';
-}
-
-function filterAlertsByAttributes(alerts, filters) {
-  if (!Array.isArray(alerts)) {
-    return [];
-  }
-
-  const severity = normalizeAlertSeverityFilter(filters?.severity || '');
-  const status = normalizeAlertStatusFilter(filters?.status || '');
-
-  return alerts.filter((alert) => {
-    const normalizedSeverity = normalizeAlertSeverity(alert?.severity);
-    const normalizedStatus = normalizeAlertStatus(alert?.status);
-
-    if (severity && normalizedSeverity !== severity) {
-      return false;
-    }
-
-    if (status && normalizedStatus !== status) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-function filterAlertsBySearch(alerts, term) {
-  if (!term) {
-    return alerts;
-  }
-
-  const normalized = String(term).toLowerCase();
-  return alerts.filter((alert) => {
-    const text = [
-      alert?.title,
-      alert?.alertType,
-      alert?.message,
-      alert?.plotName,
-      alert?.propertyName,
-      alert?.sensorId
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-
-    return text.includes(normalized);
-  });
 }
 
 function isCurrentUserAdmin() {
@@ -928,29 +813,327 @@ function setupEventListeners() {
 }
 
 async function handleResolve(alertId) {
-  const confirmed = await showConfirm('Mark this alert as resolved?');
-
-  if (confirmed) {
-    try {
-      await resolveAlert(alertId);
-      toast('alerts.resolve_success', 'success');
-
-      latestPendingAlerts = latestPendingAlerts.filter(
-        (alert) => String(alert?.id) !== String(alertId)
-      );
-      renderStats(latestSummary);
-      renderAlertsForCurrentFilter();
-      setTimeout(() => void loadAlertsData(), 350);
-    } catch (error) {
-      console.error('Error resolving alert:', error);
-      toast('alerts.resolve_failed', 'error');
-    }
+  const alert = getAlertById(alertId);
+  if (!alert) {
+    toast('Alert not found in current list.', 'warning');
+    return;
   }
+
+  openResolveAlertDialog(alert);
 }
 
 function handleDetails(alertId) {
-  // Could open a modal with full details
-  toast('alerts.details', 'info', { id: alertId });
+  const alert = getAlertById(alertId);
+  if (!alert) {
+    toast('Alert details unavailable for this item.', 'warning');
+    return;
+  }
+
+  openAlertDetailsDialog(alert);
+}
+
+function setupAlertDialogs() {
+  const resolveModal = $('#resolve-alert-modal');
+  const detailsModal = $('#alert-details-modal');
+  const resolveCloseButton = $('#resolve-alert-modal-close');
+  const resolveCancelButton = $('#resolve-alert-cancel');
+  const resolveConfirmButton = $('#resolve-alert-confirm');
+  const detailsResolveButton = $('#alert-details-resolve');
+  const detailsCloseButton = $('#alert-details-close');
+  const detailsHeaderCloseButton = $('#alert-details-modal-close');
+
+  const closeResolve = () => closeModal(resolveModal);
+  const closeDetails = () => closeModal(detailsModal);
+
+  resolveCloseButton?.addEventListener('click', closeResolve);
+  resolveCancelButton?.addEventListener('click', closeResolve);
+  resolveConfirmButton?.addEventListener('click', () => {
+    void submitResolveAlert();
+  });
+
+  detailsResolveButton?.addEventListener('click', () => {
+    const alert = alertPendingDetails;
+    if (!alert) {
+      toast('No alert selected to resolve.', 'warning');
+      return;
+    }
+
+    closeDetails();
+    openResolveAlertDialog(alert);
+  });
+
+  detailsCloseButton?.addEventListener('click', closeDetails);
+  detailsHeaderCloseButton?.addEventListener('click', closeDetails);
+
+  resolveModal?.addEventListener('click', (event) => {
+    if (event.target === resolveModal) {
+      closeResolve();
+    }
+  });
+
+  detailsModal?.addEventListener('click', (event) => {
+    if (event.target === detailsModal) {
+      closeDetails();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+
+    if (resolveModal?.classList.contains('open')) {
+      closeResolve();
+    }
+
+    if (detailsModal?.classList.contains('open')) {
+      closeDetails();
+    }
+  });
+}
+
+function openResolveAlertDialog(alert) {
+  const modal = $('#resolve-alert-modal');
+  const summary = $('#resolve-alert-summary');
+  const notesField = $('#resolve-alert-notes');
+  if (!modal || !summary || !notesField) {
+    return;
+  }
+
+  const alertId = String(alert?.id || '').trim();
+  if (!alertId) {
+    toast('Invalid alert selected.', 'warning');
+    return;
+  }
+
+  alertIdPendingResolution = alertId;
+  notesField.value = '';
+
+  const ownerScope = getSelectedOwnerIdForAlerts();
+  const scopeLabel = ownerScope ? `Owner scope: ${ownerScope}` : 'Owner scope: current user';
+
+  summary.textContent = `${alert?.title || alert?.alertType || 'Alert'} • ${scopeLabel}`;
+  setResolveDialogBusy(false);
+  openModal(modal);
+  notesField.focus();
+}
+
+async function submitResolveAlert() {
+  const alertId = String(alertIdPendingResolution || '').trim();
+  if (!alertId) {
+    toast('No alert selected to resolve.', 'warning');
+    return;
+  }
+
+  const notesField = $('#resolve-alert-notes');
+  const notes = String(notesField?.value || '').trim();
+  if (notes.length > 1000) {
+    toast('Resolution notes must be up to 1000 characters.', 'warning');
+    return;
+  }
+
+  setResolveDialogBusy(true);
+  try {
+    await resolveAlert(alertId, notes || null);
+    closeModal($('#resolve-alert-modal'));
+    toast('alerts.resolve_success', 'success');
+
+    latestPendingAlerts = latestPendingAlerts.filter(
+      (alert) => String(alert?.id) !== String(alertId)
+    );
+    renderStats(latestSummary);
+    renderAlertsForCurrentFilter();
+    setTimeout(() => void loadAlertsData(), 350);
+  } catch (error) {
+    console.error('Error resolving alert:', error);
+    const backendMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      (Array.isArray(error?.response?.data?.errors) && error.response.data.errors[0]?.reason) ||
+      null;
+
+    toast(backendMessage || 'alerts.resolve_failed', 'error');
+  } finally {
+    setResolveDialogBusy(false);
+  }
+}
+
+function setResolveDialogBusy(isBusy) {
+  const confirmButton = $('#resolve-alert-confirm');
+  const cancelButton = $('#resolve-alert-cancel');
+  const closeButton = $('#resolve-alert-modal-close');
+  const notesField = $('#resolve-alert-notes');
+
+  if (confirmButton) {
+    confirmButton.disabled = isBusy;
+    confirmButton.textContent = isBusy ? 'Resolving...' : 'Resolve';
+  }
+
+  if (cancelButton) {
+    cancelButton.disabled = isBusy;
+  }
+
+  if (closeButton) {
+    closeButton.disabled = isBusy;
+  }
+
+  if (notesField) {
+    notesField.disabled = isBusy;
+  }
+}
+
+function openAlertDetailsDialog(alert) {
+  const modal = $('#alert-details-modal');
+  const content = $('#alert-details-content');
+  const resolveButton = $('#alert-details-resolve');
+  if (!modal || !content) {
+    return;
+  }
+
+  const createdAt = alert?.createdAt;
+  const acknowledgedAt = alert?.acknowledgedAt;
+  const resolvedAt = alert?.resolvedAt;
+  const normalizedSeverity = normalizeAlertSeverity(alert?.severity);
+  const normalizedStatus = normalizeAlertStatus(alert?.status);
+  alertPendingDetails = alert;
+
+  const rows = [
+    ['Alert ID', alert?.id],
+    ['Type', alert?.alertType || alert?.title || '-'],
+    ['Status', normalizedStatus],
+    ['Severity', normalizedSeverity],
+    ['Message', alert?.message || '-'],
+    ['Sensor', formatDiagnosticText(alert?.sensorId)],
+    ['Plot', formatDiagnosticText(alert?.plotName)],
+    ['Property', formatDiagnosticText(alert?.propertyName)],
+    ['Value', formatMaybeNumber(alert?.value)],
+    ['Threshold', formatMaybeNumber(alert?.threshold)],
+    ['Created At', formatDiagnosticDate(createdAt)],
+    ['Acknowledged At', formatDiagnosticDate(acknowledgedAt)],
+    ['Resolved At', formatDiagnosticDate(resolvedAt)],
+    ['Resolved By', formatDiagnosticText(alert?.resolvedBy)],
+    ['Resolution Notes', formatDiagnosticText(alert?.resolutionNotes)]
+  ];
+
+  content.innerHTML = `
+    <div class="table-container" style="box-shadow: none; margin: 0">
+      <table class="table">
+        <tbody>
+          ${rows
+            .map(
+              ([label, value]) => `
+            <tr>
+              <th style="width: 170px">${escapeHtml(label)}</th>
+              <td>${escapeHtml(value ?? '-')}</td>
+            </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  if (resolveButton) {
+    const canResolve = normalizedStatus === 'pending';
+    resolveButton.style.display = canResolve ? 'inline-flex' : 'none';
+  }
+
+  openModal(modal);
+}
+
+function getAlertById(alertId) {
+  const normalizedId = String(alertId || '').trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  return (
+    latestPendingAlerts.find((alert) => String(alert?.id || '').trim() === normalizedId) || null
+  );
+}
+
+function openModal(modal) {
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeModal(modal) {
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+
+  if (modal.id === 'resolve-alert-modal') {
+    alertIdPendingResolution = null;
+    setResolveDialogBusy(false);
+  }
+
+  if (modal.id === 'alert-details-modal') {
+    alertPendingDetails = null;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatMaybeNumber(value) {
+  if (value === undefined) {
+    return '(field missing in API payload)';
+  }
+
+  if (value === null) {
+    return '(not provided)';
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return '(not provided)';
+  }
+
+  return parsed % 1 === 0 ? String(parsed) : parsed.toFixed(2);
+}
+
+function formatDiagnosticText(value) {
+  if (value === undefined) {
+    return '(field missing in API payload)';
+  }
+
+  if (value === null) {
+    return '(not provided)';
+  }
+
+  const normalized = String(value).trim();
+  return normalized.length > 0 ? normalized : '(not provided)';
+}
+
+function formatDiagnosticDate(value) {
+  if (value === undefined) {
+    return '(field missing in API payload)';
+  }
+
+  if (value === null) {
+    return '(not provided)';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '(not provided)';
+  }
+
+  return formatDate(value);
 }
 
 // Export for debugging

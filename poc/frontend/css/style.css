@@ -342,6 +342,44 @@ p {
   position: relative;
 }
 
+.topbar-alert-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  position: relative;
+  color: var(--color-text);
+  background: transparent;
+}
+
+.topbar-alert-link:hover {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.topbar-alert-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.topbar-alert-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .topbar-nav {
   display: none;
 }

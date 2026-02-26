@@ -306,6 +306,66 @@
       </main>
     </div>
 
+    <div id="resolve-alert-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 640px">
+        <div class="modal-header">
+          <h3>✅ Resolve Alert</h3>
+          <button
+            id="resolve-alert-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close resolve alert dialog"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="resolve-alert-summary" class="text-muted" style="margin: 0"></p>
+          <div class="form-group" style="margin-bottom: 0">
+            <label for="resolve-alert-notes" class="form-label">Resolution notes (optional)</label>
+            <textarea
+              id="resolve-alert-notes"
+              class="form-control"
+              rows="4"
+              maxlength="1000"
+              placeholder="Describe what was done to resolve this alert..."
+            ></textarea>
+            <span class="form-text"
+              >Optional. You can leave this empty and still resolve the alert. Up to 1000
+              characters.</span
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="resolve-alert-cancel" type="button" class="btn btn-outline">Cancel</button>
+          <button id="resolve-alert-confirm" type="button" class="btn btn-success">Resolve</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="alert-details-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 720px">
+        <div class="modal-header">
+          <h3>📋 Alert Details</h3>
+          <button
+            id="alert-details-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close alert details dialog"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="alert-details-content"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="alert-details-resolve" type="button" class="btn btn-success">Resolve</button>
+          <button id="alert-details-close" type="button" class="btn btn-outline">Close</button>
+        </div>
+      </div>
+    </div>
+
     <style>
       /* Tab styles */
       .tabs {
