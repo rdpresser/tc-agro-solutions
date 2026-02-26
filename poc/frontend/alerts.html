@@ -162,14 +162,35 @@
 
           <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom: 0">
+            <div class="form-row alerts-filters-row">
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
                 <input
                   type="text"
                   id="search-alerts"
                   class="form-control"
                   placeholder="🔍 Search alerts..."
                 />
+              </div>
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
+                <select id="alerts-severity-filter" class="form-control form-select">
+                  <option value="">All Severity</option>
+                  <option value="critical">🚨 Critical</option>
+                  <option value="warning">⚠️ Warning</option>
+                  <option value="info">ℹ️ Info</option>
+                </select>
+              </div>
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
+                <select id="alerts-status-filter" class="form-control form-select">
+                  <option value="">All Status</option>
+                  <option value="pending">⏳ Pending</option>
+                  <option value="acknowledged">🟡 Acknowledged</option>
+                  <option value="resolved">✅ Resolved</option>
+                </select>
+              </div>
+              <div class="form-group alerts-filter-actions" style="margin-bottom: 0">
+                <button id="clear-alert-filters" class="btn btn-outline btn-sm" type="button">
+                  ✖ Clear filters
+                </button>
               </div>
             </div>
           </div>
@@ -179,8 +200,12 @@
             <button class="tab-btn active" data-tab="pending">
               Pending <span class="badge badge-danger" style="margin-left: 8px">0</span>
             </button>
-            <button class="tab-btn" data-tab="resolved">Resolved</button>
-            <button class="tab-btn" data-tab="all">All Alerts</button>
+            <button class="tab-btn" data-tab="resolved">
+              Resolved <span class="badge badge-success" style="margin-left: 8px">0</span>
+            </button>
+            <button class="tab-btn" data-tab="all">
+              All Alerts <span class="badge badge-info" style="margin-left: 8px">0</span>
+            </button>
           </div>
 
           <div id="alerts-container" class="alert-list">
@@ -364,6 +389,28 @@
         gap: 8px;
       }
 
+      .alerts-filters-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .alerts-filter-grow {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .alerts-filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .alerts-filter-actions .btn {
+        white-space: nowrap;
+      }
+
       @media (max-width: 768px) {
         .alert-item {
           flex-direction: column;
@@ -380,6 +427,20 @@
         .tab-btn {
           flex: 1;
           text-align: center;
+        }
+
+        .alerts-filters-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .alerts-filter-actions {
+          margin-left: 0;
+          justify-content: stretch;
+        }
+
+        .alerts-filter-actions .btn {
+          width: 100%;
         }
       }
     </style>

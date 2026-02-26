@@ -26,6 +26,8 @@ let latestSummary = null;
 let ownerGroupJoined = false;
 let ownerScopeId = null;
 let searchTerm = '';
+let severityFilter = '';
+let statusFilter = '';
 let isAlertsLoading = false;
 let hasPendingAlertsReload = false;
 let lastSyncTimestampIso = null;
@@ -135,10 +137,22 @@ function hydrateInitialAlertsViewState() {
   currentFilter = allowedTabs.includes(tab) ? tab : 'pending';
 
   searchTerm = String(params.get('search') || '').trim();
+  severityFilter = normalizeAlertSeverityFilter(params.get('severity') || '');
+  statusFilter = normalizeAlertStatusFilter(params.get('status') || '');
 
   const searchInput = $('#search-alerts');
   if (searchInput) {
     searchInput.value = searchTerm;
+  }
+
+  const severitySelect = $('#alerts-severity-filter');
+  if (severitySelect) {
+    severitySelect.value = severityFilter;
+  }
+
+  const statusSelect = $('#alerts-status-filter');
+  if (statusSelect) {
+    statusSelect.value = statusFilter;
   }
 
   const tabs = $$('[data-tab]');
@@ -161,6 +175,18 @@ function persistAlertsViewStateToUrl() {
     params.set('search', searchTerm);
   } else {
     params.delete('search');
+  }
+
+  if (severityFilter) {
+    params.set('severity', severityFilter);
+  } else {
+    params.delete('severity');
+  }
+
+  if (statusFilter) {
+    params.set('status', statusFilter);
+  } else {
+    params.delete('status');
   }
 
   const next = `${url.pathname}${params.toString() ? `?${params.toString()}` : ''}${url.hash}`;
@@ -208,9 +234,14 @@ function renderAlertsForCurrentFilter() {
   if (!container) return;
 
   try {
-    const alerts = filterAlertsByCurrentTab(latestPendingAlerts, currentFilter);
-    const filteredBySearch = filterAlertsBySearch(alerts, searchTerm);
-    renderAlerts(filteredBySearch, currentFilter);
+    const alertsByTab = getAlertsForTab(currentFilter, {
+      severity: severityFilter,
+      status: statusFilter,
+      search: searchTerm
+    });
+
+    renderAlerts(alertsByTab, currentFilter);
+    renderStats(latestSummary, getAlertsForStats());
     updateTabCounts();
   } catch (error) {
     console.error('Error loading alerts:', error);
@@ -290,19 +321,56 @@ function renderAlerts(alerts, activeFilter) {
 }
 
 function updateTabCounts() {
-  const pendingCount = Number(latestSummary?.pendingAlertsTotal || latestPendingAlerts.length || 0);
+  const pendingCount = getAlertsForTab('pending', {
+    severity: severityFilter,
+    status: statusFilter,
+    search: searchTerm
+  }).length;
+  const resolvedCount = getAlertsForTab('resolved', {
+    severity: severityFilter,
+    status: statusFilter,
+    search: searchTerm
+  }).length;
+  const allCount = getAlertsForTab('all', {
+    severity: severityFilter,
+    status: statusFilter,
+    search: searchTerm
+  }).length;
+
   const pendingTabBadge = $('[data-tab="pending"] .badge');
+  const resolvedTabBadge = $('[data-tab="resolved"] .badge');
+  const allTabBadge = $('[data-tab="all"] .badge');
+
   if (pendingTabBadge) {
     pendingTabBadge.textContent = String(pendingCount);
   }
+
+  if (resolvedTabBadge) {
+    resolvedTabBadge.textContent = String(resolvedCount);
+  }
+
+  if (allTabBadge) {
+    allTabBadge.textContent = String(allCount);
+  }
 }
 
-function renderStats(summary) {
-  const critical = Number(summary?.criticalPendingCount || 0);
-  const warning = Number(summary?.highPendingCount || 0) + Number(summary?.mediumPendingCount || 0);
-  const info = Number(summary?.lowPendingCount || 0);
+function renderStats(summary, alertsOverride = null) {
+  const usingOverride = Array.isArray(alertsOverride);
 
-  const pendingTotal = Number(summary?.pendingAlertsTotal || 0);
+  const critical = usingOverride
+    ? alertsOverride.filter((alert) => normalizeAlertSeverity(alert?.severity) === 'critical')
+        .length
+    : Number(summary?.criticalPendingCount || 0);
+  const warning = usingOverride
+    ? alertsOverride.filter((alert) => normalizeAlertSeverity(alert?.severity) === 'warning').length
+    : Number(summary?.highPendingCount || 0) + Number(summary?.mediumPendingCount || 0);
+  const info = usingOverride
+    ? alertsOverride.filter((alert) => normalizeAlertSeverity(alert?.severity) === 'info').length
+    : Number(summary?.lowPendingCount || 0);
+
+  const pendingTotal = usingOverride
+    ? alertsOverride.length
+    : Number(summary?.pendingAlertsTotal || latestPendingAlerts.length || 0);
   const resolvedToday = 0;
 
   const statCritical = $('#alerts-stat-critical');
@@ -388,6 +456,23 @@ function filterAlertsByCurrentTab(alerts, tab) {
   return [];
 }
 
+function getAlertsForTab(tab, filters = {}) {
+  const tabAlerts = filterAlertsByCurrentTab(latestPendingAlerts, tab);
+  const filteredByAttributes = filterAlertsByAttributes(tabAlerts, {
+    severity: filters.severity,
+    status: filters.status
+  });
+  return filterAlertsBySearch(filteredByAttributes, filters.search || '');
+}
+
+function getAlertsForStats() {
+  return getAlertsForTab('pending', {
+    severity: severityFilter,
+    status: statusFilter,
+    search: searchTerm
+  });
+}
+
 function normalizeAlertSeverity(severity) {
   const normalized = String(severity || '')
     .trim()
@@ -413,6 +498,54 @@ function normalizeAlertStatus(status) {
   }
 
   return 'pending';
+}
+
+function normalizeAlertSeverityFilter(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === 'critical' || normalized === 'warning' || normalized === 'info') {
+    return normalized;
+  }
+
+  return '';
+}
+
+function normalizeAlertStatusFilter(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === 'pending' || normalized === 'acknowledged' || normalized === 'resolved') {
+    return normalized;
+  }
+
+  return '';
+}
+
+function filterAlertsByAttributes(alerts, filters) {
+  if (!Array.isArray(alerts)) {
+    return [];
+  }
+
+  const severity = normalizeAlertSeverityFilter(filters?.severity || '');
+  const status = normalizeAlertStatusFilter(filters?.status || '');
+
+  return alerts.filter((alert) => {
+    const normalizedSeverity = normalizeAlertSeverity(alert?.severity);
+    const normalizedStatus = normalizeAlertStatus(alert?.status);
+
+    if (severity && normalizedSeverity !== severity) {
+      return false;
+    }
+
+    if (status && normalizedStatus !== status) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 function filterAlertsBySearch(alerts, term) {
@@ -555,6 +688,42 @@ function setupEventListeners() {
     searchDebounceTimer = setTimeout(() => {
       renderAlertsForCurrentFilter();
     }, 250);
+  });
+
+  const severitySelect = $('#alerts-severity-filter');
+  severitySelect?.addEventListener('change', () => {
+    severityFilter = normalizeAlertSeverityFilter(severitySelect.value);
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
+  });
+
+  const statusSelect = $('#alerts-status-filter');
+  statusSelect?.addEventListener('change', () => {
+    statusFilter = normalizeAlertStatusFilter(statusSelect.value);
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
+  });
+
+  const clearFiltersButton = $('#clear-alert-filters');
+  clearFiltersButton?.addEventListener('click', () => {
+    searchTerm = '';
+    severityFilter = '';
+    statusFilter = '';
+
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    if (severitySelect) {
+      severitySelect.value = '';
+    }
+
+    if (statusSelect) {
+      statusSelect.value = '';
+    }
+
+    persistAlertsViewStateToUrl();
+    renderAlertsForCurrentFilter();
   });
 }
 
