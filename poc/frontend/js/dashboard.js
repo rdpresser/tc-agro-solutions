@@ -20,7 +20,12 @@ import {
   stopSignalRConnection,
   stopAlertSignalRConnection
 } from './api.js';
-import { addDataPoint, createReadingsChart, destroyAllCharts } from './charts.js';
+import {
+  addDataPoint,
+  createAlertDistributionChart,
+  createReadingsChart,
+  destroyAllCharts
+} from './charts.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
@@ -599,6 +604,7 @@ let selectedOwnerId = null;
 let latestMetricsTimestampMs = 0;
 const realtimeReadingsTimeline = [];
 const processedRealtimeEventKeys = new Map();
+const processedAlertRealtimeEventKeys = new Map();
 const MAX_PROCESSED_REALTIME_EVENTS = 500;
 const MAX_REALTIME_TIMELINE_ITEMS = 100;
 const fallbackPoller = createFallbackPoller({
@@ -688,6 +694,8 @@ async function refreshDashboardFromFallback() {
   syncRealtimeStateFromReadings(readingsForTable);
   updateReadingsTable(readingsForTable);
   updateAlertsSection(alerts);
+  renderAlertsDistributionChart(alerts);
+  renderAlertsDistributionChart(alerts);
   const alertStat = $('#stat-alerts');
   if (alertStat) {
     alertStat.textContent = String(alerts.length);
@@ -757,6 +765,19 @@ function markRealtimeEventAsProcessed(eventKey) {
   }
 }
 
+function markAlertRealtimeEventAsProcessed(eventKey) {
+  processedAlertRealtimeEventKeys.set(eventKey, Date.now());
+
+  if (processedAlertRealtimeEventKeys.size <= MAX_PROCESSED_REALTIME_EVENTS) {
+    return;
+  }
+
+  const oldestKey = processedAlertRealtimeEventKeys.keys().next().value;
+  if (oldestKey) {
+    processedAlertRealtimeEventKeys.delete(oldestKey);
+  }
+}
+
 function syncRealtimeStateFromReadings(readings) {
   realtimeReadingsTimeline.length = 0;
   processedRealtimeEventKeys.clear();
@@ -792,6 +813,71 @@ function getRealtimeReadingsForTable(limit = 10) {
 
 function updateRealtimeReadingsTable() {
   updateReadingsTable(getRealtimeReadingsForTable(10));
+}
+
+function computeAlertsDistribution(alerts) {
+  const distribution = {
+    critical: 0,
+    warning: 0,
+    info: 0
+  };
+
+  if (!Array.isArray(alerts)) {
+    return distribution;
+  }
+
+  alerts.forEach((alert) => {
+    const severity = String(alert?.severity || alert?.Severity || 'info').toLowerCase();
+
+    if (severity === 'critical') {
+      distribution.critical += 1;
+      return;
+    }
+
+    if (severity === 'warning' || severity === 'high' || severity === 'medium') {
+      distribution.warning += 1;
+      return;
+    }
+
+    distribution.info += 1;
+  });
+
+  return distribution;
+}
+
+function renderAlertsDistributionChart(alerts) {
+  const container = $('#alerts-chart-container');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '<canvas id="alerts-chart"></canvas>';
+  createAlertDistributionChart('alerts-chart', computeAlertsDistribution(alerts));
+}
+
+function extractAlertEventTimestamp(payload) {
+  const timestampValue =
+    payload?.createdAt ||
+    payload?.CreatedAt ||
+    payload?.acknowledgedAt ||
+    payload?.AcknowledgedAt ||
+    payload?.resolvedAt ||
+    payload?.ResolvedAt ||
+    null;
+
+  if (!timestampValue) {
+    return 0;
+  }
+
+  const parsed = new Date(timestampValue).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function buildAlertRealtimeEventKey(eventType, payload) {
+  const alertId = extractAlertId(payload) || 'unknown';
+  const status = extractAlertStatus(payload, eventType || 'unknown');
+  const timestamp = extractAlertEventTimestamp(payload);
+  return `${eventType}:${alertId}:${status}:${timestamp}`;
 }
 
 function shouldUpdateMetrics(reading) {
@@ -986,6 +1072,13 @@ function updateRealtimeBadges() {
 }
 
 async function handleAlertRealtime(eventType, payload) {
+  const eventKey = buildAlertRealtimeEventKey(eventType, payload);
+  if (processedAlertRealtimeEventKeys.has(eventKey)) {
+    return;
+  }
+
+  markAlertRealtimeEventAsProcessed(eventKey);
+
   const alertId = extractAlertId(payload);
   const fallbackStatus =
     eventType === 'resolved'
@@ -1002,6 +1095,7 @@ async function handleAlertRealtime(eventType, payload) {
   try {
     const alerts = await getAlerts('pending', getSelectedOwnerIdForDashboard());
     updateAlertsSection(alerts);
+    renderAlertsDistributionChart(alerts);
 
     const alertStat = $('#stat-alerts');
     if (alertStat) {
