@@ -433,6 +433,20 @@ p {
   background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
 }
 
+.pagination-sticky-card > .d-flex.justify-between.align-center {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-sticky-card > .d-flex.justify-between.align-center > :nth-child(2) {
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Stats Cards */
 .stats-grid {
   display: grid;
@@ -1150,6 +1164,17 @@ p {
   .pagination-sticky-card::before {
     top: -12px;
     height: 12px;
+  }
+
+  .pagination-sticky-card > .d-flex.justify-between.align-center {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-sticky-card > .d-flex.justify-between.align-center > :nth-child(2) {
+    order: -1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
   }
 
   .sidebar {

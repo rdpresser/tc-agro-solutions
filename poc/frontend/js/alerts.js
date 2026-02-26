@@ -116,16 +116,34 @@ async function loadAlertsData() {
   }
 
   try {
+    const requestedStatus = getRequestedAlertStatus();
+
     const [alertsPage, summary] = await Promise.all([
-      getPendingAlertsPage({ ownerId: selectedOwnerId, pageNumber: 1, pageSize: 500 }),
+      getPendingAlertsPage({
+        ownerId: selectedOwnerId,
+        pageNumber: alertsViewState.pageNumber,
+        pageSize: alertsViewState.pageSize,
+        status: requestedStatus,
+        severity: severityFilter || null,
+        search: searchTerm || null
+      }),
       getPendingAlertsSummary({ ownerId: selectedOwnerId, windowHours: 24 })
     ]);
+
+    applyAlertsPageState(alertsPage);
+
+    if (alertsViewState.totalCount > 0 && alertsViewState.pageNumber > alertsViewState.totalPages) {
+      alertsViewState.pageNumber = alertsViewState.totalPages;
+      hasPendingAlertsReload = true;
+      return;
+    }
 
     latestPendingAlerts = Array.isArray(alertsPage?.items) ? alertsPage.items : [];
     latestSummary = summary;
 
     renderStats(summary);
     renderAlertsForCurrentFilter();
+    await updateTabCountsFromBackend();
     updateLastAlertsSyncTimestamp();
     persistAlertsViewStateToUrl();
   } finally {
@@ -273,17 +291,7 @@ function renderAlertsForCurrentFilter() {
   if (!container) return;
 
   try {
-    const alertsByTab = getAlertsForTab(currentFilter, {
-      severity: severityFilter,
-      status: statusFilter,
-      search: searchTerm
-    });
-
-    const pagedAlerts = paginateAlerts(alertsByTab);
-
-    renderAlerts(pagedAlerts, currentFilter);
-    renderStats(latestSummary, getAlertsForStats());
-    updateTabCounts();
+    renderAlerts(latestPendingAlerts, currentFilter);
     renderPaginationControls();
     persistAlertsViewStateToUrl();
   } catch (error) {
@@ -363,26 +371,31 @@ function renderAlerts(alerts, activeFilter) {
   refreshAlertRelativeTimes();
 }
 
-function updateTabCounts() {
-  const pendingCount = getAlertsForTab('pending', {
-    severity: severityFilter,
-    status: statusFilter,
-    search: searchTerm
-  }).length;
-  const resolvedCount = getAlertsForTab('resolved', {
-    severity: severityFilter,
-    status: statusFilter,
-    search: searchTerm
-  }).length;
-  const allCount = getAlertsForTab('all', {
-    severity: severityFilter,
-    status: statusFilter,
-    search: searchTerm
-  }).length;
-
+async function updateTabCountsFromBackend() {
   const pendingTabBadge = $('[data-tab="pending"] .badge');
   const resolvedTabBadge = $('[data-tab="resolved"] .badge');
   const allTabBadge = $('[data-tab="all"] .badge');
+
+  const ownerId = getSelectedOwnerIdForAlerts();
+  const severity = severityFilter || null;
+  const search = searchTerm || null;
+  const getCount = (status) =>
+    getPendingAlertsPage({
+      ownerId,
+      pageNumber: 1,
+      pageSize: 1,
+      status,
+      severity,
+      search
+    })
+      .then((response) => Number(response?.totalCount || 0))
+      .catch(() => 0);
+
+  const [pendingCount, resolvedCount, allCount] = await Promise.all([
+    getCount('pending'),
+    getCount('resolved'),
+    getCount('all')
+  ]);
 
   if (pendingTabBadge) {
     pendingTabBadge.textContent = String(pendingCount);
@@ -521,6 +534,41 @@ function getAlertsForStats() {
     status: statusFilter,
     search: searchTerm
   });
+}
+
+function hasActiveStatsFilters() {
+  return Boolean(searchTerm || severityFilter || statusFilter);
+}
+
+function getRequestedAlertStatus() {
+  const normalizedStatusFilter = normalizeAlertStatusFilter(statusFilter);
+  if (normalizedStatusFilter) {
+    return normalizedStatusFilter;
+  }
+
+  if (currentFilter === 'resolved') {
+    return 'resolved';
+  }
+
+  if (currentFilter === 'all') {
+    return 'all';
+  }
+
+  return 'pending';
+}
+
+function applyAlertsPageState(alertsPage) {
+  const totalCount = Number(alertsPage?.totalCount || 0);
+  const pageSizeFromResponse = Number(alertsPage?.pageSize || alertsViewState.pageSize);
+  const pageNumberFromResponse = Number(alertsPage?.pageNumber || alertsViewState.pageNumber);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSizeFromResponse));
+
+  alertsViewState.totalCount = totalCount;
+  alertsViewState.pageSize = pageSizeFromResponse;
+  alertsViewState.pageNumber = Math.min(Math.max(pageNumberFromResponse, 1), totalPages);
+  alertsViewState.totalPages = totalPages;
+  alertsViewState.hasPreviousPage = alertsViewState.pageNumber > 1;
+  alertsViewState.hasNextPage = alertsViewState.pageNumber < totalPages;
 }
 
 function paginateAlerts(alerts) {
@@ -757,7 +805,7 @@ function setupEventListeners() {
       currentFilter = tab.dataset.tab;
       alertsViewState.pageNumber = 1;
       persistAlertsViewStateToUrl();
-      renderAlertsForCurrentFilter();
+      void loadAlertsData();
     });
   });
 
@@ -792,7 +840,7 @@ function setupEventListeners() {
     }
 
     searchDebounceTimer = setTimeout(() => {
-      renderAlertsForCurrentFilter();
+      void loadAlertsData();
     }, 250);
   });
 
@@ -801,7 +849,7 @@ function setupEventListeners() {
     severityFilter = normalizeAlertSeverityFilter(severitySelect.value);
     alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 
   const statusSelect = $('#alerts-status-filter');
@@ -809,7 +857,7 @@ function setupEventListeners() {
     statusFilter = normalizeAlertStatusFilter(statusSelect.value);
     alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 
   const clearFiltersButton = $('#clear-alert-filters');
@@ -832,7 +880,7 @@ function setupEventListeners() {
     }
 
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 
   const previousButton = $('#alerts-prev-page');
@@ -843,7 +891,7 @@ function setupEventListeners() {
 
     alertsViewState.pageNumber -= 1;
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 
   const nextButton = $('#alerts-next-page');
@@ -854,7 +902,7 @@ function setupEventListeners() {
 
     alertsViewState.pageNumber += 1;
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 
   const pageSizeSelect = $('#alerts-page-size');
@@ -865,7 +913,7 @@ function setupEventListeners() {
       : ALERTS_PAGE_SIZE_DEFAULT;
     alertsViewState.pageNumber = 1;
     persistAlertsViewStateToUrl();
-    renderAlertsForCurrentFilter();
+    void loadAlertsData();
   });
 }
 

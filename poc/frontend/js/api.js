@@ -661,23 +661,18 @@ export async function getPendingAlertsPage({
   ownerId = null,
   pageNumber = 1,
   pageSize = 20,
-  status = null
+  status = null,
+  severity = null,
+  search = null
 } = {}) {
   try {
-    if (status && status.toLowerCase() !== 'pending') {
-      console.warn(
-        '[Alerts] Dashboard supports pending alerts feed only. Requested status ignored.',
-        {
-          requestedStatus: status,
-          routeUsed: '/api/alerts/pending'
-        }
-      );
-    }
-
     const { data } = await analyticsApi.get('/api/alerts/pending', {
       params: {
         pageNumber,
         pageSize,
+        ...(status ? { status } : {}),
+        ...(severity ? { severity } : {}),
+        ...(search ? { search } : {}),
         ...(ownerId ? { ownerId } : {})
       }
     });
