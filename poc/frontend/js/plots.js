@@ -7,7 +7,17 @@ import { initProtectedPage } from './common.js';
 import { COMMON_CROP_TYPES, CROP_TYPE_ICONS } from './crop-types.js';
 import { toast } from './i18n.js';
 import { getIrrigationTypeDisplay, normalizeIrrigationType } from './irrigation-types.js';
-import { $, getPageUrl, debounce, formatArea, formatDate } from './utils.js';
+import {
+  $,
+  getPageUrl,
+  debounce,
+  formatArea,
+  formatDate,
+  getPaginatedItems,
+  getPaginatedTotalCount,
+  getPaginatedPageNumber,
+  getPaginatedPageSize
+} from './utils.js';
 // import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
 // import { deletePlot } from './api.js'; // Commented out - no delete route available
 
@@ -83,8 +93,8 @@ function normalizePlotsResponse(data, filters) {
   if (Array.isArray(data)) {
     const normalizedItems = data.map(normalizePlotItem);
     const filteredItems = applyStatusFilter(normalizedItems, filters?.status);
-    const pageSize = filters?.pageSize || 10;
-    const pageNumber = filters?.pageNumber || 1;
+    const pageSize = getPaginatedPageSize(null, filters?.pageSize || 10);
+    const pageNumber = getPaginatedPageNumber(null, filters?.pageNumber || 1);
     const totalCount = filteredItems.length;
     const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
     const safePage = Math.min(Math.max(1, pageNumber), pageCount);
@@ -101,15 +111,16 @@ function normalizePlotsResponse(data, filters) {
     };
   }
 
-  const items = data?.data || data?.items || data?.results || [];
+  const items = getPaginatedItems(data, []);
   const normalizedItems = (Array.isArray(items) ? items : []).map(normalizePlotItem);
   const filteredItems = applyStatusFilter(normalizedItems, filters?.status);
+  const hasServerTotal = Number.isFinite(Number(data?.totalCount ?? data?.TotalCount));
   const totalCount =
-    filters?.status && Number.isFinite(Number(data?.totalCount))
+    filters?.status && hasServerTotal
       ? filteredItems.length
-      : Number(data?.totalCount ?? filteredItems.length);
-  const pageNumber = Number(data?.pageNumber || filters?.pageNumber || 1);
-  const pageSize = Number(data?.pageSize || filters?.pageSize || 10);
+      : getPaginatedTotalCount(data, filteredItems.length);
+  const pageNumber = getPaginatedPageNumber(data, filters?.pageNumber || 1);
+  const pageSize = getPaginatedPageSize(data, filters?.pageSize || 10);
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasPreviousPage = data?.hasPreviousPage ?? pageNumber > 1;
   const hasNextPage = data?.hasNextPage ?? pageNumber < pageCount;
@@ -274,12 +285,17 @@ function renderSummary(state) {
   ).length;
 
   if (summaryText) {
-    summaryText.textContent = `Showing ${plots.length} of ${state?.totalCount ?? plots.length} plot(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
+    const total = Number(state?.totalCount ?? plots.length ?? 0);
+    const pageNumber = Number(state?.pageNumber ?? 1);
+    const pageSize = Number(state?.pageSize ?? plots.length ?? 1);
+    const from = total === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+    const to = total === 0 ? 0 : from + plots.length - 1;
+    summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
   if (summaryArea) summaryArea.textContent = `Total Area: ${formatArea(totalArea)}`;
-  if (healthyBadge) healthyBadge.textContent = `${healthyCount} Healthy`;
-  if (warningBadge) warningBadge.textContent = `${warningCount} Warning`;
-  if (alertBadge) alertBadge.textContent = `${alertCount} Alert`;
+  if (healthyBadge) healthyBadge.textContent = `${healthyCount} ● Healthy`;
+  if (warningBadge) warningBadge.textContent = `${warningCount} ● Needs Attention`;
+  if (alertBadge) alertBadge.textContent = `${alertCount} ● Alert Active`;
 }
 
 // ============================================

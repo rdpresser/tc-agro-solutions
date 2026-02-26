@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{farm_service_url}}/api/owners?pageNumber=1&pageSize=1000&sortBy=name&sortDirection=asc&filter
+  url: {{farm_service_url}}/api/owners?pageNumber=1&pageSize=1000&sortBy=name&sortDirection=asc&filter&ownerId=ca236603-2dea-4c12-aead-a7be4e70e725
   body: none
   auth: bearer
 }
@@ -16,6 +16,7 @@ params:query {
   sortBy: name
   sortDirection: asc
   filter: 
+  ownerId: ca236603-2dea-4c12-aead-a7be4e70e725
 }
 
 auth:bearer {

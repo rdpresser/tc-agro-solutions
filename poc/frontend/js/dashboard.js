@@ -7,14 +7,29 @@ import {
   getLatestReadings,
   getReadingsLatest,
   getHistoricalData,
-  getAlerts,
+  getPendingAlertsPage,
+  getPendingAlertsSummary,
+  getProperties,
   getPlots,
+  getPlotsPaginated,
+  getSensorsPaginated,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger,
+  joinOwnerGroup,
+  leaveOwnerGroup,
+  joinAlertOwnerGroup,
+  leaveAlertOwnerGroup,
   initSignalRConnection,
   initAlertSignalRConnection,
   stopSignalRConnection,
   stopAlertSignalRConnection
 } from './api.js';
-import { addDataPoint, createReadingsChart, destroyAllCharts } from './charts.js';
+import {
+  addDataPoint,
+  createAlertDistributionChart,
+  createReadingsChart,
+  destroyAllCharts
+} from './charts.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
@@ -25,7 +40,7 @@ import {
   formatPercentage,
   formatRelativeTime,
   formatTemperature,
-  debounce,
+  getPaginatedTotalCount,
   getUser
 } from './utils.js';
 
@@ -46,6 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  await setupOwnerSelectorForDashboard();
+
   const shouldEnableRealtime = await loadDashboardData();
   if (shouldEnableRealtime) {
     setupRealTimeUpdates();
@@ -53,23 +70,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('beforeunload', async () => {
-  if (joinedPlotIds.length > 0) {
-    const { leavePlotGroup, leaveAlertPlotGroup } = await import('./api.js');
-    for (const plotId of joinedPlotIds) {
-      try {
-        await leavePlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave plot ${plotId}:`, error);
-      }
-
-      try {
-        await leaveAlertPlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave alert plot ${plotId}:`, error);
-      }
+  const realtimeOwnerId = getRealtimeOwnerScopeId();
+  if (!isCurrentUserAdmin() || realtimeOwnerId) {
+    try {
+      await leaveOwnerGroup(realtimeOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave owner group ${realtimeOwnerId}:`, error);
     }
-    joinedPlotIds = [];
-    joinedAlertPlotIds = [];
+  }
+
+  if (!isCurrentUserAdmin() || realtimeOwnerId) {
+    try {
+      await leaveAlertOwnerGroup(realtimeOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave alert owner group ${realtimeOwnerId}:`, error);
+    }
   }
 
   stopFallbackPollingSilently();
@@ -80,31 +95,51 @@ window.addEventListener('beforeunload', async () => {
 
 async function loadDashboardData() {
   try {
-    const userPlots = await getPlots();
+    const ownerId = getSelectedOwnerIdForDashboard();
+    const stats = await getDashboardStats(ownerId);
+    updateStatCards(stats);
+
+    const userPlots = await getPlots(null, ownerId);
     const hasPlots = Array.isArray(userPlots) && userPlots.length > 0;
 
     if (!hasPlots) {
       hasSetupForRealtime = false;
-      renderInitialSetupState();
+      syncRealtimeStateFromReadings([]);
+      renderInitialSetupState({ preserveStats: true });
       return false;
     }
 
     // Load all data in parallel
-    const [stats, dashboardReadings, latestReadings, alerts] = await Promise.all([
-      getDashboardStats(),
-      getLatestReadings(5),
-      getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
-      getAlerts('pending').catch(() => [])
+    const [dashboardReadings, latestReadings, alertsData, statSubtextData] = await Promise.all([
+      getLatestReadings(5, ownerId),
+      getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+      loadDashboardAlertsData(ownerId),
+      loadDashboardStatSubtextData(ownerId, stats)
     ]);
 
-    updateStatCards(stats);
+    const alerts = alertsData?.page?.items || [];
+    const alertSummary = alertsData?.summary || null;
+
     const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
+    syncRealtimeStateFromReadings(readingsForTable);
     updateReadingsTable(readingsForTable);
     updateAlertsSection(alerts);
+    renderAlertsDistributionChart(alertSummary, alerts);
     const alertStat = $('#stat-alerts');
     if (alertStat) {
-      alertStat.textContent = String(alerts.length);
+      alertStat.textContent = String(resolvePendingAlertsTotal(alertSummary, alertsData?.page));
     }
+    dashboardSubtextState = {
+      propertiesCreatedThisMonth: Number(statSubtextData?.propertiesCreatedThisMonth || 0),
+      plotsCreatedThisMonth: Number(statSubtextData?.plotsCreatedThisMonth || 0),
+      activeSensorsCount: Number(statSubtextData?.activeSensorsCount || 0),
+      sensorsTotal: Number(statSubtextData?.sensorsTotal || 0)
+    };
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts,
+      newPendingInWindowCount: Number(alertSummary?.newPendingInWindowCount || 0)
+    });
 
     const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
     if (freshestReading) {
@@ -113,7 +148,7 @@ async function loadDashboardData() {
 
     const chartSensorId = freshestReading?.sensorId;
     if (chartSensorId) {
-      const history = await getHistoricalData(chartSensorId, 7, 168);
+      const history = await getHistoricalData(chartSensorId, 7, 168, ownerId);
       renderReadingsChart(history);
     } else {
       renderReadingsChart([]);
@@ -125,6 +160,162 @@ async function loadDashboardData() {
     toast('dashboard.load_failed', 'error');
     return false;
   }
+}
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) return false;
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function getSelectedOwnerIdForDashboard() {
+  if (!isCurrentUserAdmin()) {
+    return null;
+  }
+
+  return selectedOwnerId || null;
+}
+
+function getCurrentUserOwnerIdFromClaims() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return null;
+  }
+
+  const ownerIdCandidates = [
+    currentUser.sub,
+    currentUser.id,
+    currentUser.userId,
+    currentUser.ownerId,
+    currentUser.nameIdentifier
+  ];
+
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+  return ownerId ? String(ownerId).trim() : null;
+}
+
+function getRealtimeOwnerScopeId() {
+  if (isCurrentUserAdmin()) {
+    return getSelectedOwnerIdForDashboard();
+  }
+
+  return getCurrentUserOwnerIdFromClaims();
+}
+
+async function setupOwnerSelectorForDashboard() {
+  const filterContainer = $('#dashboard-owner-filter');
+  const ownerSelect = $('#dashboard-owner-select');
+
+  if (!filterContainer || !ownerSelect) {
+    return;
+  }
+
+  if (!isCurrentUserAdmin()) {
+    filterContainer.style.display = 'none';
+    selectedOwnerId = null;
+    return;
+  }
+
+  filterContainer.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwnersForDashboard(parameterMap);
+    const sortedOwners = [...owners].sort((left, right) => {
+      const leftName = String(left?.name || '').toLowerCase();
+      const rightName = String(right?.name || '').toLowerCase();
+      return leftName.localeCompare(rightName);
+    });
+
+    ownerSelect.innerHTML = sortedOwners
+      .map(
+        (owner) =>
+          `<option value="${owner.id}">${owner?.name || 'Unnamed owner'} - ${owner?.email || 'no-email'}</option>`
+      )
+      .join('');
+
+    if (sortedOwners.length > 0) {
+      selectedOwnerId = sortedOwners[0].id;
+      ownerSelect.value = selectedOwnerId;
+      ownerSelect.disabled = false;
+    } else {
+      selectedOwnerId = null;
+      ownerSelect.innerHTML = '<option value="">No owners found</option>';
+      ownerSelect.disabled = true;
+    }
+
+    ownerSelect.addEventListener('change', async () => {
+      const previousOwnerId = selectedOwnerId;
+      selectedOwnerId = ownerSelect.value || null;
+
+      const shouldEnableRealtime = await loadDashboardData();
+
+      if (
+        previousOwnerId &&
+        previousOwnerId !== selectedOwnerId &&
+        sensorRealtimeState === 'connected'
+      ) {
+        await leaveOwnerGroup(previousOwnerId);
+      }
+
+      if (
+        previousOwnerId &&
+        previousOwnerId !== selectedOwnerId &&
+        alertsRealtimeState === 'connected'
+      ) {
+        await leaveAlertOwnerGroup(previousOwnerId);
+      }
+
+      if (shouldEnableRealtime) {
+        await ensureOwnerGroupSubscriptions();
+        syncFallbackMode('owner-scope-changed');
+      }
+    });
+  } catch (error) {
+    console.warn('[Dashboard] Failed to load owners for admin filter.', error);
+    selectedOwnerId = null;
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+  }
+}
+
+async function getAllOwnersForDashboard(parameterMap) {
+  const owners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: 1000,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    owners.push(...items);
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(owners.map((owner) => [owner.id, owner])).values());
 }
 
 function pickFreshestReading(...readingCollections) {
@@ -151,16 +342,20 @@ function renderReadingsChart(history) {
   createReadingsChart('readings-chart', history || []);
 }
 
-function renderInitialSetupState() {
+function renderInitialSetupState(options = {}) {
+  const preserveStats = Boolean(options?.preserveStats);
+
   const statProperties = $('#stat-properties');
   const statPlots = $('#stat-plots');
   const statSensors = $('#stat-sensors');
   const statAlerts = $('#stat-alerts');
 
-  if (statProperties) statProperties.textContent = '0';
-  if (statPlots) statPlots.textContent = '0';
-  if (statSensors) statSensors.textContent = '0';
-  if (statAlerts) statAlerts.textContent = '0';
+  if (!preserveStats) {
+    if (statProperties) statProperties.textContent = '0';
+    if (statPlots) statPlots.textContent = '0';
+    if (statSensors) statSensors.textContent = '0';
+    if (statAlerts) statAlerts.textContent = '0';
+  }
 
   const readingsBody = $('#readings-tbody');
   if (readingsBody) {
@@ -253,6 +448,180 @@ function updateStatCards(stats) {
       el.textContent = stats[key];
     }
   });
+}
+
+function updateStatSubtextsFromData(data) {
+  const propertiesSubtext = $('#stat-properties-subtext');
+  const plotsSubtext = $('#stat-plots-subtext');
+  const sensorsSubtext = $('#stat-sensors-subtext');
+  const alertsSubtext = $('#stat-alerts-subtext');
+
+  const propertiesCreatedThisMonth = Number(data?.propertiesCreatedThisMonth || 0);
+  const plotsCreatedThisMonth = Number(data?.plotsCreatedThisMonth || 0);
+  const sensorsTotal = Number(data?.sensorsTotal || 0);
+  const activeSensorsCount = Number(data?.activeSensorsCount || 0);
+  const pendingAlerts = Array.isArray(data?.pendingAlerts) ? data.pendingAlerts : [];
+  const summaryNewPending24h = Number(data?.newPendingInWindowCount || 0);
+
+  if (propertiesSubtext) {
+    propertiesSubtext.textContent = `↑ ${propertiesCreatedThisMonth} this month`;
+  }
+
+  if (plotsSubtext) {
+    plotsSubtext.textContent = `↑ ${plotsCreatedThisMonth} this month`;
+  }
+
+  if (sensorsSubtext) {
+    const onlinePercentage =
+      sensorsTotal > 0 ? Math.round((activeSensorsCount / sensorsTotal) * 100) : 0;
+    sensorsSubtext.textContent = `${onlinePercentage}% online`;
+  }
+
+  if (alertsSubtext) {
+    const newAlerts24h =
+      summaryNewPending24h > 0
+        ? summaryNewPending24h
+        : pendingAlerts.filter((alert) => {
+            const raw = alert?.createdAt || alert?.CreatedAt;
+            const timestamp = new Date(raw || 0).getTime();
+            return !Number.isNaN(timestamp) && timestamp >= Date.now() - 24 * 60 * 60 * 1000;
+          }).length;
+
+    alertsSubtext.textContent = `↑ ${newAlerts24h} new (24h)`;
+  }
+}
+
+async function loadDashboardAlertsData(ownerId) {
+  const [pageResult, summaryResult] = await Promise.allSettled([
+    getPendingAlertsPage({
+      ownerId,
+      pageNumber: 1,
+      pageSize: DASHBOARD_ALERTS_PREVIEW_PAGE_SIZE,
+      status: 'pending'
+    }),
+    getPendingAlertsSummary({ ownerId, windowHours: 24 })
+  ]);
+
+  const page =
+    pageResult.status === 'fulfilled'
+      ? pageResult.value
+      : {
+          items: [],
+          totalCount: 0,
+          pageNumber: 1,
+          pageSize: DASHBOARD_ALERTS_PREVIEW_PAGE_SIZE
+        };
+
+  const summary =
+    summaryResult.status === 'fulfilled'
+      ? summaryResult.value
+      : {
+          pendingAlertsTotal: getPaginatedTotalCount(page),
+          criticalPendingCount: 0,
+          highPendingCount: 0,
+          mediumPendingCount: 0,
+          lowPendingCount: 0,
+          newPendingInWindowCount: 0
+        };
+
+  return {
+    page,
+    summary
+  };
+}
+
+function resolvePendingAlertsTotal(summary, page) {
+  const summaryTotal = getPaginatedTotalCount({ totalCount: summary?.pendingAlertsTotal }, 0);
+  if (summaryTotal > 0) {
+    return summaryTotal;
+  }
+
+  return getPaginatedTotalCount(page, 0);
+}
+
+async function loadDashboardStatSubtextData(ownerId, stats) {
+  const [properties, plots, activeSensorsPage] = await Promise.all([
+    getAllPropertiesForDashboard(ownerId),
+    getAllPlotsForDashboard(ownerId),
+    getSensorsPaginated({
+      pageNumber: 1,
+      pageSize: 1,
+      sortBy: 'installedAt',
+      sortDirection: 'desc',
+      ownerId: ownerId || '',
+      status: 'Active'
+    }).catch(() => ({ totalCount: 0 }))
+  ]);
+
+  return {
+    propertiesCreatedThisMonth: countCreatedThisMonth(properties),
+    plotsCreatedThisMonth: countCreatedThisMonth(plots),
+    activeSensorsCount: getPaginatedTotalCount(activeSensorsPage),
+    sensorsTotal: Number(stats?.sensors || 0)
+  };
+}
+
+async function getAllPropertiesForDashboard(ownerId) {
+  const items = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage && pageNumber <= 50) {
+    const page = await getProperties({
+      pageNumber,
+      pageSize: 200,
+      sortBy: 'createdAt',
+      sortDirection: 'desc',
+      filter: '',
+      ownerId: ownerId || ''
+    });
+
+    const pageItems = page?.data || page?.items || page?.results || [];
+    items.push(...pageItems);
+    hasNextPage = Boolean(page?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return items;
+}
+
+async function getAllPlotsForDashboard(ownerId) {
+  const items = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage && pageNumber <= 50) {
+    const page = await getPlotsPaginated({
+      pageNumber,
+      pageSize: 200,
+      sortBy: 'createdat',
+      sortDirection: 'desc',
+      filter: '',
+      ownerId: ownerId || ''
+    });
+
+    const pageItems = page?.data || page?.items || page?.results || [];
+    items.push(...pageItems);
+    hasNextPage = Boolean(page?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return items;
+}
+
+function countCreatedThisMonth(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0;
+  }
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  return items.filter((item) => {
+    const createdAt = item?.createdAt || item?.CreatedAt;
+    const createdAtTs = new Date(createdAt || 0).getTime();
+    return !Number.isNaN(createdAtTs) && createdAtTs >= startOfMonth;
+  }).length;
 }
 
 // ============================================
@@ -442,15 +811,30 @@ const DASHBOARD_ALERTS_REALTIME_CONTEXT = {
   page: 'dashboard',
   hub: '/dashboard/alertshub',
   events: ['alertCreated', 'alertAcknowledged', 'alertResolved'],
-  fallbackRoutes: ['/api/alerts/pending']
+  fallbackRoutes: ['/api/alerts/pending', '/api/alerts/pending/summary']
 };
 
-let joinedPlotIds = []; // Track joined plot groups
-let joinedAlertPlotIds = [];
-let isJoiningPlotGroups = false;
 let hasSetupForRealtime = true;
 let sensorRealtimeState = 'disconnected';
 let alertsRealtimeState = 'disconnected';
+let selectedOwnerId = null;
+let ownerSubscriptionInFlight = null;
+let lastOwnerSubscriptionFailedAt = 0;
+let lastOwnerSubscriptionFailureKey = null;
+let latestMetricsTimestampMs = 0;
+let dashboardSubtextState = {
+  propertiesCreatedThisMonth: 0,
+  plotsCreatedThisMonth: 0,
+  activeSensorsCount: 0,
+  sensorsTotal: 0
+};
+const realtimeReadingsTimeline = [];
+const processedRealtimeEventKeys = new Map();
+const processedAlertRealtimeEventKeys = new Map();
+const MAX_PROCESSED_REALTIME_EVENTS = 500;
+const MAX_REALTIME_TIMELINE_ITEMS = 100;
+const DASHBOARD_ALERTS_PREVIEW_PAGE_SIZE = 20;
+const OWNER_SUBSCRIPTION_RETRY_COOLDOWN_MS = 8000;
 const fallbackPoller = createFallbackPoller({
   refresh: refreshDashboardFromFallback,
   intervalMs: 15000,
@@ -477,9 +861,13 @@ async function setupRealTimeUpdates() {
     onConnectionChange: handleAlertConnectionChange
   });
 
-  // After connection, join all plot groups to receive sensor readings
-  if (sensorConnection && !sensorConnection.isMock) {
-    await joinAllPlotGroups();
+  if (
+    sensorConnection &&
+    !sensorConnection.isMock &&
+    alertsConnection &&
+    !alertsConnection.isMock
+  ) {
+    await ensureOwnerGroupSubscriptions();
   }
 
   if (!sensorConnection || sensorConnection.isMock) {
@@ -492,11 +880,17 @@ async function setupRealTimeUpdates() {
 }
 
 async function refreshDashboardFromFallback() {
-  const [dashboardReadingsResult, latestReadingsResult, alertsResult] = await Promise.allSettled([
-    getLatestReadings(5),
-    getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
-    getAlerts('pending').catch(() => [])
-  ]);
+  const ownerId = getSelectedOwnerIdForDashboard();
+
+  const [dashboardReadingsResult, latestReadingsResult, alertsResult, statSubtextResult] =
+    await Promise.allSettled([
+      getLatestReadings(5, ownerId),
+      getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+      loadDashboardAlertsData(ownerId),
+      loadDashboardStatSubtextData(ownerId, {
+        sensors: Number($('#stat-sensors')?.textContent || 0)
+      })
+    ]);
 
   if (dashboardReadingsResult.status === 'rejected') {
     console.warn('[DashboardRealtime] Fallback route failed: /api/dashboard/latest', {
@@ -526,14 +920,45 @@ async function refreshDashboardFromFallback() {
     dashboardReadingsResult.status === 'fulfilled' ? dashboardReadingsResult.value : [];
   const latestReadings =
     latestReadingsResult.status === 'fulfilled' ? latestReadingsResult.value : [];
-  const alerts = alertsResult.status === 'fulfilled' ? alertsResult.value : [];
+  const alertsData =
+    alertsResult.status === 'fulfilled'
+      ? alertsResult.value
+      : {
+          page: {
+            items: [],
+            totalCount: 0,
+            pageNumber: 1,
+            pageSize: DASHBOARD_ALERTS_PREVIEW_PAGE_SIZE
+          },
+          summary: null
+        };
+  const alerts = alertsData.page.items || [];
+  const alertSummary = alertsData.summary;
+  const statSubtextData = statSubtextResult.status === 'fulfilled' ? statSubtextResult.value : null;
 
   const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
+  syncRealtimeStateFromReadings(readingsForTable);
   updateReadingsTable(readingsForTable);
   updateAlertsSection(alerts);
+  renderAlertsDistributionChart(alertSummary, alerts);
   const alertStat = $('#stat-alerts');
   if (alertStat) {
-    alertStat.textContent = String(alerts.length);
+    alertStat.textContent = String(resolvePendingAlertsTotal(alertSummary, alertsData.page));
+  }
+
+  if (statSubtextData) {
+    dashboardSubtextState = {
+      propertiesCreatedThisMonth: Number(statSubtextData.propertiesCreatedThisMonth || 0),
+      plotsCreatedThisMonth: Number(statSubtextData.plotsCreatedThisMonth || 0),
+      activeSensorsCount: Number(statSubtextData.activeSensorsCount || 0),
+      sensorsTotal: Number(statSubtextData.sensorsTotal || 0)
+    };
+
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts,
+      newPendingInWindowCount: Number(alertSummary?.newPendingInWindowCount || 0)
+    });
   }
 
   const freshestReading = pickFreshestReading(latestReadings, readingsForTable);
@@ -546,66 +971,8 @@ function stopFallbackPollingSilently() {
   fallbackPoller.stop('page-unload', { silent: true });
 }
 
-async function joinAllPlotGroups() {
-  if (isJoiningPlotGroups) {
-    return;
-  }
-
-  if (!hasSetupForRealtime) {
-    return;
-  }
-
-  isJoiningPlotGroups = true;
-
-  try {
-    const { joinPlotGroup, joinAlertPlotGroup } = await import('./api.js');
-    const plots = await getPlots();
-    const plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
-
-    if (plotIds.length > 0) {
-      console.warn(`[SignalR] Joining ${plotIds.length} plot groups...`);
-
-      joinedPlotIds = [];
-      joinedAlertPlotIds = [];
-      for (const plotId of plotIds) {
-        try {
-          await joinPlotGroup(plotId);
-          joinedPlotIds.push(plotId);
-          console.warn(`[SignalR] ✅ Joined plot group: ${plotId}`);
-        } catch (error) {
-          console.warn(`[SignalR] Failed to join plot ${plotId}:`, error);
-        }
-
-        try {
-          await joinAlertPlotGroup(plotId);
-          joinedAlertPlotIds.push(plotId);
-          console.warn(`[AlertSignalR] ✅ Joined plot group: ${plotId}`);
-        } catch (error) {
-          console.warn(`[AlertSignalR] Failed to join plot ${plotId}:`, error);
-        }
-      }
-
-      console.warn(`[SignalR] Successfully joined ${joinedPlotIds.length} plot groups`);
-    } else {
-      hasSetupForRealtime = false;
-      console.warn('[SignalR] No plots found. Skipping realtime plot group subscriptions.');
-    }
-  } catch (error) {
-    const statusCode = error?.response?.status;
-    if (statusCode === 400 || statusCode === 404) {
-      hasSetupForRealtime = false;
-      console.warn('[SignalR] No plot context available for current user yet.');
-      return;
-    }
-
-    console.error('[SignalR] Error joining plot groups:', error);
-  } finally {
-    isJoiningPlotGroups = false;
-  }
-}
-
-const handleSensorReading = debounce((reading) => {
-  const normalized = {
+function normalizeRealtimeReadingPayload(reading) {
+  return {
     ...reading,
     sensorId: reading.sensorId || reading.SensorId,
     plotId: reading.plotId || reading.PlotId,
@@ -618,14 +985,277 @@ const handleSensorReading = debounce((reading) => {
     soilMoisture: reading.soilMoisture ?? reading.SoilMoisture ?? null,
     rainfall: reading.rainfall ?? reading.Rainfall ?? null
   };
+}
 
-  // Update metric cards
-  applyLatestReadingToMetrics(normalized);
+function parseReadingTimestampMs(reading) {
+  const parsed = new Date(reading?.timestamp || 0).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function buildRealtimeEventKey(reading) {
+  const sensorId = reading?.sensorId || 'unknown';
+  const timestampMs = parseReadingTimestampMs(reading);
+  return `${sensorId}:${timestampMs}`;
+}
+
+function isValidGuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || '').trim()
+  );
+}
+
+function pushRealtimeReading(reading) {
+  realtimeReadingsTimeline.unshift(reading);
+
+  if (realtimeReadingsTimeline.length > MAX_REALTIME_TIMELINE_ITEMS) {
+    realtimeReadingsTimeline.length = MAX_REALTIME_TIMELINE_ITEMS;
+  }
+}
+
+function markRealtimeEventAsProcessed(eventKey) {
+  processedRealtimeEventKeys.set(eventKey, Date.now());
+
+  if (processedRealtimeEventKeys.size <= MAX_PROCESSED_REALTIME_EVENTS) {
+    return;
+  }
+
+  const oldestKey = processedRealtimeEventKeys.keys().next().value;
+  if (oldestKey) {
+    processedRealtimeEventKeys.delete(oldestKey);
+  }
+}
+
+function markAlertRealtimeEventAsProcessed(eventKey) {
+  processedAlertRealtimeEventKeys.set(eventKey, Date.now());
+
+  if (processedAlertRealtimeEventKeys.size <= MAX_PROCESSED_REALTIME_EVENTS) {
+    return;
+  }
+
+  const oldestKey = processedAlertRealtimeEventKeys.keys().next().value;
+  if (oldestKey) {
+    processedAlertRealtimeEventKeys.delete(oldestKey);
+  }
+}
+
+function syncRealtimeStateFromReadings(readings) {
+  realtimeReadingsTimeline.length = 0;
+  processedRealtimeEventKeys.clear();
+  latestMetricsTimestampMs = 0;
+
+  if (!Array.isArray(readings) || readings.length === 0) {
+    return;
+  }
+
+  readings.forEach((reading) => {
+    const normalized = normalizeRealtimeReadingPayload(reading);
+    if (!normalized.sensorId) {
+      return;
+    }
+
+    pushRealtimeReading(normalized);
+    const eventKey = buildRealtimeEventKey(normalized);
+    markRealtimeEventAsProcessed(eventKey);
+
+    const timestampMs = parseReadingTimestampMs(normalized);
+    if (timestampMs > latestMetricsTimestampMs) {
+      latestMetricsTimestampMs = timestampMs;
+    }
+  });
+}
+
+function getRealtimeReadingsForTable(limit = 10) {
+  return realtimeReadingsTimeline
+    .slice()
+    .sort((left, right) => parseReadingTimestampMs(right) - parseReadingTimestampMs(left))
+    .slice(0, limit);
+}
+
+function updateRealtimeReadingsTable() {
+  updateReadingsTable(getRealtimeReadingsForTable(10));
+}
+
+function computeAlertsDistribution(alerts) {
+  const distribution = {
+    critical: 0,
+    warning: 0,
+    info: 0
+  };
+
+  if (!Array.isArray(alerts)) {
+    return distribution;
+  }
+
+  alerts.forEach((alert) => {
+    const severity = String(alert?.severity || alert?.Severity || 'info').toLowerCase();
+
+    if (severity === 'critical') {
+      distribution.critical += 1;
+      return;
+    }
+
+    if (severity === 'warning' || severity === 'high' || severity === 'medium') {
+      distribution.warning += 1;
+      return;
+    }
+
+    distribution.info += 1;
+  });
+
+  return distribution;
+}
+
+function renderAlertsDistributionChart(summary, alerts = []) {
+  const container = $('#alerts-chart-container');
+  if (!container) {
+    return;
+  }
+
+  const distribution =
+    summary && typeof summary === 'object'
+      ? {
+          critical: Number(summary?.criticalPendingCount || 0),
+          warning:
+            Number(summary?.highPendingCount || 0) + Number(summary?.mediumPendingCount || 0),
+          info: Number(summary?.lowPendingCount || 0)
+        }
+      : computeAlertsDistribution(alerts);
+
+  container.innerHTML = '<canvas id="alerts-chart"></canvas>';
+  createAlertDistributionChart('alerts-chart', distribution);
+}
+
+function extractAlertEventTimestamp(payload) {
+  const timestampValue =
+    payload?.createdAt ||
+    payload?.CreatedAt ||
+    payload?.acknowledgedAt ||
+    payload?.AcknowledgedAt ||
+    payload?.resolvedAt ||
+    payload?.ResolvedAt ||
+    null;
+
+  if (!timestampValue) {
+    return 0;
+  }
+
+  const parsed = new Date(timestampValue).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function buildAlertRealtimeEventKey(eventType, payload) {
+  const alertId = extractAlertId(payload) || 'unknown';
+  const status = extractAlertStatus(payload, eventType || 'unknown');
+  const timestamp = extractAlertEventTimestamp(payload);
+  return `${eventType}:${alertId}:${status}:${timestamp}`;
+}
+
+function shouldUpdateMetrics(reading) {
+  const timestampMs = parseReadingTimestampMs(reading);
+  if (timestampMs === 0) {
+    return true;
+  }
+
+  if (timestampMs >= latestMetricsTimestampMs) {
+    latestMetricsTimestampMs = timestampMs;
+    return true;
+  }
+
+  return false;
+}
+
+async function ensureOwnerGroupSubscriptions() {
+  const realtimeOwnerId = getRealtimeOwnerScopeId();
+  const shouldJoinSensor = sensorRealtimeState === 'connected';
+  const shouldJoinAlerts = alertsRealtimeState === 'connected';
+  const ownerScopeKey = realtimeOwnerId || '__self__';
+  const attemptKey = `${ownerScopeKey}|sensor:${shouldJoinSensor}|alerts:${shouldJoinAlerts}`;
+
+  if (isCurrentUserAdmin() && !realtimeOwnerId) {
+    console.warn('[SignalR] Admin owner scope not selected. Skipping owner-group subscription.');
+    return;
+  }
+
+  if (isCurrentUserAdmin() && realtimeOwnerId && !isValidGuid(realtimeOwnerId)) {
+    console.warn('[SignalR] Invalid owner scope GUID. Skipping owner-group subscription.', {
+      ownerId: realtimeOwnerId
+    });
+    return;
+  }
+
+  if (!shouldJoinSensor && !shouldJoinAlerts) {
+    return;
+  }
+
+  if (ownerSubscriptionInFlight) {
+    return ownerSubscriptionInFlight;
+  }
+
+  if (
+    lastOwnerSubscriptionFailureKey === attemptKey &&
+    Date.now() - lastOwnerSubscriptionFailedAt < OWNER_SUBSCRIPTION_RETRY_COOLDOWN_MS
+  ) {
+    return;
+  }
+
+  ownerSubscriptionInFlight = (async () => {
+    let sensorJoined = true;
+    let alertsJoined = true;
+
+    if (shouldJoinSensor) {
+      sensorJoined = await joinOwnerGroup(realtimeOwnerId);
+    }
+
+    if (shouldJoinAlerts) {
+      alertsJoined = await joinAlertOwnerGroup(realtimeOwnerId);
+    }
+
+    if (!sensorJoined || !alertsJoined) {
+      lastOwnerSubscriptionFailedAt = Date.now();
+      lastOwnerSubscriptionFailureKey = attemptKey;
+
+      console.warn('[SignalR] Failed to join one or more owner groups.', {
+        sensorJoined,
+        alertsJoined,
+        ownerId: realtimeOwnerId
+      });
+      return;
+    }
+
+    lastOwnerSubscriptionFailureKey = null;
+    lastOwnerSubscriptionFailedAt = 0;
+  })();
+
+  try {
+    await ownerSubscriptionInFlight;
+  } finally {
+    ownerSubscriptionInFlight = null;
+  }
+}
+
+const handleSensorReading = (reading) => {
+  const normalized = normalizeRealtimeReadingPayload(reading);
+  if (!normalized.sensorId) {
+    return;
+  }
+
+  const eventKey = buildRealtimeEventKey(normalized);
+  if (processedRealtimeEventKeys.has(eventKey)) {
+    return;
+  }
+
+  markRealtimeEventAsProcessed(eventKey);
+  pushRealtimeReading(normalized);
+
+  if (shouldUpdateMetrics(normalized)) {
+    applyLatestReadingToMetrics(normalized);
+  }
 
   const timeLabel = new Date(normalized.timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit'
   });
+
   addDataPoint(
     'readings-chart',
     timeLabel,
@@ -633,41 +1263,17 @@ const handleSensorReading = debounce((reading) => {
     168
   );
 
-  // Update readings table (prepend new reading)
-  const tbody = $('#readings-tbody');
-  if (tbody && tbody.firstChild) {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td><strong>${getSensorDisplayName(normalized)}</strong></td>
-      <td>${formatPlotDisplay(normalized)}</td>
-      <td>${formatTemperature(normalized.temperature)}</td>
-      <td>${formatPercentage(normalized.humidity)}</td>
-      <td>${formatPercentage(normalized.soilMoisture)}</td>
-      <td>now</td>
-    `;
-    row.style.backgroundColor = '#e8f5e9';
-    tbody.insertBefore(row, tbody.firstChild);
-
-    // Remove highlight after animation
-    setTimeout(() => {
-      row.style.backgroundColor = '';
-    }, 2000);
-
-    // Keep only 10 rows
-    while (tbody.children.length > 10) {
-      tbody.removeChild(tbody.lastChild);
-    }
-  }
-}, 500);
+  updateRealtimeReadingsTable();
+};
 
 function handleSensorConnectionChange(state) {
   sensorRealtimeState = state;
   updateRealtimeBadges();
 
-  // Rejoin plot groups after reconnection (without creating a new connection)
+  // Rejoin owner groups after reconnection (without creating a new connection)
   if (state === 'connected' && hasSetupForRealtime) {
-    console.warn('[SignalR] Connected, (re)joining plot groups...');
-    joinAllPlotGroups();
+    console.warn('[SignalR] Connected, (re)joining owner groups...');
+    void ensureOwnerGroupSubscriptions();
   }
 
   if (state === 'reconnecting' || state === 'disconnected') {
@@ -690,8 +1296,8 @@ function handleAlertConnectionChange(state) {
   updateRealtimeBadges();
 
   if (state === 'connected' && hasSetupForRealtime) {
-    console.warn('[AlertSignalR] Connected, (re)joining plot groups...');
-    joinAllPlotGroups();
+    console.warn('[AlertSignalR] Connected, (re)joining owner groups...');
+    void ensureOwnerGroupSubscriptions();
   }
 
   if (state === 'reconnecting' || state === 'disconnected') {
@@ -764,6 +1370,13 @@ function updateRealtimeBadges() {
 }
 
 async function handleAlertRealtime(eventType, payload) {
+  const eventKey = buildAlertRealtimeEventKey(eventType, payload);
+  if (processedAlertRealtimeEventKeys.has(eventKey)) {
+    return;
+  }
+
+  markAlertRealtimeEventAsProcessed(eventKey);
+
   const alertId = extractAlertId(payload);
   const fallbackStatus =
     eventType === 'resolved'
@@ -778,13 +1391,24 @@ async function handleAlertRealtime(eventType, payload) {
   }
 
   try {
-    const alerts = await getAlerts('pending');
+    const alertsData = await loadDashboardAlertsData(getSelectedOwnerIdForDashboard());
+    const alertsPage = alertsData.page;
+    const alertSummary = alertsData.summary;
+    const alerts = alertsPage.items || [];
+
     updateAlertsSection(alerts);
+    renderAlertsDistributionChart(alertSummary, alerts);
 
     const alertStat = $('#stat-alerts');
     if (alertStat) {
-      alertStat.textContent = String(alerts.length);
+      alertStat.textContent = String(resolvePendingAlertsTotal(alertSummary, alertsPage));
     }
+
+    updateStatSubtextsFromData({
+      ...dashboardSubtextState,
+      pendingAlerts: alerts,
+      newPendingInWindowCount: Number(alertSummary?.newPendingInWindowCount || 0)
+    });
   } catch (error) {
     console.warn(
       '[DashboardAlertsRealtime] Failed to refresh pending alerts after AlertHub event.',

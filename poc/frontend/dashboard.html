@@ -80,7 +80,7 @@
           </div>
           <div class="topbar-right">
             <div class="user-menu">
-              <div class="user-avatar">👤</div>
+              <div class="user-avatar">🌾</div>
               <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
@@ -88,6 +88,18 @@
 
         <!-- Content Area -->
         <div class="content">
+          <div id="dashboard-owner-filter" class="card" style="margin-bottom: 16px; display: none">
+            <div class="form-row" style="align-items: end">
+              <div class="form-group" style="margin-bottom: 0; min-width: 320px">
+                <label for="dashboard-owner-select" class="form-label">Owner</label>
+                <select id="dashboard-owner-select" class="form-control form-select">
+                  <option value="">Loading owners...</option>
+                </select>
+                <span class="form-text">Admin view filter for dashboard HTTP and SignalR data.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Stats Grid -->
           <div class="stats-grid">
             <!-- Properties Card -->

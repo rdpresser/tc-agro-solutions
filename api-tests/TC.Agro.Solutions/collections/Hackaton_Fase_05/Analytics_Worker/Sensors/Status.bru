@@ -1,0 +1,24 @@
+meta {
+  name: Status
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{analytics_service_url}}/api/sensors/a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d/status?sensorId=a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+  body: none
+  auth: bearer
+}
+
+params:query {
+  sensorId: a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

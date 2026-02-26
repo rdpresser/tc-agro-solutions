@@ -2,7 +2,14 @@
  * TC Agro Solutions - Sensors Page Entry Point
  */
 
-import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
+import {
+  getSensorsPaginated,
+  getReadingsLatest,
+  initSignalRConnection,
+  stopSignalRConnection,
+  joinOwnerGroup,
+  leaveOwnerGroup
+} from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
@@ -13,7 +20,16 @@ import {
   SENSOR_STATUSES
 } from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
-import { $, $$, formatPercentage, formatRelativeTime, formatTemperature } from './utils.js';
+import {
+  $,
+  $$,
+  formatPercentage,
+  formatRelativeTime,
+  formatTemperature,
+  getUser,
+  getPaginatedTotalCount,
+  getPaginatedPageSize
+} from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -27,34 +43,137 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadStatusFilterOptions();
   loadTypeFilterOptions();
+  hydrateInitialViewState();
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
+
+  syncIndicatorIntervalId = setInterval(() => {
+    refreshHeaderSyncIndicator();
+  }, 30000);
 });
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', async () => {
-  // Leave all plot groups before disconnecting
-  if (window.joinedPlotIds && window.joinedPlotIds.length > 0) {
-    const { leavePlotGroup } = await import('./api.js');
-    for (const plotId of window.joinedPlotIds) {
-      try {
-        await leavePlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave plot ${plotId}:`, error);
-      }
+  if (ownerGroupJoined) {
+    try {
+      await leaveOwnerGroup(lastJoinedOwnerScopeId ?? currentOwnerScopeId);
+    } catch (error) {
+      console.warn(
+        `Failed to leave owner group ${lastJoinedOwnerScopeId ?? currentOwnerScopeId}:`,
+        error
+      );
     }
-    window.joinedPlotIds = [];
   }
 
   stopFallbackPollingSilently();
 
   stopSignalRConnection();
+
+  if (syncIndicatorIntervalId) {
+    clearInterval(syncIndicatorIntervalId);
+    syncIndicatorIntervalId = null;
+  }
 });
 
 // ============================================
 // DATA LOADING
 // ============================================
+
+const MONITORING_PAGE_SIZE_DEFAULT = 10;
+const MONITORING_PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50, 100];
+const SUMMARY_REFRESH_INTERVAL_MS = 60000;
+
+const monitoringViewState = {
+  search: '',
+  status: '',
+  type: '',
+  pageNumber: 1,
+  pageSize: MONITORING_PAGE_SIZE_DEFAULT,
+  totalCount: 0,
+  totalPages: 1,
+  hasPreviousPage: false,
+  hasNextPage: false
+};
+
+let isSensorsLoading = false;
+let hasPendingReload = false;
+let cachedSummaryStats = null;
+let cachedSummaryCacheKey = null;
+let summaryStatsLoadedAt = 0;
+let lastSyncTimestampIso = null;
+let syncIndicatorIntervalId = null;
+
+function hydrateInitialViewState() {
+  readViewStateFromUrl();
+
+  const searchInput = $('#searchInput');
+  if (searchInput) {
+    searchInput.value = monitoringViewState.search;
+  }
+
+  const statusSelect = $('#statusFilter');
+  if (statusSelect) {
+    statusSelect.value = monitoringViewState.status;
+  }
+
+  const typeSelect = $('#typeFilter');
+  if (typeSelect) {
+    typeSelect.value = monitoringViewState.type;
+  }
+
+  const pageSizeSelect = $('#sensors-page-size');
+
+  if (pageSizeSelect) {
+    pageSizeSelect.innerHTML = MONITORING_PAGE_SIZE_OPTIONS.map(
+      (size) => `<option value="${size}">${size} / page</option>`
+    ).join('');
+    pageSizeSelect.value = String(monitoringViewState.pageSize);
+  }
+}
+
+function readViewStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  const search = String(params.get('search') || '').trim();
+  const status = normalizeSensorStatus(params.get('status') || '');
+  const type = String(params.get('type') || '').trim();
+  const pageNumber = Number(params.get('page') || 1);
+  const pageSize = Number(params.get('pageSize') || MONITORING_PAGE_SIZE_DEFAULT);
+
+  monitoringViewState.search = search;
+  monitoringViewState.status = status;
+  monitoringViewState.type = type;
+  monitoringViewState.pageNumber = Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+  monitoringViewState.pageSize = MONITORING_PAGE_SIZE_OPTIONS.includes(pageSize)
+    ? pageSize
+    : MONITORING_PAGE_SIZE_DEFAULT;
+}
+
+function persistViewStateToUrl() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+
+  const setOrDelete = (key, value, defaultValue = '') => {
+    const normalized = String(value ?? '');
+    const normalizedDefault = String(defaultValue ?? '');
+    if (!normalized || normalized === normalizedDefault) {
+      params.delete(key);
+      return;
+    }
+
+    params.set(key, normalized);
+  };
+
+  setOrDelete('search', monitoringViewState.search, '');
+  setOrDelete('status', monitoringViewState.status, '');
+  setOrDelete('type', monitoringViewState.type, '');
+  setOrDelete('page', monitoringViewState.pageNumber, 1);
+  setOrDelete('pageSize', monitoringViewState.pageSize, MONITORING_PAGE_SIZE_DEFAULT);
+
+  const next = `${url.pathname}${params.toString() ? `?${params.toString()}` : ''}${url.hash}`;
+  window.history.replaceState({}, '', next);
+}
 
 function loadStatusFilterOptions() {
   const select = $('#statusFilter');
@@ -92,21 +211,278 @@ function loadTypeFilterOptions() {
   }
 }
 
-async function loadSensors() {
+async function loadSensors({ forceSummaryRefresh = false } = {}) {
+  if (isSensorsLoading) {
+    hasPendingReload = true;
+    return;
+  }
+
   const grid = $('#sensors-grid');
   if (!grid) return;
 
-  grid.innerHTML = '<div class="loading">Loading sensors...</div>';
+  const hasRenderedCards = Boolean(grid.querySelector('.sensor-card'));
+
+  isSensorsLoading = true;
+  setSensorsLoadingState(true);
+
+  if (!hasRenderedCards) {
+    grid.innerHTML = '<div class="loading">Loading sensors...</div>';
+  }
 
   try {
-    const sensors = await getSensors();
+    const ownerId = getOwnerScopeIdForMonitoring();
+    const [sensorsPage, latestReadings, summaryStats] = await Promise.all([
+      getSensorsPaginated({
+        pageNumber: monitoringViewState.pageNumber,
+        pageSize: monitoringViewState.pageSize,
+        sortBy: 'installedAt',
+        sortDirection: 'desc',
+        filter: monitoringViewState.search,
+        ownerId: ownerId || '',
+        type: monitoringViewState.type,
+        status: monitoringViewState.status
+      }),
+      getReadingsLatest({
+        pageNumber: 1,
+        pageSize: 1000,
+        ownerId: ownerId || null
+      }).catch(() => []),
+      getSummaryStatsWithCache(ownerId, monitoringViewState, forceSummaryRefresh)
+    ]);
+
+    const latestReadingsMap = new Map(
+      (Array.isArray(latestReadings) ? latestReadings : [])
+        .filter((reading) => reading?.sensorId)
+        .map((reading) => [String(reading.sensorId).toLowerCase(), reading])
+    );
+
+    const rawItems = sensorsPage?.data || sensorsPage?.items || sensorsPage?.results || [];
+    const sensors = rawItems.map((sensor) => mapSensorForMonitoring(sensor, latestReadingsMap));
+
+    syncPaginationState(sensorsPage, sensors.length);
     renderSensorsGrid(sensors);
-    updateStatusSummary(sensors);
+    updateStatusSummary(summaryStats || null);
+    renderPaginationControls();
+    updateLastSyncTimestamp();
+    persistViewStateToUrl();
   } catch (error) {
     console.error('Error loading sensors:', error);
-    grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
+    if (!hasRenderedCards) {
+      grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
+    }
     toast('sensors.load_failed', 'error');
+  } finally {
+    isSensorsLoading = false;
+    setSensorsLoadingState(false);
+
+    if (hasPendingReload) {
+      hasPendingReload = false;
+      void loadSensors();
+    }
   }
+}
+
+function setSensorsLoadingState(isLoading) {
+  const refreshBtn = $('#refresh-sensors');
+  const updatingIndicator = $('#sensors-updating-indicator');
+  const previousButton = $('#sensors-prev-page');
+  const nextButton = $('#sensors-next-page');
+  const pageSizeSelect = $('#sensors-page-size');
+  const grid = $('#sensors-grid');
+  const pageInfo = $('#sensors-page-info');
+
+  if (grid && grid.querySelector('.sensor-card')) {
+    grid.style.opacity = isLoading ? '0.72' : '1';
+    grid.style.transition = 'opacity 0.2s ease';
+  }
+
+  if (refreshBtn) {
+    refreshBtn.disabled = isLoading;
+    refreshBtn.textContent = isLoading ? '⟳ Updating...' : '⟳ Refresh';
+  }
+
+  if (updatingIndicator) {
+    updatingIndicator.style.display = 'inline';
+    if (isLoading) {
+      updatingIndicator.textContent = '⟳ Updating data...';
+    } else {
+      refreshHeaderSyncIndicator();
+    }
+  }
+
+  if (pageInfo && isLoading && monitoringViewState.totalCount > 0) {
+    pageInfo.textContent = `Updating... (Page ${monitoringViewState.pageNumber}/${monitoringViewState.totalPages})`;
+  }
+
+  if (previousButton) previousButton.disabled = isLoading || !monitoringViewState.hasPreviousPage;
+  if (nextButton) nextButton.disabled = isLoading || !monitoringViewState.hasNextPage;
+  if (pageSizeSelect) pageSizeSelect.disabled = isLoading;
+}
+
+async function getSummaryStatsWithCache(ownerId, viewState, forceRefresh = false) {
+  const now = Date.now();
+  const cacheKey = buildSummaryCacheKey(ownerId, viewState);
+  const cacheValid =
+    !forceRefresh &&
+    cachedSummaryStats &&
+    cachedSummaryCacheKey === cacheKey &&
+    now - summaryStatsLoadedAt < SUMMARY_REFRESH_INTERVAL_MS;
+
+  if (cacheValid) {
+    return cachedSummaryStats;
+  }
+
+  const summary = await loadSensorSummaryStats(ownerId, viewState);
+  cachedSummaryStats = summary;
+  cachedSummaryCacheKey = cacheKey;
+  summaryStatsLoadedAt = now;
+  return summary;
+}
+
+function buildSummaryCacheKey(ownerId, viewState) {
+  const ownerScope = ownerId || '__self__';
+  const search = String(viewState?.search || '')
+    .trim()
+    .toLowerCase();
+  const type = String(viewState?.type || '')
+    .trim()
+    .toLowerCase();
+  const status = normalizeSensorStatus(viewState?.status || '');
+
+  return `${ownerScope}|${search}|${type}|${status}`;
+}
+
+function mapSensorForMonitoring(sensor, latestReadingsMap) {
+  const sensorId = sensor?.id || sensor?.sensorId || sensor?.SensorId;
+  const normalizedSensorId = String(sensorId || '').toLowerCase();
+  const reading = latestReadingsMap.get(normalizedSensorId) || null;
+  const timestamp = reading?.timestamp || reading?.time || reading?.Time || null;
+
+  return {
+    id: sensorId,
+    sensorId,
+    sensorLabel: sensor?.label || sensor?.sensorLabel || sensor?.name || null,
+    type: sensor?.type || sensor?.sensorType || '',
+    plotName: sensor?.plotName || reading?.plotName || '-',
+    propertyName: sensor?.propertyName || reading?.propertyName || '-',
+    status: sensor?.status || deriveSensorStatusFromTimestamp(timestamp),
+    battery: reading?.batteryLevel ?? reading?.battery ?? null,
+    lastReading: timestamp,
+    temperature: reading?.temperature ?? null,
+    humidity: reading?.humidity ?? null,
+    soilMoisture: reading?.soilMoisture ?? null
+  };
+}
+
+async function loadSensorSummaryStats(ownerId, viewState) {
+  const selectedStatus = normalizeSensorStatus(viewState?.status || '');
+  const baseQuery = {
+    pageNumber: 1,
+    pageSize: 1,
+    sortBy: 'installedAt',
+    sortDirection: 'desc',
+    filter: String(viewState?.search || '').trim(),
+    ownerId: ownerId || '',
+    type: String(viewState?.type || '').trim()
+  };
+
+  const [active, inactive, maintenance, faulty] = await Promise.all([
+    getSensorsPaginated({ ...baseQuery, status: 'Active' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Inactive' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Maintenance' }),
+    getSensorsPaginated({ ...baseQuery, status: 'Faulty' })
+  ]);
+
+  const counts = {
+    Active: getPaginatedTotalCount(active),
+    Inactive: getPaginatedTotalCount(inactive),
+    Maintenance: getPaginatedTotalCount(maintenance),
+    Faulty: getPaginatedTotalCount(faulty)
+  };
+
+  if (selectedStatus) {
+    const scopedCounts = {
+      Active: 0,
+      Inactive: 0,
+      Maintenance: 0,
+      Faulty: 0
+    };
+
+    if (Object.prototype.hasOwnProperty.call(scopedCounts, selectedStatus)) {
+      scopedCounts[selectedStatus] = counts[selectedStatus];
+    }
+
+    return {
+      total: Object.values(scopedCounts).reduce((acc, value) => acc + value, 0),
+      ...scopedCounts
+    };
+  }
+
+  const total = Object.values(counts).reduce((acc, value) => acc + value, 0);
+
+  return {
+    total,
+    ...counts
+  };
+}
+
+function syncPaginationState(payload, currentItemsCount) {
+  const totalCount = getPaginatedTotalCount(payload, currentItemsCount);
+  monitoringViewState.pageSize = getPaginatedPageSize(payload, monitoringViewState.pageSize);
+  const totalPagesRaw = payload?.totalPages || payload?.TotalPages;
+  const hasPreviousPageRaw = payload?.hasPreviousPage || payload?.HasPreviousPage;
+  const hasNextPageRaw = payload?.hasNextPage || payload?.HasNextPage;
+
+  monitoringViewState.totalCount = totalCount;
+  monitoringViewState.totalPages =
+    typeof totalPagesRaw === 'number' && totalPagesRaw > 0
+      ? totalPagesRaw
+      : Math.max(1, Math.ceil(totalCount / monitoringViewState.pageSize));
+  monitoringViewState.hasPreviousPage =
+    typeof hasPreviousPageRaw === 'boolean'
+      ? hasPreviousPageRaw
+      : monitoringViewState.pageNumber > 1;
+  monitoringViewState.hasNextPage =
+    typeof hasNextPageRaw === 'boolean'
+      ? hasNextPageRaw
+      : monitoringViewState.pageNumber < monitoringViewState.totalPages;
+
+  if (currentItemsCount === 0 && monitoringViewState.pageNumber > 1) {
+    monitoringViewState.pageNumber = 1;
+  }
+}
+
+function renderPaginationControls() {
+  const info = $('#sensors-page-info');
+  const previousButton = $('#sensors-prev-page');
+  const nextButton = $('#sensors-next-page');
+
+  if (info) {
+    const total = monitoringViewState.totalCount;
+    const from =
+      total === 0 ? 0 : (monitoringViewState.pageNumber - 1) * monitoringViewState.pageSize + 1;
+    const to = Math.min(total, monitoringViewState.pageNumber * monitoringViewState.pageSize);
+
+    info.textContent = `Showing ${from}-${to} of ${total} (Page ${monitoringViewState.pageNumber}/${monitoringViewState.totalPages})`;
+  }
+
+  if (previousButton) {
+    previousButton.disabled = !monitoringViewState.hasPreviousPage;
+  }
+
+  if (nextButton) {
+    nextButton.disabled = !monitoringViewState.hasNextPage;
+  }
+}
+
+function deriveSensorStatusFromTimestamp(timestamp) {
+  if (!timestamp) return 'Inactive';
+
+  const ageMs = Date.now() - new Date(timestamp).getTime();
+  if (Number.isNaN(ageMs)) return 'Inactive';
+  if (ageMs <= 15 * 60 * 1000) return 'Active';
+  if (ageMs <= 60 * 60 * 1000) return 'Maintenance';
+  return 'Inactive';
 }
 
 function renderSensorsGrid(sensors) {
@@ -118,52 +494,7 @@ function renderSensorsGrid(sensors) {
     return;
   }
 
-  grid.innerHTML = sensors
-    .map(
-      (sensor) => `
-    <div class="sensor-card ${getSensorStatusBadgeClass(sensor.status)}" data-sensor-id="${sensor.id}" data-status="${normalizeSensorStatus(sensor.status)}">
-      <div class="sensor-header">
-        <span class="sensor-id">${getSensorDisplayName(sensor)}</span>
-        <span class="sensor-status ${getSensorStatusBadgeClass(sensor.status)}">
-          ${getSensorStatusDisplay(sensor.status)}
-        </span>
-      </div>
-      
-      <div class="sensor-plot">📍 ${formatSensorLocation(sensor)}</div>
-      
-      <div class="sensor-readings">
-        <div class="reading">
-          <span class="reading-label">🌡️ Temp</span>
-          <span class="reading-value" data-metric="temperature">
-            ${formatTemperature(sensor.temperature)}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">💧 Humidity</span>
-          <span class="reading-value" data-metric="humidity">
-            ${formatPercentage(sensor.humidity)}
-          </span>
-        </div>
-        <div class="reading">
-          <span class="reading-label">🌿 Soil</span>
-          <span class="reading-value" data-metric="soilMoisture">
-            ${formatPercentage(sensor.soilMoisture)}
-          </span>
-        </div>
-      </div>
-      
-      <div class="sensor-footer">
-        <span class="battery ${getBatteryClass(sensor.battery)}">
-          🔋 ${formatPercentage(sensor.battery)}
-        </span>
-        <span class="last-update" title="${sensor.lastReading}">
-          ${formatRelativeTime(sensor.lastReading)}
-        </span>
-      </div>
-    </div>
-  `
-    )
-    .join('');
+  grid.innerHTML = sensors.map((sensor) => createSensorCardHtml(sensor, sensor.status)).join('');
 }
 
 function getSensorDisplayName(sensor) {
@@ -176,46 +507,38 @@ function formatSensorLocation(sensor) {
   return propertyName ? `${plotName} - ${propertyName}` : plotName;
 }
 
-function getBatteryClass(level) {
-  if (level < 20) return 'critical';
-  if (level < 50) return 'warning';
-  return 'good';
-}
-
 /**
  * Update status summary KPI cards based on sensor array or rendered cards
  * @param {Array} [sensors] - Array of sensor objects. If not provided, counts from rendered cards
  */
-function updateStatusSummary(sensors = null) {
-  let counts;
+function updateStatusSummary(summary = null) {
+  let counts = {
+    total: 0,
+    Active: 0,
+    Inactive: 0,
+    Maintenance: 0,
+    Faulty: 0
+  };
 
-  if (sensors) {
-    // Count from provided array
+  if (summary && typeof summary === 'object' && !Array.isArray(summary)) {
     counts = {
-      total: sensors.length,
-      Active: 0,
-      Inactive: 0,
-      Maintenance: 0,
-      Faulty: 0
+      total: Number(summary.total || 0),
+      Active: Number(summary.Active || 0),
+      Inactive: Number(summary.Inactive || 0),
+      Maintenance: Number(summary.Maintenance || 0),
+      Faulty: Number(summary.Faulty || 0)
     };
-
-    sensors.forEach((sensor) => {
+  } else if (Array.isArray(summary)) {
+    counts.total = summary.length;
+    summary.forEach((sensor) => {
       const normalized = normalizeSensorStatus(sensor.status);
       if (counts[normalized] !== undefined) {
         counts[normalized]++;
       }
     });
   } else {
-    // Count from rendered cards in DOM
     const cards = $$('.sensor-card');
-    counts = {
-      total: cards.length,
-      Active: 0,
-      Inactive: 0,
-      Maintenance: 0,
-      Faulty: 0
-    };
-
+    counts.total = cards.length;
     cards.forEach((card) => {
       const normalized = normalizeSensorStatus(card.dataset.status);
       if (counts[normalized] !== undefined) {
@@ -252,8 +575,13 @@ const SENSORS_REALTIME_CONTEXT = {
   fallbackRoutes: ['/api/readings/latest', '/api/sensors (metadata cache)']
 };
 
-window.joinedPlotIds = []; // Track joined plot groups
 let realtimeConnectionState = 'disconnected';
+let ownerGroupJoined = false;
+let currentOwnerScopeId = null;
+let lastJoinedOwnerScopeId = null;
+const processedRealtimeEventKeys = new Map();
+const latestRealtimeTimestampBySensor = new Map();
+const MAX_PROCESSED_REALTIME_EVENTS = 1000;
 const fallbackPoller = createFallbackPoller({
   refresh: loadSensors,
   intervalMs: 15000,
@@ -272,8 +600,7 @@ async function setupRealTimeUpdates() {
 
   const connection = await initSignalRConnection({
     onSensorReading: (reading) => {
-      const normalized = normalizeRealtimeReading(reading);
-      updateSensorCard(normalized.sensorId, normalized);
+      handleRealtimeSensorReading(reading);
     },
     onSensorStatus: (data) => {
       const card = $(`[data-sensor-id="${data.sensorId}"]`);
@@ -282,17 +609,18 @@ async function setupRealTimeUpdates() {
         const newStatus = normalizeSensorStatus(data.status);
 
         const badgeClass = getSensorStatusBadgeClass(newStatus);
-        card.className = `sensor-card ${badgeClass}`;
+        card.className = 'card sensor-card';
+        card.style.cssText = getSensorCardStyle(newStatus);
         card.dataset.status = newStatus;
 
-        const statusEl = card.querySelector('.sensor-status');
+        const statusEl = card.querySelector('.badge');
         if (statusEl) {
-          statusEl.className = `sensor-status ${badgeClass}`;
+          statusEl.className = `badge ${badgeClass}`;
           statusEl.textContent = getSensorStatusDisplay(newStatus);
         }
 
         if (oldStatus !== newStatus) {
-          updateStatusSummary();
+          void loadSensors();
         }
       }
     },
@@ -319,19 +647,108 @@ async function setupRealTimeUpdates() {
 
       updateRealtimeBadges(state);
 
-      if (state === 'connected' && window.joinedPlotIds.length === 0) {
-        setTimeout(() => joinAllPlotGroups(connection), 1000);
+      if (state === 'connected') {
+        void ensureOwnerGroupSubscription();
       }
     }
   });
 
   if (connection && !connection.isMock) {
-    await joinAllPlotGroups(connection);
+    await ensureOwnerGroupSubscription();
   } else {
     fallbackPoller.start('initial-connect-failed');
     realtimeConnectionState = 'disconnected';
     updateRealtimeBadges('disconnected');
   }
+}
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return false;
+  }
+
+  const roles = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roles.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function getOwnerScopeIdForMonitoring() {
+  if (isCurrentUserAdmin()) {
+    const ownerId = new URLSearchParams(window.location.search).get('ownerId');
+    return ownerId || null;
+  }
+
+  const currentUser = getUser();
+  if (!currentUser) {
+    return null;
+  }
+
+  const ownerIdCandidates = [
+    currentUser.sub,
+    currentUser.id,
+    currentUser.userId,
+    currentUser.ownerId,
+    currentUser.nameIdentifier
+  ];
+
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+  return ownerId ? String(ownerId).trim() : null;
+}
+
+async function ensureOwnerGroupSubscription() {
+  if (realtimeConnectionState !== 'connected') {
+    return;
+  }
+
+  currentOwnerScopeId = getOwnerScopeIdForMonitoring();
+
+  if (isCurrentUserAdmin() && !currentOwnerScopeId) {
+    ownerGroupJoined = false;
+    console.warn(
+      '[SensorsRealtime] Admin user without ownerId query param. Skipping owner-group subscription.'
+    );
+    fallbackPoller.start('admin-owner-scope-required');
+    return;
+  }
+
+  if (isCurrentUserAdmin() && !isValidGuid(currentOwnerScopeId)) {
+    ownerGroupJoined = false;
+    console.warn(
+      '[SensorsRealtime] Invalid ownerId query param. Skipping owner-group subscription.',
+      {
+        ownerId: currentOwnerScopeId
+      }
+    );
+    fallbackPoller.start('admin-owner-scope-invalid');
+    return;
+  }
+
+  if (ownerGroupJoined && lastJoinedOwnerScopeId === currentOwnerScopeId) {
+    return;
+  }
+
+  if (
+    ownerGroupJoined &&
+    lastJoinedOwnerScopeId &&
+    lastJoinedOwnerScopeId !== currentOwnerScopeId
+  ) {
+    await leaveOwnerGroup(lastJoinedOwnerScopeId);
+  }
+
+  ownerGroupJoined = await joinOwnerGroup(currentOwnerScopeId);
+
+  if (!ownerGroupJoined) {
+    console.warn('[SensorsRealtime] Failed to join owner group.', {
+      ownerId: currentOwnerScopeId
+    });
+    fallbackPoller.start('owner-join-failed');
+    return;
+  }
+
+  lastJoinedOwnerScopeId = currentOwnerScopeId;
 }
 
 function getConnectionBadgeElement() {
@@ -392,31 +809,161 @@ function normalizeRealtimeReading(reading) {
   };
 }
 
-async function joinAllPlotGroups(connection) {
-  try {
-    // Fetch all plots to join their groups
-    const { getPlots, joinPlotGroup } = await import('./api.js');
-    const plots = await getPlots();
+function isValidGuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || '').trim()
+  );
+}
 
-    if (plots && plots.length > 0) {
-      console.warn(`[SignalR] Joining ${plots.length} plot groups...`);
+function parseReadingTimestampMs(reading) {
+  const parsed = new Date(reading?.timestamp || 0).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
 
-      for (const plot of plots) {
-        try {
-          await joinPlotGroup(plot.id);
-          window.joinedPlotIds.push(plot.id);
-          console.warn(`[SignalR] ✅ Joined plot group: ${plot.id}`);
-        } catch (error) {
-          console.warn(`[SignalR] Failed to join plot ${plot.id}:`, error);
-        }
-      }
+function buildRealtimeEventKey(reading) {
+  return `${reading?.sensorId || 'unknown'}:${parseReadingTimestampMs(reading)}`;
+}
 
-      console.warn(`[SignalR] Successfully joined ${window.joinedPlotIds.length} plot groups`);
-    } else {
-      console.warn('[SignalR] No plots found to join');
-    }
-  } catch (error) {
-    console.error('[SignalR] Error joining plot groups:', error);
+function markRealtimeEventProcessed(eventKey) {
+  processedRealtimeEventKeys.set(eventKey, Date.now());
+
+  if (processedRealtimeEventKeys.size <= MAX_PROCESSED_REALTIME_EVENTS) {
+    return;
+  }
+
+  const oldestKey = processedRealtimeEventKeys.keys().next().value;
+  if (oldestKey) {
+    processedRealtimeEventKeys.delete(oldestKey);
+  }
+}
+
+function isReadingStale(reading) {
+  const sensorId = reading?.sensorId;
+  if (!sensorId) return true;
+
+  const incomingTimestamp = parseReadingTimestampMs(reading);
+  const previousTimestamp = latestRealtimeTimestampBySensor.get(sensorId) || 0;
+
+  if (incomingTimestamp > 0 && incomingTimestamp < previousTimestamp) {
+    return true;
+  }
+
+  if (incomingTimestamp > 0) {
+    latestRealtimeTimestampBySensor.set(sensorId, incomingTimestamp);
+  }
+
+  return false;
+}
+
+function handleRealtimeSensorReading(reading) {
+  const normalized = normalizeRealtimeReading(reading);
+  if (!normalized.sensorId) {
+    return;
+  }
+
+  const eventKey = buildRealtimeEventKey(normalized);
+  if (processedRealtimeEventKeys.has(eventKey)) {
+    return;
+  }
+
+  markRealtimeEventProcessed(eventKey);
+
+  if (isReadingStale(normalized)) {
+    return;
+  }
+
+  upsertSensorCard(normalized);
+  updateLastSyncTimestamp(normalized.timestamp);
+}
+
+function updateLastSyncTimestamp(timestamp = null) {
+  const target = $('#lastSync');
+  if (!target) {
+    return;
+  }
+
+  const value = timestamp || new Date().toISOString();
+  lastSyncTimestampIso = value;
+  target.textContent = formatRelativeTime(value);
+  refreshHeaderSyncIndicator();
+}
+
+function refreshHeaderSyncIndicator() {
+  const indicator = $('#sensors-updating-indicator');
+  if (!indicator) {
+    return;
+  }
+
+  if (!lastSyncTimestampIso) {
+    indicator.textContent = 'Updated just now';
+    return;
+  }
+
+  indicator.textContent = `✓ Updated ${formatRelativeTime(lastSyncTimestampIso)}`;
+}
+
+function createSensorCardHtml(sensor, status = 'Active') {
+  const normalizedStatus = normalizeSensorStatus(status);
+  const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+  const cardStyle = getSensorCardStyle(normalizedStatus);
+
+  return `
+    <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" style="${cardStyle}">
+      <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
+        <span class="badge ${badgeClass}">${getSensorStatusDisplay(normalizedStatus)}</span>
+        <span class="text-muted last-update" style="font-size: 0.85em" title="${sensor.lastReading}">
+          ${formatRelativeTime(sensor.lastReading)}
+        </span>
+      </div>
+
+      <h3 class="sensor-id" style="margin: 0 0 4px 0">📡 ${getSensorDisplayName(sensor)}</h3>
+      <p class="text-muted sensor-location" style="margin: 0 0 16px 0; font-size: 0.9em">
+        ${formatSensorLocation(sensor)}
+      </p>
+
+      <div class="sensor-readings">
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">🌡️ Temperature</span>
+          <span class="sensor-reading-value" data-metric="temperature">
+            ${formatTemperature(sensor.temperature)}
+          </span>
+        </div>
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">💧 Humidity</span>
+          <span class="sensor-reading-value" data-metric="humidity">
+            ${formatPercentage(sensor.humidity)}
+          </span>
+        </div>
+        <div class="sensor-reading">
+          <span class="sensor-reading-label">🌱 Soil Moisture</span>
+          <span class="sensor-reading-value" data-metric="soilMoisture">
+            ${formatPercentage(sensor.soilMoisture)}
+          </span>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <span class="text-muted" style="font-size: 0.9em">🔋 ${formatPercentage(sensor.battery)}</span>
+        <button class="btn btn-outline btn-sm" type="button">📊 View History</button>
+      </div>
+    </div>
+  `;
+}
+
+function getSensorCardStyle(status) {
+  if (status === 'Maintenance') return 'border-left: 4px solid #ffc107';
+  if (status === 'Faulty') return 'border-left: 4px solid #dc3545; opacity: 0.85';
+  if (status === 'Inactive') return 'border-left: 4px solid #adb5bd; opacity: 0.9';
+  return '';
+}
+
+function upsertSensorCard(reading) {
+  const sensorId = reading.sensorId;
+  if (!sensorId) return;
+
+  const existingCard = $(`[data-sensor-id="${sensorId}"]`);
+  if (existingCard) {
+    updateSensorCard(sensorId, reading);
   }
 }
 
@@ -426,12 +973,17 @@ function updateSensorCard(sensorId, reading) {
 
   const headerEl = card.querySelector('.sensor-id');
   if (headerEl && reading.sensorLabel) {
-    headerEl.textContent = reading.sensorLabel;
+    headerEl.textContent = `📡 ${reading.sensorLabel}`;
   }
 
   const plotEl = card.querySelector('.sensor-plot');
   if (plotEl) {
     plotEl.textContent = `📍 ${formatSensorLocation(reading)}`;
+  }
+
+  const locationEl = card.querySelector('.sensor-location');
+  if (locationEl) {
+    locationEl.textContent = formatSensorLocation(reading);
   }
 
   // Update readings with animation
@@ -456,8 +1008,9 @@ function updateSensorCard(sensorId, reading) {
   // Update last update time
   const timeEl = card.querySelector('.last-update');
   if (timeEl) {
-    timeEl.textContent = 'now';
-    timeEl.title = new Date().toISOString();
+    const timestamp = reading.timestamp || new Date().toISOString();
+    timeEl.textContent = formatRelativeTime(timestamp);
+    timeEl.title = timestamp;
   }
 }
 
@@ -466,54 +1019,98 @@ function updateSensorCard(sensorId, reading) {
 // ============================================
 
 function setupEventListeners() {
-  // Refresh button
   const refreshBtn = $('#refresh-sensors');
   refreshBtn?.addEventListener('click', async () => {
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = '⟳ Updating...';
-
-    await loadSensors();
-
-    refreshBtn.disabled = false;
-    refreshBtn.textContent = '⟳ Refresh';
+    await loadSensors({ forceSummaryRefresh: true });
     toast('sensors.updated', 'success');
   });
 
-  // Status filter
-  const statusFilter = $('#statusFilter');
-  statusFilter?.addEventListener('change', () => {
-    const selectedStatus = normalizeSensorStatus(statusFilter.value);
-    const cards = $$('.sensor-card');
+  const searchInput = $('#searchInput');
+  let searchDebounceTimer = null;
+  searchInput?.addEventListener('input', (event) => {
+    monitoringViewState.search = String(event?.target?.value || '').trim();
+    monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
 
-    cards.forEach((card) => {
-      const cardStatus = normalizeSensorStatus(card.dataset.status);
-      if (!selectedStatus || selectedStatus === cardStatus) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
-    });
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+      void loadSensors();
+    }, 250);
   });
 
-  const filterBtns = $$('[data-filter-status]');
-  filterBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // Update active state
-      filterBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+  const statusFilter = $('#statusFilter');
+  statusFilter?.addEventListener('change', () => {
+    monitoringViewState.status = normalizeSensorStatus(statusFilter.value);
+    monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
+    void loadSensors();
+  });
 
-      // Filter cards
-      const status = btn.dataset.filterStatus;
-      const cards = $$('.sensor-card');
+  const typeFilter = $('#typeFilter');
+  typeFilter?.addEventListener('change', () => {
+    monitoringViewState.type = String(typeFilter.value || '').trim();
+    monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
+    void loadSensors();
+  });
 
-      cards.forEach((card) => {
-        if (status === 'all' || card.classList.contains(status)) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
+  const clearFiltersButton = $('#clear-alert-filters');
+  clearFiltersButton?.addEventListener('click', () => {
+    monitoringViewState.search = '';
+    monitoringViewState.status = '';
+    monitoringViewState.type = '';
+    monitoringViewState.pageNumber = 1;
+
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    if (statusFilter) {
+      statusFilter.value = '';
+    }
+
+    if (typeFilter) {
+      typeFilter.value = '';
+    }
+
+    persistViewStateToUrl();
+    void loadSensors({ forceSummaryRefresh: true });
+  });
+
+  const pageSizeSelect = $('#sensors-page-size');
+  pageSizeSelect?.addEventListener('change', () => {
+    const nextSize = Number(pageSizeSelect.value || MONITORING_PAGE_SIZE_DEFAULT);
+    monitoringViewState.pageSize = MONITORING_PAGE_SIZE_OPTIONS.includes(nextSize)
+      ? nextSize
+      : MONITORING_PAGE_SIZE_DEFAULT;
+    monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
+    void loadSensors();
+  });
+
+  const previousButton = $('#sensors-prev-page');
+  previousButton?.addEventListener('click', () => {
+    if (!monitoringViewState.hasPreviousPage) {
+      return;
+    }
+
+    monitoringViewState.pageNumber -= 1;
+    persistViewStateToUrl();
+    void loadSensors();
+  });
+
+  const nextButton = $('#sensors-next-page');
+  nextButton?.addEventListener('click', () => {
+    if (!monitoringViewState.hasNextPage) {
+      return;
+    }
+
+    monitoringViewState.pageNumber += 1;
+    persistViewStateToUrl();
+    void loadSensors();
   });
 }
 

@@ -338,6 +338,10 @@ p {
   gap: 16px;
 }
 
+.user-menu-host {
+  position: relative;
+}
+
 .topbar-nav {
   display: none;
 }
@@ -356,6 +360,10 @@ p {
   background: var(--color-background);
 }
 
+.user-menu.open {
+  background: var(--color-background);
+}
+
 .user-avatar {
   width: 36px;
   height: 36px;
@@ -369,6 +377,61 @@ p {
 
 .user-name {
   font-weight: 500;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-hover);
+  z-index: 120;
+  display: none;
+}
+
+.user-menu-dropdown.open {
+  display: block;
+}
+
+.user-menu-dropdown-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.user-menu-dropdown-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.user-menu-dropdown-email {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  word-break: break-word;
+}
+
+.user-menu-dropdown-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.user-menu-dropdown-link {
+  display: block;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: var(--transition);
+}
+
+.user-menu-dropdown-link:hover {
+  background: var(--color-background);
 }
 
 /* Content Area */
@@ -411,6 +474,40 @@ p {
 
 .card-body {
   color: var(--color-text-light);
+}
+
+.pagination-sticky-card {
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.pagination-sticky-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -16px;
+  height: 16px;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+}
+
+.pagination-sticky-card > .d-flex.justify-between.align-center {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-sticky-card > .d-flex.justify-between.align-center > :nth-child(2) {
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Stats Cards */
@@ -1121,6 +1218,26 @@ p {
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 100%;
+  }
+
+  .pagination-sticky-card {
+    bottom: 8px;
+  }
+
+  .pagination-sticky-card::before {
+    top: -12px;
+    height: 12px;
+  }
+
+  .pagination-sticky-card > .d-flex.justify-between.align-center {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-sticky-card > .d-flex.justify-between.align-center > :nth-child(2) {
+    order: -1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
   }
 
   .sidebar {
