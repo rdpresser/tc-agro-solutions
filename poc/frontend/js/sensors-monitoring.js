@@ -45,6 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
+
+  syncIndicatorIntervalId = setInterval(() => {
+    refreshHeaderSyncIndicator();
+  }, 30000);
 });
 
 // Cleanup on page unload
@@ -63,6 +67,11 @@ window.addEventListener('beforeunload', async () => {
   stopFallbackPollingSilently();
 
   stopSignalRConnection();
+
+  if (syncIndicatorIntervalId) {
+    clearInterval(syncIndicatorIntervalId);
+    syncIndicatorIntervalId = null;
+  }
 });
 
 // ============================================
@@ -71,6 +80,7 @@ window.addEventListener('beforeunload', async () => {
 
 const MONITORING_PAGE_SIZE_DEFAULT = 50;
 const MONITORING_PAGE_SIZE_OPTIONS = [50, 100];
+const SUMMARY_REFRESH_INTERVAL_MS = 60000;
 
 const monitoringViewState = {
   search: '',
@@ -84,7 +94,32 @@ const monitoringViewState = {
   hasNextPage: false
 };
 
+let isSensorsLoading = false;
+let hasPendingReload = false;
+let cachedSummaryStats = null;
+let cachedSummaryOwnerScope = null;
+let summaryStatsLoadedAt = 0;
+let lastSyncTimestampIso = null;
+let syncIndicatorIntervalId = null;
+
 function hydrateInitialViewState() {
+  readViewStateFromUrl();
+
+  const searchInput = $('#searchInput');
+  if (searchInput) {
+    searchInput.value = monitoringViewState.search;
+  }
+
+  const statusSelect = $('#statusFilter');
+  if (statusSelect) {
+    statusSelect.value = monitoringViewState.status;
+  }
+
+  const typeSelect = $('#typeFilter');
+  if (typeSelect) {
+    typeSelect.value = monitoringViewState.type;
+  }
+
   const pageSizeSelect = $('#sensors-page-size');
 
   if (pageSizeSelect) {
@@ -93,6 +128,49 @@ function hydrateInitialViewState() {
     ).join('');
     pageSizeSelect.value = String(monitoringViewState.pageSize);
   }
+}
+
+function readViewStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  const search = String(params.get('search') || '').trim();
+  const status = normalizeSensorStatus(params.get('status') || '');
+  const type = String(params.get('type') || '').trim();
+  const pageNumber = Number(params.get('page') || 1);
+  const pageSize = Number(params.get('pageSize') || MONITORING_PAGE_SIZE_DEFAULT);
+
+  monitoringViewState.search = search;
+  monitoringViewState.status = status;
+  monitoringViewState.type = type;
+  monitoringViewState.pageNumber = Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+  monitoringViewState.pageSize = MONITORING_PAGE_SIZE_OPTIONS.includes(pageSize)
+    ? pageSize
+    : MONITORING_PAGE_SIZE_DEFAULT;
+}
+
+function persistViewStateToUrl() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+
+  const setOrDelete = (key, value, defaultValue = '') => {
+    const normalized = String(value ?? '');
+    const normalizedDefault = String(defaultValue ?? '');
+    if (!normalized || normalized === normalizedDefault) {
+      params.delete(key);
+      return;
+    }
+
+    params.set(key, normalized);
+  };
+
+  setOrDelete('search', monitoringViewState.search, '');
+  setOrDelete('status', monitoringViewState.status, '');
+  setOrDelete('type', monitoringViewState.type, '');
+  setOrDelete('page', monitoringViewState.pageNumber, 1);
+  setOrDelete('pageSize', monitoringViewState.pageSize, MONITORING_PAGE_SIZE_DEFAULT);
+
+  const next = `${url.pathname}${params.toString() ? `?${params.toString()}` : ''}${url.hash}`;
+  window.history.replaceState({}, '', next);
 }
 
 function loadStatusFilterOptions() {
@@ -131,11 +209,23 @@ function loadTypeFilterOptions() {
   }
 }
 
-async function loadSensors() {
+async function loadSensors({ forceSummaryRefresh = false } = {}) {
+  if (isSensorsLoading) {
+    hasPendingReload = true;
+    return;
+  }
+
   const grid = $('#sensors-grid');
   if (!grid) return;
 
-  grid.innerHTML = '<div class="loading">Loading sensors...</div>';
+  const hasRenderedCards = Boolean(grid.querySelector('.sensor-card'));
+
+  isSensorsLoading = true;
+  setSensorsLoadingState(true);
+
+  if (!hasRenderedCards) {
+    grid.innerHTML = '<div class="loading">Loading sensors...</div>';
+  }
 
   try {
     const ownerId = getOwnerScopeIdForMonitoring();
@@ -155,7 +245,7 @@ async function loadSensors() {
         pageSize: 1000,
         ownerId: ownerId || null
       }).catch(() => []),
-      loadSensorSummaryStats(ownerId)
+      getSummaryStatsWithCache(ownerId, forceSummaryRefresh)
     ]);
 
     const latestReadingsMap = new Map(
@@ -171,11 +261,80 @@ async function loadSensors() {
     renderSensorsGrid(sensors);
     updateStatusSummary(summaryStats || null);
     renderPaginationControls();
+    updateLastSyncTimestamp();
+    persistViewStateToUrl();
   } catch (error) {
     console.error('Error loading sensors:', error);
-    grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
+    if (!hasRenderedCards) {
+      grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
+    }
     toast('sensors.load_failed', 'error');
+  } finally {
+    isSensorsLoading = false;
+    setSensorsLoadingState(false);
+
+    if (hasPendingReload) {
+      hasPendingReload = false;
+      void loadSensors();
+    }
   }
+}
+
+function setSensorsLoadingState(isLoading) {
+  const refreshBtn = $('#refresh-sensors');
+  const updatingIndicator = $('#sensors-updating-indicator');
+  const previousButton = $('#sensors-prev-page');
+  const nextButton = $('#sensors-next-page');
+  const pageSizeSelect = $('#sensors-page-size');
+  const grid = $('#sensors-grid');
+  const pageInfo = $('#sensors-page-info');
+
+  if (grid && grid.querySelector('.sensor-card')) {
+    grid.style.opacity = isLoading ? '0.72' : '1';
+    grid.style.transition = 'opacity 0.2s ease';
+  }
+
+  if (refreshBtn) {
+    refreshBtn.disabled = isLoading;
+    refreshBtn.textContent = isLoading ? '⟳ Updating...' : '⟳ Refresh';
+  }
+
+  if (updatingIndicator) {
+    updatingIndicator.style.display = 'inline';
+    if (isLoading) {
+      updatingIndicator.textContent = '⟳ Updating data...';
+    } else {
+      refreshHeaderSyncIndicator();
+    }
+  }
+
+  if (pageInfo && isLoading && monitoringViewState.totalCount > 0) {
+    pageInfo.textContent = `Updating... (Page ${monitoringViewState.pageNumber}/${monitoringViewState.totalPages})`;
+  }
+
+  if (previousButton) previousButton.disabled = isLoading || !monitoringViewState.hasPreviousPage;
+  if (nextButton) nextButton.disabled = isLoading || !monitoringViewState.hasNextPage;
+  if (pageSizeSelect) pageSizeSelect.disabled = isLoading;
+}
+
+async function getSummaryStatsWithCache(ownerId, forceRefresh = false) {
+  const now = Date.now();
+  const ownerScope = ownerId || '__self__';
+  const cacheValid =
+    !forceRefresh &&
+    cachedSummaryStats &&
+    cachedSummaryOwnerScope === ownerScope &&
+    now - summaryStatsLoadedAt < SUMMARY_REFRESH_INTERVAL_MS;
+
+  if (cacheValid) {
+    return cachedSummaryStats;
+  }
+
+  const summary = await loadSensorSummaryStats(ownerId);
+  cachedSummaryStats = summary;
+  cachedSummaryOwnerScope = ownerScope;
+  summaryStatsLoadedAt = now;
+  return summary;
 }
 
 function mapSensorForMonitoring(sensor, latestReadingsMap) {
@@ -281,7 +440,7 @@ function renderPaginationControls() {
       total === 0 ? 0 : (monitoringViewState.pageNumber - 1) * monitoringViewState.pageSize + 1;
     const to = Math.min(total, monitoringViewState.pageNumber * monitoringViewState.pageSize);
 
-    info.textContent = `Showing ${from}-${to} of ${total}`;
+    info.textContent = `Showing ${from}-${to} of ${total} (Page ${monitoringViewState.pageNumber}/${monitoringViewState.totalPages})`;
   }
 
   if (previousButton) {
@@ -691,6 +850,33 @@ function handleRealtimeSensorReading(reading) {
   }
 
   upsertSensorCard(normalized);
+  updateLastSyncTimestamp(normalized.timestamp);
+}
+
+function updateLastSyncTimestamp(timestamp = null) {
+  const target = $('#lastSync');
+  if (!target) {
+    return;
+  }
+
+  const value = timestamp || new Date().toISOString();
+  lastSyncTimestampIso = value;
+  target.textContent = formatRelativeTime(value);
+  refreshHeaderSyncIndicator();
+}
+
+function refreshHeaderSyncIndicator() {
+  const indicator = $('#sensors-updating-indicator');
+  if (!indicator) {
+    return;
+  }
+
+  if (!lastSyncTimestampIso) {
+    indicator.textContent = 'Updated just now';
+    return;
+  }
+
+  indicator.textContent = `✓ Updated ${formatRelativeTime(lastSyncTimestampIso)}`;
 }
 
 function createSensorCardHtml(sensor, status = 'Active') {
@@ -812,13 +998,7 @@ function updateSensorCard(sensorId, reading) {
 function setupEventListeners() {
   const refreshBtn = $('#refresh-sensors');
   refreshBtn?.addEventListener('click', async () => {
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = '⟳ Updating...';
-
-    await loadSensors();
-
-    refreshBtn.disabled = false;
-    refreshBtn.textContent = '⟳ Refresh';
+    await loadSensors({ forceSummaryRefresh: true });
     toast('sensors.updated', 'success');
   });
 
@@ -827,6 +1007,7 @@ function setupEventListeners() {
   searchInput?.addEventListener('input', (event) => {
     monitoringViewState.search = String(event?.target?.value || '').trim();
     monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
 
     if (searchDebounceTimer) {
       clearTimeout(searchDebounceTimer);
@@ -841,6 +1022,7 @@ function setupEventListeners() {
   statusFilter?.addEventListener('change', () => {
     monitoringViewState.status = normalizeSensorStatus(statusFilter.value);
     monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
     void loadSensors();
   });
 
@@ -848,6 +1030,7 @@ function setupEventListeners() {
   typeFilter?.addEventListener('change', () => {
     monitoringViewState.type = String(typeFilter.value || '').trim();
     monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
     void loadSensors();
   });
 
@@ -858,6 +1041,7 @@ function setupEventListeners() {
       ? nextSize
       : MONITORING_PAGE_SIZE_DEFAULT;
     monitoringViewState.pageNumber = 1;
+    persistViewStateToUrl();
     void loadSensors();
   });
 
@@ -868,6 +1052,7 @@ function setupEventListeners() {
     }
 
     monitoringViewState.pageNumber -= 1;
+    persistViewStateToUrl();
     void loadSensors();
   });
 
@@ -878,6 +1063,7 @@ function setupEventListeners() {
     }
 
     monitoringViewState.pageNumber += 1;
+    persistViewStateToUrl();
     void loadSensors();
   });
 }
