@@ -9,6 +9,12 @@ import {
   getHistoricalData,
   getAlerts,
   getPlots,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger,
+  joinOwnerGroup,
+  leaveOwnerGroup,
+  joinAlertOwnerGroup,
+  leaveAlertOwnerGroup,
   initSignalRConnection,
   initAlertSignalRConnection,
   stopSignalRConnection,
@@ -46,6 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  await setupOwnerSelectorForDashboard();
+
   const shouldEnableRealtime = await loadDashboardData();
   if (shouldEnableRealtime) {
     setupRealTimeUpdates();
@@ -53,23 +61,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('beforeunload', async () => {
-  if (joinedPlotIds.length > 0) {
-    const { leavePlotGroup, leaveAlertPlotGroup } = await import('./api.js');
-    for (const plotId of joinedPlotIds) {
-      try {
-        await leavePlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave plot ${plotId}:`, error);
-      }
-
-      try {
-        await leaveAlertPlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave alert plot ${plotId}:`, error);
-      }
+  const realtimeOwnerId = getRealtimeOwnerScopeId();
+  if (!isCurrentUserAdmin() || realtimeOwnerId) {
+    try {
+      await leaveOwnerGroup(realtimeOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave owner group ${realtimeOwnerId}:`, error);
     }
-    joinedPlotIds = [];
-    joinedAlertPlotIds = [];
+  }
+
+  if (!isCurrentUserAdmin() || realtimeOwnerId) {
+    try {
+      await leaveAlertOwnerGroup(realtimeOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave alert owner group ${realtimeOwnerId}:`, error);
+    }
   }
 
   stopFallbackPollingSilently();
@@ -80,24 +86,26 @@ window.addEventListener('beforeunload', async () => {
 
 async function loadDashboardData() {
   try {
-    const userPlots = await getPlots();
+    const ownerId = getSelectedOwnerIdForDashboard();
+    const stats = await getDashboardStats(ownerId);
+    updateStatCards(stats);
+
+    const userPlots = await getPlots(null, ownerId);
     const hasPlots = Array.isArray(userPlots) && userPlots.length > 0;
 
     if (!hasPlots) {
       hasSetupForRealtime = false;
-      renderInitialSetupState();
+      renderInitialSetupState({ preserveStats: true });
       return false;
     }
 
     // Load all data in parallel
-    const [stats, dashboardReadings, latestReadings, alerts] = await Promise.all([
-      getDashboardStats(),
-      getLatestReadings(5),
-      getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
-      getAlerts('pending').catch(() => [])
+    const [dashboardReadings, latestReadings, alerts] = await Promise.all([
+      getLatestReadings(5, ownerId),
+      getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+      getAlerts('pending', ownerId).catch(() => [])
     ]);
 
-    updateStatCards(stats);
     const readingsForTable = dashboardReadings.length > 0 ? dashboardReadings : latestReadings;
     updateReadingsTable(readingsForTable);
     updateAlertsSection(alerts);
@@ -113,7 +121,7 @@ async function loadDashboardData() {
 
     const chartSensorId = freshestReading?.sensorId;
     if (chartSensorId) {
-      const history = await getHistoricalData(chartSensorId, 7, 168);
+      const history = await getHistoricalData(chartSensorId, 7, 168, ownerId);
       renderReadingsChart(history);
     } else {
       renderReadingsChart([]);
@@ -125,6 +133,132 @@ async function loadDashboardData() {
     toast('dashboard.load_failed', 'error');
     return false;
   }
+}
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) return false;
+
+  const roleValues = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roleValues.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function getSelectedOwnerIdForDashboard() {
+  if (!isCurrentUserAdmin()) {
+    return null;
+  }
+
+  return selectedOwnerId || null;
+}
+
+function getRealtimeOwnerScopeId() {
+  return isCurrentUserAdmin() ? getSelectedOwnerIdForDashboard() : null;
+}
+
+async function setupOwnerSelectorForDashboard() {
+  const filterContainer = $('#dashboard-owner-filter');
+  const ownerSelect = $('#dashboard-owner-select');
+
+  if (!filterContainer || !ownerSelect) {
+    return;
+  }
+
+  if (!isCurrentUserAdmin()) {
+    filterContainer.style.display = 'none';
+    selectedOwnerId = null;
+    return;
+  }
+
+  filterContainer.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwnersForDashboard(parameterMap);
+    const sortedOwners = [...owners].sort((left, right) => {
+      const leftName = String(left?.name || '').toLowerCase();
+      const rightName = String(right?.name || '').toLowerCase();
+      return leftName.localeCompare(rightName);
+    });
+
+    ownerSelect.innerHTML = sortedOwners
+      .map(
+        (owner) =>
+          `<option value="${owner.id}">${owner?.name || 'Unnamed owner'} - ${owner?.email || 'no-email'}</option>`
+      )
+      .join('');
+
+    if (sortedOwners.length > 0) {
+      selectedOwnerId = sortedOwners[0].id;
+      ownerSelect.value = selectedOwnerId;
+      ownerSelect.disabled = false;
+    } else {
+      selectedOwnerId = null;
+      ownerSelect.innerHTML = '<option value="">No owners found</option>';
+      ownerSelect.disabled = true;
+    }
+
+    ownerSelect.addEventListener('change', async () => {
+      const previousOwnerId = selectedOwnerId;
+      selectedOwnerId = ownerSelect.value || null;
+
+      const shouldEnableRealtime = await loadDashboardData();
+
+      if (previousOwnerId && previousOwnerId !== selectedOwnerId) {
+        await leaveOwnerGroup(previousOwnerId);
+      }
+
+      if (previousOwnerId && previousOwnerId !== selectedOwnerId) {
+        await leaveAlertOwnerGroup(previousOwnerId);
+      }
+
+      if (shouldEnableRealtime) {
+        await ensureOwnerGroupSubscriptions();
+        syncFallbackMode('owner-scope-changed');
+      }
+    });
+  } catch (error) {
+    console.warn('[Dashboard] Failed to load owners for admin filter.', error);
+    selectedOwnerId = null;
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+  }
+}
+
+async function getAllOwnersForDashboard(parameterMap) {
+  const owners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: 1000,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    owners.push(...items);
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(owners.map((owner) => [owner.id, owner])).values());
 }
 
 function pickFreshestReading(...readingCollections) {
@@ -151,16 +285,20 @@ function renderReadingsChart(history) {
   createReadingsChart('readings-chart', history || []);
 }
 
-function renderInitialSetupState() {
+function renderInitialSetupState(options = {}) {
+  const preserveStats = Boolean(options?.preserveStats);
+
   const statProperties = $('#stat-properties');
   const statPlots = $('#stat-plots');
   const statSensors = $('#stat-sensors');
   const statAlerts = $('#stat-alerts');
 
-  if (statProperties) statProperties.textContent = '0';
-  if (statPlots) statPlots.textContent = '0';
-  if (statSensors) statSensors.textContent = '0';
-  if (statAlerts) statAlerts.textContent = '0';
+  if (!preserveStats) {
+    if (statProperties) statProperties.textContent = '0';
+    if (statPlots) statPlots.textContent = '0';
+    if (statSensors) statSensors.textContent = '0';
+    if (statAlerts) statAlerts.textContent = '0';
+  }
 
   const readingsBody = $('#readings-tbody');
   if (readingsBody) {
@@ -445,12 +583,10 @@ const DASHBOARD_ALERTS_REALTIME_CONTEXT = {
   fallbackRoutes: ['/api/alerts/pending']
 };
 
-let joinedPlotIds = []; // Track joined plot groups
-let joinedAlertPlotIds = [];
-let isJoiningPlotGroups = false;
 let hasSetupForRealtime = true;
 let sensorRealtimeState = 'disconnected';
 let alertsRealtimeState = 'disconnected';
+let selectedOwnerId = null;
 const fallbackPoller = createFallbackPoller({
   refresh: refreshDashboardFromFallback,
   intervalMs: 15000,
@@ -477,9 +613,13 @@ async function setupRealTimeUpdates() {
     onConnectionChange: handleAlertConnectionChange
   });
 
-  // After connection, join all plot groups to receive sensor readings
-  if (sensorConnection && !sensorConnection.isMock) {
-    await joinAllPlotGroups();
+  if (
+    sensorConnection &&
+    !sensorConnection.isMock &&
+    alertsConnection &&
+    !alertsConnection.isMock
+  ) {
+    await ensureOwnerGroupSubscriptions();
   }
 
   if (!sensorConnection || sensorConnection.isMock) {
@@ -492,10 +632,12 @@ async function setupRealTimeUpdates() {
 }
 
 async function refreshDashboardFromFallback() {
+  const ownerId = getSelectedOwnerIdForDashboard();
+
   const [dashboardReadingsResult, latestReadingsResult, alertsResult] = await Promise.allSettled([
-    getLatestReadings(5),
-    getReadingsLatest({ pageNumber: 1, pageSize: 20 }),
-    getAlerts('pending').catch(() => [])
+    getLatestReadings(5, ownerId),
+    getReadingsLatest({ pageNumber: 1, pageSize: 20, ownerId }),
+    getAlerts('pending', ownerId).catch(() => [])
   ]);
 
   if (dashboardReadingsResult.status === 'rejected') {
@@ -546,61 +688,23 @@ function stopFallbackPollingSilently() {
   fallbackPoller.stop('page-unload', { silent: true });
 }
 
-async function joinAllPlotGroups() {
-  if (isJoiningPlotGroups) {
+async function ensureOwnerGroupSubscriptions() {
+  const realtimeOwnerId = getRealtimeOwnerScopeId();
+
+  if (isCurrentUserAdmin() && !realtimeOwnerId) {
+    console.warn('[SignalR] Admin owner scope not selected. Skipping owner-group subscription.');
     return;
   }
 
-  if (!hasSetupForRealtime) {
-    return;
-  }
+  const sensorJoined = await joinOwnerGroup(realtimeOwnerId);
+  const alertsJoined = await joinAlertOwnerGroup(realtimeOwnerId);
 
-  isJoiningPlotGroups = true;
-
-  try {
-    const { joinPlotGroup, joinAlertPlotGroup } = await import('./api.js');
-    const plots = await getPlots();
-    const plotIds = (plots || []).map((plot) => plot?.id).filter(Boolean);
-
-    if (plotIds.length > 0) {
-      console.warn(`[SignalR] Joining ${plotIds.length} plot groups...`);
-
-      joinedPlotIds = [];
-      joinedAlertPlotIds = [];
-      for (const plotId of plotIds) {
-        try {
-          await joinPlotGroup(plotId);
-          joinedPlotIds.push(plotId);
-          console.warn(`[SignalR] ✅ Joined plot group: ${plotId}`);
-        } catch (error) {
-          console.warn(`[SignalR] Failed to join plot ${plotId}:`, error);
-        }
-
-        try {
-          await joinAlertPlotGroup(plotId);
-          joinedAlertPlotIds.push(plotId);
-          console.warn(`[AlertSignalR] ✅ Joined plot group: ${plotId}`);
-        } catch (error) {
-          console.warn(`[AlertSignalR] Failed to join plot ${plotId}:`, error);
-        }
-      }
-
-      console.warn(`[SignalR] Successfully joined ${joinedPlotIds.length} plot groups`);
-    } else {
-      hasSetupForRealtime = false;
-      console.warn('[SignalR] No plots found. Skipping realtime plot group subscriptions.');
-    }
-  } catch (error) {
-    const statusCode = error?.response?.status;
-    if (statusCode === 400 || statusCode === 404) {
-      hasSetupForRealtime = false;
-      console.warn('[SignalR] No plot context available for current user yet.');
-      return;
-    }
-
-    console.error('[SignalR] Error joining plot groups:', error);
-  } finally {
-    isJoiningPlotGroups = false;
+  if (!sensorJoined || !alertsJoined) {
+    console.warn('[SignalR] Failed to join one or more owner groups.', {
+      sensorJoined,
+      alertsJoined,
+      ownerId: realtimeOwnerId
+    });
   }
 }
 
@@ -664,10 +768,10 @@ function handleSensorConnectionChange(state) {
   sensorRealtimeState = state;
   updateRealtimeBadges();
 
-  // Rejoin plot groups after reconnection (without creating a new connection)
+  // Rejoin owner groups after reconnection (without creating a new connection)
   if (state === 'connected' && hasSetupForRealtime) {
-    console.warn('[SignalR] Connected, (re)joining plot groups...');
-    joinAllPlotGroups();
+    console.warn('[SignalR] Connected, (re)joining owner groups...');
+    ensureOwnerGroupSubscriptions();
   }
 
   if (state === 'reconnecting' || state === 'disconnected') {
@@ -690,8 +794,8 @@ function handleAlertConnectionChange(state) {
   updateRealtimeBadges();
 
   if (state === 'connected' && hasSetupForRealtime) {
-    console.warn('[AlertSignalR] Connected, (re)joining plot groups...');
-    joinAllPlotGroups();
+    console.warn('[AlertSignalR] Connected, (re)joining owner groups...');
+    ensureOwnerGroupSubscriptions();
   }
 
   if (state === 'reconnecting' || state === 'disconnected') {
@@ -778,7 +882,7 @@ async function handleAlertRealtime(eventType, payload) {
   }
 
   try {
-    const alerts = await getAlerts('pending');
+    const alerts = await getAlerts('pending', getSelectedOwnerIdForDashboard());
     updateAlertsSection(alerts);
 
     const alertStat = $('#stat-alerts');

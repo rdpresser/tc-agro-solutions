@@ -2,7 +2,13 @@
  * TC Agro Solutions - Sensors Page Entry Point
  */
 
-import { getSensors, initSignalRConnection, stopSignalRConnection } from './api.js';
+import {
+  getSensors,
+  initSignalRConnection,
+  stopSignalRConnection,
+  joinOwnerGroup,
+  leaveOwnerGroup
+} from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
@@ -13,7 +19,14 @@ import {
   SENSOR_STATUSES
 } from './sensor-statuses.js';
 import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
-import { $, $$, formatPercentage, formatRelativeTime, formatTemperature } from './utils.js';
+import {
+  $,
+  $$,
+  formatPercentage,
+  formatRelativeTime,
+  formatTemperature,
+  getUser
+} from './utils.js';
 
 // ============================================
 // PAGE INITIALIZATION
@@ -34,17 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', async () => {
-  // Leave all plot groups before disconnecting
-  if (window.joinedPlotIds && window.joinedPlotIds.length > 0) {
-    const { leavePlotGroup } = await import('./api.js');
-    for (const plotId of window.joinedPlotIds) {
-      try {
-        await leavePlotGroup(plotId);
-      } catch (error) {
-        console.warn(`Failed to leave plot ${plotId}:`, error);
-      }
+  if (ownerGroupJoined) {
+    try {
+      await leaveOwnerGroup(currentOwnerScopeId);
+    } catch (error) {
+      console.warn(`Failed to leave owner group ${currentOwnerScopeId}:`, error);
     }
-    window.joinedPlotIds = [];
   }
 
   stopFallbackPollingSilently();
@@ -252,8 +260,9 @@ const SENSORS_REALTIME_CONTEXT = {
   fallbackRoutes: ['/api/readings/latest', '/api/sensors (metadata cache)']
 };
 
-window.joinedPlotIds = []; // Track joined plot groups
 let realtimeConnectionState = 'disconnected';
+let ownerGroupJoined = false;
+let currentOwnerScopeId = null;
 const fallbackPoller = createFallbackPoller({
   refresh: loadSensors,
   intervalMs: 15000,
@@ -319,18 +328,62 @@ async function setupRealTimeUpdates() {
 
       updateRealtimeBadges(state);
 
-      if (state === 'connected' && window.joinedPlotIds.length === 0) {
-        setTimeout(() => joinAllPlotGroups(connection), 1000);
+      if (state === 'connected') {
+        setTimeout(() => ensureOwnerGroupSubscription(), 500);
       }
     }
   });
 
   if (connection && !connection.isMock) {
-    await joinAllPlotGroups(connection);
+    await ensureOwnerGroupSubscription();
   } else {
     fallbackPoller.start('initial-connect-failed');
     realtimeConnectionState = 'disconnected';
     updateRealtimeBadges('disconnected');
+  }
+}
+
+function isCurrentUserAdmin() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return false;
+  }
+
+  const roles = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roles.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function getOwnerScopeIdForMonitoring() {
+  if (!isCurrentUserAdmin()) {
+    return null;
+  }
+
+  const ownerId = new URLSearchParams(window.location.search).get('ownerId');
+  return ownerId || null;
+}
+
+async function ensureOwnerGroupSubscription() {
+  currentOwnerScopeId = getOwnerScopeIdForMonitoring();
+
+  if (isCurrentUserAdmin() && !currentOwnerScopeId) {
+    ownerGroupJoined = false;
+    console.warn(
+      '[SensorsRealtime] Admin user without ownerId query param. Skipping owner-group subscription.'
+    );
+    fallbackPoller.start('admin-owner-scope-required');
+    return;
+  }
+
+  ownerGroupJoined = await joinOwnerGroup(currentOwnerScopeId);
+
+  if (!ownerGroupJoined) {
+    console.warn('[SensorsRealtime] Failed to join owner group.', {
+      ownerId: currentOwnerScopeId
+    });
+    fallbackPoller.start('owner-join-failed');
   }
 }
 
@@ -390,34 +443,6 @@ function normalizeRealtimeReading(reading) {
     batteryLevel: reading.batteryLevel ?? reading.BatteryLevel ?? null,
     timestamp: reading.timestamp || reading.Timestamp || new Date().toISOString()
   };
-}
-
-async function joinAllPlotGroups(connection) {
-  try {
-    // Fetch all plots to join their groups
-    const { getPlots, joinPlotGroup } = await import('./api.js');
-    const plots = await getPlots();
-
-    if (plots && plots.length > 0) {
-      console.warn(`[SignalR] Joining ${plots.length} plot groups...`);
-
-      for (const plot of plots) {
-        try {
-          await joinPlotGroup(plot.id);
-          window.joinedPlotIds.push(plot.id);
-          console.warn(`[SignalR] ✅ Joined plot group: ${plot.id}`);
-        } catch (error) {
-          console.warn(`[SignalR] Failed to join plot ${plot.id}:`, error);
-        }
-      }
-
-      console.warn(`[SignalR] Successfully joined ${window.joinedPlotIds.length} plot groups`);
-    } else {
-      console.warn('[SignalR] No plots found to join');
-    }
-  } catch (error) {
-    console.error('[SignalR] Error joining plot groups:', error);
-  }
 }
 
 function updateSensorCard(sensorId, reading) {
