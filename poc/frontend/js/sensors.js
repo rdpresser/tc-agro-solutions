@@ -214,11 +214,16 @@ function renderSummary(state) {
   ).length;
 
   if (summaryText) {
-    summaryText.textContent = `Showing ${sensors.length} of ${state?.totalCount ?? sensors.length} sensor(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
+    const total = Number(state?.totalCount ?? sensors.length ?? 0);
+    const pageNumber = Number(state?.pageNumber ?? 1);
+    const pageSize = Number(state?.pageSize ?? sensors.length ?? 1);
+    const from = total === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+    const to = total === 0 ? 0 : from + sensors.length - 1;
+    summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
-  if (activeBadge) activeBadge.textContent = `${activeCount} Active`;
-  if (inactiveBadge) inactiveBadge.textContent = `${inactiveCount} Inactive`;
-  if (maintenanceBadge) maintenanceBadge.textContent = `${maintenanceCount} Maintenance`;
+  if (activeBadge) activeBadge.textContent = `${activeCount} ● Active`;
+  if (inactiveBadge) inactiveBadge.textContent = `${inactiveCount} ● Inactive`;
+  if (maintenanceBadge) maintenanceBadge.textContent = `${maintenanceCount} ● Maintenance`;
 }
 
 function updatePageOptions(pageCount, currentPage) {

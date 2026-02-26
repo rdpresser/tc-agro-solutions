@@ -82,7 +82,10 @@ async function loadProperties(filters = getFiltersFromUI()) {
     lastPageState = normalized;
 
     if (summary) {
-      summary.textContent = `Showing ${normalized.items.length} of ${normalized.totalCount} properties · Page ${normalized.pageNumber} of ${normalized.pageCount}`;
+      const total = Number(normalized.totalCount || 0);
+      const from = total === 0 ? 0 : (normalized.pageNumber - 1) * normalized.pageSize + 1;
+      const to = total === 0 ? 0 : from + normalized.items.length - 1;
+      summary.textContent = `Showing ${from}-${to} of ${total} (Page ${normalized.pageNumber}/${normalized.pageCount})`;
     }
   } catch (error) {
     const { message } = normalizeError(error);

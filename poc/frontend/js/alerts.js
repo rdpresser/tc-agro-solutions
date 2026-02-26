@@ -33,8 +33,8 @@ let hasPendingAlertsReload = false;
 let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
 
-const ALERTS_PAGE_SIZE_DEFAULT = 50;
-const ALERTS_PAGE_SIZE_OPTIONS = [50, 100];
+const ALERTS_PAGE_SIZE_DEFAULT = 10;
+const ALERTS_PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50, 100];
 
 const alertsViewState = {
   pageNumber: 1,

@@ -274,12 +274,17 @@ function renderSummary(state) {
   ).length;
 
   if (summaryText) {
-    summaryText.textContent = `Showing ${plots.length} of ${state?.totalCount ?? plots.length} plot(s) · Page ${state?.pageNumber ?? 1} of ${state?.pageCount ?? 1}`;
+    const total = Number(state?.totalCount ?? plots.length ?? 0);
+    const pageNumber = Number(state?.pageNumber ?? 1);
+    const pageSize = Number(state?.pageSize ?? plots.length ?? 1);
+    const from = total === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+    const to = total === 0 ? 0 : from + plots.length - 1;
+    summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
   if (summaryArea) summaryArea.textContent = `Total Area: ${formatArea(totalArea)}`;
-  if (healthyBadge) healthyBadge.textContent = `${healthyCount} Healthy`;
-  if (warningBadge) warningBadge.textContent = `${warningCount} Warning`;
-  if (alertBadge) alertBadge.textContent = `${alertCount} Alert`;
+  if (healthyBadge) healthyBadge.textContent = `${healthyCount} ● Healthy`;
+  if (warningBadge) warningBadge.textContent = `${warningCount} ● Needs Attention`;
+  if (alertBadge) alertBadge.textContent = `${alertCount} ● Alert Active`;
 }
 
 // ============================================
