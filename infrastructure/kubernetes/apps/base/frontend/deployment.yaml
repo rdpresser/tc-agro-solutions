@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: rdpresser/frontend-service:c71500e8
+        image: rdpresser/frontend-service:7a0941bb
         imagePullPolicy: Always
         envFrom:
         - configMapRef:
