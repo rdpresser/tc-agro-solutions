@@ -3,7 +3,7 @@ import { pascalizeRequest } from './normalize';
 import type { Property, PaginatedResponse, PaginatedRequest, CreatePropertyRequest, UpdatePropertyRequest } from '@/types';
 
 export const propertiesApi = {
-  list: async (params?: PaginatedRequest): Promise<PaginatedResponse<Property>> => {
+  list: async (params?: PaginatedRequest & { ownerId?: string }): Promise<PaginatedResponse<Property>> => {
     const response = await farmApi.get('/api/properties', { params });
     const data = response.data;
     return {

@@ -63,7 +63,7 @@ async function fetchAllAlertPages(
   const all: Alert[] = [];
   let pageNumber = 1;
   let keepLoading = true;
-  const maxPages = 5;
+  const maxPages = 20;
 
   while (keepLoading && pageNumber <= maxPages) {
     const response = await analyticsApi.get(endpoint, {
@@ -98,6 +98,23 @@ export const alertsApi = {
     }
   },
 
+  getResolved: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<Alert[]> => {
+    try {
+      return await fetchAllAlertPages('/api/alerts/pending', {
+        ...params,
+        status: 'resolved',
+      });
+    } catch {
+      return [];
+    }
+  },
+
   getAll: async (params?: {
     pageNumber?: number;
     pageSize?: number;
@@ -107,7 +124,6 @@ export const alertsApi = {
     ownerId?: string;
   }): Promise<Alert[]> => {
     try {
-      // Same endpoint as frontend — /api/alerts/pending with status=all
       return await fetchAllAlertPages('/api/alerts/pending', {
         ...params,
         status: params?.status || 'all',

@@ -18,9 +18,9 @@ export const Input = forwardRef<TextInput, InputProps>(
         {label && (
           <Text
             className="text-sm font-medium mb-1.5"
-            style={{ color: colors.text }}
+            style={{ color: error ? '#dc3545' : colors.text }}
           >
-            {label}
+            {label}{error ? ' *' : ''}
           </Text>
         )}
         <View
@@ -42,7 +42,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           {rightIcon && <View className="ml-2">{rightIcon}</View>}
         </View>
         {error && (
-          <Text className="text-danger text-xs mt-1">{error}</Text>
+          <Text className="text-xs mt-1" style={{ color: '#dc3545' }}>{error}</Text>
         )}
       </View>
     );

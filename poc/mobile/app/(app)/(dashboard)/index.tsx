@@ -14,7 +14,6 @@ import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { ConnectionBadge } from '@/components/dashboard/ConnectionBadge';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
@@ -98,7 +97,6 @@ export default function DashboardScreen() {
             </Text>
           </View>
           <View className="flex-row items-center gap-3">
-            <ConnectionBadge />
             <TouchableOpacity onPress={() => router.push('/(app)/(alerts)')}>
               <View>
                 <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />

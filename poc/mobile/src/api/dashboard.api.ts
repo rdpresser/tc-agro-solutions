@@ -2,9 +2,9 @@ import { sensorApi } from './clients';
 import type { SensorReading } from '@/types';
 
 export const dashboardApi = {
-  getLatestReadings: async (pageSize = 5): Promise<SensorReading[]> => {
+  getLatestReadings: async (pageSize = 5, ownerId?: string): Promise<SensorReading[]> => {
     const response = await sensorApi.get('/api/dashboard/latest', {
-      params: { pageNumber: 1, pageSize },
+      params: { pageNumber: 1, pageSize, ...(ownerId ? { ownerId } : {}) },
     });
     const data = response.data;
     return data.items || data.data || (Array.isArray(data) ? data : []);

@@ -6,9 +6,11 @@ import { dashboardApi } from '@/api/dashboard.api';
 import { alertsApi } from '@/api/alerts.api';
 import { API_CONFIG } from '@/constants/api-config';
 import { triggerAlertNotification } from '@/lib/notifications';
+import { useOwnerScope } from '@/hooks/use-owner-scope';
 
 export function useFallbackPolling() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const ownerId = useOwnerScope();
   const sensorHubState = useConnectionStore((s) => s.sensorHubState);
   const alertHubState = useConnectionStore((s) => s.alertHubState);
   const setFallbackActive = useConnectionStore((s) => s.setFallbackActive);
@@ -34,9 +36,10 @@ export function useFallbackPolling() {
 
     const poll = async () => {
       try {
+        const ownerParam = ownerId ? { ownerId } : {};
         const [readings, alerts] = await Promise.all([
-          dashboardApi.getLatestReadings(10),
-          alertsApi.getPending(),
+          dashboardApi.getLatestReadings(10, ownerId),
+          alertsApi.getPending(ownerParam),
         ]);
         setReadings(readings);
 
@@ -67,5 +70,5 @@ export function useFallbackPolling() {
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, needsFallback]);
+  }, [isAuthenticated, needsFallback, ownerId]);
 }

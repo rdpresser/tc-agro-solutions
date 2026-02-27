@@ -10,10 +10,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert as RNAlert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAlertsPending, useAlertsAll, useResolveAlert, useAlertsSummary } from '@/hooks/queries/use-alerts';
+import { useAlertsPending, useAlertsResolved, useAlertsAll, useResolveAlert, useAlertsSummary } from '@/hooks/queries/use-alerts';
 import { useTheme } from '@/providers/theme-provider';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -87,6 +88,8 @@ export default function AlertsScreen() {
 
   const { data: pending, isLoading: loadingPending, refetch: refetchPending, isRefetching: refetchingPending } =
     useAlertsPending();
+  const { data: resolvedAlerts, isLoading: loadingResolved, refetch: refetchResolved, isRefetching: refetchingResolved } =
+    useAlertsResolved();
   const { data: allAlerts, isLoading: loadingAll, refetch: refetchAll, isRefetching: refetchingAll } =
     useAlertsAll();
   const { data: summary } = useAlertsSummary();
@@ -111,19 +114,16 @@ export default function AlertsScreen() {
   }, [search, severityFilter]);
 
   const filteredPending = useMemo(() => applyFilters(pending || []), [pending, applyFilters]);
+  const filteredResolved = useMemo(() => applyFilters(resolvedAlerts || []), [resolvedAlerts, applyFilters]);
   const filteredAll = useMemo(() => applyFilters(allAlerts || []), [allAlerts, applyFilters]);
 
-  const resolved = useMemo(
-    () => filteredAll.filter((a) => a.status?.toLowerCase() === 'resolved'),
-    [filteredAll]
-  );
-
-  const currentData = tab === 'pending' ? filteredPending : tab === 'resolved' ? resolved : filteredAll;
-  const isLoading = tab === 'pending' ? loadingPending : loadingAll;
-  const isRefetching = tab === 'pending' ? refetchingPending : refetchingAll;
+  const currentData = tab === 'pending' ? filteredPending : tab === 'resolved' ? filteredResolved : filteredAll;
+  const isLoading = tab === 'pending' ? loadingPending : tab === 'resolved' ? loadingResolved : loadingAll;
+  const isRefetching = tab === 'pending' ? refetchingPending : tab === 'resolved' ? refetchingResolved : refetchingAll;
 
   const onRefresh = () => {
     refetchPending();
+    refetchResolved();
     refetchAll();
   };
 
@@ -135,6 +135,17 @@ export default function AlertsScreen() {
         onSuccess: () => {
           setResolveAlert(null);
           setResolveNotes('');
+        },
+        onError: (error: any) => {
+          const apiError = error?.response?.data;
+          const errorList = apiError?.errors || apiError?.Errors;
+          let msg = 'Failed to resolve alert.';
+          if (Array.isArray(errorList) && errorList.length > 0) {
+            msg = errorList.map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || 'Unknown error').join('\n');
+          } else {
+            msg = apiError?.message || apiError?.detail || error?.message || msg;
+          }
+          RNAlert.alert('Error', msg);
         },
       }
     );
@@ -198,7 +209,7 @@ export default function AlertsScreen() {
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'pending', label: 'Pending', count: filteredPending.length },
-    { key: 'resolved', label: 'Resolved', count: resolved?.length },
+    { key: 'resolved', label: 'Resolved', count: filteredResolved.length },
     { key: 'all', label: 'All', count: filteredAll.length },
   ];
 

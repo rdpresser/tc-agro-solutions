@@ -87,7 +87,22 @@ export default function PropertyFormScreen() {
         ]);
       }
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'Operation failed');
+      const apiError = error?.response?.data;
+      const errorList = apiError?.errors || apiError?.Errors;
+      let msg = 'Operation failed';
+      if (Array.isArray(errorList) && errorList.length > 0) {
+        msg = errorList
+          .map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || e?.name || 'Unknown error')
+          .join('\n');
+      } else {
+        msg = apiError?.message || apiError?.Message
+          || apiError?.detail || apiError?.Detail
+          || apiError?.title || apiError?.Title
+          || (typeof apiError === 'string' ? apiError : null)
+          || error?.message
+          || 'Operation failed';
+      }
+      Alert.alert('Error', msg);
     }
   };
 

@@ -3,7 +3,7 @@ import { pascalizeRequest } from './normalize';
 import type { Sensor, SensorReading, PaginatedResponse, PaginatedRequest } from '@/types';
 
 export const sensorsApi = {
-  list: async (params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string }): Promise<PaginatedResponse<Sensor>> => {
+  list: async (params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string; ownerId?: string }): Promise<PaginatedResponse<Sensor>> => {
     const response = await farmApi.get('/api/sensors', { params });
     const data = response.data;
     return {

@@ -1,11 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sensorsApi } from '@/api/sensors.api';
+import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { PaginatedRequest } from '@/types';
 
 export function useSensors(params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string }) {
+  const ownerId = useOwnerScope();
+  const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery({
-    queryKey: ['sensors', params],
-    queryFn: () => sensorsApi.list(params),
+    queryKey: ['sensors', scopedParams],
+    queryFn: () => sensorsApi.list(scopedParams),
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    retry: 2,
   });
 }
 
@@ -14,6 +20,8 @@ export function useSensor(id: string) {
     queryKey: ['sensors', id],
     queryFn: () => sensorsApi.getById(id),
     enabled: !!id,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
   });
 }
 
@@ -22,6 +30,8 @@ export function useSensorReadings(sensorId: string, days = 7) {
     queryKey: ['sensor-readings', sensorId, days],
     queryFn: () => sensorsApi.getReadings(sensorId, days),
     enabled: !!sensorId,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
   });
 }
 

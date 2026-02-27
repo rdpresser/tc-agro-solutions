@@ -3,7 +3,7 @@ import { pascalizeRequest } from './normalize';
 import type { Plot, PaginatedResponse, PaginatedRequest, CreatePlotRequest } from '@/types';
 
 export const plotsApi = {
-  list: async (params?: PaginatedRequest & { propertyId?: string; cropType?: string; status?: string }): Promise<PaginatedResponse<Plot>> => {
+  list: async (params?: PaginatedRequest & { propertyId?: string; cropType?: string; status?: string; ownerId?: string }): Promise<PaginatedResponse<Plot>> => {
     const response = await farmApi.get('/api/plots', { params });
     const data = response.data;
     return {

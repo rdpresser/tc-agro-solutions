@@ -25,8 +25,8 @@ export function Select({ label, placeholder = 'Select...', options, value, onCha
   return (
     <View className="mb-4">
       {label && (
-        <Text className="text-sm font-medium mb-1.5" style={{ color: colors.text }}>
-          {label}
+        <Text className="text-sm font-medium mb-1.5" style={{ color: error ? '#dc3545' : colors.text }}>
+          {label}{error ? ' *' : ''}
         </Text>
       )}
       <TouchableOpacity

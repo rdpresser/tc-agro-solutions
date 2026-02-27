@@ -38,9 +38,21 @@ export default function SignupScreen() {
         { text: 'OK', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (error: any) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.title
-        || 'Registration failed. Please try again.';
+      const apiError = error?.response?.data;
+      const errorList = apiError?.errors || apiError?.Errors;
+      let message = 'Registration failed. Please try again.';
+      if (Array.isArray(errorList) && errorList.length > 0) {
+        message = errorList
+          .map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || 'Unknown error')
+          .join('\n');
+      } else {
+        message = apiError?.message || apiError?.Message
+          || apiError?.detail || apiError?.Detail
+          || apiError?.title || apiError?.Title
+          || (typeof apiError === 'string' ? apiError : null)
+          || error?.message
+          || message;
+      }
       Alert.alert('Error', message);
     } finally {
       setIsLoading(false);

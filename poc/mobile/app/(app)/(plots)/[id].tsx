@@ -83,8 +83,15 @@ export default function PlotFormScreen() {
 
   const onSubmit = async (data: PlotFormData) => {
     try {
+      // Convert date strings to ISO 8601 datetime (API expects full datetime)
+      const toIso = (d?: string) => d ? new Date(d + 'T00:00:00.000Z').toISOString() : undefined;
       const ownerId = selectedPropertyFromList?.ownerId || selectedPropertyDetail?.ownerId;
-      const payload = ownerId ? { ...data, ownerId } : data;
+      const payload = {
+        ...data,
+        plantingDate: toIso(data.plantingDate) || data.plantingDate,
+        expectedHarvestDate: toIso(data.expectedHarvestDate) || data.expectedHarvestDate,
+        ...(ownerId ? { ownerId } : {}),
+      };
 
       if (isNew) {
         const result = await createMutation.mutateAsync(payload);
@@ -104,11 +111,22 @@ export default function PlotFormScreen() {
       }
     } catch (error: any) {
       const apiError = error?.response?.data;
-      const firstValidationError =
-        Array.isArray(apiError?.errors) ? apiError.errors[0]?.message :
-        Array.isArray(apiError?.Errors) ? apiError.Errors[0]?.Message :
-        undefined;
-      Alert.alert('Error', firstValidationError || apiError?.message || 'Operation failed');
+      // FastEndpoints returns errors as [{name, reason, code}]
+      const errorList = apiError?.errors || apiError?.Errors;
+      let msg = 'Operation failed';
+      if (Array.isArray(errorList) && errorList.length > 0) {
+        msg = errorList
+          .map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || e?.name || 'Unknown error')
+          .join('\n');
+      } else {
+        msg = apiError?.message || apiError?.Message
+          || apiError?.detail || apiError?.Detail
+          || apiError?.title || apiError?.Title
+          || (typeof apiError === 'string' ? apiError : null)
+          || error?.message
+          || 'Operation failed';
+      }
+      Alert.alert('Error', msg);
     }
   };
 
@@ -261,8 +279,27 @@ export default function PlotFormScreen() {
             </View>
           )}
 
+          {Object.keys(errors).length > 0 && (
+            <View className="rounded-lg p-3 mb-3" style={{ backgroundColor: '#dc354520' }}>
+              <Text className="text-sm font-medium mb-1" style={{ color: '#dc3545' }}>Please fix the following:</Text>
+              {Object.entries(errors).map(([key, err]) => (
+                <Text key={key} className="text-xs" style={{ color: '#dc3545' }}>• {(err as any)?.message || key}</Text>
+              ))}
+            </View>
+          )}
           <View className="mb-8">
-            <Button title={isNew ? 'Create Plot' : 'Update Plot'} onPress={handleSubmit(onSubmit)} loading={isSaving} fullWidth size="lg" />
+            <Button
+              title={isNew ? 'Create Plot' : 'Update Plot'}
+              onPress={handleSubmit(onSubmit, (validationErrors) => {
+                const messages = Object.entries(validationErrors)
+                  .map(([key, err]) => `${key}: ${err?.message}`)
+                  .join('\n');
+                Alert.alert('Validation Error', messages);
+              })}
+              loading={isSaving}
+              fullWidth
+              size="lg"
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

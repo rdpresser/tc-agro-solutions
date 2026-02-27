@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { getToken, setToken, clearAll, setUserData, getUserData } from '@/lib/secure-store';
 import { decodeToken, isTokenExpired } from '@/lib/token';
 import { authApi } from '@/api/auth.api';
+import { globalQueryClient } from '@/providers/query-provider';
+import { useRealtimeStore } from '@/stores/realtime.store';
+import { useConnectionStore } from '@/stores/connection.store';
 import type { User, LoginRequest, TokenInfo } from '@/types';
 
 interface AuthState {
@@ -66,6 +69,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     await clearAll();
+    globalQueryClient?.clear();
+    useRealtimeStore.getState().setReadings([]);
+    useRealtimeStore.getState().setAlerts([]);
+    useConnectionStore.getState().setSensorHubState('disconnected');
+    useConnectionStore.getState().setAlertHubState('disconnected');
+    useConnectionStore.getState().setFallbackActive(false);
     set({
       token: null,
       user: null,

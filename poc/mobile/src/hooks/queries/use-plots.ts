@@ -1,11 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { plotsApi } from '@/api/plots.api';
+import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { PaginatedRequest, CreatePlotRequest } from '@/types';
 
 export function usePlots(params?: PaginatedRequest & { propertyId?: string; cropType?: string; status?: string }) {
+  const ownerId = useOwnerScope();
+  const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery({
-    queryKey: ['plots', params],
-    queryFn: () => plotsApi.list(params),
+    queryKey: ['plots', scopedParams],
+    queryFn: () => plotsApi.list(scopedParams),
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    retry: 2,
   });
 }
 
@@ -14,6 +20,8 @@ export function usePlot(id: string) {
     queryKey: ['plots', id],
     queryFn: () => plotsApi.getById(id),
     enabled: !!id,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
   });
 }
 

@@ -60,7 +60,22 @@ export default function SensorDetailScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to create sensor');
+      const apiError = error?.response?.data;
+      const errorList = apiError?.errors || apiError?.Errors;
+      let msg = 'Failed to create sensor';
+      if (Array.isArray(errorList) && errorList.length > 0) {
+        msg = errorList
+          .map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || e?.name || 'Unknown error')
+          .join('\n');
+      } else {
+        msg = apiError?.message || apiError?.Message
+          || apiError?.detail || apiError?.Detail
+          || apiError?.title || apiError?.Title
+          || (typeof apiError === 'string' ? apiError : null)
+          || error?.message
+          || 'Failed to create sensor';
+      }
+      Alert.alert('Error', msg);
     }
   };
 
