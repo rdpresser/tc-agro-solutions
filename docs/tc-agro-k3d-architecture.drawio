@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
   <diagram name="TC Agro - k3d Architecture V3" id="tc-agro-k3d-arch-v3">
-    <mxGraphModel dx="3443" dy="4202" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1400" math="0" shadow="0">
+    <mxGraphModel dx="1307" dy="4323" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1400" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -44,10 +44,10 @@
           <mxGeometry height="35" width="90" x="605" y="-2272" as="geometry" />
         </mxCell>
         <mxCell id="controller-mgr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0078D4;strokeWidth=1;fontSize=11;" value="Controller Mgr" vertex="1">
-          <mxGeometry height="35" width="100" x="780" y="-2272" as="geometry" />
+          <mxGeometry height="35" width="100" x="775" y="-2272" as="geometry" />
         </mxCell>
         <mxCell id="etcd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0078D4;strokeWidth=1;fontSize=11;" value="etcd" vertex="1">
-          <mxGeometry height="35" width="90" x="917" y="-2272" as="geometry" />
+          <mxGeometry height="35" width="90" x="955" y="-2272" as="geometry" />
         </mxCell>
         <mxCell id="worker-nodes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E6;strokeColor=#FFB900;strokeWidth=2;" value="" vertex="1">
           <mxGeometry height="337" width="1480" x="81" y="-2212" as="geometry" />
@@ -74,7 +74,7 @@
           <mxGeometry height="30" width="70" x="344" y="-2131" as="geometry" />
         </mxCell>
         <mxCell id="tempo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;fontStyle=1;" value="🧵 Tempo" vertex="1">
-          <mxGeometry height="30" width="80" x="531" y="-2131" as="geometry" />
+          <mxGeometry height="30" width="105" x="555" y="-2131" as="geometry" />
         </mxCell>
         <mxCell id="microservices" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#326CE5;strokeWidth=2;" value="" vertex="1">
           <mxGeometry height="168" width="1440" x="101" y="-2069" as="geometry" />
@@ -115,7 +115,7 @@
         <mxCell id="sensor-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#F57C00;" value="📡 SENSOR INGEST SERVICE" vertex="1">
           <mxGeometry height="20" width="280" x="924" y="-2044" as="geometry" />
         </mxCell>
-        <mxCell id="Tn9aaI5Wbkuxl3utth3a-3" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#F57C00;" target="Tn9aaI5Wbkuxl3utth3a-1">
+        <mxCell id="Tn9aaI5Wbkuxl3utth3a-3" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#F57C00;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="sensor-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 sensor-ingest-service" vertex="1">
@@ -127,7 +127,7 @@
         <mxCell id="analytics-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#8E24AA;" value="📊 ANALYTICS WORKER" vertex="1">
           <mxGeometry height="20" width="300" x="1246" y="-2044" as="geometry" />
         </mxCell>
-        <mxCell id="Tn9aaI5Wbkuxl3utth3a-9" edge="1" parent="1" source="analytics-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#8E24AA;" target="Tn9aaI5Wbkuxl3utth3a-7">
+        <mxCell id="Tn9aaI5Wbkuxl3utth3a-9" edge="1" parent="1" source="analytics-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#8E24AA;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="analytics-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8E24AA;strokeColor=#6A1B9A;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 analytics-worker" vertex="1">
@@ -164,15 +164,15 @@
             <mxPoint x="491" y="-2029" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow2-farm" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;" target="farm-box">
+        <mxCell id="flow2-farm" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.671;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="hr12vLZTpnwPUjiR8agK-4">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="761" y="-2271" />
-              <mxPoint x="761" y="-2271" />
+              <mxPoint x="881" y="-2153" />
+              <mxPoint x="1173" y="-2153" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow2-sensor" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;" target="Tn9aaI5Wbkuxl3utth3a-1">
+        <mxCell id="flow2-sensor" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="775" y="-2198" />
@@ -180,11 +180,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-ingress-analytics" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8E24AA;strokeWidth=2;endArrow=classic;endFill=1;" target="analytics-box">
+        <mxCell id="flow-ingress-analytics" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8E24AA;strokeWidth=2;endArrow=classic;endFill=1;exitX=0.834;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" target="hr12vLZTpnwPUjiR8agK-2">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="796" y="-2305" />
-              <mxPoint x="1371" y="-2305" />
+              <mxPoint x="928" y="-2196" />
+              <mxPoint x="1485" y="-2196" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -213,10 +213,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-db-sensor" edge="1" parent="1" source="sensor-box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#336791;strokeWidth=2;endArrow=classic;endFill=1;dashed=1;entryX=1.006;entryY=0.217;entryDx=0;entryDy=0;entryPerimeter=0;" target="postgresql">
+        <mxCell id="flow-db-sensor" edge="1" parent="1" source="sensor-box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#336791;strokeWidth=2;endArrow=classic;endFill=1;dashed=1;entryX=1.006;entryY=0.217;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.146;exitY=1.002;exitDx=0;exitDy=0;exitPerimeter=0;" target="postgresql">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="967" y="-1745" />
+              <mxPoint x="957" y="-1770" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -227,11 +227,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-rmq-sensor" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;exitX=0.307;exitY=1.038;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="rabbitmq">
+        <mxCell id="flow-rmq-sensor" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;exitX=0.374;exitY=1.011;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="rabbitmq">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="961" y="-1822" />
-              <mxPoint x="1097" y="-1822" />
+              <mxPoint x="969" y="-1891" />
+              <mxPoint x="1097" y="-1891" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -358,15 +358,16 @@
           </mxCell>
         </object>
         <object placeholders="1" c4Type="Relationship" id="zZaR_RDr0Yx5pnyFEexQ-23">
-          <mxCell edge="1" parent="1" source="sensor-box" style="endArrow=blockThin;html=1;fontSize=10;fontColor=#404040;strokeWidth=2;endFill=1;strokeColor=#FF0000;elbow=vertical;metaEdit=1;endSize=14;startSize=14;jumpStyle=arc;jumpSize=16;rounded=0;edgeStyle=orthogonalEdgeStyle;exitX=0.11;exitY=0.996;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="redis">
+          <mxCell edge="1" parent="1" style="endArrow=blockThin;html=1;fontSize=10;fontColor=#404040;strokeWidth=2;endFill=1;strokeColor=#FF0000;elbow=vertical;metaEdit=1;endSize=14;startSize=14;jumpStyle=arc;jumpSize=16;rounded=0;edgeStyle=orthogonalEdgeStyle;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="redis">
             <mxGeometry relative="1" width="240" as="geometry">
               <Array as="points">
-                <mxPoint x="942" y="-1917" />
-                <mxPoint x="941" y="-1822" />
+                <mxPoint x="946" y="-1902" />
+                <mxPoint x="945" y="-1902" />
+                <mxPoint x="945" y="-1822" />
                 <mxPoint x="467" y="-1822" />
                 <mxPoint x="467" y="-1728" />
               </Array>
-              <mxPoint x="981.5600000000002" y="-1916.97" as="sourcePoint" />
+              <mxPoint x="946" y="-1909" as="sourcePoint" />
               <mxPoint x="386" y="-1726.41" as="targetPoint" />
             </mxGeometry>
           </mxCell>
@@ -389,6 +390,50 @@
         </mxCell>
         <mxCell id="zZaR_RDr0Yx5pnyFEexQ-27" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="🌐 Shared Network (tc-agro-network)" vertex="1">
           <mxGeometry height="30" width="223" x="1312" y="-2329" as="geometry" />
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-1" edge="1" parent="1" source="analytics-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#8E24AA;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="hr12vLZTpnwPUjiR8agK-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1369" y="-1985" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1;fontSize=9;fontColor=#000000;" value="🔔 AlertHub (SignalR)" vertex="1">
+          <mxGeometry height="30" width="120" x="1395" y="-2000" as="geometry" />
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-3" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#F57C00;" target="hr12vLZTpnwPUjiR8agK-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1044.5" y="-1987" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCC80;strokeColor=#F57C00;strokeWidth=1;fontSize=9;fontColor=#000000;" value="🔌 SensorsHub (SignalR)" vertex="1">
+          <mxGeometry height="30" width="120" x="1092.5" y="-2000" as="geometry" />
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#F57C00;strokeWidth=1;fontSize=9;fontColor=#000000;dashed=1;" value="⚙️ Sensor Reading Job" vertex="1">
+          <mxGeometry height="25" width="197" x="975" y="-1944" as="geometry" />
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-6" edge="1" parent="1" source="hr12vLZTpnwPUjiR8agK-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#F57C00;entryX=0.57;entryY=0.96;entryDx=0;entryDy=0;entryPerimeter=0;" target="sensor-pod1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1071" y="-1954" />
+              <mxPoint x="993" y="-1954" />
+            </Array>
+            <mxPoint x="985" y="-1953" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-8" edge="1" parent="1" source="argocd" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.549;entryY=-0.015;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" target="layer-external">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-9" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.467;entryY=-0.004;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.287;exitY=0.992;exitDx=0;exitDy=0;exitPerimeter=0;" target="farm-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="753" y="-2381" />
+              <mxPoint x="753" y="-2381" />
+            </Array>
+            <mxPoint x="765" y="-2381" as="sourcePoint" />
+            <mxPoint x="758" y="-1857" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hr12vLZTpnwPUjiR8agK-10" edge="1" parent="1" source="controller-mgr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="controller-mgr">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
