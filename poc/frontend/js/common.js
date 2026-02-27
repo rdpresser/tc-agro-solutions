@@ -317,7 +317,11 @@ function setupUserMenuDropdown() {
     if (changePasswordLink) {
       event.preventDefault();
       closeDropdown();
-      window.alert('Change password screen is not available yet.');
+      const encodedEmail = encodeURIComponent(String(userEmail || '').trim());
+      const changePasswordPage = encodedEmail
+        ? `change-password.html?email=${encodedEmail}`
+        : 'change-password.html';
+      navigateTo(changePasswordPage);
       return;
     }
 

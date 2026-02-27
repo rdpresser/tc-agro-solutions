@@ -853,6 +853,11 @@ export async function registerUser(payload) {
   return data;
 }
 
+export async function changePassword(payload) {
+  const { data } = await identityApi.post('/auth/change-password', payload);
+  return data;
+}
+
 export async function checkEmailAvailability(email) {
   const { data } = await identityApi.get(`/auth/check-email/${encodeURIComponent(email)}`);
   return data;
