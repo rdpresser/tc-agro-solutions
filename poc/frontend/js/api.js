@@ -211,24 +211,75 @@ export async function getReadingsLatest({
  * @returns {Promise<Array>} Historical readings from Sensor Ingest API
  */
 export async function getHistoricalData(sensorId, days = 7, pageSize = 200, ownerId = null) {
+  const page = await getHistoricalDataPage({
+    sensorId,
+    days,
+    pageNumber: 1,
+    pageSize,
+    ownerId
+  });
+
+  const history = [...(page.items || [])].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  return history;
+}
+
+export async function getHistoricalDataPage({
+  sensorId,
+  days = 7,
+  pageNumber = 1,
+  pageSize = 20,
+  ownerId = null
+} = {}) {
   if (!sensorId) {
-    return [];
+    return {
+      items: [],
+      totalCount: 0,
+      pageNumber,
+      pageSize,
+      hasNextPage: false,
+      hasPreviousPage: false
+    };
   }
 
   const { data } = await sensorApi.get(`/api/sensors/${encodeURIComponent(sensorId)}/readings`, {
     params: {
       days,
-      pageNumber: 1,
+      pageNumber,
       pageSize,
       ...(ownerId ? { ownerId } : {})
     }
   });
 
-  const history = (await normalizeReadings(extractReadingsArray(data), ownerId)).sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
+  const rawItems = extractReadingsArray(data);
+  const items = rawItems.map((reading) => ({
+    rainfallFieldPresent:
+      reading &&
+      (Object.prototype.hasOwnProperty.call(reading, 'rainfall') ||
+        Object.prototype.hasOwnProperty.call(reading, 'Rainfall')),
+    id: reading?.id || reading?.Id,
+    sensorId: reading?.sensorId || reading?.SensorId,
+    plotId: reading?.plotId || reading?.PlotId,
+    plotName: reading?.plotName || reading?.PlotName || '-',
+    propertyName: reading?.propertyName || reading?.PropertyName || '-',
+    timestamp: reading?.time || reading?.Time || reading?.timestamp || reading?.Timestamp,
+    temperature: reading?.temperature ?? reading?.Temperature ?? null,
+    humidity: reading?.humidity ?? reading?.Humidity ?? null,
+    soilMoisture: reading?.soilMoisture ?? reading?.SoilMoisture ?? null,
+    rainfall: reading?.rainfall ?? reading?.Rainfall ?? null,
+    batteryLevel: reading?.batteryLevel ?? reading?.BatteryLevel ?? null
+  }));
 
-  return history;
+  return {
+    items,
+    totalCount: getPaginatedTotalCount(data),
+    pageNumber: Number(data?.pageNumber || data?.PageNumber || pageNumber),
+    pageSize: Number(data?.pageSize || data?.PageSize || pageSize),
+    hasNextPage: Boolean(data?.hasNextPage || data?.HasNextPage),
+    hasPreviousPage: Boolean(data?.hasPreviousPage || data?.HasPreviousPage)
+  };
 }
 
 // ============================================

@@ -5,6 +5,7 @@
 import {
   getSensorsPaginated,
   getReadingsLatest,
+  getHistoricalDataPage,
   initSignalRConnection,
   stopSignalRConnection,
   joinOwnerGroup,
@@ -23,6 +24,7 @@ import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
 import {
   $,
   $$,
+  formatDate,
   formatPercentage,
   formatRelativeTime,
   formatTemperature,
@@ -44,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadStatusFilterOptions();
   loadTypeFilterOptions();
   hydrateInitialViewState();
+  setupSensorHistoryModal();
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
@@ -103,6 +106,18 @@ let cachedSummaryCacheKey = null;
 let summaryStatsLoadedAt = 0;
 let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
+let sensorHistoryModalElements = null;
+let sensorHistoryCurrentSensor = null;
+let isSensorHistoryLoading = false;
+const sensorHistoryViewState = {
+  days: 7,
+  pageNumber: 1,
+  pageSize: 20,
+  sortDirection: 'desc',
+  totalCount: 0,
+  hasNextPage: false,
+  hasPreviousPage: false
+};
 
 function hydrateInitialViewState() {
   readViewStateFromUrl();
@@ -944,7 +959,17 @@ function createSensorCardHtml(sensor, status = 'Active') {
 
       <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
         <span class="text-muted" style="font-size: 0.9em">🔋 ${formatPercentage(sensor.battery)}</span>
-        <button class="btn btn-outline btn-sm" type="button">📊 View History</button>
+        <button
+          class="btn btn-outline btn-sm"
+          type="button"
+          data-action="view-history"
+          data-sensor-id="${sensor.id || ''}"
+          data-sensor-name="${getSensorDisplayName(sensor)}"
+          data-plot-name="${sensor.plotName || '-'}"
+          data-property-name="${sensor.propertyName || '-'}"
+        >
+          📊 View History
+        </button>
       </div>
     </div>
   `;
@@ -1112,6 +1137,351 @@ function setupEventListeners() {
     persistViewStateToUrl();
     void loadSensors();
   });
+
+  const grid = $('#sensors-grid');
+  grid?.addEventListener('click', (event) => {
+    const historyButton = event.target.closest('[data-action="view-history"]');
+    if (!historyButton) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const sensorId = String(historyButton.getAttribute('data-sensor-id') || '').trim();
+    if (!sensorId) {
+      toast('Sensor ID not available for history lookup.', 'warning');
+      return;
+    }
+
+    const sensorName = String(historyButton.getAttribute('data-sensor-name') || '').trim();
+    const plotName = String(historyButton.getAttribute('data-plot-name') || '').trim();
+    const propertyName = String(historyButton.getAttribute('data-property-name') || '').trim();
+
+    void openSensorHistoryDialog({
+      sensorId,
+      sensorName,
+      plotName,
+      propertyName
+    });
+  });
+}
+
+function setupSensorHistoryModal() {
+  sensorHistoryModalElements = {
+    modal: $('#sensor-history-modal'),
+    closeButton: $('#sensor-history-modal-close'),
+    footerCloseButton: $('#sensor-history-close'),
+    summary: $('#sensor-history-summary'),
+    content: $('#sensor-history-content'),
+    daysSelect: $('#sensor-history-days'),
+    pageSizeSelect: $('#sensor-history-page-size'),
+    sortSelect: $('#sensor-history-sort'),
+    previousButton: $('#sensor-history-prev'),
+    nextButton: $('#sensor-history-next'),
+    pageInfo: $('#sensor-history-page-info')
+  };
+
+  const previousButtonText = sensorHistoryModalElements.previousButton?.textContent || '← Previous';
+  const nextButtonText = sensorHistoryModalElements.nextButton?.textContent || 'Next →';
+  sensorHistoryModalElements.previousButtonDefaultText = previousButtonText;
+  sensorHistoryModalElements.nextButtonDefaultText = nextButtonText;
+
+  const {
+    modal,
+    closeButton,
+    footerCloseButton,
+    daysSelect,
+    pageSizeSelect,
+    sortSelect,
+    previousButton,
+    nextButton
+  } = sensorHistoryModalElements;
+  if (!modal) {
+    return;
+  }
+
+  const closeModal = () => {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    sensorHistoryCurrentSensor = null;
+  };
+
+  closeButton?.addEventListener('click', closeModal);
+  footerCloseButton?.addEventListener('click', closeModal);
+
+  daysSelect?.addEventListener('change', () => {
+    sensorHistoryViewState.days = Number(daysSelect.value || 7);
+    sensorHistoryViewState.pageNumber = 1;
+    void loadCurrentSensorHistoryPage();
+  });
+
+  pageSizeSelect?.addEventListener('change', () => {
+    sensorHistoryViewState.pageSize = Number(pageSizeSelect.value || 20);
+    sensorHistoryViewState.pageNumber = 1;
+    void loadCurrentSensorHistoryPage();
+  });
+
+  sortSelect?.addEventListener('change', () => {
+    sensorHistoryViewState.sortDirection = String(sortSelect.value || 'desc').toLowerCase();
+    void loadCurrentSensorHistoryPage();
+  });
+
+  previousButton?.addEventListener('click', () => {
+    if (!sensorHistoryViewState.hasPreviousPage) {
+      return;
+    }
+
+    sensorHistoryViewState.pageNumber -= 1;
+    void loadCurrentSensorHistoryPage();
+  });
+
+  nextButton?.addEventListener('click', () => {
+    if (!sensorHistoryViewState.hasNextPage) {
+      return;
+    }
+
+    sensorHistoryViewState.pageNumber += 1;
+    void loadCurrentSensorHistoryPage();
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) {
+      closeModal();
+    }
+  });
+}
+
+function formatHistoryRainfall(reading) {
+  if (reading?.rainfall === null) {
+    return '<span class="text-muted">null</span>';
+  }
+
+  if (reading?.rainfall === undefined) {
+    return reading?.rainfallFieldPresent
+      ? '<span class="text-muted">null</span>'
+      : '<span class="text-warning">not returned</span>';
+  }
+
+  return `${reading.rainfall} mm`;
+}
+
+async function openSensorHistoryDialog({ sensorId, sensorName, plotName, propertyName }) {
+  const modal = sensorHistoryModalElements?.modal;
+  const summary = sensorHistoryModalElements?.summary;
+  const content = sensorHistoryModalElements?.content;
+
+  if (!modal || !summary || !content) {
+    return;
+  }
+
+  sensorHistoryCurrentSensor = sensorId;
+  sensorHistoryViewState.pageNumber = 1;
+
+  summary.textContent = `Sensor: ${sensorName || sensorId} • ${plotName || '-'} • ${propertyName || '-'}`;
+  content.innerHTML = `
+    <div class="text-center" style="display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 0;">
+      <span class="spinner" aria-hidden="true" style="width: 20px; height: 20px; border-width: 3px;"></span>
+      <p class="text-muted" style="margin: 0">Loading history...</p>
+    </div>
+  `;
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+
+  await loadCurrentSensorHistoryPage();
+}
+
+async function loadCurrentSensorHistoryPage() {
+  const modal = sensorHistoryModalElements?.modal;
+  const content = sensorHistoryModalElements?.content;
+  const daysSelect = sensorHistoryModalElements?.daysSelect;
+  const pageSizeSelect = sensorHistoryModalElements?.pageSizeSelect;
+  const sortSelect = sensorHistoryModalElements?.sortSelect;
+
+  if (!modal || !content || !sensorHistoryCurrentSensor) {
+    return;
+  }
+
+  isSensorHistoryLoading = true;
+  updateSensorHistoryPaginationControls();
+
+  if (daysSelect) {
+    sensorHistoryViewState.days = Number(daysSelect.value || sensorHistoryViewState.days || 7);
+  }
+
+  if (pageSizeSelect) {
+    sensorHistoryViewState.pageSize = Number(
+      pageSizeSelect.value || sensorHistoryViewState.pageSize || 20
+    );
+  }
+
+  if (sortSelect) {
+    sensorHistoryViewState.sortDirection = String(
+      sortSelect.value || sensorHistoryViewState.sortDirection || 'desc'
+    ).toLowerCase();
+  }
+
+  content.innerHTML = `
+    <div class="text-center" style="display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 0;">
+      <span class="spinner" aria-hidden="true" style="width: 20px; height: 20px; border-width: 3px;"></span>
+      <p class="text-muted" style="margin: 0">Loading history...</p>
+    </div>
+  `;
+
+  try {
+    const historyPage = await getHistoricalDataPage({
+      sensorId: sensorHistoryCurrentSensor,
+      days: sensorHistoryViewState.days,
+      pageNumber: sensorHistoryViewState.pageNumber,
+      pageSize: sensorHistoryViewState.pageSize
+    });
+
+    if (!sensorHistoryCurrentSensor) {
+      return;
+    }
+
+    const rows = Array.isArray(historyPage?.items) ? [...historyPage.items] : [];
+    const totalCount = Number(historyPage?.totalCount || 0);
+    const pageNumber = Number(historyPage?.pageNumber || sensorHistoryViewState.pageNumber || 1);
+    const pageSize = Number(historyPage?.pageSize || sensorHistoryViewState.pageSize || 20);
+
+    sensorHistoryViewState.totalCount = totalCount;
+    sensorHistoryViewState.pageNumber = pageNumber;
+    sensorHistoryViewState.pageSize = pageSize;
+    sensorHistoryViewState.hasNextPage = Boolean(historyPage?.hasNextPage);
+    sensorHistoryViewState.hasPreviousPage = Boolean(historyPage?.hasPreviousPage);
+
+    if (daysSelect) {
+      daysSelect.value = String(sensorHistoryViewState.days);
+    }
+
+    if (pageSizeSelect) {
+      pageSizeSelect.value = String(sensorHistoryViewState.pageSize);
+    }
+
+    if (sortSelect) {
+      sortSelect.value = sensorHistoryViewState.sortDirection === 'asc' ? 'asc' : 'desc';
+    }
+
+    rows.sort((a, b) => {
+      const timeA = new Date(a?.timestamp || 0).getTime();
+      const timeB = new Date(b?.timestamp || 0).getTime();
+      if (sensorHistoryViewState.sortDirection === 'asc') {
+        return timeA - timeB;
+      }
+
+      return timeB - timeA;
+    });
+
+    updateSensorHistoryPaginationControls();
+
+    if (rows.length === 0) {
+      content.innerHTML = `<p class="text-muted" style="margin: 0">No readings found for the last ${sensorHistoryViewState.days} days.</p>`;
+      return;
+    }
+
+    content.innerHTML = `
+      <div class="table-container" style="box-shadow: none; margin-top: 12px">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Temperature</th>
+              <th>Humidity</th>
+              <th>Soil Moisture</th>
+              <th>Rainfall</th>
+              <th>Battery</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map(
+                (reading) => `
+              <tr>
+                <td>${formatDate(reading.timestamp, 'DD/MMM/YYYY HH:mm:ss')}</td>
+                <td>${formatTemperature(reading.temperature)}</td>
+                <td>${formatPercentage(reading.humidity)}</td>
+                <td>${formatPercentage(reading.soilMoisture)}</td>
+                <td>${formatHistoryRainfall(reading)}</td>
+                <td>${formatPercentage(reading.batteryLevel)}</td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted" style="margin-bottom: 0; font-size: 0.9em">Showing page ${sensorHistoryViewState.pageNumber} with ${rows.length} readings from last ${sensorHistoryViewState.days} days (${sensorHistoryViewState.sortDirection === 'asc' ? 'oldest first' : 'newest first'}).</p>
+    `;
+  } catch (error) {
+    console.error('Failed to load sensor history:', error);
+    if (!sensorHistoryCurrentSensor) {
+      return;
+    }
+
+    content.innerHTML =
+      '<p class="text-danger" style="margin: 0">Unable to load sensor history right now. Please try again.</p>';
+    updateSensorHistoryPaginationControls();
+  } finally {
+    isSensorHistoryLoading = false;
+    updateSensorHistoryPaginationControls();
+  }
+}
+
+function updateSensorHistoryPaginationControls() {
+  const daysSelect = sensorHistoryModalElements?.daysSelect;
+  const pageSizeSelect = sensorHistoryModalElements?.pageSizeSelect;
+  const sortSelect = sensorHistoryModalElements?.sortSelect;
+  const previousButton = sensorHistoryModalElements?.previousButton;
+  const nextButton = sensorHistoryModalElements?.nextButton;
+  const pageInfo = sensorHistoryModalElements?.pageInfo;
+
+  if (daysSelect) {
+    daysSelect.disabled = isSensorHistoryLoading;
+  }
+
+  if (pageSizeSelect) {
+    pageSizeSelect.disabled = isSensorHistoryLoading;
+  }
+
+  if (sortSelect) {
+    sortSelect.disabled = isSensorHistoryLoading;
+  }
+
+  if (previousButton) {
+    previousButton.disabled = isSensorHistoryLoading || !sensorHistoryViewState.hasPreviousPage;
+    previousButton.textContent = isSensorHistoryLoading
+      ? '⟳ Loading...'
+      : sensorHistoryModalElements?.previousButtonDefaultText || '← Previous';
+  }
+
+  if (nextButton) {
+    nextButton.disabled = isSensorHistoryLoading || !sensorHistoryViewState.hasNextPage;
+    nextButton.textContent = isSensorHistoryLoading
+      ? '⟳ Loading...'
+      : sensorHistoryModalElements?.nextButtonDefaultText || 'Next →';
+  }
+
+  if (pageInfo) {
+    if (isSensorHistoryLoading) {
+      pageInfo.textContent = 'Loading...';
+      return;
+    }
+
+    const total = sensorHistoryViewState.totalCount;
+    const from =
+      total === 0
+        ? 0
+        : (sensorHistoryViewState.pageNumber - 1) * sensorHistoryViewState.pageSize + 1;
+    const to = Math.min(total, sensorHistoryViewState.pageNumber * sensorHistoryViewState.pageSize);
+    pageInfo.textContent = `Showing ${from}-${to} of ${total}`;
+  }
 }
 
 // Export for debugging

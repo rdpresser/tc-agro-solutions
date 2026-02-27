@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => ({
         users: resolve(__dirname, 'users.html'),
         usersForm: resolve(__dirname, 'users-form.html'),
         signup: resolve(__dirname, 'signup.html'),
+        changePassword: resolve(__dirname, 'change-password.html'),
         sensors: resolve(__dirname, 'sensors.html'),
         sensorsForm: resolve(__dirname, 'sensors-form.html'),
         sensorsMonitoring: resolve(__dirname, 'sensors-monitoring.html'),

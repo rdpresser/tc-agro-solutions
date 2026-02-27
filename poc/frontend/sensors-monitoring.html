@@ -454,6 +454,59 @@
       </main>
     </div>
 
+    <div id="sensor-history-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 840px">
+        <div class="modal-header">
+          <h3>📊 Sensor History</h3>
+          <button
+            id="sensor-history-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close sensor history dialog"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="sensor-history-summary" class="text-muted" style="margin-top: 0"></p>
+          <div class="d-flex justify-between align-center" style="gap: 12px; flex-wrap: wrap; margin-bottom: 12px">
+            <div class="d-flex align-center" style="gap: 8px">
+              <label for="sensor-history-days" class="text-muted" style="font-size: 0.9em">Period</label>
+              <select id="sensor-history-days" class="form-control form-select" style="width: 140px">
+                <option value="1">1 day</option>
+                <option value="3">3 days</option>
+                <option value="7" selected>7 days</option>
+                <option value="15">15 days</option>
+                <option value="30">30 days</option>
+              </select>
+            </div>
+            <div class="d-flex align-center" style="gap: 8px">
+              <label for="sensor-history-page-size" class="text-muted" style="font-size: 0.9em">Page size</label>
+              <select id="sensor-history-page-size" class="form-control form-select" style="width: 120px">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            <div class="d-flex align-center" style="gap: 8px">
+              <label for="sensor-history-sort" class="text-muted" style="font-size: 0.9em">Date</label>
+              <select id="sensor-history-sort" class="form-control form-select" style="width: 140px">
+                <option value="desc" selected>Newest first</option>
+                <option value="asc">Oldest first</option>
+              </select>
+            </div>
+          </div>
+          <div id="sensor-history-content"></div>
+        </div>
+        <div class="modal-footer">
+          <span id="sensor-history-page-info" class="text-muted" style="font-size: 0.9em; margin-right: auto">Showing 0-0 of 0</span>
+          <button id="sensor-history-prev" type="button" class="btn btn-outline btn-sm">← Previous</button>
+          <button id="sensor-history-next" type="button" class="btn btn-outline btn-sm">Next →</button>
+          <button id="sensor-history-close" type="button" class="btn btn-outline">Close</button>
+        </div>
+      </div>
+    </div>
+
     <style>
       /* Additional Sensor-specific Styles */
       .sensor-grid {

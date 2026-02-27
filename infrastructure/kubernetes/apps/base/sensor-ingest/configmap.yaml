@@ -61,7 +61,7 @@ data:
 
   # Jobs
   Jobs__SensorReadings__Enabled: "true"
-  Jobs__SensorReadings__IntervalSeconds: "5"
+  Jobs__SensorReadings__IntervalSeconds: "15"
 
   # ═══════════════════════════════════════════════════════════════════════════════════
   # Telemetry / OpenTelemetry Configuration
