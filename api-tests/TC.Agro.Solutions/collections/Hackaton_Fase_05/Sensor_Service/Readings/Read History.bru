@@ -5,9 +5,15 @@ meta {
 }
 
 get {
-  url: {{sensor_service_url}}/api/readings/latest?pageNumber=1&pageSize=10
+  url: {{sensor_service_url}}/api/sensors/d56b4f36-6d6f-489a-a4a8-ef17514fb582/readings?pageNumber=1&pageSize=10&days=7
   body: none
   auth: bearer
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 10
+  days: 7
 }
 
 auth:bearer {
