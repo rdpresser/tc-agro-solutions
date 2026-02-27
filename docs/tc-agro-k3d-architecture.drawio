@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
   <diagram name="TC Agro - k3d Architecture V3" id="tc-agro-k3d-arch-v3">
-    <mxGraphModel dx="1252" dy="3359" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1400" math="0" shadow="0">
+    <mxGraphModel dx="3443" dy="4202" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1400" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -80,67 +80,58 @@
           <mxGeometry height="168" width="1440" x="101" y="-2069" as="geometry" />
         </mxCell>
         <mxCell id="microservices-label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;fontColor=#326CE5;" value="📦 Domain Microservices (.NET + FastEndpoints + Wolverine)" vertex="1">
-          <mxGeometry height="15" width="500" x="111" y="-2062" as="geometry" />
+          <mxGeometry height="15" width="500" x="105" y="-2068" as="geometry" />
         </mxCell>
         <mxCell id="frontend-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#01579B;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="110" width="220" x="121" y="-2029" as="geometry" />
+          <mxGeometry height="125" width="220" x="121" y="-2044" as="geometry" />
         </mxCell>
         <mxCell id="frontend-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#01579B;" value="🌐 FRONTEND SERVICE" vertex="1">
-          <mxGeometry height="20" width="220" x="121" y="-2024" as="geometry" />
+          <mxGeometry height="20" width="220" x="121" y="-2039" as="geometry" />
         </mxCell>
         <mxCell id="frontend-pod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#01579B;strokeColor=#012d52;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 frontend (Nginx)" vertex="1">
           <mxGeometry height="30" width="110" x="176" y="-1994" as="geometry" />
         </mxCell>
-        <mxCell id="frontend-route" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;fontColor=#01579B;" value="/* (Static Content)" vertex="1">
-          <mxGeometry height="15" width="220" x="121" y="-1954" as="geometry" />
-        </mxCell>
         <mxCell id="identity-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="110" width="240" x="371" y="-2029" as="geometry" />
+          <mxGeometry height="137" width="240" x="371" y="-2048" as="geometry" />
         </mxCell>
         <mxCell id="identity-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#1976D2;" value="👤 IDENTITY SERVICE" vertex="1">
-          <mxGeometry height="20" width="240" x="371" y="-2024" as="geometry" />
+          <mxGeometry height="20" width="240" x="371" y="-2042" as="geometry" />
         </mxCell>
         <mxCell id="identity-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 identity-service" vertex="1">
           <mxGeometry height="30" width="110" x="436" y="-1994" as="geometry" />
         </mxCell>
-        <mxCell id="identity-route" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;fontColor=#1976D2;" value="/identity/*" vertex="1">
-          <mxGeometry height="15" width="240" x="371" y="-1954" as="geometry" />
-        </mxCell>
         <mxCell id="farm-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#388E3C;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="110" width="240" x="641" y="-2029" as="geometry" />
+          <mxGeometry height="140" width="240" x="641" y="-2048" as="geometry" />
         </mxCell>
         <mxCell id="farm-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#388E3C;" value="🌱 FARM SERVICE" vertex="1">
-          <mxGeometry height="20" width="240" x="641" y="-2024" as="geometry" />
+          <mxGeometry height="20" width="240" x="641" y="-2044" as="geometry" />
         </mxCell>
         <mxCell id="farm-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#388E3C;strokeColor=#1B5E20;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 farm-service" vertex="1">
           <mxGeometry height="30" width="110" x="706" y="-1994" as="geometry" />
         </mxCell>
-        <mxCell id="farm-route" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;fontColor=#388E3C;" value="/farm/*" vertex="1">
-          <mxGeometry height="15" width="240" x="641" y="-1954" as="geometry" />
-        </mxCell>
         <mxCell id="sensor-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="110" width="280" x="911" y="-2029" as="geometry" />
+          <mxGeometry height="141" width="318" x="911" y="-2050" as="geometry" />
         </mxCell>
-        <mxCell id="sensor-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#F57C00;" value="📡 SENSOR INGEST + DASHBOARD" vertex="1">
-          <mxGeometry height="20" width="280" x="911" y="-2024" as="geometry" />
+        <mxCell id="sensor-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#F57C00;" value="📡 SENSOR INGEST SERVICE" vertex="1">
+          <mxGeometry height="20" width="280" x="924" y="-2044" as="geometry" />
+        </mxCell>
+        <mxCell id="Tn9aaI5Wbkuxl3utth3a-3" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#F57C00;" target="Tn9aaI5Wbkuxl3utth3a-1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="sensor-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 sensor-ingest-service" vertex="1">
-          <mxGeometry height="30" width="150" x="976" y="-1994" as="geometry" />
-        </mxCell>
-        <mxCell id="sensor-route" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;fontColor=#F57C00;" value="/sensor-ingest/* (Dashboard API)" vertex="1">
-          <mxGeometry height="15" width="280" x="911" y="-1954" as="geometry" />
+          <mxGeometry height="30" width="122" x="923" y="-2000" as="geometry" />
         </mxCell>
         <mxCell id="analytics-box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#8E24AA;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="110" width="300" x="1221" y="-2029" as="geometry" />
+          <mxGeometry height="142" width="273" x="1251" y="-2050" as="geometry" />
         </mxCell>
-        <mxCell id="analytics-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#8E24AA;" value="📊 ANALYTICS + ALERTS API" vertex="1">
-          <mxGeometry height="20" width="300" x="1221" y="-2024" as="geometry" />
+        <mxCell id="analytics-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#8E24AA;" value="📊 ANALYTICS WORKER" vertex="1">
+          <mxGeometry height="20" width="300" x="1246" y="-2044" as="geometry" />
+        </mxCell>
+        <mxCell id="Tn9aaI5Wbkuxl3utth3a-9" edge="1" parent="1" source="analytics-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#8E24AA;" target="Tn9aaI5Wbkuxl3utth3a-7">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="analytics-pod1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8E24AA;strokeColor=#6A1B9A;strokeWidth=1;fontSize=10;fontColor=#FFFFFF;" value="🔲 analytics-worker" vertex="1">
-          <mxGeometry height="30" width="150" x="1296" y="-1994" as="geometry" />
-        </mxCell>
-        <mxCell id="analytics-route" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;fontColor=#8E24AA;" value="/analytics-worker/* (Alerts API)" vertex="1">
-          <mxGeometry height="15" width="300" x="1221" y="-1954" as="geometry" />
+          <mxGeometry height="30" width="110" x="1257" y="-2000" as="geometry" />
         </mxCell>
         <mxCell id="layer-data" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6F0FF;strokeColor=#0078D4;strokeWidth=2;" value="" vertex="1">
           <mxGeometry height="192" width="1520" x="61" y="-1834" as="geometry" />
@@ -181,20 +172,19 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow2-sensor" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;" target="sensor-box">
+        <mxCell id="flow2-sensor" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#388E3C;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;" target="Tn9aaI5Wbkuxl3utth3a-1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="910" y="-2198" />
-              <mxPoint x="1051" y="-2198" />
+              <mxPoint x="775" y="-2198" />
+              <mxPoint x="1153" y="-2198" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-ingress-analytics" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8E24AA;strokeWidth=2;endArrow=classic;endFill=1;exitX=0.891;exitY=1.02;exitDx=0;exitDy=0;exitPerimeter=0;" target="analytics-box">
+        <mxCell id="flow-ingress-analytics" edge="1" parent="1" source="ingress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8E24AA;strokeWidth=2;endArrow=classic;endFill=1;" target="analytics-box">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="943" y="-2381" />
-              <mxPoint x="943" y="-2299" />
-              <mxPoint x="1371" y="-2299" />
+              <mxPoint x="796" y="-2305" />
+              <mxPoint x="1371" y="-2305" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -226,7 +216,7 @@
         <mxCell id="flow-db-sensor" edge="1" parent="1" source="sensor-box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#336791;strokeWidth=2;endArrow=classic;endFill=1;dashed=1;entryX=1.006;entryY=0.217;entryDx=0;entryDy=0;entryPerimeter=0;" target="postgresql">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="967" y="-1770" />
+              <mxPoint x="967" y="-1745" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -237,11 +227,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-rmq-sensor" edge="1" parent="1" source="sensor-box" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;" target="rabbitmq">
+        <mxCell id="flow-rmq-sensor" edge="1" parent="1" source="sensor-pod1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;exitX=0.307;exitY=1.038;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="rabbitmq">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1116" y="-1836" />
-              <mxPoint x="1116" y="-1836" />
+              <mxPoint x="961" y="-1822" />
+              <mxPoint x="1097" y="-1822" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -253,10 +243,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="flow-rmq-consume" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;" target="analytics-box">
+        <mxCell id="flow-rmq-consume" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9800;strokeWidth=2;endArrow=classic;endFill=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="analytics-pod1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1338" y="-1744" />
+              <mxPoint x="1312" y="-1744" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -400,17 +390,9 @@
         <mxCell id="zZaR_RDr0Yx5pnyFEexQ-27" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="🌐 Shared Network (tc-agro-network)" vertex="1">
           <mxGeometry height="30" width="223" x="1312" y="-2329" as="geometry" />
         </mxCell>
-        <object placeholders="1" c4Type="Relationship" id="zZaR_RDr0Yx5pnyFEexQ-38">
-          <mxCell edge="1" parent="1" source="argocd" style="endArrow=blockThin;html=1;fontSize=10;fontColor=#404040;strokeWidth=2;endFill=1;strokeColor=#000000;elbow=vertical;metaEdit=1;endSize=14;startSize=14;jumpStyle=arc;jumpSize=16;rounded=0;edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;">
-            <mxGeometry relative="1" width="240" as="geometry">
-              <Array as="points">
-                <mxPoint x="892" y="-2116" />
-              </Array>
-              <mxPoint x="781" y="-1943" as="sourcePoint" />
-              <mxPoint x="892" y="-1621" as="targetPoint" />
-            </mxGeometry>
-          </mxCell>
-        </object>
+        <mxCell id="postgresql" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#336791;strokeColor=#1a3a4d;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" value="🐘 PostgreSQL + TimescaleDB&#xa;───────────&#xa;Transactional + Time Series" vertex="1">
+          <mxGeometry height="120" width="180" x="635" y="-1796" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
