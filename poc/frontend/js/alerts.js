@@ -43,6 +43,7 @@ let lastSyncTimestampIso = null;
 let syncIndicatorIntervalId = null;
 let alertIdPendingResolution = null;
 let alertPendingDetails = null;
+let latestTabCounts = { pending: 0, resolved: 0, all: 0 };
 
 const ALERTS_PAGE_SIZE_DEFAULT = 10;
 const ALERTS_PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50, 100];
@@ -153,9 +154,10 @@ async function loadAlertsData() {
     latestPendingAlerts = Array.isArray(alertsPage?.items) ? alertsPage.items : [];
     latestSummary = summary;
 
-    renderStats(summary);
+    const tabCounts = await updateTabCountsFromBackend();
+    latestTabCounts = tabCounts;
+    renderStats(summary, null, tabCounts);
     renderAlertsForCurrentFilter();
-    await updateTabCountsFromBackend();
     updateLastAlertsSyncTimestamp();
     persistAlertsViewStateToUrl();
   } finally {
@@ -415,9 +417,15 @@ async function updateTabCountsFromBackend() {
   if (allTabBadge) {
     allTabBadge.textContent = String(allCount);
   }
+
+  return {
+    pending: pendingCount,
+    resolved: resolvedCount,
+    all: allCount
+  };
 }
 
-function renderStats(summary, alertsOverride = null) {
+function renderStats(summary, alertsOverride = null, countsOverride = null) {
   const usingOverride = Array.isArray(alertsOverride);
 
   const critical = usingOverride
@@ -433,8 +441,10 @@ function renderStats(summary, alertsOverride = null) {
 
   const pendingTotal = usingOverride
     ? alertsOverride.length
-    : Number(summary?.pendingAlertsTotal || latestPendingAlerts.length || 0);
-  const resolvedToday = 0;
+    : Number(
+        countsOverride?.pending ?? summary?.pendingAlertsTotal ?? latestTabCounts.pending ?? 0
+      );
+  const resolvedCount = Number(countsOverride?.resolved ?? latestTabCounts.resolved ?? 0);
 
   const statCritical = $('#alerts-stat-critical');
   const statWarning = $('#alerts-stat-warning');
@@ -445,7 +455,7 @@ function renderStats(summary, alertsOverride = null) {
   if (statCritical) statCritical.textContent = String(critical);
   if (statWarning) statWarning.textContent = String(warning);
   if (statInfo) statInfo.textContent = String(info);
-  if (statResolved) statResolved.textContent = String(resolvedToday);
+  if (statResolved) statResolved.textContent = String(resolvedCount);
   if (navPendingBadge) navPendingBadge.textContent = String(pendingTotal);
 }
 
