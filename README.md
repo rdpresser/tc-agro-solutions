@@ -39,7 +39,28 @@ cd scripts\k3d
 
 ---
 
-## 🎯 Two Development Modes
+## 🎯 Three Development Modes
+
+### 🎨 Visual Studio AppHost Mode (Recommended for Developers)
+
+Run all services with Visual Studio's integrated orchestration - **zero configuration required**.
+
+```powershell
+# Open the orchestration solution
+start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
+# Press F5 in Visual Studio - all services start automatically with Docker containers
+```
+
+**What you get:**
+- ✅ All 4 microservices running in Docker containers
+- ✅ PostgreSQL + Redis + RabbitMQ (auto-configured)
+- ✅ Integrated debugging (breakpoints work across services)
+- ✅ Service dashboard in Visual Studio
+- ✅ Auto-restart on code changes
+
+**Best for:** Day-to-day development, debugging, quick iterations
+
+---
 
 ### 🐳 Docker Compose Mode (API Development)
 
@@ -119,43 +140,349 @@ This will:
 
 ### 3️⃣ Open Solution
 
+**Choose one:**
+
 ```powershell
-# Open in Visual Studio 2026
+# Option A: Visual Studio AppHost (Recommended - runs everything)
+start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
+
+# Option B: Open individual services
 start tc-agro-solutions.sln
 ```
 
-### 4️⃣ Start Infrastructure
+### 4️⃣ Start Development
+
+**If using AppHost (Option A):**
+- Press `F5` in Visual Studio - all services start automatically ✅
+
+**If using manual mode (Option B):**
 
 ```powershell
-# Start PostgreSQL, Redis, RabbitMQ
+# Start infrastructure
 docker compose up -d
+
+# Run individual services
+dotnet run --project services/farm-service/src/Agro.Farm.Api
 ```
 
 **For detailed setup instructions, see [📖 Bootstrap Setup Guide](./docs/BOOTSTRAP_SETUP.md)**
 
 ---
 
+## 🎨 Frontend Dashboard (PoC)
+
+A pure HTML/CSS/JavaScript frontend for demonstrating the platform without cloud dependencies.
+
+**Location:** `poc/frontend/`
+
+**Quick Start:**
+
+```powershell
+# Option 1: Open directly in browser
+start poc\frontend\index.html
+
+# Option 2: Use VS Code Live Server
+# Right-click index.html → "Open with Live Server"
+
+# Option 3: Python server
+cd poc\frontend
+python -m http.server 8000
+# Access: http://localhost:8000
+```
+
+**What you get:**
+- ✅ Login page (mock authentication)
+- ✅ Dashboard with stats & metrics
+- ✅ Properties, Plots, Sensors CRUD
+- ✅ Alert management UI
+- ✅ Responsive design (mobile-friendly)
+
+**Documentation:** [poc/frontend/README.md](poc/frontend/README.md)
+
+---
+
+## ✅ Validating Your Setup
+
+After running bootstrap and starting services, verify everything is working:
+
+### Check Services
+
+```powershell
+# Check Docker containers
+docker ps
+# Expected: postgresql, redis, rabbitmq running
+
+# Check .NET services (if running manually)
+dotnet --list-runtimes
+# Expected: .NET 10.0.x
+
+# Test Identity API
+curl http://localhost:5001/health
+# Expected: HTTP 200 OK
+
+# Test Farm API
+curl http://localhost:5002/health
+# Expected: HTTP 200 OK
+```
+
+### Access Points
+
+| Component | URL | Credentials |
+|-----------|-----|-------------|
+| **Frontend Dashboard** | http://localhost:8000 | demo@agro.com / Demo@123 |
+| **Identity API** | http://localhost:5001/swagger | - |
+| **Farm API** | http://localhost:5002/swagger | JWT required |
+| **Sensor Ingest API** | http://localhost:5003/swagger | JWT required |
+| **Analytics Worker** | http://localhost:5004/health | - |
+| **PostgreSQL** | localhost:5432 | postgres/postgres |
+| **Redis** | localhost:6379 | - |
+| **RabbitMQ UI** | http://localhost:15672 | guest/guest |
+| **Grafana (k3d)** | http://localhost:3000 | admin/admin |
+| **ArgoCD (k3d)** | http://localhost/argocd | admin/[see k3d docs] |
+
+### Verify Database
+
+```powershell
+# Connect to PostgreSQL
+docker exec -it tc-agro-postgres psql -U postgres
+
+# Check databases
+\l
+# Expected: identity_db, farm_db, sensor_db, analytics_db
+
+# Exit
+\q
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### ❌ Bootstrap fails to clone repositories
+
+**Problem:** Git authentication error or network timeout
+
+**Solution:**
+```powershell
+# If using HTTPS, ensure credentials are cached
+git config --global credential.helper wincred
+
+# Or switch to SSH
+# Edit scripts\bootstrap.ps1 and change HTTPS URLs to SSH
+```
+
+---
+
+### ❌ Docker Compose fails to start
+
+**Problem:** Port already in use (5432, 6379, 5672)
+
+**Solution:**
+```powershell
+# Check what's using the port
+netstat -ano | findstr :5432
+
+# Stop conflicting service or change port in docker-compose.yml
+```
+
+---
+
+### ❌ Visual Studio AppHost doesn't start services
+
+**Problem:** Docker Desktop not running
+
+**Solution:**
+```powershell
+# Ensure Docker Desktop is running
+docker version
+# If error, start Docker Desktop first
+```
+
+---
+
+### ❌ Services can't connect to PostgreSQL
+
+**Problem:** Connection string mismatch or database not initialized
+
+**Solution:**
+```powershell
+# Check PostgreSQL is running
+docker ps | findstr postgres
+
+# Re-run migrations
+cd services\farm-service
+dotnet ef database update --project src\Agro.Farm.Api
+
+# Check connection string in appsettings.Development.json
+# Expected: "Host=localhost;Port=5432;Database=farm_db;Username=postgres;Password=postgres"
+```
+
+---
+
+### ❌ k3d cluster creation fails
+
+**Problem:** Not enough RAM or k3d not installed
+
+**Solution:**
+```powershell
+# Check k3d version
+k3d version
+# If not found, install: choco install k3d
+
+# Check Docker memory (needs 18GB total)
+# Docker Desktop → Settings → Resources → Memory → Set to 20GB
+
+# Delete existing cluster and retry
+k3d cluster delete tc-agro-dev
+cd scripts\k3d
+.\bootstrap.ps1
+```
+
+---
+
+### ❌ Frontend shows "No backend connection"
+
+**Problem:** APIs not running or wrong URLs
+
+**Solution:**
+```javascript
+// Check API URLs in poc/frontend/js/api.js
+const API_BASE_URL = 'http://localhost:5001'; // Must match running service
+
+// Ensure Identity API is running
+curl http://localhost:5001/health
+// If 404, start the service first
+```
+
+---
+
+### ❌ JWT authentication fails
+
+**Problem:** Token expired or invalid secret key
+
+**Solution:**
+```powershell
+# Login again to get new token
+curl -X POST http://localhost:5001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@agro.com","password":"Demo@123"}'
+
+# Check JWT secret in appsettings.Development.json (all services must match)
+# "Jwt:SecretKey": "your-super-secret-key-min-32-characters"
+```
+
+---
+
+### 🆘 Still stuck?
+
+1. Check logs: `docker compose logs -f <service-name>`
+2. Review [Local Development Setup](docs/development/local-setup.md)
+3. Check [Copilot Instructions](.github/copilot-instructions.md)
+4. Search issues in service repositories
+
+---
+
 ## 🏗️ Solution Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        FE[🌐 Web Dashboard<br/>HTML/CSS/JS]
+    end
+
+    subgraph "Microservices Layer"
+        ID[🔐 Identity Service<br/>JWT Auth]
+        FM[🌾 Farm Service<br/>Properties/Plots]
+        SI[📡 Sensor Ingest<br/>TimescaleDB]
+        AW[📈 Analytics Worker<br/>Alerts/Rules]
+    end
+
+    subgraph "Infrastructure Layer"
+        PG[(PostgreSQL<br/>+TimescaleDB)]
+        RD[(Redis<br/>Cache)]
+        RMQ[RabbitMQ<br/>Messaging]
+    end
+
+    subgraph "Orchestration Options"
+        MODE1[🎨 Visual Studio<br/>AppHost.Compose]
+        MODE2[🐳 Docker<br/>Compose]
+        MODE3[☸️ k3d<br/>GitOps]
+    end
+
+    FE -->|REST API| ID
+    FE -->|REST API| FM
+    FE -->|REST API| SI
+    FE -->|SignalR| AW
+
+    ID --> PG
+    FM --> PG
+    FM --> RD
+    SI --> PG
+    SI --> RMQ
+    AW --> PG
+    AW --> RMQ
+
+    MODE1 -.Runs.-> ID
+    MODE1 -.Runs.-> FM
+    MODE1 -.Runs.-> SI
+    MODE1 -.Runs.-> AW
+    MODE1 -.Runs.-> PG
+    MODE1 -.Runs.-> RD
+    MODE1 -.Runs.-> RMQ
+
+    MODE2 -.Runs.-> PG
+    MODE2 -.Runs.-> RD
+    MODE2 -.Runs.-> RMQ
+
+    MODE3 -.Deploys.-> ID
+    MODE3 -.Deploys.-> FM
+    MODE3 -.Deploys.-> SI
+    MODE3 -.Deploys.-> AW
+
+    style FE fill:#e1f5ff
+    style ID fill:#fff3cd
+    style FM fill:#d4edda
+    style SI fill:#d1ecf1
+    style AW fill:#f8d7da
+    style MODE1 fill:#ffeaa7
+    style MODE2 fill:#74b9ff
+    style MODE3 fill:#a29bfe
+```
+
+**📐 Detailed Architecture:** See [Architecture Diagram (Draw.io)](docs/tc-agro-k3d-architecture.drawio) for full visualization.
+
+---
 
 ### Parent Repository (this repo)
 
 ```
 tc-agro-solutions/
-├── services/                # 🔄 Cloned by bootstrap.ps1
-│   ├── identity-service/
-│   ├── farm-service/
-│   ├── sensor-ingest-service/
-│   └── analytics-worker/
-├── common/                  # 🔄 Cloned by bootstrap.ps1
-├── infrastructure/          # Terraform IaC for AKS
-├── kubernetes/             # Kubernetes manifests
-├── scripts/
-│   └── bootstrap.ps1       # ⚙️ Setup automation
-├── docs/                   # Architecture & ADRs
+├── services/                   # 🔄 Cloned by bootstrap.ps1
+│   ├── identity-service/       # Authentication & JWT
+│   ├── farm-service/           # Properties & Plots management
+│   ├── sensor-ingest-service/  # IoT data ingestion
+│   └── analytics-worker/       # Alerts & rules engine
+├── common/                     # 🔄 Cloned by bootstrap.ps1 (shared libraries)
+├── poc/
+│   └── frontend/               # 🌐 HTML/CSS/JS dashboard (no backend required)
 ├── orchestration/
 │   └── apphost-compose/
-│       ├── .env            # 🔄 Created by bootstrap (shared)
-└── docker-compose.yml      # (To be created)
+│       ├── TC.Agro.AppHost.Compose.slnx  # 🎨 Visual Studio orchestration
+│       └── .env                          # 🔄 Created by bootstrap (shared config)
+├── infrastructure/
+│   ├── terraform/              # 🟣 Azure AKS IaC (future)
+│   └── kubernetes/             # ☸️ k3d manifests (current)
+├── scripts/
+│   ├── bootstrap.ps1           # ⚙️ Setup automation
+│   └── k3d/                    # k3d cluster scripts
+├── docs/                       # Architecture & ADRs
+│   ├── adr/                    # Architectural Decision Records
+│   ├── architecture/           # C4 diagrams & guides
+│   │   └── tc-agro-k3d-architecture.drawio  # 📐 Main architecture diagram
+│   └── development/            # Developer guides
+└── docker-compose.yml          # 🐳 Infrastructure services
 ```
 
 ---
@@ -221,41 +548,76 @@ tc-agro-solutions/
 
 ### Backend
 
-- **Language:** C# / .NET 10
-- **Framework:** FastEndpoints (not MVC Controllers)
-- **ORM:** Entity Framework Core 10
-- **Messaging:** Wolverine + Azure Service Bus
-- **Pattern:** Pragmatic CQRS (no full event sourcing)
+| Category | Technology | Version |
+|----------|------------|---------|
+| **Runtime** | .NET | 10.0 |
+| **Language** | C# | 14.0 |
+| **API Framework** | FastEndpoints | 7.2 |
+| **ORM** | Entity Framework Core | 10.0 |
+| **Messaging** | Wolverine | 5.15 |
+| **Pattern** | Pragmatic CQRS | - |
 
-### Cloud Infrastructure (Production)
+### Infrastructure (Production - Azure)
 
-- **Orchestration:** Azure Kubernetes Service (AKS)
-- **Database:** Azure PostgreSQL Flexible Server + TimescaleDB
-- **Cache:** Azure Redis Cache
-- **Messaging:** Azure Service Bus
-- **Registry:** Azure Container Registry (ACR)
-- **Observability:** Application Insights + Log Analytics
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Orchestration** | Azure Kubernetes Service (AKS) | Container orchestration |
+| **Database** | Azure PostgreSQL Flexible Server + TimescaleDB | Relational + time-series data |
+| **Cache** | Azure Redis Cache | Distributed caching |
+| **Messaging** | Azure Service Bus | Async communication |
+| **Registry** | Azure Container Registry (ACR) | Docker images |
+| **Observability** | Application Insights + Log Analytics | APM & logging |
+| **IaC** | Terraform | Infrastructure as Code |
 
-### Local Development (Two Modes)
+### Local Development
 
-#### 🐳 Docker Compose Mode (Recommended for API development)
+| Component | Technology | Mode |
+|-----------|------------|------|
+| **Orchestration** | Visual Studio AppHost / Docker Compose / k3d | 🎨 / 🐳 / ☸️ |
+| **Database** | PostgreSQL 16 + TimescaleDB | Docker |
+| **Cache** | Redis 7 | Docker |
+| **Messaging** | RabbitMQ 4.0 | Docker |
+| **Observability (k3d)** | Prometheus + Grafana + Loki + Tempo + OpenTelemetry | GitOps |
+| **GitOps (k3d)** | ArgoCD | Auto-deployment |
+| **Ingress (k3d)** | Traefik | k3s built-in |
 
-- **Orchestration:** Docker Compose
-- **Database:** PostgreSQL 16
-- **Cache:** Redis 7
-- **Messaging:** RabbitMQ (Azure Service Bus replacement)
+### Frontend
 
-#### ☸️ K3D Mode (Recommended for K8s/GitOps testing)
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **UI** | HTML5 + CSS3 + JavaScript (Vanilla) | Responsive dashboard |
+| **Icons** | Unicode Emoji | No external dependencies |
+| **Server** | Python HTTP Server / VS Code Live Server | Local development |
 
-- **Orchestration:** k3d (lightweight Kubernetes)
-- **Platform Stack:** GitOps via ArgoCD (Prometheus, Grafana, Loki, Tempo, KEDA)
-- **Cluster:** 18GB total (1 server 2GB + 2 agents: system 6GB + apps 10GB)
-- **Registry:** Docker Hub (rdpresser)
+### Testing & Quality
+
+| Category | Technology |
+|----------|------------|
+| **Unit Tests** | xUnit 3.2 |
+| **Mocking** | NSubstitute / FakeItEasy |
+| **Integration Tests** | FastEndpoints.Testing |
+| **Load Tests** | k6 |
+| **Code Quality** | SonarQube (planned) |
 
 **Choose your mode:**
 
+- 🎨 **Visual Studio AppHost** → Best for daily development (recommended)
 - 🐳 **Docker Compose** → Simple API development
 - ☸️ **K3D** → Full K8s with observability stack
+
+**Quick Start AppHost (Easiest):**
+
+```powershell
+start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
+# Press F5 - everything starts automatically
+```
+
+**Quick Start Docker Compose:**
+
+```powershell
+docker compose up -d
+dotnet run --project services/farm-service/src/Agro.Farm.Api
+```
 
 **Quick Start K3D:**
 
