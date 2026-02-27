@@ -7,6 +7,7 @@ import {
   createPlot,
   fetchFarmSwagger,
   getPlot,
+  getPlotSensorsPaginated,
   getProperties,
   getPropertiesByOwner,
   normalizeError,
@@ -31,6 +32,7 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } fro
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
 const ADDITIONAL_NOTES_MAX_LENGTH = 1000;
+const ASSOCIATED_SENSORS_MAX_PREVIEW = 10;
 const OWNER_PAGE_SIZE = 1000;
 const OWNER_SORT_BY = 'name';
 const OWNER_SORT_DIRECTION = 'asc';
@@ -259,7 +261,8 @@ async function setupEditMode() {
     updateOwnerNameDisplay(plot);
     populateForm(plot);
     setReadOnlyEditMode();
-    loadSensors();
+    setupAssociatedSensorsActions(plot?.id || editId);
+    await loadSensorsForPlot(plot?.id || editId);
     toast('Edit mode is not available yet. Fields are read-only.', 'warning');
   } catch (error) {
     const { message } = normalizeError(error);
@@ -331,6 +334,9 @@ function setReadOnlyEditMode() {
   const sensorsSection = $id('sensorsSection');
   const sensorsButtons = sensorsSection?.querySelectorAll('button') || [];
   sensorsButtons.forEach((button) => {
+    if (button.id === 'addAssociatedSensorBtn') {
+      return;
+    }
     button.disabled = true;
   });
 
@@ -339,6 +345,18 @@ function setReadOnlyEditMode() {
     formError.textContent = 'Edit mode is not available yet. This screen is read-only.';
     formError.style.display = 'block';
   }
+}
+
+function setupAssociatedSensorsActions(plotId) {
+  const addSensorButton = $id('addAssociatedSensorBtn');
+  if (!addSensorButton || !plotId) {
+    return;
+  }
+
+  addSensorButton.disabled = false;
+  addSensorButton.addEventListener('click', () => {
+    navigateTo(`sensors-form.html?plotId=${encodeURIComponent(plotId)}`);
+  });
 }
 
 // ============================================
@@ -416,31 +434,93 @@ function loadIrrigationTypeOptions() {
 // Load Sensors for Plot
 // ============================================
 
-function loadSensors() {
-  const mockSensors = [
-    { id: 'S001', type: 'Temperature & Humidity', status: 'online', lastReading: '5 min ago' },
-    { id: 'S002', type: 'Soil Moisture', status: 'online', lastReading: '5 min ago' },
-    { id: 'S003', type: 'Rain Gauge', status: 'warning', lastReading: '1 hour ago' }
-  ];
-
+async function loadSensorsForPlot(plotId) {
+  const sensorsSection = $id('sensorsSection');
   const sensorsList = $id('sensorsList');
-  if (!sensorsList) return;
+  if (!sensorsSection || !sensorsList || !plotId) {
+    if (sensorsSection) {
+      sensorsSection.style.display = 'none';
+    }
+    return;
+  }
 
-  const html = mockSensors
-    .map(
-      (s) => `
-    <div class="d-flex justify-between align-center" style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+  sensorsList.innerHTML = '<p class="text-muted">Loading associated sensors...</p>';
+
+  try {
+    const response = await getPlotSensorsPaginated(plotId, {
+      pageNumber: 1,
+      pageSize: 100,
+      sortBy: 'installedAt',
+      sortDirection: 'desc',
+      filter: ''
+    });
+
+    const sensors = response?.data || response?.items || response?.results || [];
+
+    if (!Array.isArray(sensors) || sensors.length === 0) {
+      sensorsList.innerHTML = '<p class="text-muted">No sensors assigned to this plot.</p>';
+      return;
+    }
+
+    const previewSensors = sensors.slice(0, ASSOCIATED_SENSORS_MAX_PREVIEW);
+    const html = previewSensors
+      .map((sensor) => {
+        const sensorId = escapeHtml(sensor?.id || '-');
+        const label = escapeHtml(sensor?.label || 'Unnamed sensor');
+        const type = escapeHtml(sensor?.type || '-');
+        const status = String(sensor?.status || 'Inactive');
+        const installedAt = formatDateTime(sensor?.installedAt);
+        const badgeClass = getSensorStatusBadgeClass(status);
+
+        return `
+    <div class="d-flex justify-between align-center" style="padding: 12px; border-bottom: 1px solid #e0e0e0; gap: 12px;">
       <div>
-        <strong>📡 ${s.id}</strong> - ${s.type}
-        <div class="text-muted" style="font-size: 0.85em;">Last reading: ${s.lastReading}</div>
+        <strong>📡 ${label}</strong>
+        <div class="text-muted" style="font-size: 0.85em;">ID: ${sensorId}</div>
+        <div class="text-muted" style="font-size: 0.85em;">Type: ${type} • Installed: ${installedAt}</div>
       </div>
-      <span class="badge badge-${s.status === 'online' ? 'success' : 'warning'}">${s.status}</span>
+      <span class="badge ${badgeClass}">${escapeHtml(status)}</span>
     </div>
-  `
-    )
-    .join('');
+  `;
+      })
+      .join('');
 
-  sensorsList.innerHTML = html || '<p class="text-muted">No sensors assigned to this plot.</p>';
+    const shouldShowViewMore = sensors.length > ASSOCIATED_SENSORS_MAX_PREVIEW;
+    const viewMoreHtml = shouldShowViewMore
+      ? `
+      <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+        <a href="sensors.html" class="btn btn-outline btn-sm">View More</a>
+      </div>
+    `
+      : '';
+
+    sensorsList.innerHTML = html + viewMoreHtml;
+  } catch (error) {
+    console.warn('Could not load associated sensors from Farm API. Hiding sensors section.', error);
+    sensorsSection.style.display = 'none';
+    toast(
+      'Associated sensors section hidden: Farm API route not available for this context.',
+      'warning'
+    );
+  }
+}
+
+function getSensorStatusBadgeClass(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === 'active') return 'badge-success';
+  if (normalized === 'maintenance') return 'badge-warning';
+  if (normalized === 'faulty') return 'badge-danger';
+  return 'badge-info';
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
 }
 
 // ============================================

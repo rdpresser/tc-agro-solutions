@@ -19,6 +19,7 @@ import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } fro
 
 const editId = getQueryParam('id');
 const isEditMode = !!editId;
+const preselectedPlotId = getQueryParam('plotId');
 const OWNER_PAGE_SIZE = 1000;
 const OWNER_SORT_BY = 'name';
 const OWNER_SORT_DIRECTION = 'asc';
@@ -247,7 +248,7 @@ async function loadPlotOptions() {
   const select = $id('plotId');
   if (!select) return;
 
-  const currentValue = select.value;
+  const currentValue = select.value || preselectedPlotId || '';
 
   try {
     const plots = await fetchAllPages((params) => getPlotsPaginated(params), {

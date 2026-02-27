@@ -423,6 +423,40 @@ export async function getPlot(id) {
   return data;
 }
 
+export async function getPlotSensorsPaginated(
+  plotId,
+  {
+    pageNumber = 1,
+    pageSize = 10,
+    sortBy = 'installedAt',
+    sortDirection = 'desc',
+    filter = '',
+    type = '',
+    status = ''
+  } = {}
+) {
+  const params = {
+    pageNumber,
+    pageSize,
+    sortBy,
+    sortDirection,
+    filter,
+    type,
+    status
+  };
+
+  Object.keys(params).forEach((key) => {
+    if (params[key] === '' || params[key] === null || params[key] === undefined) {
+      delete params[key];
+    }
+  });
+
+  const { data } = await farmApi.get(`/api/plots/${encodeURIComponent(plotId)}/sensors`, {
+    params
+  });
+  return data;
+}
+
 export async function getPlotsPaginated({
   pageNumber = 1,
   pageSize = 10,
