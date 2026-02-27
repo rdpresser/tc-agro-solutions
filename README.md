@@ -171,23 +171,35 @@ dotnet run --project services/farm-service/src/Agro.Farm.Api
 
 ## 🎨 Frontend Dashboard (PoC)
 
-A pure HTML/CSS/JavaScript frontend for demonstrating the platform without cloud dependencies.
+A modern single-page application built with Vite for fast development and hot reload.
 
 **Location:** `poc/frontend/`
+
+**Technology Stack:**
+- ⚡ **Vite 6.0** - Lightning-fast build tool with hot module replacement
+- 📊 **Chart.js** - Interactive charts for sensor data visualization
+- 🔌 **SignalR** - Real-time WebSocket communication for live updates
+- 🌐 **axios** - HTTP client with automatic retry logic
+- 📅 **dayjs** - Lightweight date/time library
 
 **Quick Start:**
 
 ```powershell
-# Option 1: Open directly in browser
-start poc\frontend\index.html
-
-# Option 2: Use VS Code Live Server
-# Right-click index.html → "Open with Live Server"
-
-# Option 3: Python server
 cd poc\frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server with hot reload (recommended)
+npm run dev
+# Opens automatically at http://localhost:3000
+
+# Alternative: Production build
+npm run build
+npm run preview
+
+# Alternative: Simple Python server (no hot reload)
 python -m http.server 8000
-# Access: http://localhost:8000
 ```
 
 **What you get:**
@@ -227,18 +239,22 @@ curl http://localhost:5002/health
 
 ### Access Points
 
-| Component | URL | Credentials |
-|-----------|-----|-------------|
-| **Frontend Dashboard** | http://localhost:8000 | demo@agro.com / Demo@123 |
-| **Identity API** | http://localhost:5001/swagger | - |
-| **Farm API** | http://localhost:5002/swagger | JWT required |
-| **Sensor Ingest API** | http://localhost:5003/swagger | JWT required |
-| **Analytics Worker** | http://localhost:5004/health | - |
-| **PostgreSQL** | localhost:5432 | postgres/postgres |
-| **Redis** | localhost:6379 | - |
-| **RabbitMQ UI** | http://localhost:15672 | guest/guest |
-| **Grafana (k3d)** | http://localhost:3000 | admin/admin |
-| **ArgoCD (k3d)** | http://localhost/argocd | admin/[see k3d docs] |
+| Component | URL | Credentials | Mode |
+|-----------|-----|-------------|------|
+| **Frontend Dashboard (Vite)** | http://localhost:3000 | demo@agro.com / Demo@123 | npm run dev |
+| **Identity API** | http://localhost:5001/swagger | - | Docker Compose |
+| **Farm API** | http://localhost:5002/swagger | JWT required | Docker Compose |
+| **Sensor Ingest API** | http://localhost:5003/swagger | JWT required | Docker Compose |
+| **Analytics Worker** | http://localhost:5004/health | - | Docker Compose |
+| **PostgreSQL** | localhost:5432 | postgres/postgres | All |
+| **Redis** | localhost:6379 | - | All |
+| **RabbitMQ UI** | http://localhost:15672 | guest/guest | All |
+| **pgAdmin** | http://localhost:5050 | admin@agro.com / admin | Docker Compose |
+| **Grafana** | http://localhost:3000 | admin/admin | k3d / Docker Compose |
+| **Prometheus** | http://localhost:9090 | - | Docker Compose |
+| **ArgoCD** | http://localhost/argocd | admin/Argo@123! | k3d only |
+
+**Note:** Frontend and Grafana both use port 3000 - run only one at a time, or change Vite port in `vite.config.js`.
 
 ### Verify Database
 
@@ -470,19 +486,21 @@ tc-agro-solutions/
 ├── orchestration/
 │   └── apphost-compose/
 │       ├── TC.Agro.AppHost.Compose.slnx  # 🎨 Visual Studio orchestration
+│       ├── docker-compose.yml            # 🐳 Infrastructure services
 │       └── .env                          # 🔄 Created by bootstrap (shared config)
 ├── infrastructure/
 │   ├── terraform/              # 🟣 Azure AKS IaC (future)
-│   └── kubernetes/             # ☸️ k3d manifests (current)
+│   └── kubernetes/             # ☸️ k3d manifests + ArgoCD apps (current)
 ├── scripts/
-│   ├── bootstrap.ps1           # ⚙️ Setup automation
+│   ├── bootstrap.ps1           # ⚙️ Clone services automation
 │   └── k3d/                    # k3d cluster scripts
+│       └── bootstrap.ps1       # ☸️ Create k3d cluster + ArgoCD
 ├── docs/                       # Architecture & ADRs
 │   ├── adr/                    # Architectural Decision Records
 │   ├── architecture/           # C4 diagrams & guides
 │   │   └── tc-agro-k3d-architecture.drawio  # 📐 Main architecture diagram
 │   └── development/            # Developer guides
-└── docker-compose.yml          # 🐳 Infrastructure services
+└── DEVELOPER_QUICK_REFERENCE.md  # 🚀 Common commands cheat sheet
 ```
 
 ---
@@ -522,7 +540,8 @@ tc-agro-solutions/
 
 ### Getting Started
 
-- **[🚀 Bootstrap Setup Guide](docs/BOOTSTRAP_SETUP.md)** - Quick setup with `bootstrap.ps1` ⭐ **START HERE**
+- **[🚀 Developer Quick Reference](DEVELOPER_QUICK_REFERENCE.md)** - Most common commands cheat sheet ⭐ **FASTEST START**
+- **[🚀 Bootstrap Setup Guide](docs/BOOTSTRAP_SETUP.md)** - Quick setup with `bootstrap.ps1`
 - **[🧑‍💻 Local Development](docs/development/local-setup.md)** - Detailed local environment guide
 
 ### Architecture & Design
@@ -585,9 +604,14 @@ tc-agro-solutions/
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **UI** | HTML5 + CSS3 + JavaScript (Vanilla) | Responsive dashboard |
+| **Build Tool** | Vite 6.0 | Fast development server with hot reload |
+| **UI** | HTML5 + CSS3 + JavaScript (ES Modules) | Responsive dashboard |
+| **HTTP Client** | axios 1.7 | REST API communication with retry logic |
+| **Charts** | Chart.js 4.4 | Interactive data visualization |
+| **Date/Time** | dayjs 1.11 | Lightweight date manipulation |
+| **Real-time** | SignalR Client 9.0 | WebSocket communication for live updates |
 | **Icons** | Unicode Emoji | No external dependencies |
-| **Server** | Python HTTP Server / VS Code Live Server | Local development |
+| **Dev Server** | Vite Dev Server / Python HTTP Server | Local development |
 
 ### Testing & Quality
 
@@ -601,33 +625,35 @@ tc-agro-solutions/
 
 **Choose your mode:**
 
-- 🎨 **Visual Studio AppHost** → Best for daily development (recommended)
-- 🐳 **Docker Compose** → Simple API development
-- ☸️ **K3D** → Full K8s with observability stack
+- 🐳 **Docker Compose + Manual Run** → Daily development (recommended)
+- 🎨 **Visual Studio AppHost** → Integrated debugging (all services together)
+- ☸️ **k3d Cluster** → Professional testing (production-like K8s)
 
-**Quick Start AppHost (Easiest):**
+**Quick Start Docker Compose (Recommended):**
+
+```powershell
+cd orchestration\apphost-compose
+docker compose up -d
+cd ..\..\services\identity-service
+dotnet run --project src\Agro.Identity.Api
+```
+
+**Quick Start AppHost (All-in-One):**
 
 ```powershell
 start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
 # Press F5 - everything starts automatically
 ```
 
-**Quick Start Docker Compose:**
-
-```powershell
-docker compose up -d
-dotnet run --project services/farm-service/src/Agro.Farm.Api
-```
-
-**Quick Start K3D:**
+**Quick Start k3d (Professional):**
 
 ```powershell
 cd scripts\k3d
 .\bootstrap.ps1
-# Wait ~4 minutes for full GitOps deployment
+# Wait ~4 minutes - ArgoCD deploys full stack via GitOps
 ```
 
-See [📖 K3D GitOps Guide](scripts/k3d/README.md) for details.
+📚 **See [K3D GitOps Guide](scripts/k3d/README.md)** for detailed workflow.
 
 ---
 
@@ -925,7 +951,7 @@ This project is proprietary. All rights reserved.
 
 ---
 
-> **Version:** 2.2 - Removed dashboard-service (deprecated)  
-> **Last Updated:** February 27, 2026  
+> **Version:** 2.3 - Corrected development modes, file paths, and documentation structure  
+> **Last Updated:** January 18, 2026  
 > **Status:** Production-ready for Phase 5 delivery  
 > **Deadline:** February 27, 2026 ✅
