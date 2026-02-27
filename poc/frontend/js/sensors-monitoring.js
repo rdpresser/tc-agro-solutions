@@ -22,7 +22,12 @@ import {
   normalizeSensorStatus,
   SENSOR_STATUSES
 } from './sensor-statuses.js';
-import { getSensorTypeDisplay, SENSOR_TYPES } from './sensor-types.js';
+import {
+  getSensorTypeDisplay,
+  getSensorTypeIcon,
+  getSensorTypeLabel,
+  SENSOR_TYPES
+} from './sensor-types.js';
 import {
   $,
   $$,
@@ -928,6 +933,8 @@ function refreshHeaderSyncIndicator() {
 function createSensorCardHtml(sensor, status = 'Active') {
   const normalizedStatus = normalizeSensorStatus(status);
   const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+  const sensorTypeIcon = getSensorTypeIcon(sensor.type);
+  const sensorTypeLabel = getSensorTypeLabel(sensor.type) || sensor.type || 'Unknown';
   const cardStyle = getSensorCardStyle(normalizedStatus);
   const statusChangedAt = sensor.statusChangedAt || null;
   const statusChangedText = statusChangedAt
@@ -938,7 +945,8 @@ function createSensorCardHtml(sensor, status = 'Active') {
     <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" data-status-changed-at="${statusChangedAt || ''}" style="${cardStyle}">
       <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
         <span class="badge ${badgeClass}">${getSensorStatusDisplay(normalizedStatus)}</span>
-        <span class="text-muted last-update" style="font-size: 0.85em" title="${sensor.lastReading}">
+        <span class="text-muted" style="font-size: 1em; margin-left: 8px" title="Sensor Type: ${sensorTypeLabel}" aria-label="Sensor Type: ${sensorTypeLabel}">${sensorTypeIcon}</span>
+        <span class="text-muted last-update" style="font-size: 0.85em; margin-left: auto" title="${sensor.lastReading}">
           ${formatRelativeTime(sensor.lastReading)}
         </span>
       </div>
