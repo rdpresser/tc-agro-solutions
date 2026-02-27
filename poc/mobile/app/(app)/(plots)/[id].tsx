@@ -75,6 +75,8 @@ export default function PlotFormScreen() {
   if (!isNew && isLoading) return <LoadingOverlay fullScreen />;
 
   const propertyOptions = (propertiesData?.items || []).map((p) => ({ value: p.id, label: p.name }));
+  const cropOptions = CROP_TYPES.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }));
+  const irrigationOptions = IRRIGATION_TYPES.map((i) => ({ value: i.value, label: i.label }));
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -99,11 +101,11 @@ export default function PlotFormScreen() {
             )} />
 
             <Controller control={control} name="cropType" render={({ field: { onChange, value } }) => (
-              <Select label="Crop Type" options={CROP_TYPES as any} value={value} onChange={onChange} error={errors.cropType?.message} />
+              <Select label="Crop Type" options={cropOptions} value={value} onChange={onChange} error={errors.cropType?.message} />
             )} />
 
             <Controller control={control} name="irrigationType" render={({ field: { onChange, value } }) => (
-              <Select label="Irrigation" options={IRRIGATION_TYPES as any} value={value} onChange={onChange} error={errors.irrigationType?.message} />
+              <Select label="Irrigation" options={irrigationOptions} value={value} onChange={onChange} error={errors.irrigationType?.message} />
             )} />
 
             <Controller control={control} name="areaHectares" render={({ field: { onChange, onBlur, value } }) => (

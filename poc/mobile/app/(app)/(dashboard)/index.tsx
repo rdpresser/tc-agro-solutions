@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardStats, useLatestReadings, usePendingAlerts } from '@/hooks/queries/use-dashboard';
@@ -68,15 +69,20 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View className="px-4 pt-2 pb-4 flex-row items-center justify-between">
-          <View>
+          <View className="flex-1">
             <Text className="text-2xl font-bold" style={{ color: colors.text }}>
-              Dashboard
+              🌾 Dashboard
             </Text>
             <Text style={{ color: colors.textSecondary }}>
               Welcome, {user?.name || 'User'}
             </Text>
           </View>
-          <ConnectionBadge />
+          <View className="flex-row items-center gap-3">
+            <ConnectionBadge />
+            <TouchableOpacity onPress={() => router.push('/(app)/(settings)')}>
+              <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Grid */}

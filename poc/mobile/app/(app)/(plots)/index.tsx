@@ -13,6 +13,7 @@ import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatArea, formatDate } from '@/lib/format';
+import { getCropIcon } from '@/constants/crop-types';
 import type { Plot } from '@/types';
 
 const statusVariant = (s: string) => {
@@ -66,7 +67,7 @@ export default function PlotsListScreen() {
 
         <View className="flex-row flex-wrap gap-3">
           <View className="flex-row items-center gap-1">
-            <Ionicons name="leaf-outline" size={14} color={colors.textMuted} />
+            <Text className="text-sm">{getCropIcon(item.cropType)}</Text>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.cropType}</Text>
           </View>
           <View className="flex-row items-center gap-1">

@@ -11,6 +11,7 @@ export const loginSchema = z.object({
 export const signupSchema = z.object({
   name: z.string().min(1, 'Name is required').min(2, 'Min 2 characters'),
   email: z.string().min(1, 'Email is required').email('Invalid email'),
+  username: z.string().min(1, 'Username is required').min(3, 'Min 3 characters'),
   password: z.string().min(1, 'Password is required').min(6, 'Min 6 characters'),
   confirmPassword: z.string().min(1, 'Confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -21,6 +22,7 @@ export const signupSchema = z.object({
 export const propertySchema = z.object({
   name: z.string().min(1, 'Name is required'),
   ownerId: z.string().min(1, 'Owner is required'),
+  address: z.string().optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   country: z.string().min(1, 'Country is required'),

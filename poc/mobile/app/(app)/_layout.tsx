@@ -10,6 +10,7 @@ import { useTheme } from '@/providers/theme-provider';
 export default function AppLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const user = useAuthStore((s) => s.user);
   const { colors } = useTheme();
 
   // Initialize real-time connections
@@ -19,6 +20,8 @@ export default function AppLayout() {
   // Alert badge count
   const { data: pendingAlerts } = useAlertsPending();
   const alertCount = pendingAlerts?.length || 0;
+
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   if (!isHydrated) return null;
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
@@ -60,9 +63,18 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="(plots)"
+        options={{
+          title: 'Plots',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="leaf-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="(sensors)"
         options={{
-          title: 'Monitoring',
+          title: 'Sensors',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="pulse-outline" size={size} color={color} />
           ),
@@ -73,23 +85,22 @@ export default function AppLayout() {
         options={{
           title: 'Alerts',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="warning-outline" size={size} color={color} />
+            <Ionicons name="notifications-outline" size={size} color={color} />
           ),
           tabBarBadge: alertCount > 0 ? alertCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#dc3545', fontSize: 10 },
         }}
       />
+      {/* Hidden tabs */}
       <Tabs.Screen
-        name="(plots)"
-        options={{
-          title: 'More',
+        name="(users)"
+        options={{ href: isAdmin ? undefined : null, title: 'Users',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
+            <Ionicons name="people-outline" size={size} color={color} />
           ),
+          tabBarItemStyle: isAdmin ? undefined : { display: 'none' },
         }}
       />
-      {/* Hidden tabs */}
-      <Tabs.Screen name="(users)" options={{ href: null }} />
       <Tabs.Screen name="(settings)" options={{ href: null }} />
     </Tabs>
   );

@@ -1,14 +1,26 @@
 export const CROP_TYPES = [
-  { value: 'Soybean', label: 'Soybean' },
-  { value: 'Corn', label: 'Corn' },
-  { value: 'Coffee', label: 'Coffee' },
-  { value: 'Sugarcane', label: 'Sugarcane' },
-  { value: 'Cotton', label: 'Cotton' },
-  { value: 'Rice', label: 'Rice' },
-  { value: 'Wheat', label: 'Wheat' },
-  { value: 'Beans', label: 'Beans' },
-  { value: 'Cassava', label: 'Cassava' },
-  { value: 'Orange', label: 'Orange' },
+  { value: 'Apple', label: 'Apple', icon: '🍎' },
+  { value: 'Banana', label: 'Banana', icon: '🍌' },
+  { value: 'Beans', label: 'Beans', icon: '🫘' },
+  { value: 'Carrot', label: 'Carrot', icon: '🥕' },
+  { value: 'Cassava', label: 'Cassava', icon: '🥔' },
+  { value: 'Coffee', label: 'Coffee', icon: '☕' },
+  { value: 'Corn', label: 'Corn', icon: '🌽' },
+  { value: 'Cotton', label: 'Cotton', icon: '🌸' },
+  { value: 'Grape', label: 'Grape', icon: '🍇' },
+  { value: 'Lettuce', label: 'Lettuce', icon: '🥬' },
+  { value: 'Mango', label: 'Mango', icon: '🥭' },
+  { value: 'Onion', label: 'Onion', icon: '🧅' },
+  { value: 'Orange', label: 'Orange', icon: '🍊' },
+  { value: 'Pasture', label: 'Pasture', icon: '🌱' },
+  { value: 'Potato', label: 'Potato', icon: '🥔' },
+  { value: 'Rice', label: 'Rice', icon: '🍚' },
+  { value: 'Soy', label: 'Soy', icon: '🌿' },
+  { value: 'Soybean', label: 'Soybean', icon: '🌿' },
+  { value: 'Sugarcane', label: 'Sugarcane', icon: '🎋' },
+  { value: 'Tomato', label: 'Tomato', icon: '🍅' },
+  { value: 'Wheat', label: 'Wheat', icon: '🌾' },
+  { value: 'Other', label: 'Other', icon: '📦' },
 ] as const;
 
 export const IRRIGATION_TYPES = [
@@ -20,18 +32,21 @@ export const IRRIGATION_TYPES = [
 ] as const;
 
 export const SENSOR_TYPES = [
-  { value: 'Temperature', label: 'Temperature' },
-  { value: 'Humidity', label: 'Humidity' },
-  { value: 'SoilMoisture', label: 'Soil Moisture' },
-  { value: 'Rainfall', label: 'Rainfall' },
-  { value: 'MultiSensor', label: 'Multi Sensor' },
+  { value: 'Temperature', label: 'Temperature', icon: '🌡️' },
+  { value: 'Humidity', label: 'Humidity', icon: '💧' },
+  { value: 'SoilMoisture', label: 'Soil Moisture', icon: '🌱' },
+  { value: 'Rainfall', label: 'Rainfall', icon: '🌧️' },
+  { value: 'WindSpeed', label: 'Wind Speed', icon: '💨' },
+  { value: 'SolarRadiation', label: 'Solar Radiation', icon: '☀️' },
+  { value: 'Ph', label: 'pH', icon: '🧪' },
+  { value: 'MultiSensor', label: 'Multi Sensor', icon: '📟' },
 ] as const;
 
 export const SENSOR_STATUSES = [
-  { value: 'Active', label: 'Active', color: '#28a745' },
-  { value: 'Inactive', label: 'Inactive', color: '#6c757d' },
-  { value: 'Maintenance', label: 'Maintenance', color: '#ffc107' },
-  { value: 'Faulty', label: 'Faulty', color: '#dc3545' },
+  { value: 'Active', label: 'Active', color: '#28a745', icon: '🟢' },
+  { value: 'Inactive', label: 'Inactive', color: '#6c757d', icon: '⚪' },
+  { value: 'Maintenance', label: 'Maintenance', color: '#ffc107', icon: '🟡' },
+  { value: 'Faulty', label: 'Faulty', color: '#dc3545', icon: '🔴' },
 ] as const;
 
 export const PLOT_STATUSES = [
@@ -42,7 +57,23 @@ export const PLOT_STATUSES = [
 ] as const;
 
 export const USER_ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'user', label: 'User' },
-  { value: 'viewer', label: 'Viewer' },
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Producer', label: 'Producer' },
 ] as const;
+
+export const ALERT_SEVERITIES = [
+  { value: 'critical', label: 'Critical', color: '#dc3545' },
+  { value: 'high', label: 'High', color: '#E74C3C' },
+  { value: 'medium', label: 'Medium', color: '#ffc107' },
+  { value: 'low', label: 'Low', color: '#17a2b8' },
+] as const;
+
+export function getCropIcon(cropType: string): string {
+  const crop = CROP_TYPES.find((c) => c.value.toLowerCase() === cropType?.toLowerCase());
+  return crop?.icon || '📦';
+}
+
+export function getSensorIcon(sensorType: string): string {
+  const sensor = SENSOR_TYPES.find((s) => s.value.toLowerCase() === sensorType?.toLowerCase());
+  return sensor?.icon || '📟';
+}

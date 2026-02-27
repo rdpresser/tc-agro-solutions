@@ -30,7 +30,7 @@ export default function PropertyFormScreen() {
   const { control, handleSubmit, reset, formState: { errors } } = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
     defaultValues: {
-      name: '', ownerId: '', city: '', state: '', country: 'Brazil', areaHectares: 0,
+      name: '', ownerId: '', address: '', city: '', state: '', country: 'Brazil', areaHectares: 0,
     },
   });
 
@@ -39,6 +39,7 @@ export default function PropertyFormScreen() {
       reset({
         name: property.name,
         ownerId: property.ownerId || '',
+        address: property.address || '',
         city: property.city,
         state: property.state,
         country: property.country,
@@ -117,6 +118,20 @@ export default function PropertyFormScreen() {
                   onChange={onChange}
                   error={errors.ownerId?.message}
                   placeholder="Select owner..."
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="address"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Address"
+                  placeholder="Street address (optional)"
+                  value={value || ''}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
                 />
               )}
             />

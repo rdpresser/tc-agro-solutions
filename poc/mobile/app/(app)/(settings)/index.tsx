@@ -97,6 +97,24 @@ export default function SettingsScreen() {
           )}
         </Card>
 
+        {/* Account */}
+        <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+          Account
+        </Text>
+
+        <Card className="mb-4">
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/(settings)/change-password')}
+            className="flex-row items-center justify-between py-3"
+          >
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="key-outline" size={22} color={colors.text} />
+              <Text style={{ color: colors.text }}>Change Password</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </Card>
+
         {/* Navigation */}
         <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
           Management
@@ -118,22 +136,11 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             onPress={() => router.push('/(app)/(plots)')}
-            className="flex-row items-center justify-between py-3 border-b border-gray-100"
-          >
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="grid-outline" size={22} color={colors.text} />
-              <Text style={{ color: colors.text }}>Plots</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/(settings)')}
             className="flex-row items-center justify-between py-3"
           >
             <View className="flex-row items-center gap-3">
-              <Ionicons name="settings-outline" size={22} color={colors.text} />
-              <Text style={{ color: colors.text }}>App Settings</Text>
+              <Ionicons name="leaf-outline" size={22} color={colors.text} />
+              <Text style={{ color: colors.text }}>Plots</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </TouchableOpacity>

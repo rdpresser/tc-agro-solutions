@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useTheme } from '@/providers/theme-provider';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -53,7 +54,7 @@ export default function UsersListScreen() {
             <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.email}</Text>
           </View>
           <View className="items-end gap-1">
-            <Badge text={item.role} variant={item.role === 'admin' ? 'primary' : 'secondary'} />
+            <Badge text={item.role} variant={item.role?.toLowerCase() === 'admin' ? 'primary' : 'secondary'} />
             <Badge
               text={item.isActive ? 'Active' : 'Inactive'}
               variant={item.isActive ? 'success' : 'secondary'}
@@ -73,11 +74,14 @@ export default function UsersListScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View className="px-4 pt-2 pb-2 flex-row items-center gap-3">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+      <View className="px-4 pt-2 pb-2 flex-row items-center justify-between">
         <Text className="text-2xl font-bold" style={{ color: colors.text }}>Users</Text>
+        <Button
+          title="Add"
+          onPress={() => router.push({ pathname: '/(app)/(users)/[id]', params: { id: 'new' } })}
+          size="sm"
+          icon={<Ionicons name="add" size={18} color="#fff" />}
+        />
       </View>
 
       {isLoading ? (

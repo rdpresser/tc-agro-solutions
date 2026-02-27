@@ -1,22 +1,50 @@
 import { analyticsApi } from './clients';
-import type { Alert } from '@/types';
+import type { Alert, AlertSummary, PaginatedResponse } from '@/types';
 
 export const alertsApi = {
-  getPending: async (): Promise<Alert[]> => {
+  getPending: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<Alert[]> => {
     try {
-      const response = await analyticsApi.get('/api/alerts/pending');
-      return Array.isArray(response.data) ? response.data : response.data.items || [];
+      const response = await analyticsApi.get('/api/alerts/pending', { params });
+      const data = response.data;
+      return data.items || (Array.isArray(data) ? data : []);
     } catch {
       return [];
     }
   },
 
-  getAll: async (): Promise<Alert[]> => {
+  getAll: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    status?: string;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<Alert[]> => {
     try {
-      const response = await analyticsApi.get('/api/alerts');
-      return Array.isArray(response.data) ? response.data : response.data.items || [];
+      const response = await analyticsApi.get('/api/alerts/pending', {
+        params: { ...params, status: params?.status || 'all' },
+      });
+      const data = response.data;
+      return data.items || (Array.isArray(data) ? data : []);
     } catch {
       return [];
+    }
+  },
+
+  getSummary: async (windowHours = 24, ownerId?: string): Promise<AlertSummary | null> => {
+    try {
+      const response = await analyticsApi.get('/api/alerts/pending/summary', {
+        params: { windowHours, ownerId },
+      });
+      return response.data;
+    } catch {
+      return null;
     }
   },
 

@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSensors, useDeleteSensor } from '@/hooks/queries/use-sensors';
 import { useTheme } from '@/providers/theme-provider';
-import { SENSOR_STATUSES } from '@/constants/crop-types';
+import { SENSOR_STATUSES, getSensorIcon } from '@/constants/crop-types';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -56,7 +56,7 @@ export default function SensorsListScreen() {
         <View className="flex-row items-start justify-between mb-2">
           <View className="flex-1">
             <Text className="text-base font-semibold" style={{ color: colors.text }}>{item.label}</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.type}</Text>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>{getSensorIcon(item.type)} {item.type}</Text>
           </View>
           <Badge text={item.status} variant={statusVariant(item.status)} />
         </View>

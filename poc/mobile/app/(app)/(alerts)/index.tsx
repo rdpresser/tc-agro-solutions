@@ -2,11 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert as RNAlert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAlertsPending, useAlertsAll, useResolveAlert } from '@/hooks/queries/use-alerts';
+import { useAlertsPending, useAlertsAll, useResolveAlert, useAlertsSummary } from '@/hooks/queries/use-alerts';
 import { useTheme } from '@/providers/theme-provider';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatRelativeTime } from '@/lib/format';
@@ -15,18 +14,41 @@ import type { Alert } from '@/types';
 type Tab = 'pending' | 'resolved' | 'all';
 
 const severityVariant = (s: string) => {
-  switch (s) {
-    case 'critical': return 'danger';
-    case 'warning': return 'warning';
-    default: return 'info';
+  switch (s?.toLowerCase()) {
+    case 'critical':
+    case 'high':
+      return 'danger';
+    case 'warning':
+    case 'medium':
+      return 'warning';
+    default:
+      return 'info';
   }
 };
 
 const severityBorderColor = (s: string) => {
-  switch (s) {
-    case 'critical': return '#dc3545';
-    case 'warning': return '#ffc107';
-    default: return '#17a2b8';
+  switch (s?.toLowerCase()) {
+    case 'critical':
+    case 'high':
+      return '#dc3545';
+    case 'warning':
+    case 'medium':
+      return '#ffc107';
+    default:
+      return '#17a2b8';
+  }
+};
+
+const severityIcon = (s: string) => {
+  switch (s?.toLowerCase()) {
+    case 'critical':
+    case 'high':
+      return '🚨';
+    case 'warning':
+    case 'medium':
+      return '⚠️';
+    default:
+      return 'ℹ️';
   }
 };
 
@@ -36,10 +58,11 @@ export default function AlertsScreen() {
 
   const { data: pending, isLoading: loadingPending, refetch: refetchPending, isRefetching: refetchingPending } = useAlertsPending();
   const { data: allAlerts, isLoading: loadingAll, refetch: refetchAll, isRefetching: refetchingAll } = useAlertsAll();
+  const { data: summary } = useAlertsSummary();
   const resolveMutation = useResolveAlert();
 
   const resolved = useMemo(
-    () => (allAlerts || []).filter((a) => a.status === 'Resolved'),
+    () => (allAlerts || []).filter((a) => a.status?.toLowerCase() === 'resolved'),
     [allAlerts]
   );
 
@@ -68,9 +91,12 @@ export default function AlertsScreen() {
       style={{ borderLeftColor: severityBorderColor(item.severity) }}
     >
       <View className="flex-row items-start justify-between mb-1">
-        <Text className="font-semibold flex-1 mr-2" style={{ color: colors.text }}>
-          {item.title}
-        </Text>
+        <View className="flex-row items-center gap-1 flex-1 mr-2">
+          <Text>{severityIcon(item.severity)}</Text>
+          <Text className="font-semibold flex-1" style={{ color: colors.text }}>
+            {item.title}
+          </Text>
+        </View>
         <Badge text={item.severity} variant={severityVariant(item.severity)} />
       </View>
       <Text className="text-sm mb-2" style={{ color: colors.textSecondary }}>
@@ -80,15 +106,21 @@ export default function AlertsScreen() {
         <View className="flex-row items-center gap-2">
           {item.plotName && (
             <View className="flex-row items-center gap-1">
-              <Ionicons name="grid-outline" size={12} color={colors.textMuted} />
+              <Ionicons name="leaf-outline" size={12} color={colors.textMuted} />
               <Text className="text-xs" style={{ color: colors.textMuted }}>{item.plotName}</Text>
+            </View>
+          )}
+          {item.propertyName && (
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="business-outline" size={12} color={colors.textMuted} />
+              <Text className="text-xs" style={{ color: colors.textMuted }}>{item.propertyName}</Text>
             </View>
           )}
           <Text className="text-xs" style={{ color: colors.textMuted }}>
             {formatRelativeTime(item.createdAt)}
           </Text>
         </View>
-        {item.status === 'Pending' && (
+        {item.status?.toLowerCase() === 'pending' && (
           <TouchableOpacity
             onPress={() => handleResolve(item.id)}
             className="flex-row items-center gap-1 bg-success/10 px-2 py-1 rounded"
@@ -97,7 +129,7 @@ export default function AlertsScreen() {
             <Text className="text-xs font-medium text-success">Resolve</Text>
           </TouchableOpacity>
         )}
-        {item.status === 'Resolved' && (
+        {item.status?.toLowerCase() === 'resolved' && (
           <Badge text="Resolved" variant="success" />
         )}
       </View>
@@ -113,8 +145,30 @@ export default function AlertsScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <View className="px-4 pt-2 pb-2">
-        <Text className="text-2xl font-bold" style={{ color: colors.text }}>Alerts</Text>
+        <Text className="text-2xl font-bold" style={{ color: colors.text }}>🔔 Alerts</Text>
       </View>
+
+      {/* Summary Cards */}
+      {summary && (
+        <View className="flex-row px-4 mb-3 gap-2">
+          <View className="flex-1 bg-red-50 rounded-lg px-3 py-2 items-center">
+            <Text className="text-lg font-bold text-danger">{summary.criticalPendingCount}</Text>
+            <Text className="text-xs text-gray-500">Critical</Text>
+          </View>
+          <View className="flex-1 bg-orange-50 rounded-lg px-3 py-2 items-center">
+            <Text className="text-lg font-bold text-warning">{summary.highPendingCount}</Text>
+            <Text className="text-xs text-gray-500">High</Text>
+          </View>
+          <View className="flex-1 bg-yellow-50 rounded-lg px-3 py-2 items-center">
+            <Text className="text-lg font-bold" style={{ color: '#ffc107' }}>{summary.mediumPendingCount}</Text>
+            <Text className="text-xs text-gray-500">Medium</Text>
+          </View>
+          <View className="flex-1 bg-blue-50 rounded-lg px-3 py-2 items-center">
+            <Text className="text-lg font-bold text-info">{summary.lowPendingCount}</Text>
+            <Text className="text-xs text-gray-500">Low</Text>
+          </View>
+        </View>
+      )}
 
       {/* Tabs */}
       <View className="flex-row px-4 mb-3 gap-2">

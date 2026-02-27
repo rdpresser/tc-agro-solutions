@@ -9,7 +9,7 @@ import { useSensor, useSensorReadings, useCreateSensor } from '@/hooks/queries/u
 import { usePlots } from '@/hooks/queries/use-plots';
 import { useTheme } from '@/providers/theme-provider';
 import { sensorSchema, type SensorFormData } from '@/lib/validation';
-import { SENSOR_TYPES } from '@/constants/crop-types';
+import { SENSOR_TYPES, getSensorIcon } from '@/constants/crop-types';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -65,7 +65,7 @@ export default function SensorDetailScreen() {
                 <Input label="Label" placeholder="Sensor label" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.label?.message} />
               )} />
               <Controller control={control} name="type" render={({ field: { onChange, value } }) => (
-                <Select label="Type" options={SENSOR_TYPES as any} value={value} onChange={onChange} error={errors.type?.message} />
+                <Select label="Type" options={SENSOR_TYPES.map((s) => ({ value: s.value, label: `${s.icon} ${s.label}` }))} value={value} onChange={onChange} error={errors.type?.message} />
               )} />
               <Controller control={control} name="plotId" render={({ field: { onChange, value } }) => (
                 <Select label="Plot" options={plotOptions} value={value} onChange={onChange} error={errors.plotId?.message} />
@@ -101,7 +101,7 @@ export default function SensorDetailScreen() {
         <Card className="mb-4">
           <Text className="font-semibold mb-2" style={{ color: colors.text }}>Sensor Info</Text>
           <View className="gap-2">
-            <InfoRow label="Type" value={sensor?.type || '-'} />
+            <InfoRow label="Type" value={`${getSensorIcon(sensor?.type || '')} ${sensor?.type || '-'}`} />
             <InfoRow label="Plot" value={sensor?.plotName || '-'} />
             <InfoRow label="Property" value={sensor?.propertyName || '-'} />
             <InfoRow label="Installed" value={sensor?.installedAt ? formatDateTime(sensor.installedAt) : '-'} />

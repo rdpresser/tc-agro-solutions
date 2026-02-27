@@ -1,5 +1,5 @@
 import { identityApi } from './clients';
-import type { LoginRequest, LoginResponse, RegisterRequest } from '@/types';
+import type { LoginRequest, LoginResponse, RegisterRequest, ChangePasswordRequest } from '@/types';
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
@@ -14,5 +14,10 @@ export const authApi = {
   checkEmail: async (email: string): Promise<boolean> => {
     const response = await identityApi.get(`/auth/check-email/${email}`);
     return response.data;
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<void> => {
+    // TODO: replace with real endpoint when available
+    await identityApi.post('/auth/change-password', data);
   },
 };

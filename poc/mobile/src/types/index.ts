@@ -12,8 +12,14 @@ export interface LoginResponse {
 export interface RegisterRequest {
   name: string;
   email: string;
+  username: string;
   password: string;
-  confirmPassword: string;
+  role: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface TokenInfo {
@@ -40,6 +46,7 @@ export interface Property {
   name: string;
   ownerName: string;
   ownerId?: string;
+  address?: string;
   city: string;
   state: string;
   country: string;
@@ -54,6 +61,7 @@ export interface Property {
 export interface CreatePropertyRequest {
   name: string;
   ownerId: string;
+  address?: string;
   city: string;
   state: string;
   country: string;
@@ -144,13 +152,27 @@ export interface Alert {
   id: string;
   title: string;
   message: string;
-  severity: 'critical' | 'warning' | 'info';
-  status: 'Pending' | 'Acknowledged' | 'Resolved';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'warning' | 'info';
+  status: 'Pending' | 'Acknowledged' | 'Resolved' | 'pending' | 'acknowledged' | 'resolved';
   plotName?: string;
+  plotId?: string;
+  propertyName?: string;
   sensorId?: string;
   createdAt: string;
   resolvedAt?: string;
   alertType?: string;
+}
+
+export interface AlertSummary {
+  pendingAlertsTotal: number;
+  affectedPlotsCount: number;
+  affectedSensorsCount: number;
+  criticalPendingCount: number;
+  highPendingCount: number;
+  mediumPendingCount: number;
+  lowPendingCount: number;
+  newPendingInWindowCount: number;
+  windowHours: number;
 }
 
 // Owners

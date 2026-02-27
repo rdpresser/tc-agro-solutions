@@ -8,6 +8,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/auth.store';
+import { useTheme } from '@/providers/theme-provider';
 import { loginSchema, type LoginFormData } from '@/lib/validation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ export default function LoginScreen() {
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
   const [showPassword, setShowPassword] = useState(false);
+  const { colors, isDark } = useTheme();
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -36,7 +38,8 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -46,15 +49,24 @@ export default function LoginScreen() {
         {/* Logo / Header */}
         <View className="items-center mb-10">
           <View className="w-20 h-20 rounded-2xl bg-primary items-center justify-center mb-4">
-            <Ionicons name="leaf" size={40} color="#fff" />
+            <Text className="text-4xl">🌾</Text>
           </View>
-          <Text className="text-3xl font-bold text-primary">TC Agro</Text>
-          <Text className="text-gray-500 mt-1">Agricultural Monitoring Platform</Text>
+          <Text className="text-3xl font-bold" style={{ color: colors.primary }}>
+            TC Agro
+          </Text>
+          <Text className="mt-1" style={{ color: colors.textSecondary }}>
+            Agricultural Monitoring Platform
+          </Text>
         </View>
 
         {/* Form */}
-        <View className="bg-white rounded-2xl p-6 shadow-sm">
-          <Text className="text-xl font-bold text-gray-800 mb-6">Sign In</Text>
+        <View
+          className="rounded-2xl p-6"
+          style={{ backgroundColor: colors.card, shadowColor: isDark ? 'transparent' : '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
+        >
+          <Text className="text-xl font-bold mb-6" style={{ color: colors.text }}>
+            Sign In
+          </Text>
 
           <Controller
             control={control}
@@ -70,7 +82,7 @@ export default function LoginScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.email?.message}
-                leftIcon={<Ionicons name="mail-outline" size={20} color="#999" />}
+                leftIcon={<Ionicons name="mail-outline" size={20} color={colors.textMuted} />}
               />
             )}
           />
@@ -79,28 +91,25 @@ export default function LoginScreen() {
             control={control}
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
-              <View>
-                <Input
-                  label="Password"
-                  placeholder="Enter your password"
-                  secureTextEntry={!showPassword}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.password?.message}
-                  leftIcon={<Ionicons name="lock-closed-outline" size={20} color="#999" />}
-                />
-                <TouchableOpacity
-                  className="absolute right-3 top-9"
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              </View>
+              <Input
+                label="Password"
+                placeholder="Enter your password"
+                secureTextEntry={!showPassword}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.password?.message}
+                leftIcon={<Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />}
+                rightIcon={
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.textMuted}
+                    />
+                  </TouchableOpacity>
+                }
+              />
             )}
           />
 
@@ -115,10 +124,10 @@ export default function LoginScreen() {
 
         {/* Sign up link */}
         <View className="flex-row justify-center mt-6">
-          <Text className="text-gray-500">Don't have an account? </Text>
+          <Text style={{ color: colors.textSecondary }}>Don't have an account? </Text>
           <Link href="/(auth)/signup" asChild>
             <TouchableOpacity>
-              <Text className="text-primary font-semibold">Sign Up</Text>
+              <Text className="font-semibold" style={{ color: colors.primary }}>Sign Up</Text>
             </TouchableOpacity>
           </Link>
         </View>

@@ -6,10 +6,11 @@ interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
-  ({ label, error, leftIcon, ...props }, ref) => {
+  ({ label, error, leftIcon, rightIcon, ...props }, ref) => {
     const { colors } = useTheme();
 
     return (
@@ -37,6 +38,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             placeholderTextColor={colors.textMuted}
             {...props}
           />
+          {rightIcon && <View className="ml-2">{rightIcon}</View>}
         </View>
         {error && (
           <Text className="text-danger text-xs mt-1">{error}</Text>
