@@ -27,7 +27,7 @@ cd scripts\k3d
 **What you get:**
 
 - ✅ k3d Kubernetes cluster (4 nodes on localhost)
-- ✅ 5 microservices deployed via ArgoCD
+- ✅ 4 microservices deployed via ArgoCD
 - ✅ PostgreSQL + TimescaleDB (Docker)
 - ✅ Redis (Docker)
 - ✅ RabbitMQ (Docker)
@@ -113,7 +113,7 @@ cd tc-agro-solutions
 
 This will:
 
-- Clone 5 microservices to `services/`
+- Clone 4 microservices to `services/`
 - Clone common libraries to `common/`
 - Create `.env` files with local configuration (shared + per service)
 
@@ -145,8 +145,7 @@ tc-agro-solutions/
 │   ├── identity-service/
 │   ├── farm-service/
 │   ├── sensor-ingest-service/
-│   ├── analytics-worker/
-│   └── dashboard-service/
+│   └── analytics-worker/
 ├── common/                  # 🔄 Cloned by bootstrap.ps1
 ├── infrastructure/          # Terraform IaC for AKS
 ├── kubernetes/             # Kubernetes manifests
@@ -163,7 +162,7 @@ tc-agro-solutions/
 
 ## � Service Repositories
 
-### Microservices (5 independent repositories)
+### Microservices (4 independent repositories)
 
 | Service              | Repository                    | Folder                           | Purpose              |
 | -------------------- | ----------------------------- | -------------------------------- | -------------------- |
@@ -171,7 +170,6 @@ tc-agro-solutions/
 | **Farm**             | tc-agro-farm-service          | `services/farm-service`          | Properties & Plots   |
 | **Sensor Ingest**    | tc-agro-sensor-ingest-service | `services/sensor-ingest-service` | Data ingestion API   |
 | **Analytics Worker** | tc-agro-analytics-worker      | `services/analytics-worker`      | Rules & alerts       |
-| **Dashboard**        | tc-agro-dashboard-service     | `services/dashboard-service`     | Optimized reads      |
 
 ### Common Libraries
 
@@ -309,12 +307,6 @@ Receives sensor data, validates, persists to TimescaleDB, publishes events.
 Consumes events, applies rules, generates alerts (background worker).
 
 **Repo:** `git@github.com:your-org/agro-analytics-worker.git`
-
-### 📊 Agro.Dashboard.Api
-
-Optimized queries, aggregations, caching for dashboards.
-
-**Repo:** `git@github.com:your-org/agro-dashboard-service.git`
 
 ---
 
@@ -563,15 +555,15 @@ This project is proprietary. All rights reserved.
 
 ## ✨ Key Metrics
 
-- **Services:** 5 microservices
+- **Services:** 4 microservices
 - **Repositories:** Independent git repositories per service
-- **Documentation:** 8 ADRs + architecture guides
+- **Documentation:** 7 ADRs + architecture guides
 - **Test Coverage:** Unit, integration, load, smoke tests
 - **Deployment:** Azure AKS via Terraform + ArgoCD
 
 ---
 
-> **Version:** 2.1 - Independent service repositories  
-> **Last Updated:** January 17, 2026  
+> **Version:** 2.2 - Removed dashboard-service (deprecated)  
+> **Last Updated:** February 27, 2026  
 > **Status:** Production-ready for Phase 5 delivery  
 > **Deadline:** February 27, 2026 ✅
