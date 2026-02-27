@@ -113,7 +113,7 @@ async function loadSensors() {
   const tbody = $('#sensors-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
 
   try {
     const filters = getCurrentFilters();
@@ -129,7 +129,7 @@ async function loadSensors() {
     const { message } = normalizeError(error);
     console.error('Error loading sensors:', error);
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center text-danger">Error loading sensors</td></tr>';
+      '<tr><td colspan="8" class="text-center text-danger">Error loading sensors</td></tr>';
     renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
     toast(message || 'sensors.load_failed', 'error');
   }
@@ -180,16 +180,18 @@ function renderSensorsTable(sensors) {
 
   if (!sensors.length) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center text-muted">No sensors found</td></tr>';
+      '<tr><td colspan="8" class="text-center text-muted">No sensors found</td></tr>';
     return;
   }
 
   tbody.innerHTML = sensors
     .map((sensor) => {
       const installedAt = formatDateTime(sensor.installedAt);
+      const ownerName = sensor.ownerName || sensor.OwnerName || sensor.owner?.name || '-';
 
       return `
     <tr data-id="${sensor.id}">
+      <td>${ownerName}</td>
       <td><strong>${sensor.label || '-'}</strong></td>
       <td>${sensor.type ? getSensorTypeDisplay(sensor.type) : '-'}</td>
       <td>

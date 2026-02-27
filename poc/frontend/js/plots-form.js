@@ -8,6 +8,7 @@ import {
   fetchFarmSwagger,
   getPlot,
   getProperties,
+  getPropertiesByOwner,
   normalizeError,
   getOwnersPaginated,
   getOwnersQueryParameterMapFromSwagger
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadCropTypeOptions();
   loadIrrigationTypeOptions();
-  await loadPropertyOptions();
+  await loadPropertyOptions({ ownerId: getOwnerIdForPropertyFilter() });
 
   if (isEditMode) {
     await setupEditMode();
@@ -100,6 +101,14 @@ async function setupOwnerSelector() {
 
     ownerSelect.required = !isEditMode;
 
+    ownerSelect.addEventListener('change', async () => {
+      ownerSelect.setCustomValidity('');
+      await loadPropertyOptions({
+        ownerId: getOwnerIdForPropertyFilter(),
+        preserveSelection: false
+      });
+    });
+
     if (isEditMode) {
       ownerSelect.disabled = true;
     }
@@ -109,6 +118,18 @@ async function setupOwnerSelector() {
     ownerSelect.disabled = true;
     showFormError(message || 'Failed to load owners for admin selection.');
   }
+}
+
+function getOwnerIdForPropertyFilter() {
+  if (!isCurrentUserAdmin()) {
+    return '';
+  }
+
+  if (isEditMode) {
+    return '';
+  }
+
+  return $id('ownerId')?.value?.trim() || '';
 }
 
 async function getAllOwners(parameterMap) {
@@ -169,17 +190,39 @@ async function checkFarmApi() {
   }
 }
 
-async function loadPropertyOptions() {
+async function loadPropertyOptions({ ownerId = '', preserveSelection = true } = {}) {
   const select = $id('propertyId');
   if (!select) return;
 
-  const currentValue = select.value;
+  const isAdmin = isCurrentUserAdmin();
+  if (isAdmin && !ownerId && !isEditMode) {
+    select.innerHTML = '<option value="">Select an owner first...</option>';
+    select.value = '';
+    return;
+  }
+
+  const currentValue = preserveSelection ? select.value : '';
+
+  if (!preserveSelection) {
+    select.innerHTML = '<option value="">Select a property...</option>';
+    select.value = '';
+  }
 
   try {
-    const response = await getProperties();
+    const response = ownerId
+      ? await getPropertiesByOwner(ownerId)
+      : await getProperties({
+          pageNumber: 1,
+          pageSize: 1000,
+          sortBy: 'name',
+          sortDirection: 'asc',
+          filter: ''
+        });
     const properties = response?.data || response || [];
 
     if (!Array.isArray(properties) || properties.length === 0) {
+      select.innerHTML = '<option value="">No properties available</option>';
+      select.value = '';
       return;
     }
 
@@ -212,6 +255,8 @@ async function setupEditMode() {
 
   try {
     const plot = await getPlot(editId);
+    updateEditHeaderWithOwner(plot);
+    updateOwnerNameDisplay(plot);
     populateForm(plot);
     setReadOnlyEditMode();
     loadSensors();
@@ -221,6 +266,43 @@ async function setupEditMode() {
     showFormError(message || 'Failed to load plot');
     toast(message || 'Failed to load plot', 'error');
   }
+}
+
+function updateEditHeaderWithOwner(plot) {
+  if (!isEditMode || isCurrentUserAdmin()) {
+    return;
+  }
+
+  const ownerName = String(plot?.ownerName || plot?.OwnerName || '').trim();
+  if (!ownerName) {
+    return;
+  }
+
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+
+  if (formTitle) {
+    formTitle.textContent = `Edit Plot · Owner: ${ownerName}`;
+  }
+
+  if (breadcrumbCurrent) {
+    breadcrumbCurrent.textContent = `Edit · ${ownerName}`;
+  }
+}
+
+function updateOwnerNameDisplay(plot) {
+  const ownerNameGroup = $id('ownerNameDisplayGroup');
+  const ownerNameField = $id('ownerNameDisplay');
+
+  if (!ownerNameGroup || !ownerNameField) {
+    return;
+  }
+
+  const ownerName = String(plot?.ownerName || plot?.OwnerName || '').trim();
+  const shouldDisplay = isEditMode && !isCurrentUserAdmin() && ownerName.length > 0;
+
+  ownerNameGroup.style.display = shouldDisplay ? 'block' : 'none';
+  ownerNameField.value = shouldDisplay ? ownerName : '';
 }
 
 function setReadOnlyEditMode() {

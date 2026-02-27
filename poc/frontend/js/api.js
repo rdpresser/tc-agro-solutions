@@ -312,6 +312,18 @@ export async function getProperties({
   return data;
 }
 
+export async function getPropertiesByOwner(ownerId, options = {}) {
+  return getProperties({
+    pageNumber: 1,
+    pageSize: 1000,
+    sortBy: 'name',
+    sortDirection: 'asc',
+    filter: '',
+    ...options,
+    ownerId: ownerId || ''
+  });
+}
+
 export async function getProperty(id) {
   const { data } = await farmApi.get(`/api/properties/${encodeURIComponent(id)}`);
   return data;

@@ -725,10 +725,10 @@ function updateAlertsSection(alerts) {
       (alert) => `
     <div class="alert-item alert-${alert.severity}" data-alert-id="${alert.id || alert.Id || ''}">
       <div class="alert-header">
-        <span class="alert-badge badge-${alert.severity}">
+        <span class="badge badge-${alert.severity}">
           ${getSeverityIcon(alert.severity)} ${getSeverityLabel(alert.severity)}
         </span>
-        <span class="alert-badge ${getAlertStatusBadgeClass(alert.status || alert.Status)}" data-alert-status>
+        <span class="badge ${getAlertStatusBadgeClass(alert.status || alert.Status)}" data-alert-status>
           ${getAlertStatusLabel(alert.status || alert.Status)}
         </span>
         <span class="alert-time" title="${formatDate(alert.createdAt)}">
@@ -791,7 +791,7 @@ function updateAlertCardVisualStatus(alertId, nextStatus) {
 
   const statusBadge = card.querySelector('[data-alert-status]');
   if (statusBadge) {
-    statusBadge.className = `alert-badge ${getAlertStatusBadgeClass(nextStatus)}`;
+    statusBadge.className = `badge ${getAlertStatusBadgeClass(nextStatus)}`;
     statusBadge.textContent = getAlertStatusLabel(nextStatus);
   }
 

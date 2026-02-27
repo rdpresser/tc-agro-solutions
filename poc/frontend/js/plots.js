@@ -65,7 +65,7 @@ async function loadPlots() {
   const tbody = $('#plots-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="10" class="text-center">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="11" class="text-center">Loading...</td></tr>';
 
   try {
     const filters = getCurrentFilters();
@@ -83,7 +83,7 @@ async function loadPlots() {
     const { message } = normalizeError(error);
     console.error('Error loading plots:', error);
     tbody.innerHTML =
-      '<tr><td colspan="10" class="text-center text-danger">Error loading plots</td></tr>';
+      '<tr><td colspan="11" class="text-center text-danger">Error loading plots</td></tr>';
     renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
     toast(message || 'plots.load_failed', 'error');
   }
@@ -172,6 +172,7 @@ function normalizePlotItem(plot) {
 
   return {
     id: plot?.id || '',
+    ownerName: plot?.ownerName || plot?.OwnerName || plot?.owner?.name || '-',
     name: plot?.name || '-',
     propertyName: plot?.propertyName || plot?.property?.name || '-',
     cropType: plot?.cropType || '-',
@@ -235,7 +236,7 @@ function renderPlotsTable(plots) {
 
   if (!plots.length) {
     tbody.innerHTML =
-      '<tr><td colspan="10" class="text-center text-muted">No plots found</td></tr>';
+      '<tr><td colspan="11" class="text-center text-muted">No plots found</td></tr>';
     return;
   }
 
@@ -243,6 +244,7 @@ function renderPlotsTable(plots) {
     .map(
       (plot) => `
     <tr data-id="${plot.id}">
+      <td>${plot.ownerName}</td>
       <td><strong>${plot.name}</strong></td>
       <td>${plot.propertyName}</td>
       <td>

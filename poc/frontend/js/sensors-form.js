@@ -333,6 +333,8 @@ async function handleSubmit(e) {
 async function loadSensor(id) {
   try {
     const sensor = await getSensorById(id);
+    updateEditHeaderWithOwner(sensor);
+    updateOwnerNameDisplay(sensor);
     populateForm(sensor);
     toast('Edit mode is not available yet. Fields are read-only.', 'warning');
   } catch (error) {
@@ -340,6 +342,68 @@ async function loadSensor(id) {
     showFormError(message || 'Failed to load sensor');
     toast(message || 'Failed to load sensor', 'error');
   }
+}
+
+function updateEditHeaderWithOwner(sensor) {
+  if (!isEditMode || isCurrentUserAdmin()) {
+    return;
+  }
+
+  const ownerName = resolveOwnerDisplayName(sensor);
+  if (!ownerName) {
+    return;
+  }
+
+  const formTitle = $id('formTitle');
+  const breadcrumbCurrent = $id('breadcrumbCurrent');
+
+  if (formTitle) {
+    formTitle.textContent = `Edit Sensor · Owner: ${ownerName}`;
+  }
+
+  if (breadcrumbCurrent) {
+    breadcrumbCurrent.textContent = `Edit · ${ownerName}`;
+  }
+}
+
+function updateOwnerNameDisplay(sensor) {
+  const ownerNameGroup = $id('ownerNameDisplayGroup');
+  const ownerNameField = $id('ownerNameDisplay');
+
+  if (!ownerNameGroup || !ownerNameField) {
+    return;
+  }
+
+  const ownerName = resolveOwnerDisplayName(sensor);
+  const shouldDisplay = isEditMode && !isCurrentUserAdmin() && ownerName.length > 0;
+
+  ownerNameGroup.style.display = shouldDisplay ? 'block' : 'none';
+  ownerNameField.value = shouldDisplay ? ownerName : '';
+}
+
+function resolveOwnerDisplayName(sensor) {
+  const ownerNameCandidate =
+    sensor?.ownerName ||
+    sensor?.OwnerName ||
+    sensor?.owner?.name ||
+    sensor?.owner?.Name ||
+    sensor?.ownerDisplayName ||
+    sensor?.OwnerDisplayName ||
+    '';
+
+  const normalizedOwnerName = String(ownerNameCandidate || '').trim();
+  if (normalizedOwnerName.length > 0) {
+    return normalizedOwnerName;
+  }
+
+  if (!isCurrentUserAdmin()) {
+    const currentUserName = String(getUser()?.name || '').trim();
+    if (currentUserName.length > 0) {
+      return currentUserName;
+    }
+  }
+
+  return '';
 }
 
 function populateForm(sensor) {
