@@ -402,70 +402,7 @@ curl -X POST http://localhost:5001/api/auth/login \
 
 ### System Overview
 
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        FE[🌐 Web Dashboard<br/>HTML/CSS/JS]
-    end
-
-    subgraph "Microservices Layer"
-        ID[🔐 Identity Service<br/>JWT Auth]
-        FM[🌾 Farm Service<br/>Properties/Plots]
-        SI[📡 Sensor Ingest<br/>TimescaleDB]
-        AW[📈 Analytics Worker<br/>Alerts/Rules]
-    end
-
-    subgraph "Infrastructure Layer"
-        PG[(PostgreSQL<br/>+TimescaleDB)]
-        RD[(Redis<br/>Cache)]
-        RMQ[RabbitMQ<br/>Messaging]
-    end
-
-    subgraph "Orchestration Options"
-        MODE1[🎨 Visual Studio<br/>AppHost.Compose]
-        MODE2[🐳 Docker<br/>Compose]
-        MODE3[☸️ k3d<br/>GitOps]
-    end
-
-    FE -->|REST API| ID
-    FE -->|REST API| FM
-    FE -->|REST API| SI
-    FE -->|SignalR| AW
-
-    ID --> PG
-    FM --> PG
-    FM --> RD
-    SI --> PG
-    SI --> RMQ
-    AW --> PG
-    AW --> RMQ
-
-    MODE1 -.Runs.-> ID
-    MODE1 -.Runs.-> FM
-    MODE1 -.Runs.-> SI
-    MODE1 -.Runs.-> AW
-    MODE1 -.Runs.-> PG
-    MODE1 -.Runs.-> RD
-    MODE1 -.Runs.-> RMQ
-
-    MODE2 -.Runs.-> PG
-    MODE2 -.Runs.-> RD
-    MODE2 -.Runs.-> RMQ
-
-    MODE3 -.Deploys.-> ID
-    MODE3 -.Deploys.-> FM
-    MODE3 -.Deploys.-> SI
-    MODE3 -.Deploys.-> AW
-
-    style FE fill:#e1f5ff
-    style ID fill:#fff3cd
-    style FM fill:#d4edda
-    style SI fill:#d1ecf1
-    style AW fill:#f8d7da
-    style MODE1 fill:#ffeaa7
-    style MODE2 fill:#74b9ff
-    style MODE3 fill:#a29bfe
-```
+<img width="3176" height="2466" alt="tc-agro-k3d-architecture drawio" src="https://github.com/user-attachments/assets/df1a3c5b-7069-45dd-a98b-da454bb8b861" />
 
 **📐 Detailed Architecture:** See [Architecture Diagram (Draw.io)](docs/tc-agro-k3d-architecture.drawio) for full visualization.
 
