@@ -390,9 +390,6 @@
         <mxCell id="zZaR_RDr0Yx5pnyFEexQ-27" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="🌐 Shared Network (tc-agro-network)" vertex="1">
           <mxGeometry height="30" width="223" x="1312" y="-2329" as="geometry" />
         </mxCell>
-        <mxCell id="postgresql" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#336791;strokeColor=#1a3a4d;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" value="🐘 PostgreSQL + TimescaleDB&#xa;───────────&#xa;Transactional + Time Series" vertex="1">
-          <mxGeometry height="120" width="180" x="635" y="-1796" as="geometry" />
-        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
