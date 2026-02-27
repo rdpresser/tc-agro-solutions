@@ -31,11 +31,12 @@ export function Select({ label, placeholder = 'Select...', options, value, onCha
       )}
       <TouchableOpacity
         onPress={() => setVisible(true)}
-        className={`
-          flex-row items-center justify-between rounded-lg border px-3 py-3
-          ${error ? 'border-danger' : 'border-gray-300'}
-        `}
-        style={{ backgroundColor: colors.surface }}
+        className="flex-row items-center justify-between rounded-lg px-3 py-3"
+        style={{
+          backgroundColor: colors.inputBg,
+          borderWidth: 1,
+          borderColor: error ? '#dc3545' : colors.border,
+        }}
       >
         <Text style={{ color: selected ? colors.text : colors.textMuted }}>
           {selected?.label || placeholder}
@@ -46,15 +47,18 @@ export function Select({ label, placeholder = 'Select...', options, value, onCha
 
       <Modal visible={visible} transparent animationType="slide">
         <TouchableOpacity
-          className="flex-1 bg-black/50 justify-end"
+          className="flex-1 bg-black/50 justify-center px-4"
           activeOpacity={1}
           onPress={() => setVisible(false)}
         >
           <View
-            className="rounded-t-2xl max-h-[60%]"
+            className="rounded-2xl max-h-[72%] overflow-hidden"
             style={{ backgroundColor: colors.surface }}
           >
-            <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-200">
+            <View
+              className="flex-row justify-between items-center px-4 py-3"
+              style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+            >
               <Text className="text-lg font-semibold" style={{ color: colors.text }}>
                 {label || 'Select'}
               </Text>
@@ -65,11 +69,15 @@ export function Select({ label, placeholder = 'Select...', options, value, onCha
             <FlatList
               data={options as Option[]}
               keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  className={`px-4 py-3.5 border-b border-gray-100 ${
-                    item.value === value ? 'bg-primary/10' : ''
-                  }`}
+                  className="px-4 py-3.5"
+                  style={{
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.borderLight,
+                    backgroundColor: item.value === value ? colors.primary + '15' : undefined,
+                  }}
                   onPress={() => {
                     onChange(item.value);
                     setVisible(false);
@@ -77,7 +85,7 @@ export function Select({ label, placeholder = 'Select...', options, value, onCha
                 >
                   <Text
                     style={{
-                      color: item.value === value ? '#2d5016' : colors.text,
+                      color: item.value === value ? colors.primary : colors.text,
                       fontWeight: item.value === value ? '600' : '400',
                     }}
                   >

@@ -11,12 +11,19 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { authApi } from '@/api/auth.api';
 import { useTheme } from '@/providers/theme-provider';
+import { useAuthStore } from '@/stores/auth.store';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  newPassword: z
+    .string()
+    .min(8, 'New password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+    .regex(/\d/, 'Must contain at least one number')
+    .regex(/[\W_]/, 'Must contain at least one special character'),
   confirmNewPassword: z.string().min(1, 'Confirm your new password'),
 }).refine((data) => data.newPassword === data.confirmNewPassword, {
   message: 'Passwords do not match',
@@ -30,6 +37,8 @@ type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export default function ChangePasswordScreen() {
   const { colors, isDark } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const tokenInfo = useAuthStore((s) => s.tokenInfo);
   const [isLoading, setIsLoading] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -43,9 +52,15 @@ export default function ChangePasswordScreen() {
   const onSubmit = async (data: ChangePasswordFormData) => {
     setIsLoading(true);
     try {
+      const email = user?.email || tokenInfo?.email || '';
+      if (!email) {
+        Alert.alert('Error', 'User email not found in session. Please login again.');
+        return;
+      }
+
       await authApi.changePassword({
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
+        email,
+        password: data.newPassword,
       });
       Alert.alert('Success', 'Password changed successfully!', [
         { text: 'OK', onPress: () => router.back() },
@@ -54,6 +69,8 @@ export default function ChangePasswordScreen() {
     } catch (error: any) {
       const message = error?.response?.data?.message
         || error?.response?.data?.title
+        || (Array.isArray(error?.response?.data?.errors) ? error.response.data.errors[0]?.message : undefined)
+        || (Array.isArray(error?.response?.data?.Errors) ? error.response.data.Errors[0]?.Message : undefined)
         || 'Failed to change password. Please check your current password and try again.';
       Alert.alert('Error', message);
     } finally {

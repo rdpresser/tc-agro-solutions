@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { dashboardApi } from '@/api/dashboard.api';
 import { alertsApi } from '@/api/alerts.api';
 import { API_CONFIG } from '@/constants/api-config';
+import { triggerAlertNotification } from '@/lib/notifications';
 
 export function useFallbackPolling() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -14,6 +15,7 @@ export function useFallbackPolling() {
   const setReadings = useRealtimeStore((s) => s.setReadings);
   const setAlerts = useRealtimeStore((s) => s.setAlerts);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const knownAlertIdsRef = useRef<Set<string>>(new Set());
 
   const needsFallback = sensorHubState !== 'connected' || alertHubState !== 'connected';
 
@@ -36,6 +38,15 @@ export function useFallbackPolling() {
           alertsApi.getPending(),
         ]);
         setReadings(readings);
+
+        // Detect new alerts and trigger notifications
+        for (const alert of alerts) {
+          if (!knownAlertIdsRef.current.has(alert.id)) {
+            triggerAlertNotification(alert);
+          }
+        }
+        knownAlertIdsRef.current = new Set(alerts.map((a) => a.id));
+
         setAlerts(alerts);
       } catch {
         // silent fail

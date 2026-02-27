@@ -94,7 +94,7 @@ export default function UserFormScreen() {
         </View>
 
         <ScrollView className="flex-1 px-4" keyboardShouldPersistTaps="handled">
-          <View className="bg-white rounded-2xl p-4 shadow-sm">
+          <View className="rounded-2xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
             <Controller control={control} name="name" render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 label="Full Name"

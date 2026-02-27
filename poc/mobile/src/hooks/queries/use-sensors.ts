@@ -32,6 +32,7 @@ export function useCreateSensor() {
       sensorsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sensors'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -42,6 +43,7 @@ export function useDeleteSensor() {
     mutationFn: (id: string) => sensorsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sensors'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

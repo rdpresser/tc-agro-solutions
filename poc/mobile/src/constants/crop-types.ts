@@ -3,7 +3,6 @@ export const CROP_TYPES = [
   { value: 'Banana', label: 'Banana', icon: '🍌' },
   { value: 'Beans', label: 'Beans', icon: '🫘' },
   { value: 'Carrot', label: 'Carrot', icon: '🥕' },
-  { value: 'Cassava', label: 'Cassava', icon: '🥔' },
   { value: 'Coffee', label: 'Coffee', icon: '☕' },
   { value: 'Corn', label: 'Corn', icon: '🌽' },
   { value: 'Cotton', label: 'Cotton', icon: '🌸' },
@@ -16,7 +15,6 @@ export const CROP_TYPES = [
   { value: 'Potato', label: 'Potato', icon: '🥔' },
   { value: 'Rice', label: 'Rice', icon: '🍚' },
   { value: 'Soy', label: 'Soy', icon: '🌿' },
-  { value: 'Soybean', label: 'Soybean', icon: '🌿' },
   { value: 'Sugarcane', label: 'Sugarcane', icon: '🎋' },
   { value: 'Tomato', label: 'Tomato', icon: '🍅' },
   { value: 'Wheat', label: 'Wheat', icon: '🌾' },
@@ -24,11 +22,11 @@ export const CROP_TYPES = [
 ] as const;
 
 export const IRRIGATION_TYPES = [
-  { value: 'Drip', label: 'Drip' },
+  { value: 'Drip Irrigation', label: 'Drip Irrigation' },
   { value: 'Sprinkler', label: 'Sprinkler' },
-  { value: 'Flood', label: 'Flood' },
-  { value: 'CenterPivot', label: 'Center Pivot' },
-  { value: 'None', label: 'None' },
+  { value: 'Center Pivot', label: 'Center Pivot' },
+  { value: 'Flood/Furrow', label: 'Flood/Furrow' },
+  { value: 'Rainfed (No Irrigation)', label: 'Rainfed (No Irrigation)' },
 ] as const;
 
 export const SENSOR_TYPES = [

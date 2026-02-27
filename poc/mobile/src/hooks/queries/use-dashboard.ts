@@ -38,7 +38,7 @@ export function useLatestReadings(limit = 10) {
 export function usePendingAlerts() {
   return useQuery({
     queryKey: ['alerts', 'pending'],
-    queryFn: () => alertsApi.getPending(),
+    queryFn: () => alertsApi.getPending({ pageNumber: 1, pageSize: 200 }),
     refetchInterval: 30000,
   });
 }

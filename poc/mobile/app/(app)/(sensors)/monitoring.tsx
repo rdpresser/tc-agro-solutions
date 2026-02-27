@@ -60,7 +60,7 @@ export default function MonitoringScreen() {
                     <Text className="text-sm font-semibold flex-1" numberOfLines={1} style={{ color: colors.text }}>
                       {reading.sensorLabel || reading.sensorId?.slice(0, 8)}
                     </Text>
-                    <View className="w-2 h-2 rounded-full bg-success" />
+                    <View className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22c55e' }} />
                   </View>
 
                   <View className="gap-1.5">

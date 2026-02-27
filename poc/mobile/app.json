@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tcagro.solutions",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Use Face ID for quick login"
+        "NSFaceIDUsageDescription": "Use Face ID for quick login",
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para centralizar o mapa e facilitar a seleção de coordenadas."
       }
     },
     "android": {
@@ -27,7 +28,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.tcagro.solutions",
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -36,7 +41,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ]
     ]
   }
 }

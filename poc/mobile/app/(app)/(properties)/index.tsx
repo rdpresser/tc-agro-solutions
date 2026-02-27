@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useProperties, useDeleteProperty } from '@/hooks/queries/use-properties';
 import { useTheme } from '@/providers/theme-provider';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { SortControl } from '@/components/ui/SortControl';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -19,12 +20,16 @@ export default function PropertiesListScreen() {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = useProperties({
     pageNumber: page,
     pageSize: 20,
     filter: search || undefined,
+    sortBy,
+    sortDirection,
   });
 
   const deleteMutation = useDeleteProperty();
@@ -113,6 +118,19 @@ export default function PropertiesListScreen() {
 
       <View className="px-4">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search properties..." />
+        <SortControl
+          options={[
+            { value: 'name', label: 'Name' },
+            { value: 'ownerName', label: 'Owner' },
+            { value: 'city', label: 'City' },
+            { value: 'state', label: 'State' },
+            { value: 'areaHectares', label: 'Area' },
+            { value: 'createdAt', label: 'Created' },
+          ]}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); setPage(1); }}
+        />
       </View>
 
       {isLoading ? (

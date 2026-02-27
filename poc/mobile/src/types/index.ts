@@ -18,8 +18,8 @@ export interface RegisterRequest {
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
+  email: string;
+  password: string;
 }
 
 export interface TokenInfo {
@@ -99,6 +99,7 @@ export interface Plot {
 export interface CreatePlotRequest {
   name: string;
   propertyId: string;
+  ownerId?: string;
   cropType: string;
   plantingDate: string;
   expectedHarvestDate: string;

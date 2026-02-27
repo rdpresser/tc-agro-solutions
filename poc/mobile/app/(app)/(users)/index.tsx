@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert as RNAlert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -12,17 +12,32 @@ import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SearchBar } from '@/components/ui/SearchBar';
+import { SortControl } from '@/components/ui/SortControl';
 import type { User } from '@/types';
 
 export default function UsersListScreen() {
   const { colors } = useTheme();
   const currentUser = useAuthStore((s) => s.user);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const { data, isLoading, isRefetching, refetch } = useUsers({ pageSize: 50 });
+  const { data, isLoading, isRefetching, refetch } = useUsers({ pageSize: 50, sortBy, sortDirection });
   const deleteMutation = useDeleteUser();
 
-  const users = data?.items || [];
+  const users = useMemo(() => {
+    const items = data?.items || [];
+    if (!search.trim()) return items;
+    const q = search.toLowerCase();
+    return items.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.role?.toLowerCase().includes(q)
+    );
+  }, [data, search]);
 
   const handleDelete = () => {
     if (!deleteTarget) return;
@@ -84,10 +99,24 @@ export default function UsersListScreen() {
         />
       </View>
 
+      <View className="px-4">
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search users..." />
+        <SortControl
+          options={[
+            { value: 'name', label: 'Name' },
+            { value: 'email', label: 'Email' },
+            { value: 'role', label: 'Role' },
+          ]}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+        />
+      </View>
+
       {isLoading ? (
         <LoadingOverlay />
       ) : users.length === 0 ? (
-        <EmptyState icon="people-outline" title="No Users" />
+        <EmptyState icon="people-outline" title="No Users" message={search ? 'No users match your search.' : undefined} />
       ) : (
         <FlatList
           data={users}

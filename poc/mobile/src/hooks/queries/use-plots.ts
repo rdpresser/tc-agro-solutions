@@ -23,6 +23,7 @@ export function useCreatePlot() {
     mutationFn: (data: CreatePlotRequest) => plotsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plots'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -34,6 +35,7 @@ export function useUpdatePlot() {
       plotsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plots'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -44,6 +46,7 @@ export function useDeletePlot() {
     mutationFn: (id: string) => plotsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plots'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

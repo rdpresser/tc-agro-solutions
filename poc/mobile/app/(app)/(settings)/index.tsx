@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useThemeStore } from '@/stores/theme.store';
 import { useTheme } from '@/providers/theme-provider';
 import { useBiometric } from '@/hooks/use-biometric';
+import { isNotificationsEnabled, setNotificationsEnabled } from '@/lib/notifications';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 
@@ -17,6 +18,16 @@ export default function SettingsScreen() {
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const { isAvailable, isEnabled, biometricType, toggleBiometric } = useBiometric();
+  const [notificationsOn, setNotificationsOn] = useState(true);
+
+  useEffect(() => {
+    isNotificationsEnabled().then(setNotificationsOn);
+  }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    setNotificationsOn(value);
+    await setNotificationsEnabled(value);
+  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to sign out?', [
@@ -61,7 +72,7 @@ export default function SettingsScreen() {
         </Card>
 
         {/* Preferences */}
-        <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        <Text className="text-sm font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: colors.textMuted }}>
           Preferences
         </Text>
 
@@ -82,7 +93,7 @@ export default function SettingsScreen() {
 
           {/* Biometric */}
           {isAvailable && (
-            <View className="flex-row items-center justify-between py-2 border-t border-gray-100">
+            <View className="flex-row items-center justify-between py-2" style={{ borderTopWidth: 1, borderTopColor: colors.borderLight }}>
               <View className="flex-row items-center gap-3">
                 <Ionicons name="finger-print-outline" size={22} color={colors.text} />
                 <Text style={{ color: colors.text }}>{biometricType}</Text>
@@ -95,10 +106,24 @@ export default function SettingsScreen() {
               />
             </View>
           )}
+
+          {/* Notifications */}
+          <View className="flex-row items-center justify-between py-2" style={{ borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+              <Text style={{ color: colors.text }}>Alert Notifications</Text>
+            </View>
+            <Switch
+              value={notificationsOn}
+              onValueChange={handleToggleNotifications}
+              trackColor={{ true: '#2d5016', false: '#e0e0e0' }}
+              thumbColor="#fff"
+            />
+          </View>
         </Card>
 
         {/* Account */}
-        <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        <Text className="text-sm font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: colors.textMuted }}>
           Account
         </Text>
 
@@ -116,7 +141,7 @@ export default function SettingsScreen() {
         </Card>
 
         {/* Navigation */}
-        <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        <Text className="text-sm font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: colors.textMuted }}>
           Management
         </Text>
 
@@ -124,7 +149,8 @@ export default function SettingsScreen() {
           {user?.role?.toLowerCase() === 'admin' && (
             <TouchableOpacity
               onPress={() => router.push('/(app)/(users)')}
-              className="flex-row items-center justify-between py-3 border-b border-gray-100"
+              className="flex-row items-center justify-between py-3"
+              style={{ borderBottomWidth: 1, borderBottomColor: colors.borderLight }}
             >
               <View className="flex-row items-center gap-3">
                 <Ionicons name="people-outline" size={22} color={colors.text} />

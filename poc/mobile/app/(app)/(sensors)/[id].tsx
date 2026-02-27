@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useSensor, useSensorReadings, useCreateSensor } from '@/hooks/queries/use-sensors';
 import { usePlots } from '@/hooks/queries/use-plots';
+import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
 import { sensorSchema, type SensorFormData } from '@/lib/validation';
 import { SENSOR_TYPES, getSensorIcon } from '@/constants/crop-types';
@@ -16,26 +17,45 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
+import { WizardBanner } from '@/components/onboarding/WizardBanner';
+import { CelebrationModal } from '@/components/onboarding/CelebrationModal';
 import { formatDateTime, formatTemperature, formatPercentage } from '@/lib/format';
 
 export default function SensorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
   const { colors } = useTheme();
+  const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
+  const wizardStep = useOnboardingStore((s) => s.wizardStep);
+  const createdPlotId = useOnboardingStore((s) => s.createdPlotId);
+  const completeOnboarding = useOnboardingStore((s) => s.completeOnboarding);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const { data: sensor, isLoading } = useSensor(isNew ? '' : id);
   const { data: readings } = useSensorReadings(isNew ? '' : id);
   const { data: plotsData } = usePlots({ pageSize: 100 });
   const createMutation = useCreateSensor();
 
-  const { control, handleSubmit, formState: { errors } } = useForm<SensorFormData>({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<SensorFormData>({
     resolver: zodResolver(sensorSchema),
     defaultValues: { label: '', type: '', plotId: '' },
   });
 
+  // Pre-fill plotId when in wizard step 3
+  useEffect(() => {
+    if (isWizardActive && wizardStep === 3 && createdPlotId && isNew) {
+      setValue('plotId', createdPlotId, { shouldValidate: true });
+    }
+  }, [isWizardActive, wizardStep, createdPlotId, isNew, setValue]);
+
   const onSubmit = async (data: SensorFormData) => {
     try {
       await createMutation.mutateAsync(data);
+      if (isWizardActive) {
+        await completeOnboarding();
+        setShowCelebration(true);
+        return;
+      }
       Alert.alert('Success', 'Sensor created!', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -52,6 +72,14 @@ export default function SensorDetailScreen() {
   if (isNew) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+        <WizardBanner />
+        <CelebrationModal
+          visible={showCelebration}
+          onGoToDashboard={() => {
+            setShowCelebration(false);
+            router.replace('/(app)/(dashboard)');
+          }}
+        />
         <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="px-4 pt-2 pb-4 flex-row items-center gap-3">
             <TouchableOpacity onPress={() => router.back()}>
@@ -60,16 +88,18 @@ export default function SensorDetailScreen() {
             <Text className="text-xl font-bold" style={{ color: colors.text }}>New Sensor</Text>
           </View>
           <ScrollView className="flex-1 px-4" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-2xl p-4 shadow-sm">
+            <View className="rounded-2xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
               <Controller control={control} name="label" render={({ field: { onChange, onBlur, value } }) => (
                 <Input label="Label" placeholder="Sensor label" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.label?.message} />
               )} />
               <Controller control={control} name="type" render={({ field: { onChange, value } }) => (
                 <Select label="Type" options={SENSOR_TYPES.map((s) => ({ value: s.value, label: `${s.icon} ${s.label}` }))} value={value} onChange={onChange} error={errors.type?.message} />
               )} />
-              <Controller control={control} name="plotId" render={({ field: { onChange, value } }) => (
-                <Select label="Plot" options={plotOptions} value={value} onChange={onChange} error={errors.plotId?.message} />
-              )} />
+              <View pointerEvents={isWizardActive && wizardStep === 3 ? 'none' : 'auto'} style={isWizardActive && wizardStep === 3 ? { opacity: 0.6 } : undefined}>
+                <Controller control={control} name="plotId" render={({ field: { onChange, value } }) => (
+                  <Select label={isWizardActive && wizardStep === 3 ? 'Plot (auto-selected)' : 'Plot'} options={plotOptions} value={value} onChange={onChange} error={errors.plotId?.message} />
+                )} />
+              </View>
               <View className="mt-2">
                 <Button title="Create Sensor" onPress={handleSubmit(onSubmit)} loading={createMutation.isPending} fullWidth size="lg" />
               </View>
@@ -113,7 +143,9 @@ export default function SensorDetailScreen() {
         <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>Recent Readings</Text>
         {(!readings || readings.length === 0) ? (
           <Card>
-            <Text className="text-center py-4" style={{ color: colors.textMuted }}>No readings available</Text>
+            <Text className="text-center py-4" style={{ color: colors.textMuted }}>
+              No readings yet for this sensor
+            </Text>
           </Card>
         ) : (
           readings.slice(0, 20).map((r, i) => (
@@ -148,10 +180,12 @@ export default function SensorDetailScreen() {
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+
   return (
     <View className="flex-row justify-between">
-      <Text className="text-sm text-gray-500">{label}</Text>
-      <Text className="text-sm font-medium text-gray-800">{value}</Text>
+      <Text className="text-sm" style={{ color: colors.textMuted }}>{label}</Text>
+      <Text className="text-sm font-medium" style={{ color: colors.text }}>{value}</Text>
     </View>
   );
 }

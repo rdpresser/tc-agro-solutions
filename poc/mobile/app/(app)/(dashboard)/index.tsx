@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardStats, useLatestReadings, usePendingAlerts } from '@/hooks/queries/use-dashboard';
 import { useRealtimeStore } from '@/stores/realtime.store';
 import { useAuthStore } from '@/stores/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MetricCard } from '@/components/dashboard/MetricCard';
@@ -16,6 +17,7 @@ import { ConnectionBadge } from '@/components/dashboard/ConnectionBadge';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
+import { WelcomeSlides } from '@/components/onboarding/WelcomeSlides';
 import { formatRelativeTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 import type { SensorReading } from '@/types';
 
@@ -23,6 +25,13 @@ export default function DashboardScreen() {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const hasCompletedOnboarding = useOnboardingStore((s) => s.hasCompletedOnboarding);
+  const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
+  const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
+  const startWizard = useOnboardingStore((s) => s.startWizard);
+  const skipOnboarding = useOnboardingStore((s) => s.skipOnboarding);
+
+  const showSlides = isOnboardingHydrated && !hasCompletedOnboarding && !isWizardActive;
   const { data: stats, isLoading: statsLoading, isRefetching } = useDashboardStats();
   const { data: readings } = useLatestReadings(10);
   const { data: pendingAlerts } = usePendingAlerts();
@@ -60,6 +69,14 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+      <WelcomeSlides
+        visible={showSlides}
+        onComplete={async () => {
+          await startWizard();
+          router.push({ pathname: '/(app)/(properties)/[id]', params: { id: 'new' } });
+        }}
+        onSkip={skipOnboarding}
+      />
       <ScrollView
         className="flex-1"
         contentContainerClassName="pb-6"
@@ -158,7 +175,7 @@ export default function DashboardScreen() {
           {mergedReadings.length === 0 ? (
             <Card>
               <Text className="text-center py-4" style={{ color: colors.textMuted }}>
-                No readings available
+                No readings yet. Create sensor data or wait for the next ingestion cycle.
               </Text>
             </Card>
           ) : (

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePlots, useDeletePlot } from '@/hooks/queries/use-plots';
 import { useTheme } from '@/providers/theme-provider';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { SortControl } from '@/components/ui/SortControl';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -29,12 +30,16 @@ export default function PlotsListScreen() {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = usePlots({
     pageSize: 50,
     filter: search || undefined,
     status: statusFilter || undefined,
+    sortBy,
+    sortDirection,
   });
   const deleteMutation = useDeletePlot();
 
@@ -109,6 +114,18 @@ export default function PlotsListScreen() {
 
       <View className="px-4">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search plots..." />
+        <SortControl
+          options={[
+            { value: 'name', label: 'Name' },
+            { value: 'cropType', label: 'Crop Type' },
+            { value: 'areaHectares', label: 'Area' },
+            { value: 'plantingDate', label: 'Planting Date' },
+            { value: 'status', label: 'Status' },
+          ]}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+        />
         <ScrollableChips
           items={statuses}
           selected={statusFilter}
@@ -145,17 +162,20 @@ export default function PlotsListScreen() {
 }
 
 function ScrollableChips({ items, selected, onSelect }: { items: string[]; selected: string; onSelect: (v: string) => void }) {
+  const { colors } = useTheme();
   return (
     <View className="flex-row flex-wrap gap-2 mb-3">
       {items.map((item) => (
         <TouchableOpacity
           key={item || 'all'}
           onPress={() => onSelect(item)}
-          className={`px-3 py-1.5 rounded-full border ${
-            selected === item ? 'bg-primary border-primary' : 'bg-white border-gray-300'
-          }`}
+          className={`px-3 py-1.5 rounded-full ${selected !== item ? 'border' : ''}`}
+          style={selected === item
+            ? { backgroundColor: colors.primary }
+            : { backgroundColor: colors.chipBg, borderColor: colors.border }
+          }
         >
-          <Text className={selected === item ? 'text-white text-sm font-medium' : 'text-gray-600 text-sm'}>
+          <Text className="text-sm font-medium" style={{ color: selected === item ? '#ffffff' : colors.textSecondary }}>
             {item || 'All'}
           </Text>
         </TouchableOpacity>

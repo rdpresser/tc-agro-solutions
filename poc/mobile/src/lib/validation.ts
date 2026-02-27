@@ -45,6 +45,31 @@ export const plotSchema = z.object({
   humidityMax: z.number().optional(),
   soilMoistureMin: z.number().optional(),
   soilMoistureMax: z.number().optional(),
+}).superRefine((data, ctx) => {
+  const validateRange = (
+    min: number | undefined,
+    max: number | undefined,
+    minPath: 'temperatureMin' | 'humidityMin' | 'soilMoistureMin',
+    maxPath: 'temperatureMax' | 'humidityMax' | 'soilMoistureMax',
+    label: string
+  ) => {
+    if (min != null && max != null && min > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [minPath],
+        message: `${label} min cannot be greater than max`,
+      });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [maxPath],
+        message: `${label} max must be greater than min`,
+      });
+    }
+  };
+
+  validateRange(data.temperatureMin, data.temperatureMax, 'temperatureMin', 'temperatureMax', 'Temperature');
+  validateRange(data.humidityMin, data.humidityMax, 'humidityMin', 'humidityMax', 'Humidity');
+  validateRange(data.soilMoistureMin, data.soilMoistureMax, 'soilMoistureMin', 'soilMoistureMax', 'Soil moisture');
 });
 
 export const sensorSchema = z.object({

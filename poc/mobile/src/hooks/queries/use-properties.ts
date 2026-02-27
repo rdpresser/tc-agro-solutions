@@ -23,6 +23,7 @@ export function useCreateProperty() {
     mutationFn: (data: CreatePropertyRequest) => propertiesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -34,6 +35,7 @@ export function useUpdateProperty() {
       propertiesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -44,6 +46,7 @@ export function useDeleteProperty() {
     mutationFn: (id: string) => propertiesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

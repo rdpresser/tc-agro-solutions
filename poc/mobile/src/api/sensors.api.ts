@@ -31,9 +31,22 @@ export const sensorsApi = {
   },
 
   getReadings: async (sensorId: string, days = 7): Promise<SensorReading[]> => {
-    const response = await sensorApi.get(`/api/sensors/${sensorId}/readings`, {
-      params: { days },
+    try {
+      const response = await sensorApi.get(`/api/sensors/${sensorId}/readings`, {
+        params: { days },
+      });
+      const items = Array.isArray(response.data) ? response.data : response.data.items || response.data.data || [];
+      if (items.length > 0) return items;
+    } catch {
+      // fallback below
+    }
+
+    const latestResponse = await sensorApi.get('/api/readings/latest', {
+      params: { sensorId, pageNumber: 1, pageSize: 50 },
     });
-    return Array.isArray(response.data) ? response.data : response.data.items || [];
+    const latestItems = Array.isArray(latestResponse.data)
+      ? latestResponse.data
+      : latestResponse.data.items || latestResponse.data.data || [];
+    return latestItems.filter((r: SensorReading) => r.sensorId === sensorId);
   },
 };

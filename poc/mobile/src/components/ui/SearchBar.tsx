@@ -14,8 +14,8 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search...' }: Se
 
   return (
     <View
-      className="flex-row items-center rounded-lg border border-gray-300 px-3 mb-3"
-      style={{ backgroundColor: colors.surface }}
+      className="flex-row items-center rounded-lg px-3 mb-3"
+      style={{ backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border }}
     >
       <Ionicons name="search" size={20} color={colors.textMuted} />
       <TextInput

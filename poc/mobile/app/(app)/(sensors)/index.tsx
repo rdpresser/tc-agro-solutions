@@ -7,6 +7,8 @@ import { useSensors, useDeleteSensor } from '@/hooks/queries/use-sensors';
 import { useTheme } from '@/providers/theme-provider';
 import { SENSOR_STATUSES, getSensorIcon } from '@/constants/crop-types';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { SortControl } from '@/components/ui/SortControl';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +17,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/format';
 import type { Sensor } from '@/types';
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All' },
+  ...SENSOR_STATUSES.map((s) => ({ value: s.value, label: s.value })),
+];
 
 const statusVariant = (s: string) => {
   switch (s) {
@@ -27,13 +34,19 @@ const statusVariant = (s: string) => {
 };
 
 export default function SensorsListScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('installedAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = useSensors({
     pageSize: 50,
     filter: search || undefined,
+    status: statusFilter || undefined,
+    sortBy,
+    sortDirection,
   });
   const deleteMutation = useDeleteSensor();
 
@@ -80,9 +93,17 @@ export default function SensorsListScreen() {
           <Text className="text-xs" style={{ color: colors.textMuted }}>
             Installed: {formatDate(item.installedAt)}
           </Text>
-          <TouchableOpacity onPress={() => setDeleteTarget(item.id)} hitSlop={8}>
-            <Ionicons name="trash-outline" size={18} color="#dc3545" />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(app)/(sensors)/history', params: { id: item.id, label: item.label } })}
+              hitSlop={8}
+            >
+              <Ionicons name="analytics-outline" size={18} color="#2d5016" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setDeleteTarget(item.id)} hitSlop={8}>
+              <Ionicons name="trash-outline" size={18} color="#dc3545" />
+            </TouchableOpacity>
+          </View>
         </View>
       </Card>
     </TouchableOpacity>
@@ -98,7 +119,7 @@ export default function SensorsListScreen() {
             onPress={() => router.push('/(app)/(sensors)/monitoring')}
             size="sm"
             variant="outline"
-            icon={<Ionicons name="pulse" size={16} color="#2d5016" />}
+            icon={<Ionicons name="pulse" size={16} color={isDark ? colors.primaryLight : colors.primary} />}
           />
           <Button
             title="Add"
@@ -111,7 +132,20 @@ export default function SensorsListScreen() {
 
       <View className="px-4">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search sensors..." />
+        <SortControl
+          options={[
+            { value: 'installedAt', label: 'Installed' },
+            { value: 'label', label: 'Name' },
+            { value: 'type', label: 'Type' },
+            { value: 'status', label: 'Status' },
+          ]}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+        />
       </View>
+
+      <FilterChips options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
 
       {isLoading ? (
         <LoadingOverlay />

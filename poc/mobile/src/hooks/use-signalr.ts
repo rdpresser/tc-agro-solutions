@@ -1,14 +1,16 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { HubConnectionBuilder, HubConnection, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
 import { useAuthStore } from '@/stores/auth.store';
 import { useConnectionStore } from '@/stores/connection.store';
 import { useRealtimeStore } from '@/stores/realtime.store';
 import { API_CONFIG } from '@/constants/api-config';
+import { triggerAlertNotification } from '@/lib/notifications';
 import type { SensorReading, Alert, ConnectionState } from '@/types';
 
 export function useSignalR() {
   const token = useAuthStore((s) => s.token);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const setSensorHubState = useConnectionStore((s) => s.setSensorHubState);
   const setAlertHubState = useConnectionStore((s) => s.setAlertHubState);
   const updateReading = useRealtimeStore((s) => s.updateReading);
@@ -17,14 +19,6 @@ export function useSignalR() {
 
   const sensorHubRef = useRef<HubConnection | null>(null);
   const alertHubRef = useRef<HubConnection | null>(null);
-
-  const mapState = (state: HubConnectionState): ConnectionState => {
-    switch (state) {
-      case HubConnectionState.Connected: return 'connected';
-      case HubConnectionState.Reconnecting: return 'reconnecting';
-      default: return 'disconnected';
-    }
-  };
 
   const buildHub = useCallback((path: string, onStateChange: (s: ConnectionState) => void) => {
     const url = `${API_CONFIG.SENSOR_BASE_URL}${path}`;
@@ -43,8 +37,14 @@ export function useSignalR() {
     return connection;
   }, [token]);
 
+  const isStoppedDuringNegotiation = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error || '');
+    return message.toLowerCase().includes('stopped during negotiation');
+  };
+
   useEffect(() => {
     if (!isAuthenticated || !token || !API_CONFIG.SIGNALR_ENABLED) return;
+    let disposed = false;
 
     // Sensor hub
     const sensorHub = buildHub('/dashboard/sensorshub', setSensorHubState);
@@ -52,6 +52,14 @@ export function useSignalR() {
       updateReading(data);
     });
     sensorHub.on('sensorStatusChanged', () => {});
+    sensorHub.onreconnected(async () => {
+      setSensorHubState('connected');
+      try {
+        await sensorHub.invoke('JoinOwnerGroup', user?.id || undefined);
+      } catch {
+        // Keep connection alive; fallback polling may still serve data.
+      }
+    });
     sensorHubRef.current = sensorHub;
 
     // Alert hub
@@ -65,30 +73,69 @@ export function useSignalR() {
       .build();
 
     alertHub.onreconnecting(() => setAlertHubState('reconnecting'));
-    alertHub.onreconnected(() => setAlertHubState('connected'));
+    alertHub.onreconnected(async () => {
+      setAlertHubState('connected');
+      try {
+        await alertHub.invoke('JoinOwnerGroup', user?.id || undefined);
+      } catch {
+        // Keep connection alive; fallback polling may still serve data.
+      }
+    });
     alertHub.onclose(() => setAlertHubState('disconnected'));
 
-    alertHub.on('alertCreated', (data: Alert) => addAlert(data));
+    alertHub.on('alertCreated', (data: Alert) => {
+      addAlert(data);
+      triggerAlertNotification(data);
+    });
     alertHub.on('alertAcknowledged', (data: Alert) => updateAlert(data));
     alertHub.on('alertResolved', (data: Alert) => updateAlert(data));
     alertHubRef.current = alertHub;
 
-    // Start both
-    sensorHub.start()
-      .then(() => setSensorHubState('connected'))
-      .catch(() => setSensorHubState('disconnected'));
+    // Start both and join owner scope to receive real-time group broadcasts.
+    const startConnections = async () => {
+      try {
+        await sensorHub.start();
+        if (!disposed) {
+          setSensorHubState('connected');
+          try {
+            await sensorHub.invoke('JoinOwnerGroup', user?.id || undefined);
+          } catch {
+            // Keep connection alive; fallback polling may still serve data.
+          }
+        }
+      } catch (error) {
+        if (!disposed && !isStoppedDuringNegotiation(error)) {
+          setSensorHubState('disconnected');
+        }
+      }
 
-    alertHub.start()
-      .then(() => setAlertHubState('connected'))
-      .catch(() => setAlertHubState('disconnected'));
+      try {
+        await alertHub.start();
+        if (!disposed) {
+          setAlertHubState('connected');
+          try {
+            await alertHub.invoke('JoinOwnerGroup', user?.id || undefined);
+          } catch {
+            // Keep connection alive; fallback polling may still serve data.
+          }
+        }
+      } catch (error) {
+        if (!disposed && !isStoppedDuringNegotiation(error)) {
+          setAlertHubState('disconnected');
+        }
+      }
+    };
+
+    void startConnections();
 
     return () => {
-      sensorHub.stop();
-      alertHub.stop();
+      disposed = true;
+      void sensorHub.stop();
+      void alertHub.stop();
       setSensorHubState('disconnected');
       setAlertHubState('disconnected');
     };
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, user?.id]);
 
   return { sensorHub: sensorHubRef, alertHub: alertHubRef };
 }

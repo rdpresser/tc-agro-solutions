@@ -17,7 +17,6 @@ export const authApi = {
   },
 
   changePassword: async (data: ChangePasswordRequest): Promise<void> => {
-    // TODO: replace with real endpoint when available
     await identityApi.post('/auth/change-password', data);
   },
 };

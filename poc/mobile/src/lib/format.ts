@@ -39,16 +39,16 @@ export function formatArea(value: number): string {
 export function getTemperatureColor(value: number): string {
   if (value > 35) return '#dc3545';
   if (value > 32) return '#ffc107';
-  return '#1a1a1a';
+  return '#ff8a65';
 }
 
 export function getHumidityColor(value: number): string {
   if (value < 30) return '#ffc107';
-  return '#1a1a1a';
+  return '#4fc3f7';
 }
 
 export function getSoilMoistureColor(value: number): string {
   if (value < 25) return '#dc3545';
   if (value < 35) return '#ffc107';
-  return '#1a1a1a';
+  return '#66bb6a';
 }
