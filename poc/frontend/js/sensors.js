@@ -3,6 +3,7 @@
  */
 
 import {
+  changeSensorOperationalStatus,
   fetchFarmSwagger,
   getSensorsPaginated,
   getProperties,
@@ -36,6 +37,8 @@ let lastPageState = {
   hasPreviousPage: false,
   totalCount: 0
 };
+
+let statusChangeContext = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!initProtectedPage()) {
@@ -202,11 +205,123 @@ function renderSensorsTable(sensors) {
       <td>${installedAt}</td>
       <td class="actions">
         <a href="${getPageUrl('sensors-form.html')}?id=${encodeURIComponent(sensor.id)}" class="btn btn-sm btn-outline">👁️ View</a>
+        <button
+          type="button"
+          class="btn btn-sm btn-primary js-change-status"
+          data-sensor-id="${sensor.id}"
+          data-sensor-label="${escapeHtmlAttribute(sensor.label || '-')}"
+          data-current-status="${normalizeSensorStatus(sensor.status)}"
+        >
+          🔄 Change Status
+        </button>
       </td>
     </tr>
   `;
     })
     .join('');
+}
+
+function escapeHtmlAttribute(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function loadModalStatusOptions(selectedStatus = '') {
+  const select = $('#sensor-new-status');
+  if (!select) return;
+
+  select.innerHTML = [`<option value="">Select status</option>`]
+    .concat(
+      SENSOR_STATUSES.map(
+        (status) => `<option value="${status}">${getSensorStatusDisplay(status)}</option>`
+      )
+    )
+    .join('');
+
+  if (selectedStatus) {
+    select.value = normalizeSensorStatus(selectedStatus);
+  }
+}
+
+function openModal(modal) {
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function openStatusChangeModal(context) {
+  const modal = $('#sensor-status-modal');
+  const summary = $('#sensor-status-modal-summary');
+  const reasonField = $('#sensor-status-reason');
+
+  if (!modal || !summary || !reasonField) return;
+
+  statusChangeContext = context;
+
+  summary.innerHTML = `
+    <div><strong>Sensor:</strong> ${context.sensorLabel || '-'}</div>
+    <div style="margin-top: 8px"><strong>Current status:</strong> ${getSensorStatusDisplay(
+      context.currentStatus
+    )}</div>
+  `;
+
+  loadModalStatusOptions(context.currentStatus);
+  reasonField.value = '';
+
+  const submitBtn = $('#sensor-status-submit');
+  if (submitBtn) submitBtn.disabled = false;
+
+  openModal(modal);
+}
+
+function closeStatusChangeModal() {
+  statusChangeContext = null;
+  closeModal($('#sensor-status-modal'));
+}
+
+async function submitStatusChange(event) {
+  event.preventDefault();
+
+  if (!statusChangeContext?.sensorId) {
+    toast('Sensor not selected', 'error');
+    return;
+  }
+
+  const newStatus = normalizeSensorStatus($('#sensor-new-status')?.value || '');
+  const reason = ($('#sensor-status-reason')?.value || '').trim();
+  const submitBtn = $('#sensor-status-submit');
+
+  if (!newStatus) {
+    toast('Select a valid status', 'warning');
+    return;
+  }
+
+  try {
+    if (submitBtn) submitBtn.disabled = true;
+
+    await changeSensorOperationalStatus(statusChangeContext.sensorId, {
+      newStatus,
+      ...(reason ? { reason } : {})
+    });
+
+    closeStatusChangeModal();
+    toast('Sensor status updated successfully', 'success');
+    await loadSensors();
+  } catch (error) {
+    const { message } = normalizeError(error);
+    toast(message || 'Failed to update sensor status', 'error');
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
 function renderSummary(state) {
@@ -434,6 +549,48 @@ function setupEventListeners() {
       pageSelect.value = String(current + 1);
       await loadSensors();
     }
+  });
+
+  const tbody = $('#sensors-tbody');
+  tbody?.addEventListener('click', (event) => {
+    const button = event.target.closest('.js-change-status');
+    if (!button) return;
+
+    const sensorId = button.dataset.sensorId;
+    const sensorLabel = button.dataset.sensorLabel || '-';
+    const currentStatus = button.dataset.currentStatus || 'Inactive';
+
+    if (!sensorId) {
+      toast('Sensor ID not found', 'error');
+      return;
+    }
+
+    openStatusChangeModal({
+      sensorId,
+      sensorLabel,
+      currentStatus
+    });
+  });
+
+  const modal = $('#sensor-status-modal');
+  const modalCloseButton = $('#sensor-status-modal-close');
+  const modalCancelButton = $('#sensor-status-cancel');
+  const modalForm = $('#sensor-status-form');
+
+  modalCloseButton?.addEventListener('click', closeStatusChangeModal);
+  modalCancelButton?.addEventListener('click', closeStatusChangeModal);
+  modalForm?.addEventListener('submit', submitStatusChange);
+
+  modal?.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeStatusChangeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (!modal?.classList.contains('open')) return;
+    closeStatusChangeModal();
   });
 }
 

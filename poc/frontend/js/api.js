@@ -548,6 +548,14 @@ export async function createSensor(payload) {
   return data;
 }
 
+export async function changeSensorOperationalStatus(sensorId, payload) {
+  const { data } = await farmApi.put(
+    `/api/sensors/${encodeURIComponent(sensorId)}/status-change`,
+    payload
+  );
+  return data;
+}
+
 /**
  * Get sensors filtered by plot
  * @param {string|null} plotId - Plot ID to filter by (default: null = all)

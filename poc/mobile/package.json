@@ -31,7 +31,7 @@
     "axios": "^1.13.5",
     "babel-preset-expo": "^55.0.8",
     "dayjs": "^1.11.19",
-    "expo": "~55.0.3",
+    "expo": "~55.0.4",
     "expo-constants": "~55.0.7",
     "expo-font": "~55.0.4",
     "expo-linking": "~55.0.7",

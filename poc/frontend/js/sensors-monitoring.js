@@ -3,13 +3,15 @@
  */
 
 import {
+  changeSensorOperationalStatus,
   getSensorsPaginated,
   getReadingsLatest,
   getHistoricalDataPage,
   initSignalRConnection,
   stopSignalRConnection,
   joinOwnerGroup,
-  leaveOwnerGroup
+  leaveOwnerGroup,
+  normalizeError
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast, t } from './i18n.js';
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadStatusFilterOptions();
   loadTypeFilterOptions();
   hydrateInitialViewState();
+  setupSensorStatusModal();
   setupSensorHistoryModal();
   await loadSensors();
   setupRealTimeUpdates();
@@ -109,6 +112,9 @@ let syncIndicatorIntervalId = null;
 let sensorHistoryModalElements = null;
 let sensorHistoryCurrentSensor = null;
 let isSensorHistoryLoading = false;
+let sensorStatusModalElements = null;
+let sensorStatusTarget = null;
+let isSensorStatusUpdating = false;
 const sensorHistoryViewState = {
   days: 7,
   pageNumber: 1,
@@ -372,6 +378,14 @@ function mapSensorForMonitoring(sensor, latestReadingsMap) {
   const normalizedSensorId = String(sensorId || '').toLowerCase();
   const reading = latestReadingsMap.get(normalizedSensorId) || null;
   const timestamp = reading?.timestamp || reading?.time || reading?.Time || null;
+  const statusChangedAt =
+    sensor?.statusChangedAt ||
+    sensor?.StatusChangedAt ||
+    sensor?.lastStatusChangedAt ||
+    sensor?.LastStatusChangedAt ||
+    sensor?.updatedAt ||
+    sensor?.UpdatedAt ||
+    null;
 
   return {
     id: sensorId,
@@ -381,6 +395,7 @@ function mapSensorForMonitoring(sensor, latestReadingsMap) {
     plotName: sensor?.plotName || reading?.plotName || '-',
     propertyName: sensor?.propertyName || reading?.propertyName || '-',
     status: sensor?.status || deriveSensorStatusFromTimestamp(timestamp),
+    statusChangedAt,
     battery: reading?.batteryLevel ?? reading?.battery ?? null,
     lastReading: timestamp,
     temperature: reading?.temperature ?? null,
@@ -622,17 +637,10 @@ async function setupRealTimeUpdates() {
       if (card) {
         const oldStatus = normalizeSensorStatus(card.dataset.status);
         const newStatus = normalizeSensorStatus(data.status);
+        const statusChangedAt =
+          data.changedAt || data.ChangedAt || data.occurredAt || data.OccurredAt || null;
 
-        const badgeClass = getSensorStatusBadgeClass(newStatus);
-        card.className = 'card sensor-card';
-        card.style.cssText = getSensorCardStyle(newStatus);
-        card.dataset.status = newStatus;
-
-        const statusEl = card.querySelector('.badge');
-        if (statusEl) {
-          statusEl.className = `badge ${badgeClass}`;
-          statusEl.textContent = getSensorStatusDisplay(newStatus);
-        }
+        applySensorStatusToCard(card, newStatus, statusChangedAt);
 
         if (oldStatus !== newStatus) {
           void loadSensors();
@@ -921,9 +929,13 @@ function createSensorCardHtml(sensor, status = 'Active') {
   const normalizedStatus = normalizeSensorStatus(status);
   const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
   const cardStyle = getSensorCardStyle(normalizedStatus);
+  const statusChangedAt = sensor.statusChangedAt || null;
+  const statusChangedText = statusChangedAt
+    ? `Status changed ${formatRelativeTime(statusChangedAt)}`
+    : 'Status changed: not informed';
 
   return `
-    <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" style="${cardStyle}">
+    <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" data-status-changed-at="${statusChangedAt || ''}" style="${cardStyle}">
       <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
         <span class="badge ${badgeClass}">${getSensorStatusDisplay(normalizedStatus)}</span>
         <span class="text-muted last-update" style="font-size: 0.85em" title="${sensor.lastReading}">
@@ -934,6 +946,9 @@ function createSensorCardHtml(sensor, status = 'Active') {
       <h3 class="sensor-id" style="margin: 0 0 4px 0">📡 ${getSensorDisplayName(sensor)}</h3>
       <p class="text-muted sensor-location" style="margin: 0 0 16px 0; font-size: 0.9em">
         ${formatSensorLocation(sensor)}
+      </p>
+      <p class="text-muted sensor-status-changed" style="margin: -8px 0 16px 0; font-size: 0.85em" title="${statusChangedAt || ''}">
+        ${statusChangedText}
       </p>
 
       <div class="sensor-readings">
@@ -959,17 +974,29 @@ function createSensorCardHtml(sensor, status = 'Active') {
 
       <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
         <span class="text-muted" style="font-size: 0.9em">🔋 ${formatPercentage(sensor.battery)}</span>
-        <button
-          class="btn btn-outline btn-sm"
-          type="button"
-          data-action="view-history"
-          data-sensor-id="${sensor.id || ''}"
-          data-sensor-name="${getSensorDisplayName(sensor)}"
-          data-plot-name="${sensor.plotName || '-'}"
-          data-property-name="${sensor.propertyName || '-'}"
-        >
-          📊 View History
-        </button>
+        <div class="d-flex align-center" style="gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end;">
+          <button
+            class="btn btn-primary btn-sm"
+            type="button"
+            data-action="change-status"
+            data-sensor-id="${sensor.id || ''}"
+            data-sensor-name="${getSensorDisplayName(sensor)}"
+            data-current-status="${normalizedStatus}"
+          >
+            🔄 Change Status
+          </button>
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-action="view-history"
+            data-sensor-id="${sensor.id || ''}"
+            data-sensor-name="${getSensorDisplayName(sensor)}"
+            data-plot-name="${sensor.plotName || '-'}"
+            data-property-name="${sensor.propertyName || '-'}"
+          >
+            📊 View History
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -1036,6 +1063,36 @@ function updateSensorCard(sensorId, reading) {
     const timestamp = reading.timestamp || new Date().toISOString();
     timeEl.textContent = formatRelativeTime(timestamp);
     timeEl.title = timestamp;
+  }
+}
+
+function applySensorStatusToCard(card, status, statusChangedAt = null) {
+  if (!card) return;
+
+  const normalizedStatus = normalizeSensorStatus(status);
+  const changedAt = statusChangedAt || card.dataset.statusChangedAt || null;
+  card.className = 'card sensor-card';
+  card.style.cssText = getSensorCardStyle(normalizedStatus);
+  card.dataset.status = normalizedStatus;
+  card.dataset.statusChangedAt = changedAt || '';
+
+  const statusEl = card.querySelector('.badge');
+  if (statusEl) {
+    statusEl.className = `badge ${getSensorStatusBadgeClass(normalizedStatus)}`;
+    statusEl.textContent = getSensorStatusDisplay(normalizedStatus);
+  }
+
+  const changeButton = card.querySelector('[data-action="change-status"]');
+  if (changeButton) {
+    changeButton.setAttribute('data-current-status', normalizedStatus);
+  }
+
+  const statusChangedEl = card.querySelector('.sensor-status-changed');
+  if (statusChangedEl) {
+    statusChangedEl.textContent = changedAt
+      ? `Status changed ${formatRelativeTime(changedAt)}`
+      : 'Status changed: not informed';
+    statusChangedEl.title = changedAt || '';
   }
 }
 
@@ -1140,6 +1197,29 @@ function setupEventListeners() {
 
   const grid = $('#sensors-grid');
   grid?.addEventListener('click', (event) => {
+    const changeStatusButton = event.target.closest('[data-action="change-status"]');
+    if (changeStatusButton) {
+      event.preventDefault();
+
+      const sensorId = String(changeStatusButton.getAttribute('data-sensor-id') || '').trim();
+      if (!sensorId) {
+        toast('Sensor ID not available for status change.', 'warning');
+        return;
+      }
+
+      const sensorName = String(changeStatusButton.getAttribute('data-sensor-name') || '').trim();
+      const currentStatus = normalizeSensorStatus(
+        changeStatusButton.getAttribute('data-current-status') || 'Inactive'
+      );
+
+      openSensorStatusDialog({
+        sensorId,
+        sensorName,
+        currentStatus
+      });
+      return;
+    }
+
     const historyButton = event.target.closest('[data-action="view-history"]');
     if (!historyButton) {
       return;
@@ -1164,6 +1244,147 @@ function setupEventListeners() {
       propertyName
     });
   });
+}
+
+function setupSensorStatusModal() {
+  sensorStatusModalElements = {
+    modal: $('#sensor-status-modal'),
+    closeButton: $('#sensor-status-modal-close'),
+    cancelButton: $('#sensor-status-cancel'),
+    form: $('#sensor-status-form'),
+    summary: $('#sensor-status-summary'),
+    statusSelect: $('#sensor-status-new-status'),
+    reasonField: $('#sensor-status-reason'),
+    submitButton: $('#sensor-status-submit')
+  };
+
+  const {
+    modal,
+    closeButton,
+    cancelButton,
+    form,
+    summary,
+    statusSelect,
+    reasonField,
+    submitButton
+  } = sensorStatusModalElements;
+
+  if (!modal || !form || !summary || !statusSelect || !reasonField || !submitButton) {
+    return;
+  }
+
+  statusSelect.innerHTML = [`<option value="">Select status</option>`]
+    .concat(
+      SENSOR_STATUSES.map(
+        (status) => `<option value="${status}">${getSensorStatusDisplay(status)}</option>`
+      )
+    )
+    .join('');
+
+  const closeModal = () => {
+    if (isSensorStatusUpdating) {
+      return;
+    }
+
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    sensorStatusTarget = null;
+    form.reset();
+  };
+
+  closeButton?.addEventListener('click', closeModal);
+  cancelButton?.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) {
+      closeModal();
+    }
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (!sensorStatusTarget?.sensorId) {
+      toast('Sensor not selected for status change.', 'warning');
+      return;
+    }
+
+    const newStatus = normalizeSensorStatus(statusSelect.value || '');
+    if (!newStatus) {
+      toast('Select a valid status.', 'warning');
+      return;
+    }
+
+    const reason = String(reasonField.value || '').trim();
+
+    try {
+      isSensorStatusUpdating = true;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Saving...';
+
+      await changeSensorOperationalStatus(sensorStatusTarget.sensorId, {
+        newStatus,
+        ...(reason ? { reason } : {})
+      });
+
+      if (sensorStatusTarget.cardElement) {
+        applySensorStatusToCard(
+          sensorStatusTarget.cardElement,
+          newStatus,
+          new Date().toISOString()
+        );
+      }
+
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      sensorStatusTarget = null;
+      form.reset();
+
+      toast('Sensor status updated successfully.', 'success');
+      await loadSensors({ forceSummaryRefresh: true });
+    } catch (error) {
+      const { message } = normalizeError(error);
+      toast(message || 'Failed to update sensor status.', 'error');
+    } finally {
+      isSensorStatusUpdating = false;
+      submitButton.disabled = false;
+      submitButton.textContent = 'Save';
+    }
+  });
+}
+
+function openSensorStatusDialog({ sensorId, sensorName, currentStatus }) {
+  const modal = sensorStatusModalElements?.modal;
+  const summary = sensorStatusModalElements?.summary;
+  const statusSelect = sensorStatusModalElements?.statusSelect;
+  const reasonField = sensorStatusModalElements?.reasonField;
+
+  if (!modal || !summary || !statusSelect || !reasonField) {
+    return;
+  }
+
+  const cardElement = $(`[data-sensor-id="${sensorId}"]`);
+  const normalizedCurrentStatus = normalizeSensorStatus(currentStatus || 'Inactive');
+
+  sensorStatusTarget = {
+    sensorId,
+    sensorName,
+    currentStatus: normalizedCurrentStatus,
+    cardElement
+  };
+
+  summary.textContent = `Sensor: ${sensorName || sensorId} • Current: ${getSensorStatusDisplay(normalizedCurrentStatus)}`;
+  statusSelect.value = normalizedCurrentStatus;
+  reasonField.value = '';
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
 }
 
 function setupSensorHistoryModal() {

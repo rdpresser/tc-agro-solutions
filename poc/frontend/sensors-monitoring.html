@@ -454,6 +454,51 @@
       </main>
     </div>
 
+    <div id="sensor-status-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 640px">
+        <div class="modal-header">
+          <h3>🔄 Change Sensor Status</h3>
+          <button
+            id="sensor-status-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close sensor status dialog"
+          >
+            ×
+          </button>
+        </div>
+
+        <form id="sensor-status-form">
+          <div class="modal-body">
+            <p id="sensor-status-summary" class="text-muted" style="margin-top: 0"></p>
+
+            <div class="form-group">
+              <label for="sensor-status-new-status" class="form-label">New status</label>
+              <select id="sensor-status-new-status" class="form-control form-select" required>
+                <option value="">Select status</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0">
+              <label for="sensor-status-reason" class="form-label">Reason (optional)</label>
+              <textarea
+                id="sensor-status-reason"
+                class="form-control"
+                rows="4"
+                maxlength="500"
+                placeholder="Describe why this status change is needed"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="sensor-status-cancel" type="button" class="btn btn-outline">Cancel</button>
+            <button id="sensor-status-submit" type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div id="sensor-history-modal" class="modal" aria-hidden="true">
       <div class="modal-content" style="max-width: 840px">
         <div class="modal-header">
