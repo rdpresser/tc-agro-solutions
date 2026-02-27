@@ -569,6 +569,101 @@ export function renderTable(containerId, columns, data, rowRenderer) {
   container.innerHTML = data.map(rowRenderer).join('');
 }
 
+const PAGINATED_ITEMS_KEYS = ['items', 'data', 'results', 'users', 'value'];
+
+function parsePositiveNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseNonNegativeNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function getPaginatedItems(payload, fallbackItems = []) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return Array.isArray(fallbackItems) ? fallbackItems : [];
+  }
+
+  for (const key of PAGINATED_ITEMS_KEYS) {
+    const items = payload[key];
+    if (Array.isArray(items)) {
+      return items;
+    }
+  }
+
+  return Array.isArray(fallbackItems) ? fallbackItems : [];
+}
+
+export function getPaginatedTotalCount(payload, fallbackCount = 0) {
+  if (Array.isArray(payload)) {
+    return payload.length;
+  }
+
+  if (payload && typeof payload === 'object') {
+    const knownTotalKeys = [
+      'totalCount',
+      'TotalCount',
+      'total',
+      'Total',
+      'count',
+      'Count',
+      'totalRecords',
+      'TotalRecords',
+      'recordsCount',
+      'RecordsCount'
+    ];
+
+    for (const key of knownTotalKeys) {
+      const parsed = parseNonNegativeNumber(payload[key]);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+
+    const items = getPaginatedItems(payload, []);
+    if (Array.isArray(items)) {
+      return items.length;
+    }
+  }
+
+  const parsedFallback = parseNonNegativeNumber(fallbackCount);
+  return parsedFallback ?? 0;
+}
+
+export function getPaginatedPageSize(payload, fallbackPageSize = 10) {
+  if (payload && typeof payload === 'object') {
+    const knownPageSizeKeys = ['pageSize', 'PageSize', 'size', 'Size', 'perPage', 'PerPage'];
+    for (const key of knownPageSizeKeys) {
+      const parsed = parsePositiveNumber(payload[key]);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+  }
+
+  return parsePositiveNumber(fallbackPageSize) ?? 1;
+}
+
+export function getPaginatedPageNumber(payload, fallbackPageNumber = 1) {
+  if (payload && typeof payload === 'object') {
+    const knownPageNumberKeys = ['pageNumber', 'PageNumber', 'page', 'Page', 'currentPage'];
+    for (const key of knownPageNumberKeys) {
+      const parsed = parsePositiveNumber(payload[key]);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+  }
+
+  return parsePositiveNumber(fallbackPageNumber) ?? 1;
+}
+
 // ============================================
 // URL HELPERS
 // ============================================

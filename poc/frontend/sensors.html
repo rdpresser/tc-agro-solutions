@@ -73,7 +73,7 @@
           </div>
           <div class="topbar-right">
             <div class="user-menu">
-              <div class="user-avatar">👤</div>
+              <div class="user-avatar">🌾</div>
               <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
@@ -145,17 +145,6 @@
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label">Page Size</label>
-                  <select id="sensors-page-size" class="form-control form-select">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="30">30</option>
-                    <option value="40">40</option>
-                    <option value="50">50</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0">
                   <label class="form-label">Sort By</label>
                   <select id="sensors-sort-by" class="form-control form-select">
                     <option value="installedAt">Installed At</option>
@@ -179,6 +168,14 @@
             </form>
           </div>
 
+          <div class="d-flex gap-2" style="margin-bottom: 16px; flex-wrap: wrap">
+            <span id="sensors-summary-active" class="badge badge-success">0 ● Active</span>
+            <span id="sensors-summary-inactive" class="badge badge-danger">0 ● Inactive</span>
+            <span id="sensors-summary-maintenance" class="badge badge-warning"
+              >0 ● Maintenance</span
+            >
+          </div>
+
           <div class="table-container">
             <table class="table">
               <thead>
@@ -200,19 +197,28 @@
             </table>
           </div>
 
-          <div class="card" style="margin-top: 24px">
+          <div class="card pagination-sticky-card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
-              <span id="sensors-summary-text" class="text-muted">Showing 0 sensor(s)</span>
-              <div class="d-flex gap-2" style="flex-wrap: wrap">
-                <span id="sensors-summary-active" class="badge badge-success">0 Active</span>
-                <span id="sensors-summary-inactive" class="badge badge-danger">0 Inactive</span>
-                <span id="sensors-summary-maintenance" class="badge badge-warning"
-                  >0 Maintenance</span
-                >
-              </div>
               <div class="d-flex align-center" style="gap: 8px">
-                <button type="button" id="sensors-prev" class="btn btn-outline btn-sm">◀ Prev</button>
-                <button type="button" id="sensors-next" class="btn btn-outline btn-sm">Next ▶</button>
+                <button type="button" id="sensors-prev" class="btn btn-outline btn-sm">← Previous</button>
+                <button type="button" id="sensors-next" class="btn btn-outline btn-sm">Next →</button>
+              </div>
+
+              <span id="sensors-summary-text" class="text-muted">Showing 0-0 of 0 (Page 1/1)</span>
+
+              <div class="d-flex align-center" style="gap: 8px">
+                <label for="sensors-page-size" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
+                <select id="sensors-page-size" class="form-control form-select" style="width: 140px">
+                  <option value="5">5 / page</option>
+                  <option value="10" selected>10 / page</option>
+                  <option value="20">20 / page</option>
+                  <option value="30">30 / page</option>
+                  <option value="40">40 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
               </div>
             </div>
           </div>

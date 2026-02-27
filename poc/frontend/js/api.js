@@ -7,7 +7,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
 
 import { toast } from './i18n.js';
-import { APP_CONFIG, getToken, clearToken, navigateTo } from './utils.js';
+import { APP_CONFIG, getToken, clearToken, navigateTo, getPaginatedTotalCount } from './utils.js';
 
 // ============================================
 // AXIOS INSTANCE WITH INTERCEPTORS
@@ -30,10 +30,7 @@ export const sensorApi = createApiClient(APP_CONFIG.sensorApiBaseUrl);
 export const analyticsApi = createApiClient(APP_CONFIG.analyticsApiBaseUrl);
 
 const SENSOR_METADATA_TTL_MS = 5 * 60 * 1000;
-let sensorMetadataCache = {
-  expiresAt: 0,
-  map: new Map()
-};
+const sensorMetadataCacheByOwner = new Map();
 
 export async function fetchFarmSwagger() {
   const { data } = await farmApi.get('/swagger/v1/swagger.json');
@@ -121,14 +118,17 @@ attachInterceptors(analyticsApi);
  * Get dashboard statistics
  * @returns {Promise<Object>} Dashboard stats from real APIs
  */
-export async function getDashboardStats() {
+export async function getDashboardStats(ownerId = null) {
+  const ownerParams = ownerId ? { ownerId } : {};
+
   const [propertiesResponse, plotsResponse, sensorsResponse] = await Promise.all([
     farmApi.get('/api/properties', {
       params: {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'name',
-        sortDirection: 'asc'
+        sortDirection: 'asc',
+        ...ownerParams
       }
     }),
     farmApi.get('/api/plots', {
@@ -136,7 +136,8 @@ export async function getDashboardStats() {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'name',
-        sortDirection: 'asc'
+        sortDirection: 'asc',
+        ...ownerParams
       }
     }),
     farmApi.get('/api/sensors', {
@@ -144,14 +145,15 @@ export async function getDashboardStats() {
         pageNumber: 1,
         pageSize: 1,
         sortBy: 'installedAt',
-        sortDirection: 'desc'
+        sortDirection: 'desc',
+        ...ownerParams
       }
     })
   ]);
 
-  const propertiesTotal = getPaginatedTotal(propertiesResponse?.data);
-  const plotsTotal = getPaginatedTotal(plotsResponse?.data);
-  const sensorsTotal = getPaginatedTotal(sensorsResponse?.data);
+  const propertiesTotal = getPaginatedTotalCount(propertiesResponse?.data);
+  const plotsTotal = getPaginatedTotalCount(plotsResponse?.data);
+  const sensorsTotal = getPaginatedTotalCount(sensorsResponse?.data);
 
   return {
     properties: propertiesTotal,
@@ -166,11 +168,15 @@ export async function getDashboardStats() {
  * @param {number} pageSize - Max readings to return (default: 5)
  * @returns {Promise<Array>} Latest readings from Sensor Ingest API
  */
-export async function getLatestReadings(pageSize = 5) {
+export async function getLatestReadings(pageSize = 5, ownerId = null) {
   const { data } = await sensorApi.get('/api/dashboard/latest', {
-    params: { pageNumber: 1, pageSize }
+    params: {
+      pageNumber: 1,
+      pageSize,
+      ...(ownerId ? { ownerId } : {})
+    }
   });
-  return normalizeReadings(extractReadingsArray(data));
+  return normalizeReadings(extractReadingsArray(data), ownerId);
 }
 
 /**
@@ -186,14 +192,16 @@ export async function getReadingsLatest({
   sensorId = null,
   plotId = null,
   pageNumber = 1,
-  pageSize = 20
+  pageSize = 20,
+  ownerId = null
 } = {}) {
   const params = { pageNumber, pageSize };
   if (sensorId) params.sensorId = sensorId;
   if (plotId) params.plotId = plotId;
+  if (ownerId) params.ownerId = ownerId;
 
   const { data } = await sensorApi.get('/api/readings/latest', { params });
-  return normalizeReadings(extractReadingsArray(data));
+  return normalizeReadings(extractReadingsArray(data), ownerId);
 }
 
 /**
@@ -202,16 +210,21 @@ export async function getReadingsLatest({
  * @param {number} days - Days of data to retrieve (default: 7)
  * @returns {Promise<Array>} Historical readings from Sensor Ingest API
  */
-export async function getHistoricalData(sensorId, days = 7, pageSize = 200) {
+export async function getHistoricalData(sensorId, days = 7, pageSize = 200, ownerId = null) {
   if (!sensorId) {
     return [];
   }
 
   const { data } = await sensorApi.get(`/api/sensors/${encodeURIComponent(sensorId)}/readings`, {
-    params: { days, pageNumber: 1, pageSize }
+    params: {
+      days,
+      pageNumber: 1,
+      pageSize,
+      ...(ownerId ? { ownerId } : {})
+    }
   });
 
-  const history = (await normalizeReadings(extractReadingsArray(data))).sort(
+  const history = (await normalizeReadings(extractReadingsArray(data), ownerId)).sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
@@ -232,10 +245,18 @@ export async function getProperties({
   pageSize = 10,
   sortBy = 'name',
   sortDirection = 'asc',
-  filter = ''
+  filter = '',
+  ownerId = ''
 } = {}) {
   const { data } = await farmApi.get('/api/properties', {
-    params: { pageNumber, pageSize, sortBy, sortDirection, filter }
+    params: {
+      pageNumber,
+      pageSize,
+      sortBy,
+      sortDirection,
+      filter,
+      ...(ownerId ? { ownerId } : {})
+    }
   });
   return data;
 }
@@ -329,8 +350,8 @@ export async function getOwnersPaginated(
  * @param {string|null} propertyId - Property ID to filter by (default: null = all)
  * @returns {Promise<Array>} List of plots (returns items from paginated response)
  */
-export async function getPlots(propertyId = null) {
-  const response = await getPlotsPaginated({ propertyId, pageSize: 1000 }); // Large page size to get all
+export async function getPlots(propertyId = null, ownerId = null) {
+  const response = await getPlotsPaginated({ propertyId, ownerId, pageSize: 1000 }); // Large page size to get all
   return response?.items || response?.data || response?.results || [];
 }
 
@@ -346,6 +367,7 @@ export async function getPlotsPaginated({
   sortDirection = 'asc',
   filter = '',
   propertyId = '',
+  ownerId = '',
   cropType = '',
   status = ''
 } = {}) {
@@ -358,7 +380,8 @@ export async function getPlotsPaginated({
     sortDirection,
     filter,
     cropType,
-    propertyId
+    propertyId,
+    ownerId
   };
 
   Object.keys(params).forEach((key) => {
@@ -423,6 +446,7 @@ export async function getSensorsPaginated({
   sortBy = 'installedAt',
   sortDirection = 'desc',
   filter = '',
+  ownerId = '',
   propertyId = '',
   plotId = '',
   type = '',
@@ -434,6 +458,7 @@ export async function getSensorsPaginated({
     sortBy,
     sortDirection,
     filter,
+    ownerId,
     propertyId,
     plotId,
     type,
@@ -488,14 +513,14 @@ function extractReadingsArray(payload) {
   return Array.isArray(readings) ? readings : [];
 }
 
-async function normalizeReadings(readings) {
+async function normalizeReadings(readings, ownerId = null) {
   if (!Array.isArray(readings) || readings.length === 0) {
     return [];
   }
 
   let metadataMap = new Map();
   try {
-    metadataMap = await getSensorMetadataMap();
+    metadataMap = await getSensorMetadataMap(ownerId);
   } catch (error) {
     console.warn(
       '[Readings] Could not load sensor metadata from Farm API. Continuing without enrichment.',
@@ -539,10 +564,13 @@ function normalizeSensorReading(reading, metadata = null) {
   };
 }
 
-async function getSensorMetadataMap() {
+async function getSensorMetadataMap(ownerId = null) {
   const now = Date.now();
-  if (sensorMetadataCache.expiresAt > now && sensorMetadataCache.map.size > 0) {
-    return sensorMetadataCache.map;
+  const ownerKey = ownerId || '__all__';
+  const cached = sensorMetadataCacheByOwner.get(ownerKey);
+
+  if (cached && cached.expiresAt > now && cached.map.size > 0) {
+    return cached.map;
   }
 
   const metadataMap = new Map();
@@ -559,7 +587,8 @@ async function getSensorMetadataMap() {
           pageNumber,
           pageSize,
           sortBy: 'installedAt',
-          sortDirection: 'desc'
+          sortDirection: 'desc',
+          ...(ownerId ? { ownerId } : {})
         }
       });
       data = response?.data;
@@ -596,10 +625,10 @@ async function getSensorMetadataMap() {
     safetyCounter += 1;
   }
 
-  sensorMetadataCache = {
+  sensorMetadataCacheByOwner.set(ownerKey, {
     expiresAt: now + SENSOR_METADATA_TTL_MS,
     map: metadataMap
-  };
+  });
 
   return metadataMap;
 }
@@ -623,39 +652,157 @@ function deriveSensorStatusFromReading(timestamp) {
  * @param {string|null} status - Alert status filter (default: null = all)
  * @returns {Promise<Array>} List of alerts from API (empty when endpoint is unavailable)
  */
-export async function getAlerts(status = null) {
-  try {
-    if (status && status.toLowerCase() !== 'pending') {
-      console.warn(
-        '[Alerts] Dashboard supports pending alerts feed only. Requested status ignored.',
-        {
-          requestedStatus: status,
-          routeUsed: '/api/alerts/pending'
-        }
-      );
-    }
+export async function getAlerts(status = null, ownerId = null) {
+  const page = await getPendingAlertsPage({ ownerId, pageNumber: 1, pageSize: 20, status });
+  return page.items;
+}
 
+export async function getPendingAlertsPage({
+  ownerId = null,
+  pageNumber = 1,
+  pageSize = 20,
+  status = null,
+  severity = null,
+  search = null
+} = {}) {
+  const normalizedStatus = normalizeAlertsStatusQueryParam(status);
+
+  try {
     const { data } = await analyticsApi.get('/api/alerts/pending', {
-      params: { pageNumber: 1, pageSize: 20 }
+      params: {
+        pageNumber,
+        pageSize,
+        ...(normalizedStatus ? { status: normalizedStatus } : {}),
+        ...(severity ? { severity } : {}),
+        ...(search ? { search } : {}),
+        ...(ownerId ? { ownerId } : {})
+      }
     });
 
-    const items = Array.isArray(data) ? data : data?.items || data?.data || data?.results || [];
+    const rawItems = Array.isArray(data) ? data : data?.items || data?.data || data?.results || [];
+    const items = rawItems.map(normalizePendingAlertItem);
 
-    return items.map((alert) => ({
-      ...alert,
-      severity: normalizeAlertSeverity(alert?.severity),
-      createdAt: alert?.createdAt || alert?.CreatedAt,
-      plotName: alert?.plotName || alert?.PlotName || '-',
-      sensorId: alert?.sensorId || alert?.SensorId || '-'
-    }));
+    return {
+      items,
+      totalCount: getPaginatedTotalCount(data),
+      pageNumber: data?.pageNumber || data?.PageNumber || pageNumber,
+      pageSize: data?.pageSize || data?.PageSize || pageSize
+    };
   } catch (error) {
     const statusCode = error?.response?.status;
     if (statusCode === 404 || statusCode === 501) {
-      return [];
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber,
+        pageSize
+      };
     }
 
     throw error;
   }
+}
+
+function normalizeAlertsStatusQueryParam(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === 'pending') {
+    return 'Pending';
+  }
+
+  if (normalized === 'acknowledged') {
+    return 'Acknowledged';
+  }
+
+  if (normalized === 'resolved') {
+    return 'Resolved';
+  }
+
+  if (normalized === 'all') {
+    return 'all';
+  }
+
+  return status;
+}
+
+export async function getPendingAlertsSummary({ ownerId = null, windowHours = 24 } = {}) {
+  try {
+    const { data } = await analyticsApi.get('/api/alerts/pending/summary', {
+      params: {
+        windowHours,
+        ...(ownerId ? { ownerId } : {})
+      }
+    });
+
+    return {
+      pendingAlertsTotal: Number(data?.pendingAlertsTotal || data?.PendingAlertsTotal || 0),
+      affectedPlotsCount: Number(data?.affectedPlotsCount || data?.AffectedPlotsCount || 0),
+      affectedSensorsCount: Number(data?.affectedSensorsCount || data?.AffectedSensorsCount || 0),
+      criticalPendingCount: Number(data?.criticalPendingCount || data?.CriticalPendingCount || 0),
+      highPendingCount: Number(data?.highPendingCount || data?.HighPendingCount || 0),
+      mediumPendingCount: Number(data?.mediumPendingCount || data?.MediumPendingCount || 0),
+      lowPendingCount: Number(data?.lowPendingCount || data?.LowPendingCount || 0),
+      newPendingInWindowCount: Number(
+        data?.newPendingInWindowCount || data?.NewPendingInWindowCount || 0
+      ),
+      windowHours: Number(data?.windowHours || data?.WindowHours || windowHours)
+    };
+  } catch (error) {
+    const statusCode = error?.response?.status;
+    if (statusCode === 404 || statusCode === 501) {
+      return {
+        pendingAlertsTotal: 0,
+        affectedPlotsCount: 0,
+        affectedSensorsCount: 0,
+        criticalPendingCount: 0,
+        highPendingCount: 0,
+        mediumPendingCount: 0,
+        lowPendingCount: 0,
+        newPendingInWindowCount: 0,
+        windowHours
+      };
+    }
+
+    throw error;
+  }
+}
+
+function normalizePendingAlertItem(alert) {
+  const readOptionalField = (...keys) => {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(alert || {}, key)) {
+        return alert[key];
+      }
+    }
+
+    return undefined;
+  };
+
+  return {
+    ...alert,
+    id: alert?.id || alert?.Id,
+    alertType: alert?.alertType || alert?.AlertType,
+    message: alert?.message || alert?.Message,
+    status: alert?.status || alert?.Status,
+    severity: normalizeAlertSeverity(alert?.severity || alert?.Severity),
+    createdAt: readOptionalField('createdAt', 'CreatedAt'),
+    acknowledgedAt: readOptionalField('acknowledgedAt', 'AcknowledgedAt'),
+    acknowledgedBy: readOptionalField('acknowledgedBy', 'AcknowledgedBy'),
+    resolvedAt: readOptionalField('resolvedAt', 'ResolvedAt'),
+    resolvedBy: readOptionalField('resolvedBy', 'ResolvedBy'),
+    resolutionNotes: readOptionalField('resolutionNotes', 'ResolutionNotes'),
+    value: readOptionalField('value', 'Value'),
+    threshold: readOptionalField('threshold', 'Threshold'),
+    plotName: readOptionalField('plotName', 'PlotName'),
+    propertyName: readOptionalField('propertyName', 'PropertyName'),
+    sensorId: alert?.sensorId || alert?.SensorId || undefined
+  };
 }
 
 function normalizeAlertSeverity(severity) {
@@ -668,36 +815,28 @@ function normalizeAlertSeverity(severity) {
   return value;
 }
 
-function getPaginatedTotal(responseData) {
-  if (!responseData || typeof responseData !== 'object') {
-    return 0;
-  }
-
-  if (typeof responseData.totalCount === 'number') {
-    return responseData.totalCount;
-  }
-
-  if (typeof responseData.TotalCount === 'number') {
-    return responseData.TotalCount;
-  }
-
-  const items = responseData.items || responseData.data || responseData.results || [];
-  return Array.isArray(items) ? items.length : 0;
-}
-
 /**
  * Resolve/close alert
- * @param {string} _alertId - Alert ID to resolve
- * @returns {Promise<boolean>} Success status (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @param {string} alertId - Alert ID to resolve
+ * @param {string|null} resolutionNotes - Optional resolution notes
+ * @returns {Promise<Object>} Resolve response payload
  */
-export function resolveAlert(_alertId) {
-  return true;
+export async function resolveAlert(alertId, resolutionNotes = null) {
+  const normalizedAlertId = String(alertId || '').trim();
+  if (!normalizedAlertId) {
+    throw new Error('Alert ID is required to resolve an alert.');
+  }
 
-  /* REAL API
-  await api.post(`/alerts/${alertId}/resolve`);
-  return true;
-  */
+  const normalizedNotes = typeof resolutionNotes === 'string' ? resolutionNotes.trim() : '';
+
+  const payload = normalizedNotes.length > 0 ? { resolutionNotes: normalizedNotes } : {};
+
+  const { data } = await analyticsApi.put(
+    `/api/alerts/${encodeURIComponent(normalizedAlertId)}/resolve`,
+    payload
+  );
+
+  return data;
 }
 
 // ============================================
@@ -711,6 +850,11 @@ export async function fetchIdentitySwagger() {
 
 export async function registerUser(payload) {
   const { data } = await identityApi.post('/auth/register', payload);
+  return data;
+}
+
+export async function changePassword(payload) {
+  const { data } = await identityApi.post('/auth/change-password', payload);
   return data;
 }
 
@@ -881,54 +1025,75 @@ export async function initAlertSignalRConnection(handlers = {}) {
   }
 }
 
-/**
- * Join a plot group to receive real-time updates for sensors in that plot
- * @param {string} plotId - Plot ID to join
- * @returns {Promise<void>}
- */
-export async function joinPlotGroup(plotId) {
+export async function joinOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
-      await signalRConnection.invoke('JoinPlotGroup', plotId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await signalRConnection.invoke('JoinOwnerGroup');
+      } else {
+        await signalRConnection.invoke('JoinOwnerGroup', ownerId);
+      }
+      return true;
     } catch (error) {
-      console.error(`Failed to join plot group ${plotId}:`, error);
+      console.error(`Failed to join owner group ${ownerId}:`, error);
+      return false;
     }
   }
+
+  return false;
 }
 
-/**
- * Leave a plot group to stop receiving real-time updates for sensors in that plot
- * @param {string} plotId - Plot ID to leave
- * @returns {Promise<void>}
- */
-export async function leavePlotGroup(plotId) {
+export async function leaveOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
-      await signalRConnection.invoke('LeavePlotGroup', plotId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await signalRConnection.invoke('LeaveOwnerGroup');
+      } else {
+        await signalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      }
+      return true;
     } catch (error) {
-      console.error(`Failed to leave plot group ${plotId}:`, error);
+      console.error(`Failed to leave owner group ${ownerId}:`, error);
+      return false;
     }
   }
-}
 
-export async function joinAlertPlotGroup(plotId) {
+  return false;
+}
+export async function joinAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
-      await alertSignalRConnection.invoke('JoinPlotGroup', plotId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await alertSignalRConnection.invoke('JoinOwnerGroup');
+      } else {
+        await alertSignalRConnection.invoke('JoinOwnerGroup', ownerId);
+      }
+      return true;
     } catch (error) {
-      console.error(`Failed to join alert plot group ${plotId}:`, error);
+      console.error(`Failed to join alert owner group ${ownerId}:`, error);
+      return false;
     }
   }
+
+  return false;
 }
 
-export async function leaveAlertPlotGroup(plotId) {
+export async function leaveAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
-      await alertSignalRConnection.invoke('LeavePlotGroup', plotId);
+      if (ownerId === null || ownerId === undefined || ownerId === '') {
+        await alertSignalRConnection.invoke('LeaveOwnerGroup');
+      } else {
+        await alertSignalRConnection.invoke('LeaveOwnerGroup', ownerId);
+      }
+      return true;
     } catch (error) {
-      console.error(`Failed to leave alert plot group ${plotId}:`, error);
+      console.error(`Failed to leave alert owner group ${ownerId}:`, error);
+      return false;
     }
   }
+
+  return false;
 }
 
 export function stopSignalRConnection() {

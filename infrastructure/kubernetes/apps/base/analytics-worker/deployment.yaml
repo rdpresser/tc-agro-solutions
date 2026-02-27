@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: analytics-worker
-        image: rdpresser/analytics-worker:bf3cad4a
+        image: rdpresser/analytics-worker:5773c6d2
         imagePullPolicy: Always
         ports:
         - name: http

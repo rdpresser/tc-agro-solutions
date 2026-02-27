@@ -75,7 +75,7 @@
           </div>
           <div class="topbar-right">
             <div class="user-menu">
-              <div class="user-avatar">👤</div>
+              <div class="user-avatar">🌾</div>
               <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
@@ -96,7 +96,14 @@
               </div>
             </div>
             <div class="page-header-actions">
-              <button class="btn btn-outline" onclick="refreshSensors()">🔄 Refresh</button>
+              <span
+                id="sensors-updating-indicator"
+                class="text-muted"
+                style="font-size: 0.85em; display: none"
+              >
+                Updated just now
+              </span>
+              <button id="refresh-sensors" class="btn btn-outline">⟳ Refresh</button>
             </div>
           </div>
 
@@ -110,7 +117,7 @@
                 📡
               </div>
               <div class="stat-info">
-                <span class="stat-value">12</span>
+                <span id="stat-total-sensors" class="stat-value">0</span>
                 <span class="stat-label">Total Sensors</span>
               </div>
             </div>
@@ -122,14 +129,14 @@
                 ✅
               </div>
               <div class="stat-info">
-                <span class="stat-value">8</span>
+                <span id="stat-active-sensors" class="stat-value">0</span>
                 <span class="stat-label">Active</span>
               </div>
             </div>
             <div class="stat-card">
               <div class="stat-icon">⚪</div>
               <div class="stat-info">
-                <span class="stat-value">1</span>
+                <span id="stat-inactive-sensors" class="stat-value">0</span>
                 <span class="stat-label">Inactive</span>
               </div>
             </div>
@@ -141,7 +148,7 @@
                 ⚠️
               </div>
               <div class="stat-info">
-                <span class="stat-value">2</span>
+                <span id="stat-maintenance-sensors" class="stat-value">0</span>
                 <span class="stat-label">Maintenance</span>
               </div>
             </div>
@@ -153,7 +160,7 @@
                 ❌
               </div>
               <div class="stat-info">
-                <span class="stat-value">1</span>
+                <span id="stat-faulty-sensors" class="stat-value">0</span>
                 <span class="stat-label">Faulty</span>
               </div>
             </div>
@@ -161,8 +168,8 @@
 
           <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom: 0">
+            <div class="form-row sensors-filters-row">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <input
                   type="text"
                   id="searchInput"
@@ -170,21 +177,26 @@
                   placeholder="🔍 Search sensors..."
                 />
               </div>
-              <div class="form-group" style="margin-bottom: 0">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <select id="statusFilter" class="form-control form-select">
                   <option value="">All Status</option>
                 </select>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
+              <div class="form-group sensors-filter-grow" style="margin-bottom: 0">
                 <select id="typeFilter" class="form-control form-select">
                   <option value="">All Types</option>
                 </select>
+              </div>
+              <div class="form-group sensors-filter-actions" style="margin-bottom: 0">
+                <button id="clear-alert-filters" class="btn btn-outline btn-sm" type="button">
+                  ✖ Clear filters
+                </button>
               </div>
             </div>
           </div>
 
           <!-- Sensors Grid -->
-          <div class="sensor-grid" id="sensorGrid">
+          <div class="sensor-grid" id="sensors-grid">
             <!-- Sensor Card 1 -->
             <div class="card sensor-card" data-status="Active">
               <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
@@ -391,6 +403,38 @@
             </div>
           </div>
 
+          <div class="card pagination-sticky-card" style="margin-top: 16px; margin-bottom: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px">
+              <div class="d-flex align-center" style="gap: 8px">
+                <button id="sensors-prev-page" class="btn btn-outline btn-sm" type="button">
+                  ← Previous
+                </button>
+                <button id="sensors-next-page" class="btn btn-outline btn-sm" type="button">
+                  Next →
+                </button>
+              </div>
+
+              <span id="sensors-page-info" class="text-muted" style="font-size: 0.9em">
+                Showing 0-0 of 0
+              </span>
+
+              <div class="d-flex align-center" style="gap: 8px">
+                <label for="sensors-page-size" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
+                <select id="sensors-page-size" class="form-control form-select" style="width: 140px">
+                  <option value="5">5 / page</option>
+                  <option value="10" selected>10 / page</option>
+                  <option value="20">20 / page</option>
+                  <option value="30">30 / page</option>
+                  <option value="40">40 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- SignalR Status -->
           <div class="card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
@@ -455,9 +499,45 @@
         font-family: 'Consolas', 'Monaco', monospace;
       }
 
+      .sensors-filters-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sensors-filter-grow {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .sensors-filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .sensors-filter-actions .btn {
+        white-space: nowrap;
+      }
+
       @media (max-width: 768px) {
         .sensor-grid {
           grid-template-columns: 1fr;
+        }
+
+        .sensors-filters-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .sensors-filter-actions {
+          margin-left: 0;
+          justify-content: stretch;
+        }
+
+        .sensors-filter-actions .btn {
+          width: 100%;
         }
       }
     </style>

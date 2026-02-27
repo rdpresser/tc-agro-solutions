@@ -51,7 +51,7 @@
             <a href="alerts.html" class="nav-item active">
               <span class="nav-icon">🔔</span>
               <span class="nav-text">Alerts</span>
-              <span class="badge badge-danger" style="margin-left: auto">3</span>
+              <span id="alerts-nav-pending-count" class="badge badge-danger" style="margin-left: auto">0</span>
             </a>
           </div>
 
@@ -76,7 +76,7 @@
           </div>
           <div class="topbar-right">
             <div class="user-menu">
-              <div class="user-avatar">👤</div>
+              <div class="user-avatar">🌾</div>
               <span id="userDisplay" class="user-name">User</span>
             </div>
           </div>
@@ -97,7 +97,14 @@
               </div>
             </div>
             <div class="page-header-actions">
-              <button class="btn btn-outline" onclick="markAllRead()">✓ Mark All Read</button>
+              <span
+                id="alerts-updating-indicator"
+                class="text-muted"
+                style="font-size: 0.85em; display: none"
+              >
+                Updated just now
+              </span>
+              <button id="refresh-alerts" class="btn btn-outline" type="button">⟳ Refresh</button>
             </div>
           </div>
 
@@ -111,7 +118,7 @@
                 🚨
               </div>
               <div class="stat-info">
-                <span class="stat-value">2</span>
+                <span id="alerts-stat-critical" class="stat-value">0</span>
                 <span class="stat-label">Critical</span>
               </div>
             </div>
@@ -123,7 +130,7 @@
                 ⚠️
               </div>
               <div class="stat-info">
-                <span class="stat-value">1</span>
+                <span id="alerts-stat-warning" class="stat-value">0</span>
                 <span class="stat-label">Warning</span>
               </div>
             </div>
@@ -135,7 +142,7 @@
                 ℹ️
               </div>
               <div class="stat-info">
-                <span class="stat-value">0</span>
+                <span id="alerts-stat-info" class="stat-value">0</span>
                 <span class="stat-label">Info</span>
               </div>
             </div>
@@ -147,8 +154,43 @@
                 ✅
               </div>
               <div class="stat-info">
-                <span class="stat-value">15</span>
-                <span class="stat-label">Resolved Today</span>
+                <span id="alerts-stat-resolved-today" class="stat-value">0</span>
+                <span class="stat-label">Resolved</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="form-row alerts-filters-row">
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
+                <input
+                  type="text"
+                  id="search-alerts"
+                  class="form-control"
+                  placeholder="🔍 Search alerts..."
+                />
+              </div>
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
+                <select id="alerts-severity-filter" class="form-control form-select">
+                  <option value="">All Severity</option>
+                  <option value="critical">🚨 Critical</option>
+                  <option value="warning">⚠️ Warning</option>
+                  <option value="info">ℹ️ Info</option>
+                </select>
+              </div>
+              <div class="form-group alerts-filter-grow" style="margin-bottom: 0">
+                <select id="alerts-status-filter" class="form-control form-select">
+                  <option value="">All Status</option>
+                  <option value="pending">⏳ Pending</option>
+                  <option value="acknowledged">🟡 Acknowledged</option>
+                  <option value="resolved">✅ Resolved</option>
+                </select>
+              </div>
+              <div class="form-group alerts-filter-actions" style="margin-bottom: 0">
+                <button id="clear-alert-filters" class="btn btn-outline btn-sm" type="button">
+                  ✖ Clear filters
+                </button>
               </div>
             </div>
           </div>
@@ -156,169 +198,48 @@
           <!-- Tabs -->
           <div class="tabs" style="margin-bottom: 24px">
             <button class="tab-btn active" data-tab="pending">
-              Pending <span class="badge badge-danger" style="margin-left: 8px">3</span>
+              Pending <span class="badge badge-danger" style="margin-left: 8px">0</span>
             </button>
-            <button class="tab-btn" data-tab="resolved">Resolved</button>
-            <button class="tab-btn" data-tab="all">All Alerts</button>
+            <button class="tab-btn" data-tab="resolved">
+              Resolved <span class="badge badge-success" style="margin-left: 8px">0</span>
+            </button>
+            <button class="tab-btn" data-tab="all">
+              All Alerts <span class="badge badge-info" style="margin-left: 8px">0</span>
+            </button>
           </div>
 
-          <!-- Pending Alerts -->
-          <div id="pendingAlerts" class="alert-list">
-            <!-- Critical Alert 1 -->
-            <div class="alert-item critical">
-              <div class="alert-item-icon">🚨</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-danger">Critical</span>
-                  <span class="alert-item-time">10 minutes ago</span>
-                </div>
-                <h4 class="alert-item-title">Sensor Offline - SENSOR-005</h4>
-                <p class="alert-item-description">
-                  Sensor at <strong>Central Plain</strong> (Highland Estate) has not responded for
-                  over 2 hours. Last reading: 30.4°C / 55% humidity.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 Central Plain</span>
-                  <span>🏘️ Highland Estate</span>
-                  <span>📡 SENSOR-005</span>
-                </div>
-                <div class="alert-item-actions">
-                  <button class="btn btn-success btn-sm" onclick="resolveAlert('1')">
-                    ✓ Resolve
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-005')">
-                    📡 View Sensor
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="snoozeAlert('1')">
-                    ⏰ Snooze 1h
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Critical Alert 2 -->
-            <div class="alert-item critical">
-              <div class="alert-item-icon">🚨</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-danger">Critical</span>
-                  <span class="alert-item-time">25 minutes ago</span>
-                </div>
-                <h4 class="alert-item-title">Low Soil Moisture - Extended Period</h4>
-                <p class="alert-item-description">
-                  Soil moisture at <strong>East Ridge</strong> (Sunrise Ranch) has been below 30%
-                  for over 24 hours. Current reading: 22%. Coffee crops may be at risk.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 East Ridge</span>
-                  <span>🏘️ Sunrise Ranch</span>
-                  <span>🌱 Coffee</span>
-                  <span>💧 22% (Threshold: 30%)</span>
-                </div>
-                <div class="alert-item-actions">
-                  <button class="btn btn-success btn-sm" onclick="resolveAlert('2')">
-                    ✓ Resolve
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="viewPlot('3')">
-                    🌱 View Plot
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="triggerIrrigation('3')">
-                    💧 Trigger Irrigation
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Warning Alert -->
-            <div class="alert-item warning">
-              <div class="alert-item-icon">⚠️</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-warning">Warning</span>
-                  <span class="alert-item-time">1 hour ago</span>
-                </div>
-                <h4 class="alert-item-title">Low Battery - SENSOR-006</h4>
-                <p class="alert-item-description">
-                  Sensor at <strong>Central Plain</strong> (Highland Estate) has battery level at
-                  15%. Replace battery within 24-48 hours to avoid data loss.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 Central Plain</span>
-                  <span>🏘️ Highland Estate</span>
-                  <span>🔋 15%</span>
-                </div>
-                <div class="alert-item-actions">
-                  <button class="btn btn-success btn-sm" onclick="resolveAlert('3')">
-                    ✓ Resolve
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="viewSensor('SENSOR-006')">
-                    📡 View Sensor
-                  </button>
-                  <button class="btn btn-outline btn-sm" onclick="scheduleVisit('SENSOR-006')">
-                    📅 Schedule Visit
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div id="alerts-container" class="alert-list">
+            <div class="loading">Loading alerts...</div>
           </div>
 
-          <!-- Resolved Alerts (hidden by default) -->
-          <div id="resolvedAlerts" class="alert-list" style="display: none">
-            <div class="alert-item resolved">
-              <div class="alert-item-icon">✅</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-success">Resolved</span>
-                  <span class="alert-item-time">Today at 09:15 AM</span>
-                </div>
-                <h4 class="alert-item-title">High Temperature Alert</h4>
-                <p class="alert-item-description">
-                  Temperature at North Field exceeded 35°C threshold. Resolved automatically when
-                  temperature dropped.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 North Field</span>
-                  <span>🏘️ Green Valley Farm</span>
-                  <span>Resolved by: System</span>
-                </div>
+          <div class="card pagination-sticky-card" style="margin-top: 16px; margin-bottom: 24px">
+            <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px">
+              <div class="d-flex align-center" style="gap: 8px">
+                <button id="alerts-prev-page" class="btn btn-outline btn-sm" type="button">
+                  ← Previous
+                </button>
+                <button id="alerts-next-page" class="btn btn-outline btn-sm" type="button">
+                  Next →
+                </button>
               </div>
-            </div>
 
-            <div class="alert-item resolved">
-              <div class="alert-item-icon">✅</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-success">Resolved</span>
-                  <span class="alert-item-time">Today at 08:30 AM</span>
-                </div>
-                <h4 class="alert-item-title">Connection Lost - SENSOR-003</h4>
-                <p class="alert-item-description">
-                  Sensor temporarily lost connection. Reconnected after 15 minutes.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 East Ridge</span>
-                  <span>🏘️ Sunrise Ranch</span>
-                  <span>Resolved by: Auto-reconnect</span>
-                </div>
-              </div>
-            </div>
+              <span id="alerts-page-info" class="text-muted" style="font-size: 0.9em">
+                Showing 0-0 of 0
+              </span>
 
-            <div class="alert-item resolved">
-              <div class="alert-item-icon">✅</div>
-              <div class="alert-item-content">
-                <div class="alert-item-header">
-                  <span class="badge badge-success">Resolved</span>
-                  <span class="alert-item-time">Yesterday at 04:45 PM</span>
-                </div>
-                <h4 class="alert-item-title">Low Humidity Warning</h4>
-                <p class="alert-item-description">
-                  Humidity dropped below 40% in South Valley. Irrigation was triggered.
-                </p>
-                <div class="alert-item-meta">
-                  <span>📍 South Valley</span>
-                  <span>🏘️ Green Valley Farm</span>
-                  <span>Resolved by: admin@agro.com</span>
-                </div>
+              <div class="d-flex align-center" style="gap: 8px">
+                <label for="alerts-page-size" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
+                <select id="alerts-page-size" class="form-control form-select" style="width: 140px">
+                  <option value="5">5 / page</option>
+                  <option value="10" selected>10 / page</option>
+                  <option value="20">20 / page</option>
+                  <option value="30">30 / page</option>
+                  <option value="40">40 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
               </div>
             </div>
           </div>
@@ -383,6 +304,66 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <div id="resolve-alert-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 640px">
+        <div class="modal-header">
+          <h3>✅ Resolve Alert</h3>
+          <button
+            id="resolve-alert-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close resolve alert dialog"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="resolve-alert-summary" class="text-muted" style="margin: 0"></p>
+          <div class="form-group" style="margin-bottom: 0">
+            <label for="resolve-alert-notes" class="form-label">Resolution notes (optional)</label>
+            <textarea
+              id="resolve-alert-notes"
+              class="form-control"
+              rows="4"
+              maxlength="1000"
+              placeholder="Describe what was done to resolve this alert..."
+            ></textarea>
+            <span class="form-text"
+              >Optional. You can leave this empty and still resolve the alert. Up to 1000
+              characters.</span
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="resolve-alert-cancel" type="button" class="btn btn-outline">Cancel</button>
+          <button id="resolve-alert-confirm" type="button" class="btn btn-success">Resolve</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="alert-details-modal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 720px">
+        <div class="modal-header">
+          <h3>📋 Alert Details</h3>
+          <button
+            id="alert-details-modal-close"
+            type="button"
+            class="modal-close"
+            aria-label="Close alert details dialog"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="alert-details-content"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="alert-details-resolve" type="button" class="btn btn-success">Resolve</button>
+          <button id="alert-details-close" type="button" class="btn btn-outline">Close</button>
+        </div>
+      </div>
     </div>
 
     <style>
@@ -500,6 +481,28 @@
         gap: 8px;
       }
 
+      .alerts-filters-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .alerts-filter-grow {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .alerts-filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .alerts-filter-actions .btn {
+        white-space: nowrap;
+      }
+
       @media (max-width: 768px) {
         .alert-item {
           flex-direction: column;
@@ -517,6 +520,21 @@
           flex: 1;
           text-align: center;
         }
+
+        .alerts-filters-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .alerts-filter-actions {
+          margin-left: 0;
+          justify-content: stretch;
+        }
+
+        .alerts-filter-actions .btn {
+          width: 100%;
+        }
+
       }
     </style>
 
