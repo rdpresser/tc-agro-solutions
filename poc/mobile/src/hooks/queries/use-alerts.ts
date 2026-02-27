@@ -6,7 +6,10 @@ export function useAlertsPending(params?: { severity?: string; search?: string }
   return useQuery({
     queryKey: ['alerts', 'pending', params],
     queryFn: () => alertsApi.getPending(params),
-    refetchInterval: 30000,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: 30_000,
+    retry: 2,
   });
 }
 
@@ -14,7 +17,10 @@ export function useAlertsAll(params?: { severity?: string; search?: string; stat
   return useQuery({
     queryKey: ['alerts', 'all', params],
     queryFn: () => alertsApi.getAll(params),
-    refetchInterval: 30000,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: 30_000,
+    retry: 2,
   });
 }
 
@@ -22,7 +28,10 @@ export function useAlertsSummary(windowHours = 24) {
   return useQuery<AlertSummary | null>({
     queryKey: ['alerts', 'summary', windowHours],
     queryFn: () => alertsApi.getSummary(windowHours),
-    refetchInterval: 30000,
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: 30_000,
+    retry: 2,
   });
 }
 

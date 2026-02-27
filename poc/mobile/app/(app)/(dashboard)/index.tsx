@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardStats, useLatestReadings, usePendingAlerts } from '@/hooks/queries/use-dashboard';
+import { useAlertsSummary } from '@/hooks/queries/use-alerts';
 import { useRealtimeStore } from '@/stores/realtime.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding.store';
@@ -33,6 +34,8 @@ export default function DashboardScreen() {
 
   const showSlides = isOnboardingHydrated && !hasCompletedOnboarding && !isWizardActive;
   const { data: stats, isLoading: statsLoading, isRefetching } = useDashboardStats();
+  const { data: alertSummary } = useAlertsSummary();
+  const alertCount = alertSummary?.pendingAlertsTotal || 0;
   const { data: readings } = useLatestReadings(10);
   const { data: pendingAlerts } = usePendingAlerts();
   const realtimeReadings = useRealtimeStore((s) => s.latestReadings);
@@ -96,8 +99,28 @@ export default function DashboardScreen() {
           </View>
           <View className="flex-row items-center gap-3">
             <ConnectionBadge />
-            <TouchableOpacity onPress={() => router.push('/(app)/(settings)')}>
-              <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+            <TouchableOpacity onPress={() => router.push('/(app)/(alerts)')}>
+              <View>
+                <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
+                {alertCount > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    top: -4,
+                    right: -6,
+                    backgroundColor: '#dc3545',
+                    borderRadius: 8,
+                    minWidth: 16,
+                    height: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 3,
+                  }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                      {alertCount > 99 ? '99+' : alertCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           </View>
         </View>

@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchBar } from '@/components/ui/SearchBar';
-import { FilterChips } from '@/components/ui/FilterChips';
 import { formatRelativeTime, formatDateTime } from '@/lib/format';
 import type { Alert } from '@/types';
 
@@ -76,14 +75,6 @@ const severityIcon = (s: string) => {
       return 'ℹ️';
   }
 };
-
-const SEVERITY_OPTIONS = [
-  { value: '', label: 'All' },
-  { value: 'critical', label: 'Critical' },
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
-];
 
 export default function AlertsScreen() {
   const { colors } = useTheme();
@@ -285,9 +276,6 @@ export default function AlertsScreen() {
       <View className="px-4">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search alerts..." />
       </View>
-
-      {/* Severity Filter */}
-      <FilterChips options={SEVERITY_OPTIONS} value={severityFilter} onChange={setSeverityFilter} />
 
       {/* Tabs */}
       <View className="flex-row px-4 mb-3 gap-2">

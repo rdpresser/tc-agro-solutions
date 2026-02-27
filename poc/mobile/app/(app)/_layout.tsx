@@ -1,17 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View } from 'react-native';
-import { Redirect, Tabs, router } from 'expo-router';
+import React from 'react';
+import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/auth.store';
 import { useSignalR } from '@/hooks/use-signalr';
 import { useFallbackPolling } from '@/hooks/use-fallback-polling';
-import { useNotifications } from '@/hooks/use-notifications';
-import { useAlertsPending } from '@/hooks/queries/use-alerts';
-import { useRealtimeStore } from '@/stores/realtime.store';
+import { useAlertsSummary } from '@/hooks/queries/use-alerts';
 import { useTheme } from '@/providers/theme-provider';
-import { Toast } from '@/components/ui/Toast';
-import type { Alert as AlertType } from '@/types';
 
 export default function AppLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -23,23 +18,10 @@ export default function AppLayout() {
   // Initialize real-time connections
   useSignalR();
   useFallbackPolling();
-  useNotifications();
 
-  // Toast state for in-app alert banners
-  const recentAlerts = useRealtimeStore((s) => s.recentAlerts);
-  const [toastAlert, setToastAlert] = useState<AlertType | null>(null);
-  const prevAlertCountRef = useRef(0);
-
-  useEffect(() => {
-    if (recentAlerts.length > prevAlertCountRef.current && recentAlerts.length > 0) {
-      setToastAlert(recentAlerts[0]);
-    }
-    prevAlertCountRef.current = recentAlerts.length;
-  }, [recentAlerts]);
-
-  // Alert badge count
-  const { data: pendingAlerts } = useAlertsPending();
-  const alertCount = pendingAlerts?.length || 0;
+  // Alert badge count (lightweight summary endpoint, not full list)
+  const { data: summary } = useAlertsSummary();
+  const alertCount = summary?.pendingAlertsTotal || 0;
 
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
@@ -47,15 +29,6 @@ export default function AppLayout() {
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
-    <View style={{ flex: 1 }}>
-    <Toast
-      alert={toastAlert}
-      onDismiss={() => setToastAlert(null)}
-      onPress={() => {
-        setToastAlert(null);
-        router.push('/(app)/(alerts)');
-      }}
-    />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -115,17 +88,24 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="(settings)"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={focused ? 24 : 22} color={color} />
+          ),
+        }}
+      />
+      {/* Hidden tabs */}
+      <Tabs.Screen
         name="(alerts)"
         options={{
+          href: null,
           title: 'Alerts',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={focused ? 24 : 22} color={color} />
-          ),
           tabBarBadge: alertCount > 0 ? alertCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#dc3545', fontSize: 10 },
         }}
       />
-      {/* Hidden tabs */}
       <Tabs.Screen
         name="(users)"
         options={{ href: isAdmin ? undefined : null, title: 'Users',
@@ -135,8 +115,6 @@ export default function AppLayout() {
           tabBarItemStyle: isAdmin ? undefined : { display: 'none' },
         }}
       />
-      <Tabs.Screen name="(settings)" options={{ href: null }} />
     </Tabs>
-    </View>
   );
 }

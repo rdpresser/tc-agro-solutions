@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { useTheme } from '@/providers/theme-provider';
 import type { Alert } from '@/types';
 
@@ -25,23 +25,30 @@ export function Toast({ alert, onDismiss, onPress }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(-150);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
     if (alert) {
       translateY.value = withSpring(0, { damping: 15, stiffness: 120 });
 
-      // Auto-dismiss after 5s
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         translateY.value = withSpring(-150, { damping: 15 }, (finished) => {
           if (finished) runOnJS(onDismiss)();
         });
       }, 5000);
-
-      return () => clearTimeout(timer);
     } else {
       translateY.value = -150;
     }
-  }, [alert?.id]);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [alert]); // watch the whole object, not just id
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -92,6 +99,7 @@ export function Toast({ alert, onDismiss, onPress }: Props) {
             </View>
             <TouchableOpacity
               onPress={() => {
+                if (timerRef.current) clearTimeout(timerRef.current);
                 translateY.value = withSpring(-150, { damping: 15 }, (finished) => {
                   if (finished) runOnJS(onDismiss)();
                 });

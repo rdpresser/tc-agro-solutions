@@ -13,9 +13,10 @@ export function useFallbackPolling() {
   const alertHubState = useConnectionStore((s) => s.alertHubState);
   const setFallbackActive = useConnectionStore((s) => s.setFallbackActive);
   const setReadings = useRealtimeStore((s) => s.setReadings);
+  const addAlert = useRealtimeStore((s) => s.addAlert);
   const setAlerts = useRealtimeStore((s) => s.setAlerts);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const knownAlertIdsRef = useRef<Set<string>>(new Set());
+  const knownAlertIdsRef = useRef<Set<string> | null>(null); // null = first poll
 
   const needsFallback = sensorHubState !== 'connected' || alertHubState !== 'connected';
 
@@ -39,15 +40,19 @@ export function useFallbackPolling() {
         ]);
         setReadings(readings);
 
-        // Detect new alerts and trigger notifications
-        for (const alert of alerts) {
-          if (!knownAlertIdsRef.current.has(alert.id)) {
+        if (knownAlertIdsRef.current === null) {
+          // First poll: seed known IDs, load into store, no notifications
+          knownAlertIdsRef.current = new Set(alerts.map((a) => a.id));
+          setAlerts(alerts);
+        } else {
+          // Subsequent polls: detect new, notify, and merge
+          const newAlerts = alerts.filter((a) => !knownAlertIdsRef.current!.has(a.id));
+          for (const alert of newAlerts) {
             triggerAlertNotification(alert);
+            addAlert(alert);
           }
+          knownAlertIdsRef.current = new Set(alerts.map((a) => a.id));
         }
-        knownAlertIdsRef.current = new Set(alerts.map((a) => a.id));
-
-        setAlerts(alerts);
       } catch {
         // silent fail
       }

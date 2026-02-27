@@ -1,6 +1,12 @@
 import { analyticsApi } from './clients';
 import type { Alert, AlertSummary } from '@/types';
 
+function formatAlertType(alertType?: string): string {
+  if (!alertType) return '';
+  // "LowSoilMoisture" → "Low Soil Moisture"
+  return alertType.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 function normalizeSeverity(severity?: string): Alert['severity'] {
   const value = (severity || '').toLowerCase();
   if (value === 'warning') return 'medium';
@@ -16,18 +22,24 @@ function normalizeStatus(status?: string): Alert['status'] {
 }
 
 function normalizeAlerts(input: unknown): Alert[] {
-  const raw = Array.isArray(input)
-    ? input
-    : (input && typeof input === 'object' && Array.isArray((input as { items?: unknown[] }).items))
-      ? (input as { items: unknown[] }).items
-      : [];
+  let raw: unknown[] = [];
+  if (Array.isArray(input)) {
+    raw = input;
+  } else if (input && typeof input === 'object') {
+    const obj = input as Record<string, unknown>;
+    // API may wrap the array in "data", "items", or "results"
+    const arr = obj.data ?? obj.items ?? obj.results;
+    if (Array.isArray(arr)) {
+      raw = arr;
+    }
+  }
 
   return raw.map((item) => {
-    const alert = item as Partial<Alert>;
+    const alert = item as Partial<Alert> & { alertType?: string };
     return {
       ...alert,
       id: alert.id || '',
-      title: alert.title || 'Alert',
+      title: alert.title || formatAlertType(alert.alertType) || 'Alert',
       message: alert.message || '',
       severity: normalizeSeverity(alert.severity),
       status: normalizeStatus(alert.status),
@@ -51,7 +63,7 @@ async function fetchAllAlertPages(
   const all: Alert[] = [];
   let pageNumber = 1;
   let keepLoading = true;
-  const maxPages = 20;
+  const maxPages = 5;
 
   while (keepLoading && pageNumber <= maxPages) {
     const response = await analyticsApi.get(endpoint, {
@@ -95,14 +107,13 @@ export const alertsApi = {
     ownerId?: string;
   }): Promise<Alert[]> => {
     try {
-      return await fetchAllAlertPages('/api/alerts', params);
+      // Same endpoint as frontend — /api/alerts/pending with status=all
+      return await fetchAllAlertPages('/api/alerts/pending', {
+        ...params,
+        status: params?.status || 'all',
+      });
     } catch {
-      try {
-        // Fallback for environments where only /pending exists.
-        return await fetchAllAlertPages('/api/alerts/pending', { ...params, status: params?.status || 'all' });
-      } catch {
-        return [];
-      }
+      return [];
     }
   },
 
@@ -111,7 +122,19 @@ export const alertsApi = {
       const response = await analyticsApi.get('/api/alerts/pending/summary', {
         params: { windowHours, ownerId },
       });
-      return response.data;
+      const data = response.data;
+      // Handle both camelCase and PascalCase
+      return {
+        pendingAlertsTotal: Number(data?.pendingAlertsTotal ?? data?.PendingAlertsTotal ?? 0),
+        affectedPlotsCount: Number(data?.affectedPlotsCount ?? data?.AffectedPlotsCount ?? 0),
+        affectedSensorsCount: Number(data?.affectedSensorsCount ?? data?.AffectedSensorsCount ?? 0),
+        criticalPendingCount: Number(data?.criticalPendingCount ?? data?.CriticalPendingCount ?? 0),
+        highPendingCount: Number(data?.highPendingCount ?? data?.HighPendingCount ?? 0),
+        mediumPendingCount: Number(data?.mediumPendingCount ?? data?.MediumPendingCount ?? 0),
+        lowPendingCount: Number(data?.lowPendingCount ?? data?.LowPendingCount ?? 0),
+        newPendingInWindowCount: Number(data?.newPendingInWindowCount ?? data?.NewPendingInWindowCount ?? 0),
+        windowHours: Number(data?.windowHours ?? data?.WindowHours ?? windowHours),
+      };
     } catch {
       return null;
     }
