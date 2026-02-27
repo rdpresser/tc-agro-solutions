@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "TC Agro Solutions",
+    "slug": "tc-agro-solutions",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "tcagro",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2d5016"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tcagro.solutions",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID for quick login",
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para centralizar o mapa e facilitar a seleção de coordenadas."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2d5016",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.tcagro.solutions",
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-local-authentication",
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ]
+    ]
+  }
+}

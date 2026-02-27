@@ -557,7 +557,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "🟢 Golden Signals - System Health Overview",
-  "uid": "tc-metrics",
+  "uid": "tc-golden-signals",
   "version": 1,
   "weekStart": ""
 }
