@@ -84,6 +84,7 @@ if (isAuthenticated()) {
 // Setup login form
 document.addEventListener('DOMContentLoaded', () => {
   const signupLink = document.querySelector('a[href="signup.html"]');
+  const changePasswordLink = document.querySelector('a[href="change-password.html"]');
   const loginForm = $('#login-form');
   const emailInput = $('#email');
   const passwordInput = $('#password');
@@ -112,6 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (signupLink) {
     signupLink.setAttribute('href', getPageUrl('signup.html'));
+  }
+
+  if (changePasswordLink) {
+    changePasswordLink.setAttribute('href', getPageUrl('change-password.html'));
   }
 
   const params = new URLSearchParams(window.location.search);

@@ -665,12 +665,14 @@ export async function getPendingAlertsPage({
   severity = null,
   search = null
 } = {}) {
+  const normalizedStatus = normalizeAlertsStatusQueryParam(status);
+
   try {
     const { data } = await analyticsApi.get('/api/alerts/pending', {
       params: {
         pageNumber,
         pageSize,
-        ...(status ? { status } : {}),
+        ...(normalizedStatus ? { status: normalizedStatus } : {}),
         ...(severity ? { severity } : {}),
         ...(search ? { search } : {}),
         ...(ownerId ? { ownerId } : {})
@@ -699,6 +701,34 @@ export async function getPendingAlertsPage({
 
     throw error;
   }
+}
+
+function normalizeAlertsStatusQueryParam(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === 'pending') {
+    return 'Pending';
+  }
+
+  if (normalized === 'acknowledged') {
+    return 'Acknowledged';
+  }
+
+  if (normalized === 'resolved') {
+    return 'Resolved';
+  }
+
+  if (normalized === 'all') {
+    return 'all';
+  }
+
+  return status;
 }
 
 export async function getPendingAlertsSummary({ ownerId = null, windowHours = 24 } = {}) {
@@ -744,12 +774,34 @@ export async function getPendingAlertsSummary({ ownerId = null, windowHours = 24
 }
 
 function normalizePendingAlertItem(alert) {
+  const readOptionalField = (...keys) => {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(alert || {}, key)) {
+        return alert[key];
+      }
+    }
+
+    return undefined;
+  };
+
   return {
     ...alert,
-    severity: normalizeAlertSeverity(alert?.severity),
-    createdAt: alert?.createdAt || alert?.CreatedAt,
-    plotName: alert?.plotName || alert?.PlotName || '-',
-    sensorId: alert?.sensorId || alert?.SensorId || '-'
+    id: alert?.id || alert?.Id,
+    alertType: alert?.alertType || alert?.AlertType,
+    message: alert?.message || alert?.Message,
+    status: alert?.status || alert?.Status,
+    severity: normalizeAlertSeverity(alert?.severity || alert?.Severity),
+    createdAt: readOptionalField('createdAt', 'CreatedAt'),
+    acknowledgedAt: readOptionalField('acknowledgedAt', 'AcknowledgedAt'),
+    acknowledgedBy: readOptionalField('acknowledgedBy', 'AcknowledgedBy'),
+    resolvedAt: readOptionalField('resolvedAt', 'ResolvedAt'),
+    resolvedBy: readOptionalField('resolvedBy', 'ResolvedBy'),
+    resolutionNotes: readOptionalField('resolutionNotes', 'ResolutionNotes'),
+    value: readOptionalField('value', 'Value'),
+    threshold: readOptionalField('threshold', 'Threshold'),
+    plotName: readOptionalField('plotName', 'PlotName'),
+    propertyName: readOptionalField('propertyName', 'PropertyName'),
+    sensorId: alert?.sensorId || alert?.SensorId || undefined
   };
 }
 
@@ -765,17 +817,26 @@ function normalizeAlertSeverity(severity) {
 
 /**
  * Resolve/close alert
- * @param {string} _alertId - Alert ID to resolve
- * @returns {Promise<boolean>} Success status (mock data)
- * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
+ * @param {string} alertId - Alert ID to resolve
+ * @param {string|null} resolutionNotes - Optional resolution notes
+ * @returns {Promise<Object>} Resolve response payload
  */
-export function resolveAlert(_alertId) {
-  return true;
+export async function resolveAlert(alertId, resolutionNotes = null) {
+  const normalizedAlertId = String(alertId || '').trim();
+  if (!normalizedAlertId) {
+    throw new Error('Alert ID is required to resolve an alert.');
+  }
 
-  /* REAL API
-  await api.post(`/alerts/${alertId}/resolve`);
-  return true;
-  */
+  const normalizedNotes = typeof resolutionNotes === 'string' ? resolutionNotes.trim() : '';
+
+  const payload = normalizedNotes.length > 0 ? { resolutionNotes: normalizedNotes } : {};
+
+  const { data } = await analyticsApi.put(
+    `/api/alerts/${encodeURIComponent(normalizedAlertId)}/resolve`,
+    payload
+  );
+
+  return data;
 }
 
 // ============================================
@@ -789,6 +850,11 @@ export async function fetchIdentitySwagger() {
 
 export async function registerUser(payload) {
   const { data } = await identityApi.post('/auth/register', payload);
+  return data;
+}
+
+export async function changePassword(payload) {
+  const { data } = await identityApi.post('/auth/change-password', payload);
   return data;
 }
 
