@@ -8,6 +8,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { authApi } from '@/api/auth.api';
+import { extractApiErrorMessage } from '@/lib/api-error';
 import { useTheme } from '@/providers/theme-provider';
 import { signupSchema, type SignupFormData } from '@/lib/validation';
 import { Input } from '@/components/ui/Input';
@@ -38,21 +39,10 @@ export default function SignupScreen() {
         { text: 'OK', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (error: any) {
-      const apiError = error?.response?.data;
-      const errorList = apiError?.errors || apiError?.Errors;
-      let message = 'Registration failed. Please try again.';
-      if (Array.isArray(errorList) && errorList.length > 0) {
-        message = errorList
-          .map((e: any) => e?.reason || e?.Reason || e?.message || e?.Message || 'Unknown error')
-          .join('\n');
-      } else {
-        message = apiError?.message || apiError?.Message
-          || apiError?.detail || apiError?.Detail
-          || apiError?.title || apiError?.Title
-          || (typeof apiError === 'string' ? apiError : null)
-          || error?.message
-          || message;
-      }
+      const message = extractApiErrorMessage(
+        error,
+        'Registration failed. Please try again.',
+      );
       Alert.alert('Error', message);
     } finally {
       setIsLoading(false);

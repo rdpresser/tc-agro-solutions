@@ -4,6 +4,18 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "start:k8s:localhost": "node ./scripts/expo-env.js k8s localhost start",
+    "start:k8s:emulator": "node ./scripts/expo-env.js k8s emulator start",
+    "start:k8s:device": "node ./scripts/expo-env.js k8s device start",
+    "start:docker:localhost": "node ./scripts/expo-env.js docker localhost start",
+    "start:docker:emulator": "node ./scripts/expo-env.js docker emulator start",
+    "start:docker:device": "node ./scripts/expo-env.js docker device start",
+    "env:k8s:localhost": "node ./scripts/expo-env.js k8s localhost --print-config",
+    "env:k8s:emulator": "node ./scripts/expo-env.js k8s emulator --print-config",
+    "env:k8s:device": "node ./scripts/expo-env.js k8s device --print-config",
+    "env:docker:localhost": "node ./scripts/expo-env.js docker localhost --print-config",
+    "env:docker:emulator": "node ./scripts/expo-env.js docker emulator --print-config",
+    "env:docker:device": "node ./scripts/expo-env.js docker device --print-config",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web"

@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra ?? {};
 
-const isK8s = extra.API_ENV === 'k8s';
+const isK8s = String(extra.API_ENV ?? 'k8s').toLowerCase() === 'k8s';
 
 export const API_CONFIG = {
   IDENTITY_BASE_URL: extra.IDENTITY_API_BASE_URL

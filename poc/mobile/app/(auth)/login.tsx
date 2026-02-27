@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/auth.store';
 import { useTheme } from '@/providers/theme-provider';
 import { loginSchema, type LoginFormData } from '@/lib/validation';
+import { extractApiErrorMessage } from '@/lib/api-error';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
@@ -29,9 +30,10 @@ export default function LoginScreen() {
       await login(data);
       router.replace('/(app)/(dashboard)');
     } catch (error: any) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.title
-        || 'Invalid credentials. Please try again.';
+      const message = extractApiErrorMessage(
+        error,
+        'Invalid credentials. Please try again.',
+      );
       Alert.alert('Login Failed', message);
     }
   };

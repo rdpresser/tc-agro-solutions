@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { authApi } from '@/api/auth.api';
+import { extractApiErrorMessage } from '@/lib/api-error';
 import { useTheme } from '@/providers/theme-provider';
 import { useAuthStore } from '@/stores/auth.store';
 import { Input } from '@/components/ui/Input';
@@ -67,11 +68,10 @@ export default function ChangePasswordScreen() {
       ]);
       reset();
     } catch (error: any) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.title
-        || (Array.isArray(error?.response?.data?.errors) ? error.response.data.errors[0]?.message : undefined)
-        || (Array.isArray(error?.response?.data?.Errors) ? error.response.data.Errors[0]?.Message : undefined)
-        || 'Failed to change password. Please check your current password and try again.';
+      const message = extractApiErrorMessage(
+        error,
+        'Failed to change password. Please check your current password and try again.',
+      );
       Alert.alert('Error', message);
     } finally {
       setIsLoading(false);
