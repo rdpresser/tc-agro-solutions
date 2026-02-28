@@ -7,6 +7,36 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 
 ---
 
+## 📋 Table of Contents
+
+- [🚀 START HERE](#-start-here---choose-your-entry-point)
+- [🎯 Development Environment](#-development-environment-localhost---current)
+- [🎯 Three Development Modes](#-three-development-modes)
+  - [🐳 Docker Compose Mode](#-docker-compose-mode-api-development)
+  - [🎨 Visual Studio AppHost Mode](#-visual-studio-apphost-mode-recommended-for-developers)
+  - [☸️ K3D Mode](#️k3d-mode-professional-testing--gitops)
+- [🚀 Quick Start](#-quick-start-choose-your-mode)
+- [🎨 Frontend Dashboard (PoC)](#-frontend-dashboard-poc)
+- [✅ Validating Your Setup](#-validating-your-setup)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [🏗️ Solution Architecture](#️-solution-architecture)
+- [📦 Service Repositories](#-service-repositories)
+- [📚 Documentation](#-documentation)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [📅 Development Timeline](#-development-timeline-phase-5)
+- [🚀 Microservices](#-microservices)
+- [💾 Data Model](#-data-model)
+- [☁️ AKS Node Pool Strategy](#aks-node-pool-strategy)
+- [🔐 Security](#-security)
+- [📈 Observability](#-observability)
+- [🧪 Testing](#-testing)
+- [🚀 Getting Started](#-getting-started)
+- [🔄 Workflow Examples](#-workflow-examples)
+- [🤝 Contributing](#-contributing)
+- [📞 Support & Resources](#-support--resources)
+
+---
+
 ## 🚀 START HERE - Choose Your Entry Point
 
 ### ⚡ **Returning Developer?**

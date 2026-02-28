@@ -2,7 +2,33 @@
 
 App mobile React Native (Expo) para monitoramento IoT agrícola. Roda em **iOS** e **Android** com o mesmo código.
 
-## Tech Stack
+---
+
+## 📋 Table of Contents
+
+- [🛠️ Tech Stack](#️-tech-stack)
+- [📁 Estrutura do Projeto](#estrutura-do-projeto)
+- [✨ Funcionalidades](#funcionalidades)
+- [🌐 APIs Consumidas](#apis-consumidas)
+- [📦 Pré-requisitos Comuns](#pré-requisitos-comuns)
+- [🍎 Setup no macOS](#setup-no-macos)
+  - [Expo Go](#2-rodar-com-expo-go-mais-rápido-sem-xcode)
+  - [Simulador iOS](#3-rodar-no-simulador-ios-precisa-do-xcode)
+  - [Emulador Android](#4-rodar-no-emulador-android-precisa-do-android-studio)
+- [🪟 Setup no Windows](#setup-no-windows)
+  - [Expo Go](#3-rodar-com-expo-go-ios-e-android)
+  - [Emulador Android](#4-rodar-no-emulador-android-precisa-do-android-studio-1)
+  - [iOS no Windows](#5-ios-no-windows)
+- [⚙️ Comandos Úteis](#️comandos-úteis)
+- [🔧 Configuração de API](#configuração-de-api)
+  - [Cenário K8s](#cenário-k8s-k3dingress)
+  - [Cenário Docker](#cenário-docker-portas-diretas)
+  - [Exemplos Rápidos](#exemplos-rápidos)
+- [🐛 Troubleshooting](#troubleshooting)
+
+---
+
+## 🛠️ Tech Stack
 
 | Componente      | Tecnologia                   |
 | --------------- | ---------------------------- |
