@@ -6,6 +6,32 @@
 
 ---
 
+## 📋 Table of Contents
+
+- [📋 Overview](#-overview)
+- [📁 File Structure](#-file-structure)
+- [🚀 Quick Start](#-quick-start)
+  - [Development Mode](#development-mode-recommended)
+  - [Production Build](#production-build)
+  - [Demo Credentials](#demo-credentials)
+- [🔐 Security Model](#-security-model)
+- [🔄 Backend Integration](#-backend-integration)
+  - [Enabling Real AJAX Calls](#enabling-real-ajax-calls)
+  - [Authentication Integration](#authentication-integration)
+  - [SignalR Integration](#signalr-integration)
+- [🎨 Design System](#-design-system)
+- [📱 Pages Overview](#-pages-overview)
+- [🧪 Testing the POC](#-testing-the-poc)
+- [🔗 Backend API Expectations](#-backend-api-expectations)
+- [🏗️ ES Module Architecture](#️-es-module-architecture)
+- [📦 Dependencies](#-dependencies)
+- [🧰 DOM & API Helpers](#-dom--api-helpers)
+- [🚧 Limitations](#-limitations)
+- [📚 Related Documentation](#-related-documentation)
+- [🎯 Next Steps](#-next-steps)
+
+---
+
 ## 📋 Overview
 
 This Proof of Concept (POC) provides a fully functional frontend UI that:
