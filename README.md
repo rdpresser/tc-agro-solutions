@@ -740,7 +740,7 @@ Analytics
 
 ## K3d Node Pool Strategy
 
-Three optimized node pools for stability, performance, and cost:
+Four optimized node pools for stability and performance, for localhost dev:
 
 | Pool            | Memory | Workload                    |
 | --------------- | ------ | --------------------------- |
