@@ -253,7 +253,7 @@ python -m http.server 8000
 
 **What you get:**
 
-- ✅ Login page (mock authentication)
+- ✅ Login page (backend authentication)
 - ✅ Dashboard with stats & metrics
 - ✅ Properties, Plots, Sensors CRUD
 - ✅ Alert management UI
