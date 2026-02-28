@@ -9,33 +9,35 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 
 ## 📋 Table of Contents
 
-- [🚀 START HERE](#-start-here---choose-your-entry-point)
-- [🎯 Development Environment](#-development-environment-localhost---current)
-- [🎯 Three Development Modes](#-three-development-modes)
-  - [🐳 Docker Compose Mode](#-docker-compose-mode-api-development)
-  - [🎨 Visual Studio AppHost Mode](#-visual-studio-apphost-mode-recommended-for-developers)
-  - [☸️ K3D Mode](#️k3d-mode-professional-testing--gitops)
-- [🚀 Quick Start](#-quick-start-choose-your-mode)
-- [🎨 Frontend Dashboard (PoC)](#-frontend-dashboard-poc)
-- [✅ Validating Your Setup](#-validating-your-setup)
-- [🛠️ Troubleshooting](#️-troubleshooting)
-- [🏗️ Solution Architecture](#️-solution-architecture)
-- [📦 Service Repositories](#-service-repositories)
-- [📚 Documentation](#-documentation)
-- [🛠️ Technology Stack](#️-technology-stack)
-- [📅 Development Timeline](#-development-timeline-phase-5)
-- [🚀 Microservices](#-microservices)
-- [💾 Data Model](#-data-model)
-- [☁️ AKS Node Pool Strategy](#aks-node-pool-strategy)
-- [🔐 Security](#-security)
-- [📈 Observability](#-observability)
-- [🧪 Testing](#-testing)
-- [🚀 Getting Started](#-getting-started)
-- [🔄 Workflow Examples](#-workflow-examples)
-- [🤝 Contributing](#-contributing)
-- [📞 Support & Resources](#-support--resources)
+- [🚀 START HERE](#start-here)
+- [🎯 Development Environment](#development-environment)
+- [🎯 Three Development Modes](#three-development-modes)
+  - [🐳 Docker Compose Mode](#docker-compose-mode)
+  - [🎨 Visual Studio AppHost Mode](#visual-studio-apphost-mode)
+  - [☸️ K3D Mode](#k3d-mode-full-stack-gitops)
+- [🚀 Quick Start](#quick-start)
+- [🎨 Frontend Dashboard (PoC)](#frontend-dashboard-poc)
+- [✅ Validating Your Setup](#validating-your-setup)
+- [🛠️ Troubleshooting](#troubleshooting)
+- [🏗️ Solution Architecture](#solution-architecture)
+- [📦 Service Repositories](#service-repositories)
+- [📚 Documentation](#documentation)
+- [🛠️ Technology Stack](#technology-stack)
+- [📅 Development Timeline](#development-timeline-phase-5)
+- [🚀 Microservices](#microservices)
+- [💾 Data Model](#data-model)
+- [☁️ K3d Node Pool Strategy](#k3d-node-pool-strategy)
+- [🔐 Security](#security)
+- [📈 Observability](#observability)
+- [🧪 Testing](#testing)
+- [🚀 Getting Started](#getting-started)
+- [🔄 Workflow Examples](#workflow-examples)
+- [🤝 Contributing](#contributing)
+- [📞 Support & Resources](#support-resources)
 
 ---
+
+<a id="start-here"></a>
 
 ## 🚀 START HERE - Choose Your Entry Point
 
@@ -44,6 +46,8 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 → Use **[DEVELOPER_QUICK_REFERENCE.md](DEVELOPER_QUICK_REFERENCE.md)** _(quick commands)_
 
 ---
+
+<a id="development-environment"></a>
 
 ## 🎯 Development Environment (Localhost - CURRENT)
 
@@ -69,7 +73,11 @@ cd scripts\k3d
 
 ---
 
+<a id="three-development-modes"></a>
+
 ## 🎯 Three Development Modes
+
+<a id="visual-studio-apphost-mode"></a>
 
 ### 🎨 Visual Studio AppHost Mode (Recommended for Developers)
 
@@ -82,6 +90,7 @@ start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
 ```
 
 **What you get:**
+
 - ✅ All 4 microservices running in Docker containers
 - ✅ PostgreSQL + Redis + RabbitMQ (auto-configured)
 - ✅ Integrated debugging (breakpoints work across services)
@@ -91,6 +100,8 @@ start orchestration\apphost-compose\TC.Agro.AppHost.Compose.slnx
 **Best for:** Day-to-day development, debugging, quick iterations
 
 ---
+
+<a id="docker-compose-mode"></a>
 
 ### 🐳 Docker Compose Mode (API Development)
 
@@ -104,6 +115,8 @@ dotnet run --project services/farm-service/src/Agro.Farm.Api
 **Best for:** Coding APIs, debugging services, database migrations
 
 ---
+
+<a id="k3d-mode-full-stack-gitops"></a>
 
 ### ☸️ K3D Mode (Full Stack + GitOps)
 
@@ -144,6 +157,8 @@ cd scripts\k3d
 
 ---
 
+<a id="quick-start"></a>
+
 ## 🚀 Quick Start (Choose Your Mode)
 
 ### 1️⃣ Clone Repository
@@ -183,6 +198,7 @@ start tc-agro-solutions.sln
 ### 4️⃣ Start Development
 
 **If using AppHost (Option A):**
+
 - Press `F5` in Visual Studio - all services start automatically ✅
 
 **If using manual mode (Option B):**
@@ -199,6 +215,8 @@ dotnet run --project services/farm-service/src/Agro.Farm.Api
 
 ---
 
+<a id="frontend-dashboard-poc"></a>
+
 ## 🎨 Frontend Dashboard (PoC)
 
 A modern single-page application built with Vite for fast development and hot reload.
@@ -206,6 +224,7 @@ A modern single-page application built with Vite for fast development and hot re
 **Location:** `poc/frontend/`
 
 **Technology Stack:**
+
 - ⚡ **Vite 6.0** - Lightning-fast build tool with hot module replacement
 - 📊 **Chart.js** - Interactive charts for sensor data visualization
 - 🔌 **SignalR** - Real-time WebSocket communication for live updates
@@ -233,6 +252,7 @@ python -m http.server 8000
 ```
 
 **What you get:**
+
 - ✅ Login page (mock authentication)
 - ✅ Dashboard with stats & metrics
 - ✅ Properties, Plots, Sensors CRUD
@@ -242,6 +262,8 @@ python -m http.server 8000
 **Documentation:** [poc/frontend/README.md](poc/frontend/README.md)
 
 ---
+
+<a id="validating-your-setup"></a>
 
 ## ✅ Validating Your Setup
 
@@ -269,20 +291,20 @@ curl http://localhost:5002/health
 
 ### Access Points
 
-| Component | URL | Credentials | Mode |
-|-----------|-----|-------------|------|
-| **Frontend Dashboard (Vite)** | http://localhost:3000 | demo@agro.com / Demo@123 | npm run dev |
-| **Identity API** | http://localhost:5001/swagger | - | Docker Compose |
-| **Farm API** | http://localhost:5002/swagger | JWT required | Docker Compose |
-| **Sensor Ingest API** | http://localhost:5003/swagger | JWT required | Docker Compose |
-| **Analytics Worker** | http://localhost:5004/health | - | Docker Compose |
-| **PostgreSQL** | localhost:5432 | postgres/postgres | All |
-| **Redis** | localhost:6379 | - | All |
-| **RabbitMQ UI** | http://localhost:15672 | guest/guest | All |
-| **pgAdmin** | http://localhost:5050 | admin@agro.com / admin | Docker Compose |
-| **Grafana** | http://localhost:3000 | admin/admin | k3d / Docker Compose |
-| **Prometheus** | http://localhost:9090 | - | Docker Compose |
-| **ArgoCD** | http://localhost/argocd | admin/Argo@123! | k3d only |
+| Component                     | Docker URL                    | K3d Url                           | Credentials              | Mode                 |
+| ----------------------------- | ----------------------------- | --------------------------------- | ------------------------ | -------------------- |
+| **Frontend Dashboard (Vite)** | http://localhost:3000         | -                                 | demo@agro.com / Demo@123 | npm run dev          |
+| **Identity API**              | http://localhost:5001/swagger | http://localhost/identity         | -                        | Docker Compose / k3d |
+| **Farm API**                  | http://localhost:5002/swagger | http://localhost/farm             | JWT required             | Docker Compose / k3d |
+| **Sensor Ingest API**         | http://localhost:5003/swagger | http://localhost/sensor-ingest    | JWT required             | Docker Compose / k3d |
+| **Analytics Worker**          | http://localhost:5004/health  | http://localhost/analytics-worker | -                        | Docker Compose / k3d |
+| **PostgreSQL**                | localhost:5432                | -                                 | postgres/postgres        | All                  |
+| **Redis**                     | localhost:6379                | -                                 | -                        | All                  |
+| **RabbitMQ UI**               | http://localhost:15672        | -                                 | guest/guest              | All                  |
+| **pgAdmin**                   | http://localhost:5050         | -                                 | admin / admin            | Docker Compose       |
+| **Grafana**                   | http://localhost:3000         | -                                 | admin/admin              | k3d / Docker Compose |
+| **Prometheus**                | http://localhost:9090         | -                                 | -                        | Docker Compose       |
+| **ArgoCD**                    | http://localhost/argocd       | http://localhost/argocd           | admin/Argo@123!          | k3d only             |
 
 **Note:** Frontend and Grafana both use port 3000 - run only one at a time, or change Vite port in `vite.config.js`.
 
@@ -302,6 +324,8 @@ docker exec -it tc-agro-postgres psql -U postgres
 
 ---
 
+<a id="troubleshooting"></a>
+
 ## 🛠️ Troubleshooting
 
 ### ❌ Bootstrap fails to clone repositories
@@ -309,6 +333,7 @@ docker exec -it tc-agro-postgres psql -U postgres
 **Problem:** Git authentication error or network timeout
 
 **Solution:**
+
 ```powershell
 # If using HTTPS, ensure credentials are cached
 git config --global credential.helper wincred
@@ -324,6 +349,7 @@ git config --global credential.helper wincred
 **Problem:** Port already in use (5432, 6379, 5672)
 
 **Solution:**
+
 ```powershell
 # Check what's using the port
 netstat -ano | findstr :5432
@@ -338,6 +364,7 @@ netstat -ano | findstr :5432
 **Problem:** Docker Desktop not running
 
 **Solution:**
+
 ```powershell
 # Ensure Docker Desktop is running
 docker version
@@ -351,6 +378,7 @@ docker version
 **Problem:** Connection string mismatch or database not initialized
 
 **Solution:**
+
 ```powershell
 # Check PostgreSQL is running
 docker ps | findstr postgres
@@ -370,6 +398,7 @@ dotnet ef database update --project src\Agro.Farm.Api
 **Problem:** Not enough RAM or k3d not installed
 
 **Solution:**
+
 ```powershell
 # Check k3d version
 k3d version
@@ -391,6 +420,7 @@ cd scripts\k3d
 **Problem:** APIs not running or wrong URLs
 
 **Solution:**
+
 ```javascript
 // Check API URLs in poc/frontend/js/api.js
 const API_BASE_URL = 'http://localhost:5001'; // Must match running service
@@ -407,6 +437,7 @@ curl http://localhost:5001/health
 **Problem:** Token expired or invalid secret key
 
 **Solution:**
+
 ```powershell
 # Login again to get new token
 curl -X POST http://localhost:5001/api/auth/login \
@@ -427,6 +458,8 @@ curl -X POST http://localhost:5001/api/auth/login \
 4. Search issues in service repositories
 
 ---
+
+<a id="solution-architecture"></a>
 
 ## 🏗️ Solution Architecture
 
@@ -472,6 +505,8 @@ tc-agro-solutions/
 
 ---
 
+<a id="service-repositories"></a>
+
 ## � Service Repositories
 
 ### Microservices (4 independent repositories)
@@ -503,6 +538,8 @@ tc-agro-solutions/
 
 ### For Architects / Tech Leads
 
+<a id="documentation"></a>
+
 ## 📚 Documentation
 
 ### Getting Started
@@ -521,7 +558,7 @@ tc-agro-solutions/
 ### Infrastructure & Deployment
 
 - **[🏗️ Terraform Infrastructure Guide](docs/architecture/infrastructure-terraform.md)** - IaC implementation
-- **[⚙️ AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** - Performance + cost optimization
+- **[⚙️ K3d Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** - Performance + cost optimization
 - **[📖 Node Pool Quick Reference](terraform/AKS_NODE_POOLS_REFERENCE.md)** - Ready-to-use HCL
 
 ### Development
@@ -530,65 +567,67 @@ tc-agro-solutions/
 
 ---
 
+<a id="technology-stack"></a>
+
 ## 🛠️ Technology Stack
 
 ### Backend
 
-| Category | Technology | Version |
-|----------|------------|---------|
-| **Runtime** | .NET | 10.0 |
-| **Language** | C# | 14.0 |
-| **API Framework** | FastEndpoints | 7.2 |
-| **ORM** | Entity Framework Core | 10.0 |
-| **Messaging** | Wolverine | 5.15 |
-| **Pattern** | Pragmatic CQRS | - |
+| Category          | Technology            | Version |
+| ----------------- | --------------------- | ------- |
+| **Runtime**       | .NET                  | 10.0    |
+| **Language**      | C#                    | 14.0    |
+| **API Framework** | FastEndpoints         | 7.2     |
+| **ORM**           | Entity Framework Core | 10.0    |
+| **Messaging**     | Wolverine             | 5.15    |
+| **Pattern**       | Pragmatic CQRS        | -       |
 
-### Infrastructure (Production - Azure)
+### Infrastructure (Production - Azure - Future)
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Orchestration** | Azure Kubernetes Service (AKS) | Container orchestration |
-| **Database** | Azure PostgreSQL Flexible Server + TimescaleDB | Relational + time-series data |
-| **Cache** | Azure Redis Cache | Distributed caching |
-| **Messaging** | Azure Service Bus | Async communication |
-| **Registry** | Azure Container Registry (ACR) | Docker images |
-| **Observability** | Application Insights + Log Analytics | APM & logging |
-| **IaC** | Terraform | Infrastructure as Code |
+| Component         | Technology                                     | Purpose                       |
+| ----------------- | ---------------------------------------------- | ----------------------------- |
+| **Orchestration** | Azure Kubernetes Service (AKS)                 | Container orchestration       |
+| **Database**      | Azure PostgreSQL Flexible Server + TimescaleDB | Relational + time-series data |
+| **Cache**         | Azure Redis Cache                              | Distributed caching           |
+| **Messaging**     | Azure Service Bus                              | Async communication           |
+| **Registry**      | Azure Container Registry (ACR)                 | Docker images                 |
+| **Observability** | Application Insights + Log Analytics           | APM & logging                 |
+| **IaC**           | Terraform                                      | Infrastructure as Code        |
 
 ### Local Development
 
-| Component | Technology | Mode |
-|-----------|------------|------|
-| **Orchestration** | Visual Studio AppHost / Docker Compose / k3d | 🎨 / 🐳 / ☸️ |
-| **Database** | PostgreSQL 16 + TimescaleDB | Docker |
-| **Cache** | Redis 7 | Docker |
-| **Messaging** | RabbitMQ 4.0 | Docker |
-| **Observability (k3d)** | Prometheus + Grafana + Loki + Tempo + OpenTelemetry | GitOps |
-| **GitOps (k3d)** | ArgoCD | Auto-deployment |
-| **Ingress (k3d)** | Traefik | k3s built-in |
+| Component               | Technology                                          | Mode            |
+| ----------------------- | --------------------------------------------------- | --------------- |
+| **Orchestration**       | Visual Studio AppHost / Docker Compose / k3d        | 🎨 / 🐳 / ☸️    |
+| **Database**            | PostgreSQL 16 + TimescaleDB                         | Docker          |
+| **Cache**               | Redis 7                                             | Docker          |
+| **Messaging**           | RabbitMQ 4.0                                        | Docker          |
+| **Observability (k3d)** | Prometheus + Grafana + Loki + Tempo + OpenTelemetry | GitOps          |
+| **GitOps (k3d)**        | ArgoCD                                              | Auto-deployment |
+| **Ingress (k3d)**       | Traefik                                             | k3s built-in    |
 
 ### Frontend
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Build Tool** | Vite 6.0 | Fast development server with hot reload |
-| **UI** | HTML5 + CSS3 + JavaScript (ES Modules) | Responsive dashboard |
-| **HTTP Client** | axios 1.7 | REST API communication with retry logic |
-| **Charts** | Chart.js 4.4 | Interactive data visualization |
-| **Date/Time** | dayjs 1.11 | Lightweight date manipulation |
-| **Real-time** | SignalR Client 9.0 | WebSocket communication for live updates |
-| **Icons** | Unicode Emoji | No external dependencies |
-| **Dev Server** | Vite Dev Server / Python HTTP Server | Local development |
+| Component       | Technology                             | Purpose                                  |
+| --------------- | -------------------------------------- | ---------------------------------------- |
+| **Build Tool**  | Vite 6.0                               | Fast development server with hot reload  |
+| **UI**          | HTML5 + CSS3 + JavaScript (ES Modules) | Responsive dashboard                     |
+| **HTTP Client** | axios 1.7                              | REST API communication with retry logic  |
+| **Charts**      | Chart.js 4.4                           | Interactive data visualization           |
+| **Date/Time**   | dayjs 1.11                             | Lightweight date manipulation            |
+| **Real-time**   | SignalR Client 9.0                     | WebSocket communication for live updates |
+| **Icons**       | Unicode Emoji                          | No external dependencies                 |
+| **Dev Server**  | Vite Dev Server / Python HTTP Server   | Local development                        |
 
 ### Testing & Quality
 
-| Category | Technology |
-|----------|------------|
-| **Unit Tests** | xUnit 3.2 |
-| **Mocking** | NSubstitute / FakeItEasy |
-| **Integration Tests** | FastEndpoints.Testing |
-| **Load Tests** | k6 |
-| **Code Quality** | SonarQube (planned) |
+| Category              | Technology               |
+| --------------------- | ------------------------ |
+| **Unit Tests**        | xUnit 3.2                |
+| **Mocking**           | NSubstitute / FakeItEasy |
+| **Integration Tests** | FastEndpoints.Testing    |
+| **Load Tests**        | k6                       |
+| **Code Quality**      | SonarQube (planned)      |
 
 **Choose your mode:**
 
@@ -624,6 +663,8 @@ cd scripts\k3d
 
 ---
 
+<a id="development-timeline-phase-5"></a>
+
 ## 📅 Development Timeline (Phase 5)
 
 | Phase       | Duration  | Focus                                            |
@@ -636,6 +677,8 @@ cd scripts\k3d
 | **Phase 5** | Weeks 5-6 | Integrated demo, dashboards, presentation        |
 
 ---
+
+<a id="microservices"></a>
 
 ## 🚀 Microservices
 
@@ -665,6 +708,8 @@ Consumes events, applies rules, generates alerts (background worker).
 
 ---
 
+<a id="data-model"></a>
+
 ## 💾 Data Model
 
 ### Core Tables
@@ -691,7 +736,22 @@ Analytics
 
 ---
 
-## AKS Node Pool Strategy
+<a id="k3d-node-pool-strategy"></a>
+
+## K3d Node Pool Strategy
+
+Three optimized node pools for stability, performance, and cost:
+
+| Pool            | Memory | Workload                    |
+| --------------- | ------ | --------------------------- |
+| **server-core** | 3gb    | Kubernetes control plane    |
+| **system**      | 4gb    | Kubernetes infrastructure   |
+| **platform**    | 6gb    | ArgoCD, Ingress             |
+| **apps**        | 7gb    | .NET APIs worloads, workers |
+
+**Est. Cost:** $0/month
+
+## AKS Node Pool Strategy (Production - Future)
 
 Three optimized node pools for stability, performance, and cost:
 
@@ -705,6 +765,8 @@ Three optimized node pools for stability, performance, and cost:
 **Details:** [ADR-007: AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)
 
 ---
+
+<a id="security"></a>
 
 ## 🔐 Security
 
@@ -728,6 +790,8 @@ Azure Key Vault for production secrets.
 
 ---
 
+<a id="observability"></a>
+
 ## 📈 Observability
 
 ### Application Insights
@@ -748,6 +812,8 @@ Azure Key Vault for production secrets.
 - Query performance metrics
 
 ---
+
+<a id="testing"></a>
 
 ## 🧪 Testing
 
@@ -795,6 +861,8 @@ docs/
 
 ---
 
+<a id="getting-started"></a>
+
 ## 🚀 Getting Started
 
 ### For Developers
@@ -818,6 +886,8 @@ docs/
 3. Check [Architecture Documentation](docs/architecture/)
 
 ---
+
+<a id="workflow-examples"></a>
 
 ## 🔄 Workflow Examples
 
@@ -855,6 +925,8 @@ docker-compose up -d agro-farm-service
 
 ---
 
+<a id="contributing"></a>
+
 ## 🤝 Contributing
 
 ### Branch Naming
@@ -882,6 +954,8 @@ test: add integration test
 - ADR required for architectural changes
 
 ---
+
+<a id="support-resources"></a>
 
 ## 📞 Support & Resources
 
