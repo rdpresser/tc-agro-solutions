@@ -988,11 +988,11 @@ This project is proprietary. All rights reserved.
 
 ## ✨ Key Metrics
 
-- **Services:** 4 microservices
+- **Services:** 4 microservices + 1 frontend + mobile app
 - **Repositories:** Independent git repositories per service
 - **Documentation:** 7 ADRs + architecture guides
-- **Test Coverage:** Unit, integration, load, smoke tests
-- **Deployment:** Azure AKS via Terraform + ArgoCD
+- **Test Coverage:** Unit testing to keep code quality
+- **Deployment:** Github Action CI (Docker Hub) + ArgoCD for Deployments
 
 ---
 
