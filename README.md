@@ -477,7 +477,9 @@ _Docker Compose infrastructure stack for local k3d cluster support._
 
 <img width="1967" height="1380" alt="tc-agro-rabbitmq-queues" src="docs/images/rabbitmq_queues.png" />
 
-_RabbitMQ queues and broker view for local k3d cluster support._
+_RabbitMQ queues and broker overview for local k3d cluster support._
+
+_Note: `TEST-*` queues are wiretap queues used only to show message flow during the demo video. They mirror messages from the same exchanges and are not real application processing queues._
 
 ---
 
