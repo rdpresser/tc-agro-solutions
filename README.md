@@ -481,6 +481,14 @@ _RabbitMQ queues and broker overview for local k3d cluster support._
 
 _Note: `TEST-*` queues are wiretap queues used only to show message flow during the demo video. They mirror messages from the same exchanges and are not real application processing queues._
 
+<img width="2393" height="1380" alt="tc-agro-argocd-gitops" src="docs/images/argocd.png" />
+
+_ArgoCD drives localhost GitOps deployments, automatically applying changes produced by GitHub Actions CI._
+
+<img width="2657" height="1380" alt="tc-agro-frontend-dashboard" src="docs/images/frontend.png" />
+
+_Frontend supports producer and admin users with property, plot, and sensor registration, plus alert monitoring with standard filters and pagination._
+
 ---
 
 ### Parent Repository (this repo)
