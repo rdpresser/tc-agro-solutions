@@ -469,6 +469,10 @@ curl -X POST http://localhost:5001/api/auth/login \
 
 **📐 Detailed Architecture:** See [Architecture Diagram (Draw.io)](docs/tc-agro-k3d-architecture.drawio) for full visualization.
 
+<img width="3176" height="2466" alt="tc-agro-docker-stack" src="docs/images/docker-stack.png" />
+
+_Docker Compose stack supporting the local k3d cluster services._
+
 ---
 
 ### Parent Repository (this repo)
