@@ -465,13 +465,19 @@ curl -X POST http://localhost:5001/api/auth/login \
 
 ### System Overview
 
-<img width="3176" height="2466" alt="tc-agro-k3d-architecture drawio" src="docs/images/tc-agro-k3d-architecture.png" />
+<img width="1588" height="1233" alt="tc-agro-k3d-architecture" src="docs/images/tc-agro-k3d-architecture.png" />
+
+_Local k3d platform architecture overview._
 
 **📐 Detailed Architecture:** See [Architecture Diagram (Draw.io)](docs/tc-agro-k3d-architecture.drawio) for full visualization.
 
-<img width="3176" height="2466" alt="tc-agro-docker-stack" src="docs/images/docker_stack.png" />
+<img width="2730" height="1271" alt="tc-agro-docker-compose-stack" src="docs/images/docker_stack.png" />
 
-_Docker Compose stack supporting the local k3d cluster services._
+_Docker Compose infrastructure stack for local k3d cluster support._
+
+<img width="1967" height="1380" alt="tc-agro-rabbitmq-queues" src="docs/images/rabbitmq_queues.png" />
+
+_RabbitMQ queues and broker view for local k3d cluster support._
 
 ---
 
