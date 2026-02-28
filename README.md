@@ -465,7 +465,7 @@ curl -X POST http://localhost:5001/api/auth/login \
 
 ### System Overview
 
-<img width="3176" height="2466" alt="tc-agro-k3d-architecture drawio" src="https://github.com/user-attachments/assets/df1a3c5b-7069-45dd-a98b-da454bb8b861" />
+<img width="3176" height="2466" alt="tc-agro-k3d-architecture drawio" src="docs/images/tc-agro-k3d-architecture.png" />
 
 **📐 Detailed Architecture:** See [Architecture Diagram (Draw.io)](docs/tc-agro-k3d-architecture.drawio) for full visualization.
 
