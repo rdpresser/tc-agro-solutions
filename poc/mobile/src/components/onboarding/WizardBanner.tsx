@@ -30,7 +30,9 @@ export function WizardBanner() {
         <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
           Setup Wizard - Step {wizardStep}/3
         </Text>
-        <TouchableOpacity onPress={skipOnboarding}>
+        <TouchableOpacity onPress={async () => {
+          await skipOnboarding();
+        }}>
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>Skip setup</Text>
         </TouchableOpacity>
       </View>

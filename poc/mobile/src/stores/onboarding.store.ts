@@ -18,6 +18,7 @@ interface OnboardingState {
   isHydrated: boolean;
 
   hydrate: () => Promise<void>;
+  reset: () => Promise<void>;
   startWizard: () => Promise<void>;
   advanceToStep2: (propertyId: string) => Promise<void>;
   advanceToStep3: (plotId: string) => Promise<void>;
@@ -99,5 +100,18 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
     await AsyncStorage.setItem(COMPLETED_KEY, 'true');
     await AsyncStorage.removeItem(WIZARD_KEY);
     set({ hasCompletedOnboarding: true, isWizardActive: false });
+  },
+
+  reset: async () => {
+    await AsyncStorage.removeItem(COMPLETED_KEY);
+    await AsyncStorage.removeItem(WIZARD_KEY);
+    set({
+      hasCompletedOnboarding: false,
+      isWizardActive: false,
+      wizardStep: 1,
+      createdPropertyId: null,
+      createdPlotId: null,
+      isHydrated: true,
+    });
   },
 }));

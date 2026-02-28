@@ -8,28 +8,19 @@ import { useFallbackPolling } from '@/hooks/use-fallback-polling';
 import { useAlertsSummary } from '@/hooks/queries/use-alerts';
 import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
+import type { User } from '@/types';
 
-export default function AppLayout() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
-  const user = useAuthStore((s) => s.user);
+function AuthenticatedTabs({ user }: { user: User }) {
   const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
-  // Initialize real-time connections
   useSignalR();
   useFallbackPolling();
 
-  // Alert badge count (lightweight summary endpoint, not full list)
-  const ownerScopeId = user?.role?.toLowerCase() === 'admin' ? (selectedOwnerId || undefined) : undefined;
+  const ownerScopeId = user.role?.toLowerCase() === 'admin' ? (selectedOwnerId || undefined) : undefined;
   const { data: summary } = useAlertsSummary(24, ownerScopeId);
   const alertCount = summary?.pendingAlertsTotal || 0;
-
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
-
-  if (!isHydrated) return null;
-  if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
     <Tabs
@@ -99,7 +90,6 @@ export default function AppLayout() {
           ),
         }}
       />
-      {/* Hidden tabs */}
       <Tabs.Screen
         name="(alerts)"
         options={{
@@ -111,13 +101,25 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="(users)"
-        options={{ href: isAdmin ? undefined : null, title: 'Users',
+        options={{
+          href: null,
+          title: 'Users',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} size={focused ? 24 : 22} color={color} />
           ),
-          tabBarItemStyle: isAdmin ? undefined : { display: 'none' },
         }}
       />
     </Tabs>
   );
+}
+
+export default function AppLayout() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const user = useAuthStore((s) => s.user);
+
+  if (!isHydrated) return null;
+  if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />;
+
+  return <AuthenticatedTabs user={user} />;
 }

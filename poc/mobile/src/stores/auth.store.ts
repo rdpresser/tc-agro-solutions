@@ -5,6 +5,7 @@ import { authApi } from '@/api/auth.api';
 import { globalQueryClient } from '@/providers/query-provider';
 import { useRealtimeStore } from '@/stores/realtime.store';
 import { useConnectionStore } from '@/stores/connection.store';
+import { useOnboardingStore } from '@/stores/onboarding.store';
 import type { User, LoginRequest, TokenInfo } from '@/types';
 
 interface AuthState {
@@ -68,6 +69,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    set({
+      token: null,
+      user: null,
+      tokenInfo: null,
+      isAuthenticated: false,
+    });
+
     await clearAll();
     globalQueryClient?.clear();
     useRealtimeStore.getState().setReadings([]);
@@ -75,12 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useConnectionStore.getState().setSensorHubState('disconnected');
     useConnectionStore.getState().setAlertHubState('disconnected');
     useConnectionStore.getState().setFallbackActive(false);
-    set({
-      token: null,
-      user: null,
-      tokenInfo: null,
-      isAuthenticated: false,
-    });
+    await useOnboardingStore.getState().reset();
   },
 
   setAuth: async (token: string) => {

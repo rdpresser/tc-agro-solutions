@@ -41,9 +41,10 @@ export function useSignalR() {
     return connection;
   }, [token]);
 
-  const isStoppedDuringNegotiation = (error: unknown) => {
+  const isExpectedStopError = (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error || '');
-    return message.toLowerCase().includes('stopped during negotiation');
+    const lower = message.toLowerCase();
+    return lower.includes('stopped during negotiation') || lower.includes('stop() was called');
   };
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export function useSignalR() {
           }
         }
       } catch (error) {
-        if (!disposed && !isStoppedDuringNegotiation(error)) {
+        if (!disposed && !isExpectedStopError(error)) {
           setSensorHubState('disconnected');
         }
       }
@@ -124,7 +125,7 @@ export function useSignalR() {
           }
         }
       } catch (error) {
-        if (!disposed && !isStoppedDuringNegotiation(error)) {
+        if (!disposed && !isExpectedStopError(error)) {
           setAlertHubState('disconnected');
         }
       }
