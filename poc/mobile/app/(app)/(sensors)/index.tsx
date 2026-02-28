@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert as RNAler
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSensors, useDeleteSensor } from '@/hooks/queries/use-sensors';
+import { useSensors, useChangeSensorStatus } from '@/hooks/queries/use-sensors';
 import { useTheme } from '@/providers/theme-provider';
 import { SENSOR_STATUSES, getSensorIcon } from '@/constants/crop-types';
 import { SearchBar } from '@/components/ui/SearchBar';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatDate } from '@/lib/format';
 import type { Sensor } from '@/types';
 
@@ -36,28 +36,44 @@ const statusVariant = (s: string) => {
 export default function SensorsListScreen() {
   const { colors, isDark } = useTheme();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('installedAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = useSensors({
-    pageSize: 50,
+    pageNumber: page,
+    pageSize: 10,
     filter: search || undefined,
     status: statusFilter || undefined,
     sortBy,
     sortDirection,
   });
-  const deleteMutation = useDeleteSensor();
+  const changeStatusMutation = useChangeSensorStatus();
 
   const sensors = data?.items || [];
 
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget, {
-      onSuccess: () => { setDeleteTarget(null); },
-      onError: () => { setDeleteTarget(null); RNAlert.alert('Error', 'Failed to delete'); },
-    });
+  const handleChangeStatus = (sensor: Sensor) => {
+    const options = SENSOR_STATUSES.filter((s) => s.value !== sensor.status);
+    RNAlert.alert(
+      'Change Sensor Status',
+      `Select new status for ${sensor.label}`,
+      [
+        ...options.map((status) => ({
+          text: status.label,
+          onPress: () => {
+            changeStatusMutation.mutate(
+              { id: sensor.id, data: { newStatus: status.value } },
+              {
+                onSuccess: () => RNAlert.alert('Success', 'Sensor status updated.'),
+                onError: () => RNAlert.alert('Error', 'Failed to update sensor status.'),
+              }
+            );
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const renderItem = ({ item }: { item: Sensor }) => (
@@ -83,7 +99,7 @@ export default function SensorsListScreen() {
               <Ionicons
                 name={item.batteryLevel > 20 ? 'battery-half-outline' : 'battery-dead-outline'}
                 size={14}
-                color={item.batteryLevel > 20 ? colors.textMuted : '#dc3545'}
+                color={item.batteryLevel > 20 ? colors.textMuted : colors.statusDanger}
               />
               <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.batteryLevel}%</Text>
             </View>
@@ -95,13 +111,16 @@ export default function SensorsListScreen() {
           </Text>
           <View className="flex-row items-center gap-3">
             <TouchableOpacity
+              onPress={() => handleChangeStatus(item)}
+              hitSlop={8}
+            >
+              <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => router.push({ pathname: '/(app)/(sensors)/history', params: { id: item.id, label: item.label } })}
               hitSlop={8}
             >
-              <Ionicons name="analytics-outline" size={18} color="#2d5016" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setDeleteTarget(item.id)} hitSlop={8}>
-              <Ionicons name="trash-outline" size={18} color="#dc3545" />
+              <Ionicons name="analytics-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -131,7 +150,7 @@ export default function SensorsListScreen() {
       </View>
 
       <View className="px-4">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search sensors..." />
+        <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search sensors..." />
         <SortControl
           options={[
             { value: 'installedAt', label: 'Installed' },
@@ -141,11 +160,11 @@ export default function SensorsListScreen() {
           ]}
           sortBy={sortBy}
           sortDirection={sortDirection}
-          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); setPage(1); }}
         />
       </View>
 
-      <FilterChips options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+      <FilterChips options={STATUS_OPTIONS} value={statusFilter} onChange={(value) => { setStatusFilter(value); setPage(1); }} />
 
       {isLoading ? (
         <LoadingOverlay />
@@ -158,19 +177,25 @@ export default function SensorsListScreen() {
           renderItem={renderItem}
           contentContainerClassName="px-4 pb-4"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#2d5016" />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.primary} />
+          }
+          ListFooterComponent={
+            <PaginationControls
+              pageNumber={data?.pageNumber || page}
+              pageSize={data?.pageSize || 10}
+              totalCount={data?.totalCount || 0}
+              hasPreviousPage={Boolean(data?.hasPreviousPage)}
+              hasNextPage={Boolean(data?.hasNextPage)}
+              isLoading={isRefetching}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => {
+                if (data?.hasNextPage) setPage((p) => p + 1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
           }
         />
       )}
-
-      <ConfirmDialog
-        visible={!!deleteTarget}
-        title="Delete Sensor"
-        message="Are you sure? This action cannot be undone."
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        loading={deleteMutation.isPending}
-      />
     </SafeAreaView>
   );
 }

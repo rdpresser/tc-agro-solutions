@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { alertsApi } from '@/api/alerts.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
-import type { Alert, AlertSummary } from '@/types';
+import type { AlertSummary, PaginatedResponse, Alert } from '@/types';
 
-export function useAlertsPending(params?: { severity?: string; search?: string }) {
+export function useAlertsPending(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string }) {
   const ownerId = useOwnerScope();
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
-  return useQuery({
+  return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'pending', scopedParams],
-    queryFn: () => alertsApi.getPending(scopedParams),
+    queryFn: () => alertsApi.getPendingPage(scopedParams),
     staleTime: 0,
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,
@@ -16,12 +16,12 @@ export function useAlertsPending(params?: { severity?: string; search?: string }
   });
 }
 
-export function useAlertsResolved(params?: { severity?: string; search?: string }) {
+export function useAlertsResolved(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string }) {
   const ownerId = useOwnerScope();
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
-  return useQuery({
+  return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'resolved', scopedParams],
-    queryFn: () => alertsApi.getResolved(scopedParams),
+    queryFn: () => alertsApi.getResolvedPage(scopedParams),
     staleTime: 0,
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,
@@ -29,12 +29,12 @@ export function useAlertsResolved(params?: { severity?: string; search?: string 
   });
 }
 
-export function useAlertsAll(params?: { severity?: string; search?: string; status?: string }) {
+export function useAlertsAll(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string; status?: string }) {
   const ownerId = useOwnerScope();
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
-  return useQuery({
+  return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'all', scopedParams],
-    queryFn: () => alertsApi.getAll(scopedParams),
+    queryFn: () => alertsApi.getAllPage(scopedParams),
     staleTime: 0,
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,
@@ -42,8 +42,9 @@ export function useAlertsAll(params?: { severity?: string; search?: string; stat
   });
 }
 
-export function useAlertsSummary(windowHours = 24) {
-  const ownerId = useOwnerScope();
+export function useAlertsSummary(windowHours = 24, ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   return useQuery<AlertSummary | null>({
     queryKey: ['alerts', 'summary', windowHours, ownerId],
     queryFn: () => alertsApi.getSummary(windowHours, ownerId),
@@ -59,20 +60,6 @@ export function useResolveAlert() {
   return useMutation({
     mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
       alertsApi.resolve(id, notes),
-    onMutate: async ({ id }) => {
-      // Cancel outgoing refetches so they don't overwrite optimistic update
-      await queryClient.cancelQueries({ queryKey: ['alerts'] });
-
-      // Optimistic: move alert from pending to resolved in cache
-      queryClient.setQueriesData<Alert[]>(
-        { queryKey: ['alerts', 'pending'] },
-        (old) => old?.filter((a) => a.id !== id),
-      );
-      queryClient.setQueriesData<Alert[]>(
-        { queryKey: ['alerts', 'all'] },
-        (old) => old?.map((a) => a.id === id ? { ...a, status: 'Resolved' as const, resolvedAt: new Date().toISOString() } : a),
-      );
-    },
     onSettled: () => {
       // Always refetch after mutation settles (success or error)
       queryClient.invalidateQueries({ queryKey: ['alerts'] });

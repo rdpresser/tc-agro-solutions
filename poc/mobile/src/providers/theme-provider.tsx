@@ -36,6 +36,10 @@ export function useTheme() {
       warningBg: isDark ? '#2a2412' : '#fff8e6',
       infoBg: isDark ? '#121e2a' : '#e8f4fd',
       successBg: isDark ? '#122a15' : '#e8fde8',
+      statusSuccess: '#28a745',
+      statusWarning: '#ffc107',
+      statusDanger: '#dc3545',
+      statusInfo: '#17a2b8',
     },
   };
 }

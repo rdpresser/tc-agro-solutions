@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert as RNAlert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { usePlots, useDeletePlot } from '@/hooks/queries/use-plots';
+import { usePlots } from '@/hooks/queries/use-plots';
 import { useTheme } from '@/providers/theme-provider';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { SortControl } from '@/components/ui/SortControl';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatArea, formatDate } from '@/lib/format';
 import { getCropIcon } from '@/constants/crop-types';
 import type { Plot } from '@/types';
@@ -29,29 +29,21 @@ const statusVariant = (s: string) => {
 export default function PlotsListScreen() {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = usePlots({
-    pageSize: 50,
+    pageNumber: page,
+    pageSize: 10,
     filter: search || undefined,
     status: statusFilter || undefined,
     sortBy,
     sortDirection,
   });
-  const deleteMutation = useDeletePlot();
 
   const plots = data?.items || [];
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget, {
-      onSuccess: () => { setDeleteTarget(null); RNAlert.alert('Deleted'); },
-      onError: () => { setDeleteTarget(null); RNAlert.alert('Error', 'Failed to delete'); },
-    });
-  };
 
   // Status filter chips
   const statuses = ['', 'Active', 'Harvested', 'Fallow', 'Preparing'];
@@ -92,9 +84,7 @@ export default function PlotsListScreen() {
         )}
 
         <View className="flex-row justify-end mt-2">
-          <TouchableOpacity onPress={() => setDeleteTarget(item.id)} hitSlop={8}>
-            <Ionicons name="trash-outline" size={18} color="#dc3545" />
-          </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </View>
       </Card>
     </TouchableOpacity>
@@ -113,7 +103,7 @@ export default function PlotsListScreen() {
       </View>
 
       <View className="px-4">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search plots..." />
+        <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search plots..." />
         <SortControl
           options={[
             { value: 'name', label: 'Name' },
@@ -124,12 +114,12 @@ export default function PlotsListScreen() {
           ]}
           sortBy={sortBy}
           sortDirection={sortDirection}
-          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); setPage(1); }}
         />
         <ScrollableChips
           items={statuses}
           selected={statusFilter}
-          onSelect={setStatusFilter}
+          onSelect={(value) => { setStatusFilter(value); setPage(1); }}
         />
       </View>
 
@@ -146,17 +136,23 @@ export default function PlotsListScreen() {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#2d5016" />
           }
+          ListFooterComponent={
+            <PaginationControls
+              pageNumber={data?.pageNumber || page}
+              pageSize={data?.pageSize || 10}
+              totalCount={data?.totalCount || 0}
+              hasPreviousPage={Boolean(data?.hasPreviousPage)}
+              hasNextPage={Boolean(data?.hasNextPage)}
+              isLoading={isRefetching}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => {
+                if (data?.hasNextPage) setPage((p) => p + 1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
+          }
         />
       )}
-
-      <ConfirmDialog
-        visible={!!deleteTarget}
-        title="Delete Plot"
-        message="Are you sure? This action cannot be undone."
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        loading={deleteMutation.isPending}
-      />
     </SafeAreaView>
   );
 }

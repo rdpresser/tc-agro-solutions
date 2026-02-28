@@ -26,6 +26,10 @@ export const sensorsApi = {
     return response.data;
   },
 
+  changeStatus: async (id: string, data: { newStatus: string; reason?: string }): Promise<void> => {
+    await farmApi.put(`/api/sensors/${id}/status-change`, data);
+  },
+
   delete: async (id: string): Promise<void> => {
     await farmApi.delete(`/api/sensors/${id}`);
   },

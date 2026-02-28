@@ -40,7 +40,7 @@ export default function MonitoringScreen() {
       <ScrollView
         className="flex-1 px-4"
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#2d5016" />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.primary} />
         }
       >
         {readings.length === 0 ? (
@@ -60,13 +60,13 @@ export default function MonitoringScreen() {
                     <Text className="text-sm font-semibold flex-1" numberOfLines={1} style={{ color: colors.text }}>
                       {reading.sensorLabel || reading.sensorId?.slice(0, 8)}
                     </Text>
-                    <View className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                    <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.statusSuccess }} />
                   </View>
 
                   <View className="gap-1.5">
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-1">
-                        <Ionicons name="thermometer-outline" size={12} color="#E74C3C" />
+                        <Ionicons name="thermometer-outline" size={12} color={colors.statusDanger} />
                         <Text className="text-xs" style={{ color: colors.textMuted }}>Temp</Text>
                       </View>
                       <Text className="text-sm font-bold" style={{ color: getTemperatureColor(reading.temperature) }}>
@@ -76,7 +76,7 @@ export default function MonitoringScreen() {
 
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-1">
-                        <Ionicons name="water-outline" size={12} color="#3498DB" />
+                        <Ionicons name="water-outline" size={12} color={colors.statusInfo} />
                         <Text className="text-xs" style={{ color: colors.textMuted }}>Hum</Text>
                       </View>
                       <Text className="text-sm font-bold" style={{ color: getHumidityColor(reading.humidity) }}>
@@ -86,7 +86,7 @@ export default function MonitoringScreen() {
 
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-1">
-                        <Ionicons name="leaf-outline" size={12} color="#27AE60" />
+                        <Ionicons name="leaf-outline" size={12} color={colors.statusSuccess} />
                         <Text className="text-xs" style={{ color: colors.textMuted }}>Soil</Text>
                       </View>
                       <Text className="text-sm font-bold" style={{ color: getSoilMoistureColor(reading.soilMoisture) }}>
@@ -96,10 +96,10 @@ export default function MonitoringScreen() {
 
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-1">
-                        <Ionicons name="rainy-outline" size={12} color="#9B59B6" />
+                        <Ionicons name="rainy-outline" size={12} color={colors.textSecondary} />
                         <Text className="text-xs" style={{ color: colors.textMuted }}>Rain</Text>
                       </View>
-                      <Text className="text-sm font-bold" style={{ color: '#9B59B6' }}>
+                      <Text className="text-sm font-bold" style={{ color: colors.textSecondary }}>
                         {reading.rainfall?.toFixed(1)} mm
                       </Text>
                     </View>

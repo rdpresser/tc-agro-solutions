@@ -7,23 +7,24 @@ import { alertsApi } from '@/api/alerts.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { DashboardStats } from '@/types';
 
-export function useDashboardStats() {
-  const ownerId = useOwnerScope();
+export function useDashboardStats(ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   const ownerParam = ownerId ? { ownerId } : {};
   return useQuery<DashboardStats>({
     queryKey: ['dashboard', 'stats', ownerId],
     queryFn: async () => {
-      const [properties, plots, sensors, alerts] = await Promise.all([
+      const [properties, plots, sensors, alertsSummary] = await Promise.all([
         propertiesApi.list({ pageSize: 1, ...ownerParam }),
         plotsApi.list({ pageSize: 1, ...ownerParam }),
         sensorsApi.list({ pageSize: 1, ...ownerParam }),
-        alertsApi.getPending({ ...ownerParam }),
+        alertsApi.getSummary(24, ownerId),
       ]);
       return {
         propertiesCount: properties.totalCount,
         plotsCount: plots.totalCount,
         sensorsCount: sensors.totalCount,
-        alertsCount: alerts.length,
+        alertsCount: Number(alertsSummary?.pendingAlertsTotal || 0),
       };
     },
     staleTime: 30_000,
@@ -32,8 +33,9 @@ export function useDashboardStats() {
   });
 }
 
-export function useLatestReadings(limit = 10) {
-  const ownerId = useOwnerScope();
+export function useLatestReadings(limit = 10, ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   return useQuery({
     queryKey: ['dashboard', 'latest-readings', limit, ownerId],
     queryFn: () => dashboardApi.getLatestReadings(limit, ownerId),
@@ -44,11 +46,15 @@ export function useLatestReadings(limit = 10) {
   });
 }
 
-export function usePendingAlerts() {
-  const ownerId = useOwnerScope();
+export function usePendingAlerts(ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   return useQuery({
     queryKey: ['alerts', 'pending', 'dashboard', ownerId],
-    queryFn: () => alertsApi.getPending({ pageNumber: 1, pageSize: 200, ...(ownerId ? { ownerId } : {}) }),
+    queryFn: async () => {
+      const page = await alertsApi.getPendingPage({ pageNumber: 1, pageSize: 20, ...(ownerId ? { ownerId } : {}) });
+      return page.items;
+    },
     staleTime: 15_000,
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,

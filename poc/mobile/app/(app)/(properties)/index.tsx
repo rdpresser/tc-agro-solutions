@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useProperties, useDeleteProperty } from '@/hooks/queries/use-properties';
+import { useProperties } from '@/hooks/queries/use-properties';
 import { useTheme } from '@/providers/theme-provider';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { SortControl } from '@/components/ui/SortControl';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatArea, formatDate } from '@/lib/format';
 import type { Property } from '@/types';
 
@@ -22,33 +22,16 @@ export default function PropertiesListScreen() {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data, isLoading, isRefetching, refetch } = useProperties({
     pageNumber: page,
-    pageSize: 20,
+    pageSize: 10,
     filter: search || undefined,
     sortBy,
     sortDirection,
   });
 
-  const deleteMutation = useDeleteProperty();
-
   const properties = data?.items || [];
-
-  const handleDelete = useCallback(() => {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget, {
-      onSuccess: () => {
-        setDeleteTarget(null);
-        Alert.alert('Success', 'Property deleted successfully');
-      },
-      onError: () => {
-        setDeleteTarget(null);
-        Alert.alert('Error', 'Failed to delete property');
-      },
-    });
-  }, [deleteTarget, deleteMutation]);
 
   const renderItem = ({ item }: { item: Property }) => (
     <TouchableOpacity
@@ -93,12 +76,7 @@ export default function PropertiesListScreen() {
               {item.plotCount} plots
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => setDeleteTarget(item.id)}
-            hitSlop={8}
-          >
-            <Ionicons name="trash-outline" size={18} color="#dc3545" />
-          </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </View>
       </Card>
     </TouchableOpacity>
@@ -117,7 +95,7 @@ export default function PropertiesListScreen() {
       </View>
 
       <View className="px-4">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search properties..." />
+        <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search properties..." />
         <SortControl
           options={[
             { value: 'name', label: 'Name' },
@@ -148,23 +126,25 @@ export default function PropertiesListScreen() {
           renderItem={renderItem}
           contentContainerClassName="px-4 pb-4"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#2d5016" />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.primary} />
           }
-          onEndReached={() => {
-            if (data?.hasNextPage) setPage((p) => p + 1);
-          }}
-          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            <PaginationControls
+              pageNumber={data?.pageNumber || page}
+              pageSize={data?.pageSize || 10}
+              totalCount={data?.totalCount || 0}
+              hasPreviousPage={Boolean(data?.hasPreviousPage)}
+              hasNextPage={Boolean(data?.hasNextPage)}
+              isLoading={isRefetching}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => {
+                if (data?.hasNextPage) setPage((p) => p + 1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
+          }
         />
       )}
-
-      <ConfirmDialog
-        visible={!!deleteTarget}
-        title="Delete Property"
-        message="Are you sure? This action cannot be undone."
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        loading={deleteMutation.isPending}
-      />
     </SafeAreaView>
   );
 }

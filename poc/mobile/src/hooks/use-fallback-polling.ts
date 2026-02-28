@@ -7,10 +7,15 @@ import { alertsApi } from '@/api/alerts.api';
 import { API_CONFIG } from '@/constants/api-config';
 import { triggerAlertNotification } from '@/lib/notifications';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 
 export function useFallbackPolling() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const ownerId = useOwnerScope();
+  const user = useAuthStore((s) => s.user);
+  const ownerScopeId = useOwnerScope();
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const ownerId = isAdmin ? (selectedOwnerId || undefined) : ownerScopeId;
   const sensorHubState = useConnectionStore((s) => s.sensorHubState);
   const alertHubState = useConnectionStore((s) => s.alertHubState);
   const setFallbackActive = useConnectionStore((s) => s.setFallbackActive);

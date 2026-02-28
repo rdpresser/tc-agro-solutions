@@ -1,5 +1,5 @@
 import { analyticsApi } from './clients';
-import type { Alert, AlertSummary } from '@/types';
+import type { Alert, AlertSummary, PaginatedResponse } from '@/types';
 
 function formatAlertType(alertType?: string): string {
   if (!alertType) return '';
@@ -9,9 +9,10 @@ function formatAlertType(alertType?: string): string {
 
 function normalizeSeverity(severity?: string): Alert['severity'] {
   const value = (severity || '').toLowerCase();
-  if (value === 'warning') return 'medium';
-  if (value === 'info') return 'low';
-  return (value || 'low') as Alert['severity'];
+  if (value === 'critical') return 'critical';
+  if (value === 'high' || value === 'medium' || value === 'warning') return 'warning';
+  if (value === 'low' || value === 'info') return 'info';
+  return 'info';
 }
 
 function normalizeStatus(status?: string): Alert['status'] {
@@ -19,6 +20,16 @@ function normalizeStatus(status?: string): Alert['status'] {
   if (value === 'acknowledged') return 'Acknowledged';
   if (value === 'resolved') return 'Resolved';
   return 'Pending';
+}
+
+function normalizeStatusParam(status?: string): string | undefined {
+  const value = (status || '').trim().toLowerCase();
+  if (!value) return undefined;
+  if (value === 'pending') return 'Pending';
+  if (value === 'acknowledged') return 'Acknowledged';
+  if (value === 'resolved') return 'Resolved';
+  if (value === 'all') return 'all';
+  return status;
 }
 
 function normalizeAlerts(input: unknown): Alert[] {
@@ -46,6 +57,58 @@ function normalizeAlerts(input: unknown): Alert[] {
       createdAt: alert.createdAt || new Date().toISOString(),
     } as Alert;
   });
+}
+
+function getPaginatedValue(input: unknown, camelKey: string, pascalKey: string, fallback: number): number {
+  const obj = (input && typeof input === 'object') ? (input as Record<string, unknown>) : {};
+  const value = Number(obj[camelKey] ?? obj[pascalKey] ?? fallback);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getPaginatedBool(input: unknown, camelKey: string, pascalKey: string): boolean {
+  const obj = (input && typeof input === 'object') ? (input as Record<string, unknown>) : {};
+  return Boolean(obj[camelKey] ?? obj[pascalKey]);
+}
+
+async function getAlertsPage(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: string;
+  severity?: string;
+  search?: string;
+  ownerId?: string;
+}): Promise<PaginatedResponse<Alert>> {
+  const pageNumber = params?.pageNumber || 1;
+  const pageSize = params?.pageSize || 10;
+  const normalizedStatus = normalizeStatusParam(params?.status);
+
+  const response = await analyticsApi.get('/api/alerts/pending', {
+    params: {
+      pageNumber,
+      pageSize,
+      ...(normalizedStatus ? { status: normalizedStatus } : {}),
+      ...(params?.severity ? { severity: params.severity } : {}),
+      ...(params?.search ? { search: params.search } : {}),
+      ...(params?.ownerId ? { ownerId: params.ownerId } : {}),
+    },
+  });
+
+  const data = response.data;
+  const items = normalizeAlerts(data);
+  const totalCount = getPaginatedValue(data, 'totalCount', 'TotalCount', items.length);
+  const currentPageNumber = getPaginatedValue(data, 'pageNumber', 'PageNumber', pageNumber);
+  const currentPageSize = getPaginatedValue(data, 'pageSize', 'PageSize', pageSize);
+  const hasNextPage = getPaginatedBool(data, 'hasNextPage', 'HasNextPage');
+  const hasPreviousPage = getPaginatedBool(data, 'hasPreviousPage', 'HasPreviousPage') || currentPageNumber > 1;
+
+  return {
+    items,
+    totalCount,
+    pageNumber: currentPageNumber,
+    pageSize: currentPageSize,
+    hasNextPage,
+    hasPreviousPage,
+  };
 }
 
 function extractPagePayload(input: unknown): { items: Alert[]; hasNextPage: boolean } {
@@ -84,6 +147,70 @@ async function fetchAllAlertPages(
 }
 
 export const alertsApi = {
+  getPendingPage: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<PaginatedResponse<Alert>> => {
+    try {
+      return await getAlertsPage({ ...params, status: 'Pending' });
+    } catch {
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber: params?.pageNumber || 1,
+        pageSize: params?.pageSize || 10,
+        hasNextPage: false,
+        hasPreviousPage: (params?.pageNumber || 1) > 1,
+      };
+    }
+  },
+
+  getResolvedPage: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<PaginatedResponse<Alert>> => {
+    try {
+      return await getAlertsPage({ ...params, status: 'Resolved' });
+    } catch {
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber: params?.pageNumber || 1,
+        pageSize: params?.pageSize || 10,
+        hasNextPage: false,
+        hasPreviousPage: (params?.pageNumber || 1) > 1,
+      };
+    }
+  },
+
+  getAllPage: async (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    status?: string;
+    severity?: string;
+    search?: string;
+    ownerId?: string;
+  }): Promise<PaginatedResponse<Alert>> => {
+    try {
+      return await getAlertsPage({ ...params, status: params?.status || 'all' });
+    } catch {
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber: params?.pageNumber || 1,
+        pageSize: params?.pageSize || 10,
+        hasNextPage: false,
+        hasPreviousPage: (params?.pageNumber || 1) > 1,
+      };
+    }
+  },
+
   getPending: async (params?: {
     pageNumber?: number;
     pageSize?: number;
@@ -92,7 +219,8 @@ export const alertsApi = {
     ownerId?: string;
   }): Promise<Alert[]> => {
     try {
-      return await fetchAllAlertPages('/api/alerts/pending', params);
+      const page = await getAlertsPage({ ...params, status: 'Pending', pageSize: 100 });
+      return page.items;
     } catch {
       return [];
     }
@@ -106,10 +234,12 @@ export const alertsApi = {
     ownerId?: string;
   }): Promise<Alert[]> => {
     try {
-      return await fetchAllAlertPages('/api/alerts/pending', {
+      const page = await getAlertsPage({
         ...params,
         status: 'resolved',
+        pageSize: 100,
       });
+      return page.items;
     } catch {
       return [];
     }
@@ -124,10 +254,12 @@ export const alertsApi = {
     ownerId?: string;
   }): Promise<Alert[]> => {
     try {
-      return await fetchAllAlertPages('/api/alerts/pending', {
+      const page = await getAlertsPage({
         ...params,
         status: params?.status || 'all',
+        pageSize: 100,
       });
+      return page.items;
     } catch {
       return [];
     }

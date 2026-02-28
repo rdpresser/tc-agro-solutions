@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert as RNAlert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,30 +14,29 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { SortControl } from '@/components/ui/SortControl';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import type { User } from '@/types';
 
 export default function UsersListScreen() {
   const { colors } = useTheme();
   const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const { data, isLoading, isRefetching, refetch } = useUsers({ pageSize: 50, sortBy, sortDirection });
+  const { data, isLoading, isRefetching, refetch } = useUsers({
+    pageNumber: page,
+    pageSize: 10,
+    sortBy,
+    sortDirection,
+    filter: search || undefined,
+  });
   const deleteMutation = useDeleteUser();
 
-  const users = useMemo(() => {
-    const items = data?.items || [];
-    if (!search.trim()) return items;
-    const q = search.toLowerCase();
-    return items.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(q) ||
-        u.email?.toLowerCase().includes(q) ||
-        u.role?.toLowerCase().includes(q)
-    );
-  }, [data, search]);
+  const users = data?.items || [];
 
   const handleDelete = () => {
     if (!deleteTarget) return;
@@ -47,9 +46,21 @@ export default function UsersListScreen() {
     });
   };
 
+  if (!isAdmin) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+        <EmptyState
+          icon="lock-closed-outline"
+          title="Admin Only"
+          message="User management is restricted to admin users."
+        />
+      </SafeAreaView>
+    );
+  }
+
   const renderItem = ({ item }: { item: User }) => (
     <TouchableOpacity
-      onPress={() => router.push({ pathname: '/(app)/(users)/[id]', params: { id: item.id } })}
+      onPress={() => router.push({ pathname: '/(app)/(users)/[id]', params: { id: item.id, email: item.email } })}
       activeOpacity={0.7}
     >
       <Card className="mb-3">
@@ -79,7 +90,7 @@ export default function UsersListScreen() {
         {item.id !== currentUser?.id && (
           <View className="flex-row justify-end mt-2">
             <TouchableOpacity onPress={() => setDeleteTarget(item.id)} hitSlop={8}>
-              <Ionicons name="trash-outline" size={18} color="#dc3545" />
+              <Ionicons name="trash-outline" size={18} color={colors.statusDanger} />
             </TouchableOpacity>
           </View>
         )}
@@ -100,7 +111,7 @@ export default function UsersListScreen() {
       </View>
 
       <View className="px-4">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search users..." />
+        <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search users..." />
         <SortControl
           options={[
             { value: 'name', label: 'Name' },
@@ -109,7 +120,7 @@ export default function UsersListScreen() {
           ]}
           sortBy={sortBy}
           sortDirection={sortDirection}
-          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); }}
+          onSortChange={(sb, sd) => { setSortBy(sb); setSortDirection(sd); setPage(1); }}
         />
       </View>
 
@@ -124,7 +135,22 @@ export default function UsersListScreen() {
           renderItem={renderItem}
           contentContainerClassName="px-4 pb-4"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#2d5016" />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.primary} />
+          }
+          ListFooterComponent={
+            <PaginationControls
+              pageNumber={data?.pageNumber || page}
+              pageSize={data?.pageSize || 10}
+              totalCount={data?.totalCount || 0}
+              hasPreviousPage={Boolean(data?.hasPreviousPage)}
+              hasNextPage={Boolean(data?.hasNextPage)}
+              isLoading={isRefetching}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => {
+                if (data?.hasNextPage) setPage((p) => p + 1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
           }
         />
       )}

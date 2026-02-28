@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatRelativeTime, formatDateTime } from '@/lib/format';
 import type { Alert } from '@/types';
 
@@ -29,48 +30,41 @@ type Tab = 'pending' | 'resolved' | 'all';
 
 const normalizeSeverity = (severity?: string) => {
   const value = (severity || '').toLowerCase();
-  if (value === 'warning') return 'medium';
-  if (value === 'info') return 'low';
-  return value;
-};
-
-const matchesSeverityFilter = (itemSeverity: string | undefined, filterSeverity: string) => {
-  if (!filterSeverity) return true;
-  const normalizedItem = normalizeSeverity(itemSeverity);
-  const normalizedFilter = normalizeSeverity(filterSeverity);
-  return normalizedItem === normalizedFilter;
+  if (value === 'critical') return 'critical';
+  if (value === 'high' || value === 'medium' || value === 'warning') return 'warning';
+  return 'info';
 };
 
 const severityVariant = (s: string) => {
   switch (normalizeSeverity(s)) {
     case 'critical':
-    case 'high':
       return 'danger' as const;
-    case 'medium':
+    case 'warning':
       return 'warning' as const;
     default:
       return 'info' as const;
   }
 };
 
-const severityBorderColor = (s: string) => {
+const severityBorderColor = (
+  s: string,
+  colors: { statusDanger: string; statusWarning: string; statusInfo: string }
+) => {
   switch (normalizeSeverity(s)) {
     case 'critical':
-    case 'high':
-      return '#dc3545';
-    case 'medium':
-      return '#ffc107';
+      return colors.statusDanger;
+    case 'warning':
+      return colors.statusWarning;
     default:
-      return '#17a2b8';
+      return colors.statusInfo;
   }
 };
 
 const severityIcon = (s: string) => {
   switch (normalizeSeverity(s)) {
     case 'critical':
-    case 'high':
       return '🚨';
-    case 'medium':
+    case 'warning':
       return '⚠️';
     default:
       return 'ℹ️';
@@ -80,44 +74,47 @@ const severityIcon = (s: string) => {
 export default function AlertsScreen() {
   const { colors } = useTheme();
   const [tab, setTab] = useState<Tab>('pending');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [detailAlert, setDetailAlert] = useState<Alert | null>(null);
   const [resolveAlert, setResolveAlert] = useState<Alert | null>(null);
   const [resolveNotes, setResolveNotes] = useState('');
 
   const { data: pending, isLoading: loadingPending, refetch: refetchPending, isRefetching: refetchingPending } =
-    useAlertsPending();
+    useAlertsPending({
+      pageNumber: page,
+      pageSize,
+      severity: severityFilter || undefined,
+      search: search || undefined,
+    });
   const { data: resolvedAlerts, isLoading: loadingResolved, refetch: refetchResolved, isRefetching: refetchingResolved } =
-    useAlertsResolved();
+    useAlertsResolved({
+      pageNumber: page,
+      pageSize,
+      severity: severityFilter || undefined,
+      search: search || undefined,
+    });
   const { data: allAlerts, isLoading: loadingAll, refetch: refetchAll, isRefetching: refetchingAll } =
-    useAlertsAll();
+    useAlertsAll({
+      pageNumber: page,
+      pageSize,
+      severity: severityFilter || undefined,
+      search: search || undefined,
+      status: statusFilter || 'all',
+    });
   const { data: summary } = useAlertsSummary();
   const resolveMutation = useResolveAlert();
 
-  const applyFilters = useCallback((items: Alert[] = []) => {
-    const normalizedSearch = search.trim().toLowerCase();
-    const normalizedSeverity = severityFilter.trim().toLowerCase();
+  const currentPageData = useMemo(() => {
+    if (tab === 'pending') return pending;
+    if (tab === 'resolved') return resolvedAlerts;
+    return allAlerts;
+  }, [tab, pending, resolvedAlerts, allAlerts]);
 
-    return items.filter((item) => {
-      const matchesSeverity = matchesSeverityFilter(item.severity, normalizedSeverity);
-      const matchesSearch =
-        !normalizedSearch
-        || item.title?.toLowerCase().includes(normalizedSearch)
-        || item.message?.toLowerCase().includes(normalizedSearch)
-        || item.plotName?.toLowerCase().includes(normalizedSearch)
-        || item.propertyName?.toLowerCase().includes(normalizedSearch)
-        || item.alertType?.toLowerCase().includes(normalizedSearch);
-
-      return matchesSeverity && matchesSearch;
-    });
-  }, [search, severityFilter]);
-
-  const filteredPending = useMemo(() => applyFilters(pending || []), [pending, applyFilters]);
-  const filteredResolved = useMemo(() => applyFilters(resolvedAlerts || []), [resolvedAlerts, applyFilters]);
-  const filteredAll = useMemo(() => applyFilters(allAlerts || []), [allAlerts, applyFilters]);
-
-  const currentData = tab === 'pending' ? filteredPending : tab === 'resolved' ? filteredResolved : filteredAll;
+  const currentData = currentPageData?.items || [];
   const isLoading = tab === 'pending' ? loadingPending : tab === 'resolved' ? loadingResolved : loadingAll;
   const isRefetching = tab === 'pending' ? refetchingPending : tab === 'resolved' ? refetchingResolved : refetchingAll;
 
@@ -155,7 +152,7 @@ export default function AlertsScreen() {
     <TouchableOpacity activeOpacity={0.7} onPress={() => setDetailAlert(item)}>
       <Card
         className="mb-3 border-l-4"
-        style={{ borderLeftColor: severityBorderColor(item.severity) }}
+        style={{ borderLeftColor: severityBorderColor(item.severity, colors) }}
       >
         <View className="flex-row items-start justify-between mb-1">
           <View className="flex-row items-center gap-1 flex-1 mr-2">
@@ -195,8 +192,8 @@ export default function AlertsScreen() {
               }}
               className="flex-row items-center gap-1 bg-success/10 px-2 py-1 rounded"
             >
-              <Ionicons name="checkmark-circle-outline" size={14} color="#28a745" />
-              <Text className="text-xs font-medium" style={{ color: '#28a745' }}>Resolve</Text>
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.statusSuccess} />
+              <Text className="text-xs font-medium" style={{ color: colors.statusSuccess }}>Resolve</Text>
             </TouchableOpacity>
           )}
           {item.status?.toLowerCase() === 'resolved' && (
@@ -208,9 +205,16 @@ export default function AlertsScreen() {
   );
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'pending', label: 'Pending', count: filteredPending.length },
-    { key: 'resolved', label: 'Resolved', count: filteredResolved.length },
-    { key: 'all', label: 'All', count: filteredAll.length },
+    { key: 'pending', label: 'Pending', count: pending?.totalCount },
+    { key: 'resolved', label: 'Resolved', count: resolvedAlerts?.totalCount },
+    { key: 'all', label: 'All', count: allAlerts?.totalCount },
+  ];
+
+  const statusOptions = [
+    { value: '', label: 'All' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Acknowledged', label: 'Acknowledged' },
+    { value: 'Resolved', label: 'Resolved' },
   ];
 
   return (
@@ -227,55 +231,67 @@ export default function AlertsScreen() {
           </Text>
           <View className="flex-row gap-2">
             <TouchableOpacity
-              onPress={() => setSeverityFilter('critical')}
+              onPress={() => {
+                setSeverityFilter('critical');
+                setPage(1);
+              }}
               className="flex-1 rounded-lg px-3 py-2 items-center"
               style={{
                 backgroundColor: colors.dangerBg,
                 borderWidth: severityFilter === 'critical' ? 1 : 0,
-                borderColor: '#dc3545',
+                borderColor: colors.statusDanger,
               }}
             >
-            <Text className="text-lg font-bold" style={{ color: '#dc3545' }}>{summary.criticalPendingCount}</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.statusDanger }}>{summary.criticalPendingCount}</Text>
             <Text className="text-xs" style={{ color: colors.textMuted }}>Critical</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setSeverityFilter('high')}
+              onPress={() => {
+                setSeverityFilter('high');
+                setPage(1);
+              }}
               className="flex-1 rounded-lg px-3 py-2 items-center"
               style={{
                 backgroundColor: colors.warningBg,
                 borderWidth: severityFilter === 'high' ? 1 : 0,
-                borderColor: '#fd7e14',
+                borderColor: colors.statusWarning,
               }}
             >
-            <Text className="text-lg font-bold" style={{ color: '#fd7e14' }}>{summary.highPendingCount}</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.statusWarning }}>{summary.highPendingCount}</Text>
             <Text className="text-xs" style={{ color: colors.textMuted }}>High</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setSeverityFilter('medium')}
+              onPress={() => {
+                setSeverityFilter('medium');
+                setPage(1);
+              }}
               className="flex-1 rounded-lg px-3 py-2 items-center"
               style={{
                 backgroundColor: colors.warningBg,
                 borderWidth: severityFilter === 'medium' ? 1 : 0,
-                borderColor: '#ffc107',
+                borderColor: colors.statusWarning,
               }}
             >
-            <Text className="text-lg font-bold" style={{ color: '#ffc107' }}>{summary.mediumPendingCount}</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.statusWarning }}>{summary.mediumPendingCount}</Text>
             <Text className="text-xs" style={{ color: colors.textMuted }}>Medium</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setSeverityFilter('low')}
+              onPress={() => {
+                setSeverityFilter('low');
+                setPage(1);
+              }}
               className="flex-1 rounded-lg px-3 py-2 items-center"
               style={{
                 backgroundColor: colors.infoBg,
                 borderWidth: severityFilter === 'low' ? 1 : 0,
-                borderColor: '#17a2b8',
+                borderColor: colors.statusInfo,
               }}
             >
-            <Text className="text-lg font-bold" style={{ color: '#17a2b8' }}>{summary.lowPendingCount}</Text>
+            <Text className="text-lg font-bold" style={{ color: colors.statusInfo }}>{summary.lowPendingCount}</Text>
             <Text className="text-xs" style={{ color: colors.textMuted }}>Low</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setSeverityFilter('')} className="mt-2 self-start">
+          <TouchableOpacity onPress={() => { setSeverityFilter(''); setPage(1); }} className="mt-2 self-start">
             <Text className="text-xs font-medium" style={{ color: colors.primary }}>
               Clear severity filter
             </Text>
@@ -285,7 +301,7 @@ export default function AlertsScreen() {
 
       {/* Search */}
       <View className="px-4">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search alerts..." />
+        <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search alerts..." />
       </View>
 
       {/* Tabs */}
@@ -293,7 +309,13 @@ export default function AlertsScreen() {
         {tabs.map((t) => (
           <TouchableOpacity
             key={t.key}
-            onPress={() => setTab(t.key)}
+            onPress={() => {
+              setTab(t.key);
+              setPage(1);
+              if (t.key !== 'all') {
+                setStatusFilter('');
+              }
+            }}
             className={`px-4 py-2 rounded-full ${tab === t.key ? '' : 'border'}`}
             style={tab === t.key
               ? { backgroundColor: colors.primary }
@@ -310,6 +332,37 @@ export default function AlertsScreen() {
         ))}
       </View>
 
+      {tab === 'all' && (
+        <View className="px-4 mb-3">
+          <Text className="text-xs mb-2" style={{ color: colors.textMuted }}>Status filter</Text>
+          <View className="flex-row gap-2 flex-wrap">
+            {statusOptions.map((option) => {
+              const selected = statusFilter === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value || 'all'}
+                  onPress={() => {
+                    setStatusFilter(option.value);
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-full ${selected ? '' : 'border'}`}
+                  style={selected
+                    ? { backgroundColor: colors.primary }
+                    : { backgroundColor: colors.chipBg, borderColor: colors.border }}
+                >
+                  <Text
+                    className="text-sm font-medium"
+                    style={{ color: selected ? '#ffffff' : colors.textSecondary }}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       {isLoading ? (
         <LoadingOverlay />
       ) : !currentData?.length ? (
@@ -325,7 +378,22 @@ export default function AlertsScreen() {
           renderItem={renderItem}
           contentContainerClassName="px-4 pb-4"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#2d5016" />
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListFooterComponent={
+            <PaginationControls
+              pageNumber={currentPageData?.pageNumber || page}
+              pageSize={currentPageData?.pageSize || 10}
+              totalCount={currentPageData?.totalCount || 0}
+              hasPreviousPage={Boolean(currentPageData?.hasPreviousPage)}
+              hasNextPage={Boolean(currentPageData?.hasNextPage)}
+              isLoading={isRefetching}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => {
+                if (currentPageData?.hasNextPage) setPage((p) => p + 1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
           }
         />
       )}
@@ -355,7 +423,7 @@ export default function AlertsScreen() {
                 <View
                   className="rounded-lg p-3 mb-3 border-l-4"
                   style={{
-                    borderLeftColor: severityBorderColor(detailAlert.severity),
+                    borderLeftColor: severityBorderColor(detailAlert.severity, colors),
                     backgroundColor: colors.card,
                   }}
                 >

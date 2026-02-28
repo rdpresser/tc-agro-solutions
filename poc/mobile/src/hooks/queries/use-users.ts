@@ -9,6 +9,14 @@ export function useUsers(params?: PaginatedRequest) {
   });
 }
 
+export function useUserByEmail(email: string) {
+  return useQuery({
+    queryKey: ['users', 'by-email', email],
+    queryFn: () => usersApi.getByEmail(email),
+    enabled: !!email,
+  });
+}
+
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   return useMutation({

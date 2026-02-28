@@ -3,6 +3,7 @@ import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signal
 import { useAuthStore } from '@/stores/auth.store';
 import { useConnectionStore } from '@/stores/connection.store';
 import { useRealtimeStore } from '@/stores/realtime.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { API_CONFIG } from '@/constants/api-config';
 import { triggerAlertNotification } from '@/lib/notifications';
 import type { SensorReading, Alert, ConnectionState } from '@/types';
@@ -11,6 +12,7 @@ export function useSignalR() {
   const token = useAuthStore((s) => s.token);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
   const setSensorHubState = useConnectionStore((s) => s.setSensorHubState);
   const setAlertHubState = useConnectionStore((s) => s.setAlertHubState);
   const updateReading = useRealtimeStore((s) => s.updateReading);
@@ -19,6 +21,8 @@ export function useSignalR() {
 
   const sensorHubRef = useRef<HubConnection | null>(null);
   const alertHubRef = useRef<HubConnection | null>(null);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const ownerScopeId = isAdmin ? (selectedOwnerId || undefined) : (user?.id || undefined);
 
   const buildHub = useCallback((path: string, onStateChange: (s: ConnectionState) => void) => {
     const url = `${API_CONFIG.SENSOR_BASE_URL}${path}`;
@@ -55,7 +59,7 @@ export function useSignalR() {
     sensorHub.onreconnected(async () => {
       setSensorHubState('connected');
       try {
-        await sensorHub.invoke('JoinOwnerGroup', user?.id || undefined);
+        await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
       } catch {
         // Keep connection alive; fallback polling may still serve data.
       }
@@ -76,7 +80,7 @@ export function useSignalR() {
     alertHub.onreconnected(async () => {
       setAlertHubState('connected');
       try {
-        await alertHub.invoke('JoinOwnerGroup', user?.id || undefined);
+        await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
       } catch {
         // Keep connection alive; fallback polling may still serve data.
       }
@@ -98,7 +102,7 @@ export function useSignalR() {
         if (!disposed) {
           setSensorHubState('connected');
           try {
-            await sensorHub.invoke('JoinOwnerGroup', user?.id || undefined);
+            await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
           } catch {
             // Keep connection alive; fallback polling may still serve data.
           }
@@ -114,7 +118,7 @@ export function useSignalR() {
         if (!disposed) {
           setAlertHubState('connected');
           try {
-            await alertHub.invoke('JoinOwnerGroup', user?.id || undefined);
+            await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
           } catch {
             // Keep connection alive; fallback polling may still serve data.
           }
@@ -135,7 +139,7 @@ export function useSignalR() {
       setSensorHubState('disconnected');
       setAlertHubState('disconnected');
     };
-  }, [isAuthenticated, token, user?.id]);
+  }, [isAuthenticated, token, ownerScopeId]);
 
   return { sensorHub: sensorHubRef, alertHub: alertHubRef };
 }

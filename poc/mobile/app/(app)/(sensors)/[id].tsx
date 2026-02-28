@@ -5,12 +5,12 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import { useSensor, useSensorReadings, useCreateSensor } from '@/hooks/queries/use-sensors';
+import { useSensor, useSensorReadings, useCreateSensor, useChangeSensorStatus } from '@/hooks/queries/use-sensors';
 import { usePlots } from '@/hooks/queries/use-plots';
 import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
 import { sensorSchema, type SensorFormData } from '@/lib/validation';
-import { SENSOR_TYPES, getSensorIcon } from '@/constants/crop-types';
+import { SENSOR_TYPES, SENSOR_STATUSES, getSensorIcon } from '@/constants/crop-types';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -19,7 +19,7 @@ import { Card } from '@/components/ui/Card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { WizardBanner } from '@/components/onboarding/WizardBanner';
 import { CelebrationModal } from '@/components/onboarding/CelebrationModal';
-import { formatDateTime, formatTemperature, formatPercentage } from '@/lib/format';
+import { formatDateTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 
 export default function SensorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +35,7 @@ export default function SensorDetailScreen() {
   const { data: readings } = useSensorReadings(isNew ? '' : id);
   const { data: plotsData } = usePlots({ pageSize: 100 });
   const createMutation = useCreateSensor();
+  const changeStatusMutation = useChangeSensorStatus();
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<SensorFormData>({
     resolver: zodResolver(sensorSchema),
@@ -141,6 +142,38 @@ export default function SensorDetailScreen() {
         />
       </View>
 
+      <View className="px-4 mb-3">
+        <Button
+          title="Change Status"
+          variant="outline"
+          fullWidth
+          onPress={() => {
+            if (!sensor?.id) return;
+            const options = SENSOR_STATUSES.filter((s) => s.value !== sensor.status);
+            Alert.alert(
+              'Change Sensor Status',
+              `Select new status for ${sensor.label}`,
+              [
+                ...options.map((status) => ({
+                  text: status.label,
+                  onPress: () => {
+                    changeStatusMutation.mutate(
+                      { id: sensor.id, data: { newStatus: status.value } },
+                      {
+                        onSuccess: () => Alert.alert('Success', 'Sensor status updated.'),
+                        onError: () => Alert.alert('Error', 'Failed to update sensor status.'),
+                      }
+                    );
+                  },
+                })),
+                { text: 'Cancel', style: 'cancel' },
+              ]
+            );
+          }}
+          disabled={changeStatusMutation.isPending}
+        />
+      </View>
+
       <ScrollView className="flex-1 px-4">
         {/* Sensor Info */}
         <Card className="mb-4">
@@ -171,19 +204,19 @@ export default function SensorDetailScreen() {
               <View className="flex-row gap-4">
                 <View>
                   <Text className="text-xs" style={{ color: colors.textMuted }}>Temp</Text>
-                  <Text className="font-semibold" style={{ color: '#E74C3C' }}>{formatTemperature(r.temperature)}</Text>
+                  <Text className="font-semibold" style={{ color: getTemperatureColor(r.temperature) }}>{formatTemperature(r.temperature)}</Text>
                 </View>
                 <View>
                   <Text className="text-xs" style={{ color: colors.textMuted }}>Humidity</Text>
-                  <Text className="font-semibold" style={{ color: '#3498DB' }}>{formatPercentage(r.humidity)}</Text>
+                  <Text className="font-semibold" style={{ color: getHumidityColor(r.humidity) }}>{formatPercentage(r.humidity)}</Text>
                 </View>
                 <View>
                   <Text className="text-xs" style={{ color: colors.textMuted }}>Soil</Text>
-                  <Text className="font-semibold" style={{ color: '#27AE60' }}>{formatPercentage(r.soilMoisture)}</Text>
+                  <Text className="font-semibold" style={{ color: getSoilMoistureColor(r.soilMoisture) }}>{formatPercentage(r.soilMoisture)}</Text>
                 </View>
                 <View>
                   <Text className="text-xs" style={{ color: colors.textMuted }}>Rain</Text>
-                  <Text className="font-semibold" style={{ color: '#9B59B6' }}>{r.rainfall?.toFixed(1)} mm</Text>
+                  <Text className="font-semibold" style={{ color: colors.textSecondary }}>{r.rainfall?.toFixed(1)} mm</Text>
                 </View>
               </View>
             </Card>

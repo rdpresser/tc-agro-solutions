@@ -6,12 +6,14 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSignalR } from '@/hooks/use-signalr';
 import { useFallbackPolling } from '@/hooks/use-fallback-polling';
 import { useAlertsSummary } from '@/hooks/queries/use-alerts';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 
 export default function AppLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const user = useAuthStore((s) => s.user);
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -20,7 +22,8 @@ export default function AppLayout() {
   useFallbackPolling();
 
   // Alert badge count (lightweight summary endpoint, not full list)
-  const { data: summary } = useAlertsSummary();
+  const ownerScopeId = user?.role?.toLowerCase() === 'admin' ? (selectedOwnerId || undefined) : undefined;
+  const { data: summary } = useAlertsSummary(24, ownerScopeId);
   const alertCount = summary?.pendingAlertsTotal || 0;
 
   const isAdmin = user?.role?.toLowerCase() === 'admin';

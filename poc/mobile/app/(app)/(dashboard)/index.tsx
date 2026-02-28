@@ -8,36 +8,70 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardStats, useLatestReadings, usePendingAlerts } from '@/hooks/queries/use-dashboard';
 import { useAlertsSummary } from '@/hooks/queries/use-alerts';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useRealtimeStore } from '@/stores/realtime.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Select } from '@/components/ui/Select';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { WelcomeSlides } from '@/components/onboarding/WelcomeSlides';
 import { formatRelativeTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 import type { SensorReading } from '@/types';
 
+function normalizeAlertSeverity(severity?: string) {
+  const value = (severity || '').toLowerCase();
+  if (value === 'critical') return 'critical';
+  if (value === 'high' || value === 'medium' || value === 'warning') return 'warning';
+  return 'info';
+}
+
 export default function DashboardScreen() {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
   const hasCompletedOnboarding = useOnboardingStore((s) => s.hasCompletedOnboarding);
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
   const startWizard = useOnboardingStore((s) => s.startWizard);
   const skipOnboarding = useOnboardingStore((s) => s.skipOnboarding);
+  const { data: owners = [] } = useOwners();
+
+  const dashboardOwnerId = isAdmin ? (selectedOwnerId || undefined) : undefined;
 
   const showSlides = isOnboardingHydrated && !hasCompletedOnboarding && !isWizardActive;
-  const { data: stats, isLoading: statsLoading, isRefetching } = useDashboardStats();
-  const { data: alertSummary } = useAlertsSummary();
+  const { data: stats, isLoading: statsLoading, isRefetching } = useDashboardStats(dashboardOwnerId);
+  const { data: alertSummary } = useAlertsSummary(24, dashboardOwnerId);
   const alertCount = alertSummary?.pendingAlertsTotal || 0;
-  const { data: readings } = useLatestReadings(10);
-  const { data: pendingAlerts } = usePendingAlerts();
+  const { data: readings } = useLatestReadings(10, dashboardOwnerId);
+  const { data: pendingAlerts } = usePendingAlerts(dashboardOwnerId);
   const realtimeReadings = useRealtimeStore((s) => s.latestReadings);
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    if (selectedOwnerId) return;
+    if (owners.length === 0) return;
+    setSelectedOwnerId(owners[0].id);
+  }, [isAdmin, owners, selectedOwnerId, setSelectedOwnerId]);
+
+  const ownerOptions = useMemo(
+    () => [
+      { value: '', label: 'All owners' },
+      ...owners.map((owner) => ({
+        value: owner.id,
+        label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
+      })),
+    ],
+    [owners],
+  );
 
   // Merge API readings with real-time updates
   const mergedReadings = useMemo(() => {
@@ -122,6 +156,18 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {isAdmin && (
+          <View className="px-4 pb-2">
+            <Select
+              label="Owner scope"
+              placeholder="Select owner scope"
+              options={ownerOptions}
+              value={selectedOwnerId || ''}
+              onChange={(value) => setSelectedOwnerId(value || null)}
+            />
+          </View>
+        )}
 
         {/* Stats Grid */}
         <View className="px-4 flex-row flex-wrap gap-3 mb-4">
@@ -247,14 +293,24 @@ export default function DashboardScreen() {
               Pending Alerts
             </Text>
             {pendingAlerts!.slice(0, 3).map((alert) => (
-              <Card key={alert.id} className="mb-2 border-l-4" style={{ borderLeftColor: alert.severity === 'critical' ? '#dc3545' : alert.severity === 'warning' ? '#ffc107' : '#17a2b8' }}>
+              <Card
+                key={alert.id}
+                className="mb-2 border-l-4"
+                style={{
+                  borderLeftColor: normalizeAlertSeverity(alert.severity) === 'critical'
+                    ? '#dc3545'
+                    : normalizeAlertSeverity(alert.severity) === 'warning'
+                      ? '#ffc107'
+                      : '#17a2b8',
+                }}
+              >
                 <View className="flex-row items-center justify-between mb-1">
                   <Text className="font-semibold flex-1" style={{ color: colors.text }}>
                     {alert.title}
                   </Text>
                   <Badge
                     text={alert.severity}
-                    variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'}
+                    variant={normalizeAlertSeverity(alert.severity) === 'critical' ? 'danger' : normalizeAlertSeverity(alert.severity) === 'warning' ? 'warning' : 'info'}
                   />
                 </View>
                 <Text className="text-sm" style={{ color: colors.textSecondary }}>

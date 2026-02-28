@@ -47,6 +47,19 @@ export function useCreateSensor() {
   });
 }
 
+export function useChangeSensorStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { newStatus: string; reason?: string } }) =>
+      sensorsApi.changeStatus(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sensors'] });
+      queryClient.invalidateQueries({ queryKey: ['sensor-readings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
 export function useDeleteSensor() {
   const queryClient = useQueryClient();
   return useMutation({

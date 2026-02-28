@@ -86,7 +86,7 @@ export default function SettingsScreen() {
             <Switch
               value={theme === 'dark'}
               onValueChange={toggleTheme}
-              trackColor={{ true: '#2d5016', false: '#e0e0e0' }}
+              trackColor={{ true: colors.primary, false: colors.border }}
               thumbColor="#fff"
             />
           </View>
@@ -101,7 +101,7 @@ export default function SettingsScreen() {
               <Switch
                 value={isEnabled}
                 onValueChange={toggleBiometric}
-                trackColor={{ true: '#2d5016', false: '#e0e0e0' }}
+                trackColor={{ true: colors.primary, false: colors.border }}
                 thumbColor="#fff"
               />
             </View>
@@ -116,7 +116,7 @@ export default function SettingsScreen() {
             <Switch
               value={notificationsOn}
               onValueChange={handleToggleNotifications}
-              trackColor={{ true: '#2d5016', false: '#e0e0e0' }}
+              trackColor={{ true: colors.primary, false: colors.border }}
               thumbColor="#fff"
             />
           </View>
@@ -177,8 +177,8 @@ export default function SettingsScreen() {
           onPress={handleLogout}
           className="flex-row items-center justify-center gap-2 bg-danger/10 rounded-xl py-4 mb-8"
         >
-          <Ionicons name="log-out-outline" size={22} color="#dc3545" />
-          <Text className="text-danger font-semibold text-base">Sign Out</Text>
+          <Ionicons name="log-out-outline" size={22} color={colors.statusDanger} />
+          <Text className="font-semibold text-base" style={{ color: colors.statusDanger }}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

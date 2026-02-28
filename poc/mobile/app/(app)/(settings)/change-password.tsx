@@ -17,21 +17,11 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z
-    .string()
-    .min(8, 'New password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/\d/, 'Must contain at least one number')
-    .regex(/[\W_]/, 'Must contain at least one special character'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
   confirmNewPassword: z.string().min(1, 'Confirm your new password'),
 }).refine((data) => data.newPassword === data.confirmNewPassword, {
   message: 'Passwords do not match',
   path: ['confirmNewPassword'],
-}).refine((data) => data.currentPassword !== data.newPassword, {
-  message: 'New password must be different from current password',
-  path: ['newPassword'],
 });
 
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
@@ -41,13 +31,12 @@ export default function ChangePasswordScreen() {
   const user = useAuthStore((s) => s.user);
   const tokenInfo = useAuthStore((s) => s.tokenInfo);
   const [isLoading, setIsLoading] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
-    defaultValues: { currentPassword: '', newPassword: '', confirmNewPassword: '' },
+    defaultValues: { newPassword: '', confirmNewPassword: '' },
   });
 
   const onSubmit = async (data: ChangePasswordFormData) => {
@@ -117,30 +106,6 @@ export default function ChangePasswordScreen() {
             }}
           >
             {/* Current Password */}
-            <Controller
-              control={control}
-              name="currentPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Current Password"
-                  placeholder="Enter your current password"
-                  secureTextEntry={!showCurrent}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.currentPassword?.message}
-                  leftIcon={<Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />}
-                  rightIcon={eyeIcon(showCurrent, () => setShowCurrent(!showCurrent))}
-                />
-              )}
-            />
-
-            {/* Divider */}
-            <View
-              className="my-2 mb-4"
-              style={{ height: 1, backgroundColor: colors.border }}
-            />
-
             {/* New Password */}
             <Controller
               control={control}
@@ -198,9 +163,6 @@ export default function ChangePasswordScreen() {
             <View className="gap-1">
               <Text className="text-sm" style={{ color: colors.textMuted }}>
                 {'\u2022'} At least 6 characters
-              </Text>
-              <Text className="text-sm" style={{ color: colors.textMuted }}>
-                {'\u2022'} Must be different from your current password
               </Text>
               <Text className="text-sm" style={{ color: colors.textMuted }}>
                 {'\u2022'} Use a mix of letters, numbers, and symbols
