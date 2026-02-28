@@ -489,6 +489,10 @@ _ArgoCD drives localhost GitOps deployments, automatically applying changes prod
 
 _Frontend supports producer and admin users with property, plot, and sensor registration, plus alert monitoring with standard filters and pagination._
 
+<img width="637" height="1346" alt="tc-agro-mobile-app" src="docs/images/mobile.png" />
+
+_The mobile app is the ideal companion to the frontend, extending producer and admin workflows for properties, plots, sensors, and alert follow-up on the go._
+
 ---
 
 ### Parent Repository (this repo)
