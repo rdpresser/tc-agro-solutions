@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/providers/theme-provider';
 
 interface FilterOption {
@@ -17,8 +17,8 @@ export function FilterChips({ options, value, onChange }: FilterChipsProps) {
   const { colors } = useTheme();
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
-      <View className="flex-row gap-2 px-4">
+    <View className="px-4 mb-3">
+      <View className="flex-row gap-2 flex-wrap">
         {options.map((opt) => (
           <TouchableOpacity
             key={opt.value}
@@ -42,6 +42,6 @@ export function FilterChips({ options, value, onChange }: FilterChipsProps) {
           </TouchableOpacity>
         ))}
       </View>
-    </ScrollView>
+    </View>
   );
 }
