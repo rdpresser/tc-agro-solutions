@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -22,14 +22,30 @@ import { CelebrationModal } from '@/components/onboarding/CelebrationModal';
 import { formatDateTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 
 export default function SensorDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, wizard } = useLocalSearchParams<{ id: string; wizard?: string }>();
   const isNew = id === 'new';
+  const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const wizardStep = useOnboardingStore((s) => s.wizardStep);
   const createdPlotId = useOnboardingStore((s) => s.createdPlotId);
   const completeOnboarding = useOnboardingStore((s) => s.completeOnboarding);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  const navigateBackToList = React.useCallback(() => {
+    router.replace('/(app)/(sensors)');
+  }, []);
+
+  // Auto-pop this screen when the wizard ends (skip or complete)
+  // to clean up stale navigation state left by cross-tab router.replace.
+  // Guard against showCelebration so we don't pop during the celebration modal.
+  const wizardActiveOnMount = useRef(isWizardActive && isNew);
+  useEffect(() => {
+    if ((wizardActiveOnMount.current || isWizardRoute) && !isWizardActive && !showCelebration) {
+      wizardActiveOnMount.current = false;
+      navigateBackToList();
+    }
+  }, [isWizardActive, isWizardRoute, showCelebration, navigateBackToList]);
 
   const { data: sensor, isLoading } = useSensor(isNew ? '' : id);
   const { data: readings } = useSensorReadings(isNew ? '' : id);
@@ -58,7 +74,7 @@ export default function SensorDetailScreen() {
         return;
       }
       Alert.alert('Success', 'Sensor created!', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: navigateBackToList },
       ]);
     } catch (error: any) {
       const apiError = error?.response?.data;
@@ -98,7 +114,7 @@ export default function SensorDetailScreen() {
         />
         <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="px-4 pt-2 pb-4 flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={navigateBackToList}>
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text className="text-xl font-bold" style={{ color: colors.text }}>New Sensor</Text>
@@ -130,7 +146,7 @@ export default function SensorDetailScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <View className="px-4 pt-2 pb-4 flex-row items-center gap-3">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={navigateBackToList}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text className="text-xl font-bold flex-1" style={{ color: colors.text }}>

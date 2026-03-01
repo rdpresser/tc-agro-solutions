@@ -109,7 +109,7 @@ export default function DashboardScreen() {
         visible={showSlides}
         onComplete={async () => {
           await startWizard();
-          router.push({ pathname: '/(app)/(properties)/[id]', params: { id: 'new' } });
+          router.push({ pathname: '/(app)/(properties)/[id]', params: { id: 'new', wizard: '1' } });
         }}
         onSkip={skipOnboarding}
       />

@@ -5,9 +5,9 @@ function normalize(value, fallback) {
   return normalized.length > 0 ? normalized : fallback;
 }
 
-function resolveRuntimeHost(runtime, deviceHost) {
+function resolveRuntimeHost(runtime, deviceHost, emulatorHost) {
   if (runtime === "emulator") {
-    return "10.0.2.2";
+    return normalize(emulatorHost, "10.0.2.2");
   }
 
   if (runtime === "device") {
@@ -54,7 +54,11 @@ module.exports = () => {
   const protocol = normalize(process.env.MOBILE_PROTOCOL, "http").toLowerCase();
   const signalrEnabled = normalize(process.env.MOBILE_SIGNALR_ENABLED, "true");
 
-  const host = resolveRuntimeHost(runtime, process.env.MOBILE_DEVICE_HOST);
+  const host = resolveRuntimeHost(
+    runtime,
+    process.env.MOBILE_DEVICE_HOST,
+    process.env.MOBILE_EMULATOR_HOST,
+  );
 
   const profileConfig =
     stack === "docker"

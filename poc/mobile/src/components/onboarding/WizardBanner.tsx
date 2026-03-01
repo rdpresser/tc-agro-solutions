@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
@@ -32,6 +33,7 @@ export function WizardBanner() {
         </Text>
         <TouchableOpacity onPress={async () => {
           await skipOnboarding();
+          router.replace('/(app)/(dashboard)');
         }}>
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>Skip setup</Text>
         </TouchableOpacity>

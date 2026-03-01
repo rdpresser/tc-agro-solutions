@@ -9,6 +9,7 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 
 ## 📋 Table of Contents
 
+- [🎬 Meet the Farmers](#meet-the-farmers)
 - [🚀 START HERE](#start-here)
 - [🎯 Development Environment](#development-environment)
 - [🎯 Three Development Modes](#three-development-modes)
@@ -34,6 +35,21 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 - [🔄 Workflow Examples](#workflow-examples)
 - [🤝 Contributing](#contributing)
 - [📞 Support & Resources](#support-resources)
+
+---
+
+<a id="meet-the-farmers"></a>
+
+## 🎬 Meet the Farmers
+
+A quick, fun intro to the team behind TC Agro Solutions. 🌱
+
+<video controls width="720" src="docs/video/meet_the_farmers.mp4">
+  Your markdown viewer may not support embedded video.
+</video>
+
+If the video doesn't render above, play it directly here:
+[▶️ Meet the Farmers](docs/video/meet_the_farmers.mp4)
 
 ---
 

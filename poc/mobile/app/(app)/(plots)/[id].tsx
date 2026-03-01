@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -23,13 +23,28 @@ import { getSensorIcon, SENSOR_STATUSES } from '@/constants/crop-types';
 import type { Sensor } from '@/types';
 
 export default function PlotFormScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, wizard } = useLocalSearchParams<{ id: string; wizard?: string }>();
   const isNew = id === 'new';
+  const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const wizardStep = useOnboardingStore((s) => s.wizardStep);
   const createdPropertyId = useOnboardingStore((s) => s.createdPropertyId);
   const advanceToStep3 = useOnboardingStore((s) => s.advanceToStep3);
+
+  const navigateBackToList = React.useCallback(() => {
+    router.replace('/(app)/(plots)');
+  }, []);
+
+  // Auto-pop this screen when the wizard ends (skip or complete)
+  // to clean up stale navigation state left by cross-tab router.replace
+  const wizardActiveOnMount = useRef(isWizardActive && isNew);
+  useEffect(() => {
+    if ((wizardActiveOnMount.current || isWizardRoute) && !isWizardActive) {
+      wizardActiveOnMount.current = false;
+      navigateBackToList();
+    }
+  }, [isWizardActive, isWizardRoute, navigateBackToList]);
 
   const { data: plot, isLoading } = usePlot(isNew ? '' : id);
   const { data: propertiesData } = useProperties({ pageSize: 100 });
@@ -97,16 +112,16 @@ export default function PlotFormScreen() {
         const result = await createMutation.mutateAsync(payload);
         if (isWizardActive && result?.id) {
           await advanceToStep3(result.id);
-          router.replace({ pathname: '/(app)/(sensors)/[id]', params: { id: 'new' } });
+          router.replace({ pathname: '/(app)/(sensors)/[id]', params: { id: 'new', wizard: '1' } });
           return;
         }
         Alert.alert('Success', 'Plot created!', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: navigateBackToList },
         ]);
       } else {
         await updateMutation.mutateAsync({ id, data });
         Alert.alert('Success', 'Plot updated!', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: navigateBackToList },
         ]);
       }
     } catch (error: any) {
@@ -142,7 +157,7 @@ export default function PlotFormScreen() {
       <WizardBanner />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View className="px-4 pt-2 pb-4 flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={navigateBackToList}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text className="text-xl font-bold" style={{ color: colors.text }}>

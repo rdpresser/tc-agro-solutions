@@ -92,9 +92,14 @@ function detectLocalIpv4Host() {
   return privateCandidates[0]?.address || fallbackCandidates[0]?.address || "";
 }
 
-function resolveRuntimeHost(runtimeValue, explicitDeviceHost) {
+function resolveRuntimeHost(
+  runtimeValue,
+  explicitDeviceHost,
+  explicitEmulatorHost,
+) {
   if (runtimeValue === "emulator") {
-    return "10.0.2.2";
+    const host = normalize(explicitEmulatorHost);
+    return host || "10.0.2.2";
   }
 
   if (runtimeValue === "device") {
@@ -112,6 +117,7 @@ function resolveRuntimeHost(runtimeValue, explicitDeviceHost) {
 const resolvedRuntimeHost = resolveRuntimeHost(
   runtime,
   process.env.MOBILE_DEVICE_HOST,
+  process.env.MOBILE_EMULATOR_HOST,
 );
 
 function buildChildEnv(baseEnv, overrides) {

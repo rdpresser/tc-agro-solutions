@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, KeyboardAvoidingView,
   Platform, Alert, TouchableOpacity,
@@ -21,11 +21,26 @@ import { MapPicker } from '@/components/ui/MapPicker';
 import { WizardBanner } from '@/components/onboarding/WizardBanner';
 
 export default function PropertyFormScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, wizard } = useLocalSearchParams<{ id: string; wizard?: string }>();
   const isNew = id === 'new';
+  const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const advanceToStep2 = useOnboardingStore((s) => s.advanceToStep2);
+
+  const navigateBackToList = useCallback(() => {
+    router.replace('/(app)/(properties)');
+  }, []);
+
+  // Auto-pop this screen when the wizard ends (skip or complete)
+  // to clean up stale navigation state left by cross-tab router.replace
+  const wizardActiveOnMount = useRef(isWizardActive && isNew);
+  useEffect(() => {
+    if ((wizardActiveOnMount.current || isWizardRoute) && !isWizardActive) {
+      wizardActiveOnMount.current = false;
+      navigateBackToList();
+    }
+  }, [isWizardActive, isWizardRoute, navigateBackToList]);
 
   const { data: property, isLoading } = useProperty(isNew ? '' : id);
   const { data: owners } = useOwners();
@@ -74,16 +89,16 @@ export default function PropertyFormScreen() {
         const result = await createMutation.mutateAsync(data);
         if (isWizardActive && result?.id) {
           await advanceToStep2(result.id);
-          router.replace({ pathname: '/(app)/(plots)/[id]', params: { id: 'new' } });
+          router.replace({ pathname: '/(app)/(plots)/[id]', params: { id: 'new', wizard: '1' } });
           return;
         }
         Alert.alert('Success', 'Property created!', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: navigateBackToList },
         ]);
       } else {
         await updateMutation.mutateAsync({ id, data: { ...data, id } });
         Alert.alert('Success', 'Property updated!', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: navigateBackToList },
         ]);
       }
     } catch (error: any) {
@@ -145,7 +160,7 @@ export default function PropertyFormScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View className="px-4 pt-2 pb-4 flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={navigateBackToList}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text className="text-xl font-bold" style={{ color: colors.text }}>

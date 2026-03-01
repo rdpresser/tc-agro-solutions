@@ -1,8 +1,9 @@
 import React from 'react';
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, router, useGlobalSearchParams, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useSignalR } from '@/hooks/use-signalr';
 import { useFallbackPolling } from '@/hooks/use-fallback-polling';
 import { useAlertsSummary } from '@/hooks/queries/use-alerts';
@@ -26,6 +27,7 @@ function AuthenticatedTabs({ user }: { user: User }) {
     <Tabs
       screenOptions={{
         headerShown: false,
+        popToTopOnBlur: true,
         tabBarActiveTintColor: isDark ? colors.primaryLight : colors.primary,
         tabBarInactiveTintColor: isDark ? colors.textSecondary : colors.textMuted,
         tabBarStyle: {
@@ -117,6 +119,33 @@ export default function AppLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const user = useAuthStore((s) => s.user);
+  const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
+  const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
+  const segments = useSegments();
+  const params = useGlobalSearchParams<{ wizard?: string }>();
+
+  React.useEffect(() => {
+    if (!isOnboardingHydrated || isWizardActive || params.wizard !== '1') {
+      return;
+    }
+
+    if (segments.includes('(properties)')) {
+      router.replace('/(app)/(properties)');
+      return;
+    }
+
+    if (segments.includes('(plots)')) {
+      router.replace('/(app)/(plots)');
+      return;
+    }
+
+    if (segments.includes('(sensors)')) {
+      router.replace('/(app)/(sensors)');
+      return;
+    }
+
+    router.replace('/(app)/(dashboard)');
+  }, [isOnboardingHydrated, isWizardActive, params.wizard, segments]);
 
   if (!isHydrated) return null;
   if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />;
