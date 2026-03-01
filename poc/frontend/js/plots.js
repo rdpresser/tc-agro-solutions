@@ -8,6 +8,14 @@ import { COMMON_CROP_TYPES, CROP_TYPE_ICONS } from './crop-types.js';
 import { toast } from './i18n.js';
 import { getIrrigationTypeDisplay, normalizeIrrigationType } from './irrigation-types.js';
 import {
+  normalizePlotStatus,
+  getPlotStatusBadgeClass,
+  getPlotStatusDisplay,
+  getPlotStatusFilterOptionsHtml,
+  getPlotSummaryCount,
+  getPlotSummaryBadgeText
+} from './plot-statuses.js';
+import {
   $,
   getPageUrl,
   debounce,
@@ -32,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   loadCropFilterOptions();
+  loadStatusFilterOptions();
   await Promise.all([loadPropertyFilter(), loadPlots()]);
   setupEventListeners();
 });
@@ -186,10 +195,7 @@ function normalizePlotItem(plot) {
 }
 
 function normalizeStatus(plot) {
-  const raw = String(plot?.status || plot?.healthStatus || '').toLowerCase();
-  if (raw === 'warning' || raw === 'alert' || raw === 'critical' || raw === 'healthy') return raw;
-  if (raw === 'active' || raw === 'ok' || raw === 'normal') return 'healthy';
-  return 'healthy';
+  return normalizePlotStatus(plot?.status || plot?.healthStatus);
 }
 
 async function loadPropertyFilter() {
@@ -230,6 +236,18 @@ function loadCropFilterOptions() {
   }
 }
 
+function loadStatusFilterOptions() {
+  const select = $('#filter-status');
+  if (!select) return;
+
+  const currentValue = select.value;
+  select.innerHTML = getPlotStatusFilterOptionsHtml('All Status');
+
+  if (currentValue) {
+    select.value = normalizePlotStatus(currentValue);
+  }
+}
+
 function renderPlotsTable(plots) {
   const tbody = $('#plots-tbody');
   if (!tbody) return;
@@ -256,8 +274,8 @@ function renderPlotsTable(plots) {
       <td>${formatArea(plot.areaHectares)}</td>
       <td>${plot.sensorsCount} sensor(es)</td>
       <td>
-        <span class="badge ${getStatusBadgeClass(plot.status)}">
-          ${getStatusIcon(plot.status)} ${formatStatus(plot.status)}
+        <span class="badge ${getPlotStatusBadgeClass(plot.status)}">
+          ${getPlotStatusDisplay(plot.status)}
         </span>
       </td>
       <td class="actions">
@@ -280,11 +298,9 @@ function renderSummary(state) {
 
   const plots = state?.items || [];
   const totalArea = plots.reduce((sum, plot) => sum + Number(plot.areaHectares || 0), 0);
-  const healthyCount = plots.filter((plot) => plot.status === 'healthy').length;
-  const warningCount = plots.filter((plot) => plot.status === 'warning').length;
-  const alertCount = plots.filter(
-    (plot) => plot.status === 'alert' || plot.status === 'critical'
-  ).length;
+  const healthyCount = getPlotSummaryCount(plots, 'healthy');
+  const warningCount = getPlotSummaryCount(plots, 'warning');
+  const alertCount = getPlotSummaryCount(plots, 'alert');
 
   if (summaryText) {
     const total = Number(state?.totalCount ?? plots.length ?? 0);
@@ -295,9 +311,9 @@ function renderSummary(state) {
     summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
   if (summaryArea) summaryArea.textContent = `Total Area: ${formatArea(totalArea)}`;
-  if (healthyBadge) healthyBadge.textContent = `${healthyCount} ● Healthy`;
-  if (warningBadge) warningBadge.textContent = `${warningCount} ● Needs Attention`;
-  if (alertBadge) alertBadge.textContent = `${alertCount} ● Alert Active`;
+  if (healthyBadge) healthyBadge.textContent = getPlotSummaryBadgeText('healthy', healthyCount);
+  if (warningBadge) warningBadge.textContent = getPlotSummaryBadgeText('warning', warningCount);
+  if (alertBadge) alertBadge.textContent = getPlotSummaryBadgeText('alert', alertCount);
 }
 
 // ============================================
@@ -311,36 +327,6 @@ function formatCropType(cropType) {
   const normalized = value.toLowerCase();
   const match = COMMON_CROP_TYPES.find((item) => item.toLowerCase() === normalized);
   return match || value;
-}
-
-function formatStatus(status) {
-  const statuses = {
-    healthy: 'Healthy',
-    warning: 'Warning',
-    alert: 'Alerta',
-    critical: 'Critical'
-  };
-  return statuses[status] || status;
-}
-
-function getStatusBadgeClass(status) {
-  const classes = {
-    healthy: 'badge-success',
-    warning: 'badge-warning',
-    alert: 'badge-danger',
-    critical: 'badge-danger'
-  };
-  return classes[status] || 'badge-secondary';
-}
-
-function getStatusIcon(status) {
-  const icons = {
-    healthy: '✅',
-    warning: '⚠️',
-    alert: '🚨',
-    critical: '🔴'
-  };
-  return icons[status] || '';
 }
 
 // ============================================

@@ -1,7 +1,9 @@
 # AKS Terraform Node Pools Configuration Reference
 
-**Purpose:** Quick reference for Terraform `modules/aks/main.tf` implementation  
+**Purpose:** Reference for future Azure AKS deployment via Terraform — architecture designed during Phase 5, **not yet deployed**  
 **Decision Source:** [ADR-007: AKS Node Pool Strategy](../../docs/adr/ADR-007-node-pool-strategy.md)
+
+> ⚠️ **Status:** This Terraform configuration was designed but not applied. The delivered system runs on **k3d (local)** — see [kubernetes/](../kubernetes/) for active manifests. Azure migration is planned for post-hackathon.
 
 ---
 
@@ -248,7 +250,7 @@ spec:
 
 Before deploying AKS with these node pools:
 
-### Terraform Configuration
+### Terraform Configuration (pre-deployment checklist — future work)
 - [ ] `cluster_name` variable is set (e.g., "agro-aks-cluster")
 - [ ] `resource_group_name` points to existing Azure Resource Group
 - [ ] `location` is set (e.g., "eastus")
@@ -346,5 +348,5 @@ No architectural changes needed; just update `vm_size` in Terraform and re-apply
 ---
 
 > **Last Updated:** January 9, 2026  
-> **Ready for:** Immediate Terraform deployment  
-> **Status:** Production-ready ✅
+> **Architecture:** Designed during Phase 5 (Hackathon 8NETT) — ready to apply post-hackathon  
+> **Delivery status:** k3d local cluster delivered ✅ | Azure deployment planned 📋
