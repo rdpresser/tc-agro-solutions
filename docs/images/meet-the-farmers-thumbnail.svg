@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Meet the Farmers video thumbnail</title>
+  <desc id="desc">Thumbnail with play button for Meet the Farmers team intro video</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2d5016" />
+      <stop offset="100%" stop-color="#4f7d2a" />
+    </linearGradient>
+    <linearGradient id="overlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00000000" />
+      <stop offset="100%" stop-color="#00000080" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg)" rx="24" />
+  <rect width="1280" height="720" fill="url(#overlay)" rx="24" />
+
+  <g opacity="0.18" fill="#ffffff">
+    <circle cx="170" cy="140" r="60" />
+    <circle cx="1080" cy="130" r="42" />
+    <circle cx="1180" cy="610" r="52" />
+    <circle cx="120" cy="610" r="38" />
+  </g>
+
+  <text x="640" y="270" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">
+    🌾 Meet the Farmers
+  </text>
+  <text x="640" y="328" text-anchor="middle" fill="#d9ead3" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="500">
+    TC Agro Solutions Team Intro
+  </text>
+
+  <g transform="translate(640 420)">
+    <circle r="82" fill="#ffffff" opacity="0.92" />
+    <polygon points="-18,-30 38,0 -18,30" fill="#2d5016" />
+  </g>
+
+  <rect x="34" y="646" width="1212" height="40" rx="20" fill="#ffffff" opacity="0.14" />
+  <rect x="34" y="646" width="500" height="40" rx="20" fill="#ffffff" opacity="0.36" />
+</svg>
