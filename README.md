@@ -44,12 +44,14 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 
 A quick, fun intro to the team behind TC Agro Solutions. 🌱
 
-[![Meet the Farmers](docs/images/meet-the-farmers-thumbnail.svg)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/rdpresser/tc-agro-solutions/main/docs/video/meet-the-farmers.html)
+[![Meet the Farmers](docs/images/meet-the-farmers-thumbnail.svg)](https://htmlpreview.github.io/?https%3A%2F%2Fraw.githubusercontent.com%2Frdpresser%2Ftc-agro-solutions%2Fmain%2Fdocs%2Fvideo%2Fmeet-the-farmers.html)
 
 > Click the thumbnail to open an embedded player page.
 
 Alternative links:
-- [▶️ Open embedded player page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/rdpresser/tc-agro-solutions/main/docs/video/meet-the-farmers.html)
+
+- [▶️ Open embedded player page (htmlpreview)](https://htmlpreview.github.io/?https%3A%2F%2Fraw.githubusercontent.com%2Frdpresser%2Ftc-agro-solutions%2Fmain%2Fdocs%2Fvideo%2Fmeet-the-farmers.html)
+- [▶️ Open embedded player page (jsDelivr)](https://cdn.jsdelivr.net/gh/rdpresser/tc-agro-solutions@main/docs/video/meet-the-farmers.html)
 - [📂 Open local player page](./docs/video/meet-the-farmers.html)
 - [▶️ Open video (MP4 raw)](https://github.com/rdpresser/tc-agro-solutions/raw/main/docs/video/meet_the_farmers.mp4)
 
