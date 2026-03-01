@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meet the Farmers | TC Agro Solutions</title>
+    <script>
+      const README_MEET_FARMERS_URL =
+        'https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers';
+
+      function goBackToReadme(event) {
+        if (event) {
+          event.preventDefault();
+        }
+
+        if (window.top) {
+          window.top.location.href = README_MEET_FARMERS_URL;
+          return false;
+        }
+
+        window.location.href = README_MEET_FARMERS_URL;
+        return false;
+      }
+    </script>
     <style>
       :root {
         color-scheme: dark;
@@ -91,9 +109,10 @@
       <div class="top-actions">
         <a
           class="back-link"
-          href="https://github.com/rdpresser/tc-agro-solutions?tab=readme-ov-file#meet-the-farmers"
+          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
           target="_top"
           rel="noopener noreferrer"
+          onclick="return goBackToReadme(event)"
         >
           ← Back to README: Meet the Farmers
         </a>
@@ -114,9 +133,10 @@
       <div class="bottom-actions" style="margin-top: 18px;">
         <a
           class="back-link"
-          href="https://github.com/rdpresser/tc-agro-solutions?tab=readme-ov-file#meet-the-farmers"
+          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
           target="_top"
           rel="noopener noreferrer"
+          onclick="return goBackToReadme(event)"
         >
           ← Back to README: Meet the Farmers
         </a>
