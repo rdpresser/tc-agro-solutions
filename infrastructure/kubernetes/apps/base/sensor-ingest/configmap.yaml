@@ -57,7 +57,9 @@ data:
   Logging__LogLevel__System: "Warning"
 
   # Auth / JWT (non-sensitive)
-  Auth__Jwt__ExpirationInMinutes: "60"
+  Auth__Jwt__Issuer: "tc-agro-identity-service"
+  Auth__Jwt__Audience__0: "tc-agro-sensor-ingest-service"
+  Auth__Jwt__ExpirationInMinutes: "480"
 
   # Jobs
   Jobs__SensorReadings__Enabled: "true"

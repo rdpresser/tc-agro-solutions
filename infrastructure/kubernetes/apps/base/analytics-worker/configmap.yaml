@@ -26,6 +26,7 @@ data:
   Cache__Redis__Host: "tc-agro-redis"
   Cache__Redis__Port: "6379"
   Cache__Redis__Password: ""
+  Cache__Redis__DefaultTTL: "300"
 
   # RabbitMQ (non-sensitive parts)
   # Use Docker container name - k3d shares Docker network with compose
@@ -37,7 +38,7 @@ data:
   Messaging__RabbitMQ__AutoProvision: "true"
   Messaging__RabbitMQ__Durable: "true"
   Messaging__RabbitMQ__UseQuorumQueues: "false"
-  Messaging__RabbitMQ__AutoPurgeOnStartup: "false"
+  Messaging__RabbitMQ__AutoPurgeOnStartup: "true"
 
   # Service ports
   Services__Identity__HttpPort: "5001"
@@ -52,6 +53,8 @@ data:
   Logging__LogLevel__System: "Warning"
 
   # Auth / JWT (non-sensitive)
+  Auth__Jwt__Issuer: "tc-agro-identity-service"
+  Auth__Jwt__Audience__0: "tc-agro-analytics-worker"
   Auth__Jwt__ExpirationInMinutes: "480"
 
   # Agent Configuration (OpenTelemetry SDK auto-instrumentation)

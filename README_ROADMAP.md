@@ -1,97 +1,106 @@
 # 🚀 Technical Roadmap - Phase 5: Hackathon 8NETT
 
-## Development on Localhost (k3d) • Production on Azure (Future)
+## Delivered on Localhost (k3d) • Cloud Migration Planned (Azure)
 
 ---
 
 ## 🎯 At a Glance
 
-| Aspect         | 🔵 NOW (Localhost Development)        | 🟣 FUTURE (Azure Production)              |
+| Aspect         | 🔵 DELIVERED (Localhost / k3d)        | 🟣 FUTURE (Azure Production)              |
 | -------------- | ------------------------------------- | ----------------------------------------- |
-| **Where?**     | Your laptop (all developers)          | Cloud (post-hackathon)                    |
+| **Where?**     | Local k3d cluster (all developers)    | Cloud (post-hackathon)                    |
 | **Kubernetes** | k3d (lightweight local cluster)       | AKS (managed Azure service)               |
-| **Database**   | PostgreSQL (Docker)                   | Azure PostgreSQL Flexible Server          |
+| **Database**   | PostgreSQL + TimescaleDB (Docker)     | Azure PostgreSQL Flexible Server          |
 | **Messaging**  | RabbitMQ (Docker)                     | Azure Service Bus                         |
 | **Cache**      | Redis (Docker)                        | Azure Redis Cache                         |
-| **Telemetry**  | Prometheus/Grafana/Loki/OTel (Docker) | Application Insights/Log Analytics        |
+| **Telemetry**  | Prometheus/Grafana/Loki/Tempo/OTel    | Application Insights / Log Analytics      |
 | **Cost**       | $0                                    | Azure subscription required               |
-| **Status**     | ✅ Active & Used Daily                | 📋 Documented (terraform/) - Not deployed |
+| **Status**     | ✅ Delivered (Feb 27, 2026)           | 📋 Architecture documented, not deployed  |
 
 ---
 
-## 📊 Current Architecture Overview (Localhost - k3d + Docker Compose)
+## 📊 Delivered Architecture (Localhost - k3d + Docker Compose)
 
 ```mermaid
 graph TB
     User["👤 User / Evaluator"]
 
-    subgraph Azure["☁️ Microsoft Azure"]
-        subgraph AKS["🐳 Azure Kubernetes Service"]
-            Identity["🔐 Agro.Identity.Api<br/>.NET 10<br/>JWT / OAuth"]
-            Farm["🌾 Agro.Farm.Api<br/>EF Core<br/>CRUD Properties/Plots"]
-            Ingest["📡 Agro.Sensor.Ingest.Api<br/>HTTP Endpoints<br/>Data Ingestion"]
-            Analytics["📈 Agro.Analytics.Worker<br/>Wolverine<br/>Rules & Alerts"]
-            Dashboard["📊 Agro.Dashboard.Api<br/>Optimized Queries<br/>Cache Layer"]
-        end
-
-        Messaging["📬 Azure Service Bus<br/>Event Streaming"]
-        Database["🗄️ Azure PostgreSQL<br/>+ TimescaleDB<br/>Persistent Storage"]
-        Cache["⚡ Azure Redis<br/>Query Cache"]
-        Telemetry["🔍 Application Insights<br/>Logs / Metrics / Traces"]
-        LogAnalytics["📋 Log Analytics<br/>Centralized Logs"]
-        Workbooks["📈 Azure Monitor Workbooks<br/>Technical Dashboards"]
+    subgraph K3D["🐳 k3d Local Cluster"]
+        Identity["🔐 Identity Service<br/>.NET 10 · FastEndpoints<br/>JWT / BCrypt"]
+        Farm["🌾 Farm Service<br/>.NET 10 · FastEndpoints<br/>Properties / Plots / Sensors"]
+        Ingest["📡 Sensor Ingest Service<br/>.NET 10 · FastEndpoints<br/>Ingestion + Dashboard + SignalR"]
+        Analytics["📈 Analytics Service<br/>.NET 10 · FastEndpoints<br/>Alerts + Rules + SignalR"]
     end
 
-    User -->|Access| Dashboard
+    subgraph Infra["🗄️ Docker Compose Infrastructure"]
+        RabbitMQ["📬 RabbitMQ<br/>Event Streaming"]
+        Postgres["🐘 PostgreSQL + TimescaleDB<br/>Persistent Storage"]
+        Redis["⚡ Redis<br/>FusionCache L1/L2"]
+    end
 
-    Dashboard -->|Query| Database
-    Dashboard -->|Cache| Cache
+    subgraph Obs["📊 Observability Stack"]
+        Prometheus["Prometheus"]
+        Grafana["Grafana"]
+        Loki["Loki"]
+        Tempo["Tempo"]
+        OTel["OTel Collector"]
+    end
 
-    Ingest -->|Publish Events| Messaging
-    Messaging -->|Subscribe| Analytics
+    User -->|"REST + SignalR"| Ingest
+    User -->|"REST + SignalR"| Analytics
+    User -->|REST| Farm
+    User -->|REST| Identity
 
-    Identity -->|Auth| Ingest
-    Identity -->|Auth| Dashboard
+    Ingest -->|"Publish events"| RabbitMQ
+    RabbitMQ -->|"Consume events"| Analytics
 
-    Farm -->|Read/Write| Database
-    Ingest -->|Write| Database
-    Analytics -->|Read/Write| Database
-    Dashboard -->|Read| Database
+    Identity -->|Read/Write| Postgres
+    Farm -->|Read/Write| Postgres
+    Ingest -->|Read/Write| Postgres
+    Analytics -->|Read/Write| Postgres
 
-    Identity -->|Telemetry| Telemetry
-    Farm -->|Telemetry| Telemetry
-    Ingest -->|Telemetry| Telemetry
-    Analytics -->|Telemetry| Telemetry
-    Dashboard -->|Telemetry| Telemetry
+    Farm -->|Cache| Redis
+    Ingest -->|"FusionCache"| Redis
 
-    Telemetry --> LogAnalytics
-    LogAnalytics --> Workbooks
+    Identity -->|Traces/Metrics/Logs| OTel
+    Farm -->|Traces/Metrics/Logs| OTel
+    Ingest -->|Traces/Metrics/Logs| OTel
+    Analytics -->|Traces/Metrics/Logs| OTel
+
+    OTel --> Prometheus
+    OTel --> Loki
+    OTel --> Tempo
+    Prometheus --> Grafana
+    Loki --> Grafana
+    Tempo --> Grafana
 ```
 
 ---
 
 ## 🎯 1. Context and Objective
 
-**Phase 5 (Current):** Build and demonstrate microservices platform running locally on k3d with complete observability.
+**Phase 5 (Delivered):** Build and demonstrate a microservices platform running locally on k3d with complete observability, event-driven architecture, and real-time capabilities.
 
 | Aspect            | Details                                                                           |
 | ----------------- | --------------------------------------------------------------------------------- |
-| ⏰ Final deadline | **February 27, 2026**                                                             |
+| ⏰ Delivered      | **February 27, 2026**                                                             |
 | 👥 Team           | **4 backend developers**                                                          |
-| 🌍 Development    | **k3d + Docker Compose (Localhost)**                                              |
+| 🌍 Environment    | **k3d + Docker Compose (Localhost)**                                              |
 | 🎯 Primary Focus  | **realistic, well-architected, observable delivery**                              |
-| 📊 Deliverables   | Working system on k3d, health checks, observability dashboards, GitOps validation |
+| 📊 Deliverables   | 4 microservices on k3d, observability stack, GitOps via ArgoCD, CI/CD pipelines  |
 
-**Objective:** Deliver a fully functional system demonstrating:
+**What was delivered:**
 
-- ✅ 5 microservices running in k3d Kubernetes
-- ✅ Complete observability (Prometheus, Grafana, Loki, Tempo, OTel)
+- ✅ 4 microservices running in k3d Kubernetes
+- ✅ Complete observability (Prometheus, Grafana, Loki, Tempo, OpenTelemetry)
 - ✅ GitOps workflows with ArgoCD
-- ✅ Event-driven architecture with RabbitMQ
+- ✅ Event-driven architecture with RabbitMQ + Wolverine Outbox Pattern
 - ✅ Time-series data with PostgreSQL + TimescaleDB
-- ✅ Sensor ingestion, alert engine, dashboard
+- ✅ Real-time updates via SignalR (sensor readings + alerts)
+- ✅ Sensor data simulation with real weather data (Open-Meteo API)
+- ✅ Full alert lifecycle (Pending → Acknowledged → Resolved)
 
-**Post-Hackathon (Future):** Proven architecture migrates to Azure AKS using Terraform IaC (documented, not deployed during Phase 5).
+**Post-Hackathon (Future):** Architecture migrates to Azure AKS using Terraform IaC (designed but not deployed during Phase 5).
 
 ---
 
@@ -99,66 +108,67 @@ graph TB
 
 | Assumption                | Description                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------- |
-| 🎨 Frontend               | No dedicated complex frontend                                                |
-| 📊 Data                   | Sensor data can be simulated                                                 |
+| 🎨 Frontend               | No dedicated complex frontend — dashboard via Swagger + SignalR POC          |
+| 📊 Data                   | Sensor data simulated via Quartz job + Open-Meteo real weather API           |
 | ✅ Evaluation prioritizes | • Architecture<br>• Observability<br>• Infrastructure<br>• Technical clarity |
-| 🛑 Avoid                  | Large structural changes                                                     |
-| 📈 Prioritize             | **Delivered value** and **quality**                                          |
+| 🛑 Avoided                | Full event sourcing, dashboard microservice (absorbed into existing services)|
+| 📈 Prioritized            | **Delivered value** and **code quality**                                     |
 
 ---
 
-## 🛠️ 3. Adopted Technology Stack
+## 🛠️ 3. Technology Stack
 
 ### 💾 Backend
 
 ```
 ├── C# / .NET 10
-├── FastEndpoints
-├── Pragmatic CQRS
-├── Wolverine (messaging and handlers)
-└── EF Core
+├── FastEndpoints (all services)
+├── Pragmatic CQRS with Wolverine
+├── EF Core 10
+├── FluentValidation
+├── Ardalis.Result (Result Pattern)
+└── xUnit (testing)
 ```
 
-### ☁️ Infrastructure
+### 🗄️ Infrastructure (Localhost)
 
 ```
-├── Azure Kubernetes Service (AKS)
-├── Azure Container Registry (ACR)
-├── Azure Service Bus
-├── Azure PostgreSQL Flexible Server
-├── Redis Cache
-└── Azure Key Vault
-```
-
-### 📊 Observability and Operations
-
-```
-├── Application Insights
-├── Log Analytics
-├── Azure Monitor Workbooks
-├── k6 (load and smoke tests)
-├── GitHub Actions
-├── Terraform (IaC)
+├── k3d (local Kubernetes)
+├── Docker Compose (PostgreSQL, Redis, RabbitMQ)
+├── PostgreSQL 16 + TimescaleDB (time-series)
+├── Redis / FusionCache (L1 + L2 cache)
+├── RabbitMQ (async messaging)
 └── ArgoCD (GitOps)
+```
+
+### 📊 Observability
+
+```
+├── OpenTelemetry (traces, metrics, logs)
+├── Prometheus (metrics scraping)
+├── Grafana (dashboards)
+├── Loki (log aggregation)
+├── Tempo (distributed tracing)
+├── k6 (load tests)
+└── GitHub Actions (CI/CD)
 ```
 
 ---
 
 ## 🏗️ 4. Architectural Decisions
 
-### 4.1 🔄 Microservices
+### 4.1 🔄 Delivered Services
 
-Architecture based on **independent microservices**, each with its own logical database.
+Architecture based on **independent microservices**, each with its own database and git repository.
 
-#### Proposed Services:
+| Service                          | Port   | Responsibility                                                              |
+| -------------------------------- | ------ | --------------------------------------------------------------------------- |
+| 🔐 **Identity Service**          | 5001   | Authentication, JWT tokens, user lifecycle, integration events              |
+| 🌾 **Farm Service**              | 5002   | Properties, plots (with crop_type), sensors, owner snapshots                |
+| 📡 **Sensor Ingest Service**     | 5003   | Ingestion, time-series persistence, dashboard queries, SignalR, simulation  |
+| 📈 **Analytics Service**         | 5004   | Alert engine, alert lifecycle, alert queries, SignalR notifications         |
 
-| Service                       | Function                         | Responsibility                               |
-| ----------------------------- | -------------------------------- | -------------------------------------------- |
-| 🔐 **Agro.Identity.Api**      | Authentication and authorization | Manage users, JWT tokens                     |
-| 🌾 **Agro.Farm.Api**          | Properties and plots             | CRUD of properties, plots, configurations    |
-| 📡 **Agro.Sensor.Ingest.Api** | Data ingestion                   | Receive sensor data, publish to Service Bus  |
-| 📈 **Agro.Analytics.Worker**  | Rules and alerts                 | Process events, apply rules, generate alerts |
-| 📊 **Agro.Dashboard.Api**     | Queries and read                 | Optimized reads for dashboards, cache        |
+> **Note:** The originally planned `Dashboard Service` was not implemented as a separate microservice. Its responsibilities — dashboard queries, historical reads, and real-time updates — were absorbed into the **Sensor Ingest Service** (readings) and **Analytics Service** (alerts). This was a deliberate pragmatic decision during the final delivery sprint.
 
 ---
 
@@ -166,15 +176,15 @@ Architecture based on **independent microservices**, each with its own logical d
 
 ```
 ┌─────────────────────────────────┐
-│             Write               │
-│        APIs and Workers         │
+│         Commands (Write)        │
+│   Handlers via Wolverine bus    │
 └─────────────────────────────────┘
          ↓
     (no extreme segregation)
          ↓
 ┌─────────────────────────────────┐
-│             Read                │
-│        Dashboard.Api            │
+│          Queries (Read)         │
+│   ReadStores with Redis cache   │
 └─────────────────────────────────┘
 
 🎯 Focus: Clarity and delivery speed
@@ -182,15 +192,15 @@ Architecture based on **independent microservices**, each with its own logical d
 
 ---
 
-### 4.3 🗄️ EF Core vs Event Sourcing
+### 4.3 🗄️ EF Core + TimescaleDB
 
-| Case             | Decision              | Note               |
-| ---------------- | --------------------- | ------------------ |
-| 🔧 Simple CRUD   | **EF Core**           | Recommended        |
-| 📋 High auditing | Marten (optional)     | If needed          |
-| ⏱️ Time series   | EF Core + TimescaleDB | Better performance |
+| Case             | Decision              | Note                            |
+| ---------------- | --------------------- | ------------------------------- |
+| 🔧 Simple CRUD   | **EF Core**           | All services                    |
+| ⏱️ Time series   | EF Core + TimescaleDB | sensor_readings table           |
+| 📋 High auditing | Not implemented       | Out of scope for this phase     |
 
-> **Note:** For this project, **event sourcing is not mandatory** and would be overengineering.
+> **Note:** Event sourcing was evaluated and intentionally avoided — it would be overengineering for this scope.
 
 ---
 
@@ -198,176 +208,157 @@ Architecture based on **independent microservices**, each with its own logical d
 
 ### 5.1 📊 What is Time Series
 
-Data whose primary axis is **time**:
-
-#### Characteristics:
-
-- 📡 Sensor readings
-- 📈 Continuous metrics
-- 📚 Historical data for dashboards
-- ⏱️ Temperature per minute
-- 💧 Humidity every 15 minutes
-- 🌾 Stock price per day
-
-#### Conceptual format:
+Data whose primary axis is **time**: sensor readings, continuous metrics, historical dashboards.
 
 ```
-[timestamp] → [sensor_value]
-[timestamp] → [sensor_value]
-[timestamp] → [sensor_value]
-Real domain example:
-2025-01-01 10:01 | Sensor123 | 28.5
-2025-01-01 10:02 | Sensor123 | 28.6
+2026-02-01 10:01 | Sensor-ABC | temp=28.5 | humidity=65.2 | soil=42.1
+2026-02-01 10:02 | Sensor-ABC | temp=28.6 | humidity=65.0 | soil=41.9
 ```
 
-### 5.2 ❓ Why a "normal" relational database with a big table falls short?
+### 5.2 🎯 Why TimescaleDB?
 
-**Problem:** Inserting 1 million records/day into a common SQL table:
+**TimescaleDB is a PostgreSQL extension** that partitions data by time (hypertables), enables fast aggregations, and handles compression natively — without changing how EF Core or SQL works.
 
-- 📊 Indexes become slow
-- 💾 Storage becomes inefficient
-- 🔍 Historical queries stall
-- 🗑️ Cleaning old data is complicated
+| Criterion                                     | Use TimescaleDB?  |
+| --------------------------------------------- | ----------------- |
+| 🔧 Less than 100k records/day                 | No, Postgres suffices |
+| 📊 100k - 10M records/day                     | **YES**           |
+| 📈 Needs period aggregations (hour/day/month) | **YES**           |
+| 🔍 Needs to query 1+ year of history          | **YES**           |
 
-### 5.3 🎯 What is TimescaleDB?
+### 5.3 🔄 Actual data flow
 
-**TimescaleDB is a PostgreSQL extension**, specifically optimized for time series.
+```
+Quartz Job (SimulatedSensorReadingsJob)
+  → Open-Meteo API (real weather data)
+  → SensorReadingAggregate (domain validation)
+  → sensor_readings table (PostgreSQL + TimescaleDB)
+  → SensorIngestedIntegrationEvent → RabbitMQ
+  → Analytics Service (SensorIngestedHandler)
+      → AlertAggregate.CreateFromSensorData()
+      → alerts table
+      → SignalR AlertHub → Dashboard UI
+```
 
-Behavior:
-
-- Partitions data by time ("hypertables")
-- Automatic compression for history
-- Super fast aggregations (avg, sum, etc.)
-- Automatic retention ("keep using normal SQL")
-
-#### Why/when to use TimescaleDB?
-
-| Criterion                                     | Use TimescaleDB?             |
-| --------------------------------------------- | ---------------------------- |
-| 🔧 Less than 100k records/day                 | No, normal Postgres suffices |
-| 📊 100k - 10M records/day                     | **YES**                      |
-| 💾 More than 10M records/day                  | **YES, STRONGLY**            |
-| 📈 Needs period aggregations (hour/day/month) | **YES**                      |
-| 🔍 Needs to query 1+ year of history          | **YES**                      |
-
-### 5.4 🚀 TimescaleDB and NuGet? Library? Where does it fit?
-
-It is not a NuGet. TimescaleDB is a **database** (PostgreSQL extension running on Azure PostgreSQL Flexible Server).
-
-You:
-
-- It is not a C# library.
-- You enable it on Azure PostgreSQL by enabling the extension.
-- EF Core accesses it normally (tables look like common big tables).
-- Use raw SQL for advanced queries (time aggregations).
-
-#### Which use case fits the AI?
-
-**Yes. It is perfect for sensor readings.**
-
-Real domain example:
+Example aggregation query used by the system:
 
 ```sql
--- TimescaleDB does this very fast:
 SELECT
   time_bucket('1 hour', time) AS hour,
   AVG(temperature) AS avg_temp,
-  MAX(humidity) AS max_humidity
+  MAX(temperature) AS max_temp,
+  MIN(temperature) AS min_temp
 FROM sensor_readings
-WHERE sensor_id = 'Sensor123'
-  AND time > now() - interval '30 days'
+WHERE sensor_id = 'sensor-uuid'
+  AND time > now() - interval '7 days'
 GROUP BY hour
 ORDER BY hour DESC;
-```
-
-### 5.5 🔄 Expected data flow sensor → TimescaleDB → Dashboard
-
-```
-Physical sensor (simulated)
-         ↓
-Agro.Sensor.Ingest.Api (receives HTTP)
-         ↓
-Persist to TimescaleDB (sensor_readings hypertable)
-         ↓
-Agro.Analytics.Worker (consumes event, applies rules)
-         ↓
-Dashboard.Api (reads history and aggregations)
-         ↓
-Azure Monitor Workbooks (visualizes)
 ```
 
 ---
 
 ## 📋 6. Database Structure
 
-### 6.1 📊 Main Tables
+### 6.1 📊 Tables per Service Database
 
-#### 📋 Identity
+#### 🔐 Identity Service
 
-- **Users** (id, email, password_hash, status)
-- **Roles** (id, name)
-- **UserRoles** (user_id, role_id)
+- **user_aggregates** (id, email, password_hash, name, username, role, is_active)
+- Wolverine Outbox tables (transactional event publishing)
 
-#### 🌾 Farm
+#### 🌾 Farm Service
 
-- **Properties** (id, name, location, owner)
-- **Plots** (id, property_id, name, area, crop_type)
-- **Sensors** (id, plot_id, type, status)
+- **property_aggregates** (id, name, address, coordinates, area_hectares, owner_id)
+- **plot_aggregates** (id, property_id, name, crop_type, area_hectares)
+- **sensor_aggregates** (id, plot_id, label, type, operational_status)
+- **owner_snapshots** (denormalized from Identity events)
+- Wolverine Outbox tables
 
-#### 📡 Sensor Data (TimescaleDB)
+#### 📡 Sensor Ingest Service
 
-- **sensor_readings** (hypertable: time, sensor_id, temperature, humidity, soil_moisture, value)
+- **sensor_readings** (id, sensor_id, time `timestamptz`, temperature, humidity, soil_moisture, rainfall, battery_level) — indexed on `(sensor_id, time)`
+- **sensor_snapshots** (denormalized from Farm events)
+- **owner_snapshots** (denormalized from Identity events)
 
-#### 📈 Analytics & Alerts
+#### 📈 Analytics Service
 
-- **Rules** (id, plot_id, metric, condition, threshold, action)
-- **Alerts** (id, rule_id, timestamp, message, status)
-- **AuditLog** (id, entity, action, timestamp, user_id)
+- **alerts** (id, sensor_id, type, severity, status, message, value, threshold, acknowledged_at, resolved_at)
+- **sensor_snapshots** (denormalized from Farm events)
+- **owner_snapshots** (denormalized from Identity events)
 
-### 6.2 🔌 Main Endpoints
+### 6.2 🔌 Delivered Endpoints
 
-#### 🔐 Identity
+#### 🔐 Identity Service (`localhost:5001`)
 
-- `POST /auth/login` → JWT token
-- `POST /auth/refresh` → new token
-- `POST /users` → create user
-- `GET /users/{id}` → user data
+```
+POST   /auth/register          → Create user + JWT token
+POST   /auth/login             → JWT token
+POST   /auth/refresh           → Refresh token
+GET    /users/{id}             → Get user
+PUT    /users/{id}             → Update user
+POST   /users/{id}/deactivate  → Deactivate user
+POST   /users/{id}/change-password
+GET    /users                  → List users (Admin)
+```
 
-#### 🌾 Farm
+#### 🌾 Farm Service (`localhost:5002`)
 
-- `GET /properties` → list properties
-- `POST /properties` → create property
-- `GET /plots/{propertyId}` → list plots
-- `POST /plots` → create plot
-- `GET /sensors/{plotId}` → list sensors
+```
+POST   /api/properties               → Create property
+GET    /api/properties               → List properties (paginated)
+GET    /api/properties/{id}          → Get property
+PUT    /api/properties/{id}          → Update property
+GET    /api/properties/{id}/plots    → List plots of a property
 
-#### 📡 Ingest
+POST   /api/plots                    → Create plot
+GET    /api/plots                    → List plots (paginated)
+GET    /api/plots/{id}               → Get plot
+GET    /api/plots/{id}/sensors       → List sensors of a plot
 
-- `POST /sensors/readings` → insert reading
-- `POST /sensors/batch` → insert batch
-- Example:
-  ```json
-  {
-    "sensorId": "Sensor123",
-    "timestamp": "2025-01-08T10:30:00Z",
-    "temperature": 28.5,
-    "humidity": 65.2,
-    "soilMoisture": 42.1
-  }
-  ```
+POST   /api/sensors                  → Register sensor
+GET    /api/sensors                  → List sensors (paginated)
+GET    /api/sensors/{id}             → Get sensor
+PUT    /api/sensors/{id}/status-change → Change operational status
+DELETE /api/sensors/{id}             → Deactivate sensor (soft-delete)
 
-#### 📊 Dashboard
+GET    /api/owners                   → List active owners
+```
 
-- `GET /dashboard/latest?pageNumber=1&pageSize=10` → latest readings (paginated)
-- `GET /api/sensors/{sensorId}/readings?days=7&pageNumber=1&pageSize=10` → history (paginated)
-- `GET /dashboard/analytics/{plotId}` → aggregated analyses
-- `GET /alerts/pending` → pending alerts
+#### 📡 Sensor Ingest Service (`localhost:5003`)
+
+```
+# Ingestion (JWT required)
+POST   /readings                     → Ingest single reading → 202 Accepted
+POST   /readings/batch               → Ingest batch of readings → 202 Accepted
+
+# Dashboard queries (JWT required)
+GET    /dashboard/latest             → Latest readings, paginated + cached
+GET    /sensors/{id}/readings/history → Reading history by sensor (up to 30 days)
+
+# Real-time
+WS     /dashboard/sensorshub        → SignalR Hub (live readings)
+```
+
+#### 📈 Analytics Service (`localhost:5004`)
+
+```
+# Alert queries (JWT required)
+GET    /alerts/pending               → Pending alerts, paginated + cached
+GET    /alerts/history               → Alert history (paginated)
+GET    /alerts/summary               → Summary counts by severity/status
+GET    /sensors/{id}/status          → Aggregated sensor status from alerts
+
+# Alert lifecycle (JWT required)
+POST   /alerts/{id}/acknowledge      → Acknowledge alert
+POST   /alerts/{id}/resolve          → Resolve alert with optional notes
+
+# Real-time
+WS     /alertshub                    → SignalR Hub (live alert notifications)
+```
 
 ---
 
 ## 🎯 7. Critical Architectural Decisions (ADRs)
-
-This section has been organized into dedicated ADR documents:
 
 - [ADR-001: Microservices-based Architecture](docs/adr/ADR-001-microservices.md)
 - [ADR-002: Data Persistence Strategy](docs/adr/ADR-002-persistence.md)
@@ -379,828 +370,299 @@ This section has been organized into dedicated ADR documents:
 
 ---
 
-## 🏗️ 8. C4 Diagrams - Architecture Language
-
-These diagrams are now in the architecture documentation:
+## 🏗️ 8. C4 Diagrams
 
 - [C4 Level 1: Context Diagram](docs/architecture/c4-context.md)
 - [C4 Level 2: Container Diagram](docs/architecture/c4-container.md)
 
 ---
 
-## 📅 9. Development Timeline by Phase
+## 📅 9. Delivery Summary by Phase
 
-### 🔵 Phase 0 – Preparation and Structure (Week 1)
+### ✅ Phase 0 – Structure and Setup
 
-**Status:** 🟢 Initial preparation
+- ✅ Multi-repo structure (one git repo per service)
+- ✅ GitHub Actions CI/CD pipelines (build, test, push to Docker Hub)
+- ✅ Coding conventions, EditorConfig, Central Package Management
+- ✅ Local development setup (Docker Compose + k3d)
+- ✅ Initial documentation (READMEs, ADRs, C4 diagrams)
 
-#### Checklist
+### ✅ Phase 1 – Domain and Database Schema
 
-- ✅ Structure repository (monorepo vs multi-repo)
-- ✅ Configure Azure DevOps / GitHub Actions pipeline
-- ✅ Define coding conventions (C# style guide)
-- ✅ Local development setup (Docker, .NET 10)
-- ✅ Create initial documentation (README, CONTRIBUTING)
-- ✅ Draw C4 and ADRs
-- ✅ Provision Azure resources (ACR, AKS, PostgreSQL, Service Bus)
+- ✅ Domain models: Property, Plot, Sensor, User, Alert, SensorReading
+- ✅ DDD Aggregates with Value Objects and Domain Events
+- ✅ EF Core DbContext + migrations for all services
+- ✅ TimescaleDB enabled on sensor_readings table
+- ✅ FastEndpoints configured in all services
 
----
+### ✅ Phase 2 – Ingestion and Performance
 
-### 🔵 Phase 1 – Real Requirements Structure (Week 1-2)
+- ✅ Single and batch ingestion endpoints
+- ✅ Domain validation in `SensorReadingAggregate` (range limits, at-least-one-metric rule)
+- ✅ Indexes on `(sensor_id, time)` for fast time-series queries
+- ✅ FusionCache (L1 memory + L2 Redis) for hot query caching
+- ✅ `SimulatedSensorReadingsJob` (Quartz) generating continuous realistic data
+- ✅ Open-Meteo API integration for real weather data in simulation
 
-**Focus:** Structure domain and specify data
+### ✅ Phase 3 – Alert Engine and Queries
 
-#### 1.1 Requirements Gathering
+- ✅ `SensorIngestedHandler` consuming RabbitMQ events via Wolverine
+- ✅ `AlertAggregate.CreateFromSensorData()` evaluating rules:
+  - Temperature > configurable threshold → `HighTemperature` alert
+  - Soil moisture < configurable threshold → `LowSoilMoisture` alert
+  - Battery level < configurable threshold → `LowBattery` alert
+  - Severity scales proportionally to deviation from threshold (Low/Medium/High/Critical)
+- ✅ Alert lifecycle: `Pending → Acknowledged → Resolved`
+- ✅ Dashboard queries: latest readings, reading history, pending alerts, alert history
+- ✅ Plot/sensor status derived from active alert state
 
-- ✅ Understand data flow (sensor → ingestion → alerts → dashboard)
-- ✅ Define business models (Property, Plot, Sensor)
-- ✅ List collected metrics (temperature, humidity, soil, etc.)
-- ✅ Specify alert rules
-- ✅ Document data retention periods
+### ✅ Phase 4 – Patterns, Observability, Testing
 
-#### 1.2 API and Domain Structure
+- ✅ CQRS with Wolverine (Commands + Queries separated)
+- ✅ Outbox Pattern for transactional event publishing
+- ✅ Snapshot Pattern (OwnerSnapshot, SensorSnapshot) for cross-service data
+- ✅ FluentValidation on all endpoints
+- ✅ Result Pattern (Ardalis.Result) — no exceptions for business errors
+- ✅ OpenTelemetry instrumentation: traces, metrics, structured logs
+- ✅ Correlation ID propagation across all services
+- ✅ Custom Prometheus metrics per service
+- ✅ 700+ unit tests across all services (identity: 56, farm: 247, ingest: 241, analytics: 170+)
 
-- ✅ Create .NET projects (Identity, Farm, Ingest, Analytics, Dashboard)
-- ✅ Define DTOs (Data Transfer Objects)
-- ✅ Model domain entities
-- ✅ Setup FastEndpoints in each project
-- ✅ Configure EF Core DbContext
+### ✅ Phase 5 – Real-Time, Integration, GitOps
 
-#### 1.3 Database Schema
-
-- ✅ Create migrations (Identity, Farm, Sensors)
-- ✅ Define primary keys, foreign keys
-- ✅ Create TimescaleDB hypertable for sensor_readings
-- ✅ Indexes for frequent queries
-- ✅ Seeders for test data
-
----
-
-### 🔵 Phase 2 – Data Problem and Dimensionality (Week 2-3)
-
-**Focus:** Understand volume and aggregation challenges
-
-#### 2.1 Sensor Dimensionality
-
-- ✅ How many sensors? (10, 100, 1000?)
-- ✅ Reading frequency? (1/min, 1/5min, 1/15min?)
-- ✅ How many years of retention?
-- ✅ Metrics to aggregate? (avg, max, min, stddev)
-
-#### 2.2 Ingestion Performance
-
-- ✅ Load test: simulated insertion
-- ✅ Measure latency P50, P99
-- ✅ Validate indexes in TimescaleDB
-- ✅ Implement batch processing if needed
-
-#### 2.3 Query Performance
-
-- ✅ Historical queries (last 7 days, 30 days, 1 year)
-- ✅ Aggregations per period (hour, day, week)
-- ✅ Validate execution plan with EXPLAIN
-- ✅ Implement Redis caching for hot queries
-
-#### 2.4 Retention and Compression
-
-- ✅ Configure TimescaleDB compression policy (e.g., 7 days)
-- ✅ Implement routine to clean old data
-- ✅ Validate storage savings
+- ✅ SignalR hubs: `SensorHub` (live readings) + `AlertHub` (live alerts)
+- ✅ ArgoCD GitOps managing all services in k3d
+- ✅ Health checks: `/health`, `/ready`, `/live` on all services
+- ✅ Metrics endpoints: `/metrics` (Prometheus format) on all services
+- ✅ Swagger/OpenAPI documented on all APIs
+- ✅ k6 load tests for ingestion pipeline
 
 ---
 
-### 🔵 Phase 3 – Query / Alerts (Week 3-4)
+## 📊 10. Service Details
 
-**Focus:** Implement business logic
+### 🔐 Identity Service
 
-#### 3.1 Ingestion Endpoints
+**Responsibility:** Authentication, authorization, user lifecycle
 
-```
-POST /sensors/readings
-Content-Type: application/json
+**Stack:** FastEndpoints · JWT Bearer · BCrypt · EF Core + PostgreSQL · Wolverine Outbox · OpenTelemetry
 
-{
-  "sensorId": "Sensor123",
-  "timestamp": "2025-01-08T10:30:00Z",
-  "temperature": 28.5,
-  "humidity": 65.2,
-  "soilMoisture": 42.1,
-  "rainfall": 0.0
-}
+**Published events:** `UserCreatedIntegrationEvent`, `UserUpdatedIntegrationEvent`, `UserDeactivatedIntegrationEvent`
 
-✅ Validate input
-✅ Persist to TimescaleDB
-✅ Publish event to Service Bus
-✅ Return 202 Accepted
-```
-
-#### 3.2 Alerts Worker (Wolverine)
-
-- ✅ Consume Ingest events via Service Bus
-- ✅ Apply rules (e.g., temperature > 35°C)
-- ✅ Generate alerts (CREATE in Alerts table)
-- ✅ Publish to notifications topic (optional: Logic Apps)
-
-#### 3.3 Dashboard Queries
-
-```
-GET /dashboard/latest?pageNumber=1&pageSize=10
-Response:
-{
-  "data": [
-    {
-      "sensorId": "Sensor123",
-      "plotId": "Plot1",
-      "time": "2025-01-08T10:30:00Z",
-      "temperature": 28.5,
-      "humidity": 65.2,
-      "soilMoisture": 42.1
-    }
-  ],
-  "totalCount": 1,
-  "pageNumber": 1,
-  "pageSize": 10
-}
-
-✅ Read from Redis cache (TTL 5 min)
-✅ If miss, query DB
-✅ Update cache
-✅ Return JSON
-✅ Compute plot status badge from alert rules (e.g., soil moisture < 30% for 24h ⇒ "Dry Alert")
-```
-
-#### 3.4 Aggregated Queries
-
-```sql
--- TimescaleDB aggregation
-SELECT
-  time_bucket('1 hour', time) AS hour,
-  AVG(temperature) AS avg_temp,
-  MAX(temperature) AS max_temp,
-  MIN(temperature) AS min_temp
-FROM sensor_readings
-WHERE sensor_id = 'Sensor123'
-  AND time > now() - interval '7 days'
-GROUP BY hour
-ORDER BY hour DESC;
-```
+**Domain highlights:** `UserAggregate` with Value Objects (`Email`, `Password`, `Role`), full DDD lifecycle
 
 ---
 
-### 🔵 Phase 4 – Proposed Architecture (Definition and Elegance) (Week 4-5)
+### 🌾 Farm Service
 
-**Focus:** Polish code, patterns, observability
+**Responsibility:** Agricultural resource management (properties, plots, sensors)
 
-#### 4.1 Coding Standards
+**Stack:** FastEndpoints · EF Core + PostgreSQL · FusionCache + Redis · Wolverine · OpenTelemetry
 
-- ✅ Pragmatic CQRS (Commands and Queries separated where it makes sense)
-- ✅ Domain handlers (use Wolverine)
-- ✅ Validation with FluentValidation
-- ✅ Centralized exception handling
-- ✅ Structured logging (with Application Insights)
+**Published events:** `PropertyCreatedIntegrationEvent`, `PropertyUpdatedIntegrationEvent`, `PlotCreatedIntegrationEvent`, `SensorRegisteredIntegrationEvent`, `SensorOperationalStatusChangedIntegrationEvent`, `SensorDeactivatedIntegrationEvent`
 
-#### 4.2 Observability
+**Consumed events:** `UserRegisteredIntegrationEvent`, `UserUpdatedIntegrationEvent`, `UserDeactivatedIntegrationEvent` → maintains `OwnerSnapshot`
 
-- ✅ Instrument all services with Application Insights SDK
-- ✅ Add custom metrics (ingestion time, alerts generated)
-- ✅ Distributed tracing (correlate logs across services)
-- ✅ Create Workbooks to visualize system health
-
-#### 4.3 Testing
-
-- ✅ Unit tests (validation, handlers)
-- ✅ Integration tests (API endpoints)
-- ✅ Load tests with k6 (simulate 1000 sensors)
-- ✅ Smoke tests post-deploy
-
-#### 4.4 Documentation
-
-- ✅ OpenAPI (Swagger) for each API
-- ✅ ADR documentation
-- ✅ Operations playbooks
-- ✅ Troubleshooting guide
+**Domain highlights:** 3 aggregates (`PropertyAggregate`, `PlotAggregate`, `SensorAggregate`), `SensorOperationalStatus` value object (Active/Maintenance/Faulty/Inactive)
 
 ---
 
-### 🟢 Phase 5 – Integrated Demo and Observability (Week 5-6)
+### 📡 Sensor Ingest Service
 
-**Focus:** Final delivery, dashboards, presentation
+**Responsibility:** Sensor data ingestion, time-series persistence, dashboard reads, real-time updates, data simulation
 
-#### 5.1 Business Dashboards
+**Stack:** FastEndpoints · EF Core + PostgreSQL/TimescaleDB · FusionCache + Redis · Wolverine Outbox · Quartz · SignalR · OpenTelemetry
 
-- ✅ Dashboard.Api returning real-time data
-- ✅ Azure Monitor Workbooks showing:
-  - Alerts per plot
-  - Temperature/humidity trends
-  - Ingestion rate
-  - Processing latency
+**Published events:** `SensorIngestedIntegrationEvent`
 
-#### 5.2 Performance & Scale
+**Consumed events:** `SensorRegisteredIntegrationEvent`, `SensorOperationalStatusChangedIntegrationEvent`, `SensorDeactivatedIntegrationEvent` → maintains `SensorSnapshot`
 
-- ✅ Simulate 100 sensors × 1 reading/min
-- ✅ Generate 144k events/day
-- ✅ Validate SLA: ingestion < 100ms, query < 500ms
-- ✅ Document load test results
+**Notable features:**
+- `SimulatedSensorReadingsJob` (Quartz): generates readings for all active sensors on a configurable interval
+- `OpenMeteoWeatherProvider`: fetches real weather data (temperature, humidity, soil moisture, precipitation) with 60-minute cache; falls back to `Bogus`-generated data when API is unavailable
+- `SensorHub` (SignalR): pushes live readings to connected clients
 
-#### 5.3 Technical Presentation
-
-- ✅ Live ingestion demo
-- ✅ Show dashboards working
-- ✅ Explain architectural decisions (ADRs)
-- ✅ Present C4 diagrams
-- ✅ Discuss observability and scalability
-
-#### 5.4 Clean and Documented Code
-
-- ✅ Final code review
-- ✅ Refactor duplicated code
-- ✅ README updated with deployment instructions
-- ✅ IaC (Terraform) versioned and commented
+**Domain highlights:** `SensorReadingAggregate` with validation (range limits, at-least-one-metric, no future timestamps)
 
 ---
 
-## 📊 10. Technical Details per Service
+### 📈 Analytics Service
 
-### 🔐 Agro.Identity.Api
+**Responsibility:** Alert detection, alert lifecycle management, alert queries, real-time notifications
 
-**Responsibility:** Authentication, authorization, user management
+**Stack:** FastEndpoints · EF Core + PostgreSQL · FusionCache + Redis · Wolverine · SignalR · OpenTelemetry
 
-#### Stack
+**Consumed events:** `SensorIngestedIntegrationEvent` → evaluates alert rules · `SensorRegisteredIntegrationEvent`, `SensorDeactivatedIntegrationEvent` → maintains `SensorSnapshot`
 
-- FastEndpoints
-- JWT Bearer
-- EF Core + PostgreSQL
+**Alert rules (configurable thresholds):**
 
-#### Endpoints
+| Metric        | Condition          | Alert Type       | Severity logic                              |
+| ------------- | ------------------ | ---------------- | ------------------------------------------- |
+| Temperature   | > MaxTemperature   | `HighTemperature`| Low/Medium/High/Critical by deviation °C   |
+| Soil Moisture | < MinSoilMoisture  | `LowSoilMoisture`| Low/Medium/High/Critical by deficit %      |
+| Battery Level | < MinBatteryLevel  | `LowBattery`     | Low/Medium/High/Critical by level %        |
 
-```
-POST   /auth/login          → JWT token
-POST   /auth/refresh        → New token
-POST   /users               → Create user
-GET    /users/{id}          → Get user
-PUT    /users/{id}          → Update user
-DELETE /users/{id}          → Delete user
-```
+**Domain highlights:** `AlertAggregate` with full lifecycle, domain events per state transition, metadata JSON storing sensor context at time of alert
 
-#### Data Model
-
-```csharp
-public class User
-{
-    public Guid Id { get; set; }
-    public string Email { get; set; }
-    public string PasswordHash { get; set; }
-    public bool Active { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
-```
+**Notable features:**
+- `AlertHub` (SignalR): pushes live alert notifications to connected clients
+- Alert queries include `ownerId` scoping (Producers see only their alerts; Admins see all)
 
 ---
 
-### 🌾 Agro.Farm.Api
+## 🚀 11. Infrastructure
 
-**Responsibility:** Management of properties, plots, sensors
+### 11.1 Local Stack (Delivered)
 
-#### Stack
-
-- FastEndpoints
-- EF Core + PostgreSQL
-- Redis Cache (catalog read)
-
-#### Endpoints
-
-```
-GET    /properties               → List all properties
-POST   /properties               → Create property
-GET    /properties/{id}          → Get property details
-PUT    /properties/{id}          → Update property
-
-GET    /properties/{id}/plots    → List plots
-POST   /plots                    → Create plot
-PUT    /plots/{id}               → Update plot
-
-GET    /plots/{id}/sensors       → List sensors
-POST   /sensors                  → Create sensor
-PUT    /sensors/{id}             → Update sensor status
+```yaml
+# docker-compose: infrastructure services
+services:
+  postgres:    # PostgreSQL 16 + TimescaleDB
+  redis:       # Redis 7
+  rabbitmq:    # RabbitMQ 4 with management UI
+  prometheus:  # Metrics collection
+  grafana:     # Dashboards (Loki + Tempo + Prometheus)
+  loki:        # Log aggregation
+  tempo:       # Distributed tracing
+  otel-collector: # OpenTelemetry collector
 ```
 
-#### Models
-
-```csharp
-public class Property
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    public string Location { get; set; }
-    public double AreaHectares { get; set; }
-    public Guid OwnerId { get; set; }
-}
-
-public class Plot
-{
-    public Guid Id { get; set; }
-    public Guid PropertyId { get; set; }
-    public string Name { get; set; }
-    public string CropType { get; set; }
-    public double AreaHectares { get; set; }
-}
-
-public class Sensor
-{
-    public string Id { get; set; }
-    public Guid PlotId { get; set; }
-    public string Type { get; set; }  // "Temperature", "Humidity", "SoilMoisture"
-    public string Status { get; set; } // "Active", "Inactive"
-}
+```powershell
+# k3d cluster
+cd scripts/k3d
+.\bootstrap.ps1          # Create cluster + ArgoCD
+.\port-forward.ps1 argocd
+.\build-push-images.ps1  # Build + push to Docker Hub (rdpresser)
+.\status.ps1
 ```
-
----
-
-### 📡 Agro.Sensor.Ingest.Api
-
-**Responsibility:** Receive sensor data, persist, publish events
-
-#### Stack
-
-- FastEndpoints
-- EF Core + TimescaleDB
-- Azure Service Bus (publisher)
-- JWT-protected ingestion endpoints
-- Input validation
-
-#### Main Endpoint
-
-```
-POST /sensors/readings
-
-Request:
-{
-  "sensorId": "Sensor123",
-  "timestamp": "2025-01-08T10:30:00Z",
-  "temperature": 28.5,
-  "humidity": 65.2,
-  "soilMoisture": 42.1,
-  "rainfall": 0.0
-}
-
-Response: 202 Accepted
-{
-  "readingId": "uuid",
-  "message": "Reading received"
-}
-```
-
-#### Batch Endpoint
-
-```
-POST /sensors/batch
-
-Request: Array of readings
-
-Response: 202 Accepted with processed count
-```
-
-#### Flow
-
-0. Enforce JWT on all ingestion endpoints
-1. Validate input (schema, limits)
-2. Persist to sensor_readings (TimescaleDB hypertable)
-3. Publish event to Service Bus
-4. Return 202 Accepted
-5. Log in Application Insights
-
----
-
-### 📈 Agro.Analytics.Worker
-
-**Responsibility:** Process events, apply rules, generate alerts
-
-#### Stack
-
-- Wolverine (event handler)
-- EF Core
-- Azure Service Bus (subscriber)
-
-#### Event Handler
-
-```csharp
-public class SensorReadingHandler : ICommandHandler<SensorReadingReceived>
-{
-    public async Task Handle(SensorReadingReceived evt)
-    {
-        // 1. Fetch plot rules
-        var rules = await _db.Rules
-            .Where(r => r.PlotId == evt.PlotId)
-            .ToListAsync();
-
-        // 2. Evaluate each rule
-        foreach (var rule in rules)
-        {
-            if (EvaluateRule(rule, evt))
-            {
-                // 3. Create alert
-                var alert = new Alert
-                {
-                    RuleId = rule.Id,
-                    Message = $"Temperature above limit: {evt.Temperature}°C",
-                    CreatedAt = DateTime.UtcNow,
-                    Status = "Pending"
-                };
-
-                await _db.Alerts.AddAsync(alert);
-            }
-        }
-
-        await _db.SaveChangesAsync();
-    }
-}
-```
-
-#### Example Rules
-
-- Temperature > 35°C → Alert "Excessive heat"
-- Humidity < 30% → Alert "Low humidity"
-- Rainfall > 100mm/day → Alert "Heavy rain"
-
----
-
-### 📊 Agro.Dashboard.Api
-
-**Responsibility:** Optimized queries and reads for dashboards
-
-#### Stack
-
-- FastEndpoints
-- EF Core + TimescaleDB (read-only)
-- Redis Cache
-- Query optimization
-
-#### Endpoints
-
-```
-GET /dashboard/latest?pageNumber=1&pageSize=10
-  → Latest readings from all sensors (with cache)
-
-GET /api/sensors/{sensorId}/readings?days=7&pageNumber=1&pageSize=10
-  → Sensor reading history (paginated)
-
-GET /dashboard/analytics/{plotId}
-  → Aggregated plot analyses (avg, max, min, trends)
-
-GET /alerts/pending
-  → Pending alerts (unresolved)
-
-GET /alerts/history/{plotId}?days=30
-  → Alert history for the last 30 days
-```
-
-#### Example: Aggregation Query
-
-```csharp
-[HttpGet("/analytics/{plotId}")]
-public async Task<DashboardAnalyticsResponse> GetAnalytics(Guid plotId)
-{
-    var result = await _db.SensorReadings
-        .FromSqlInterpolated($@"
-            SELECT
-              time_bucket('1 hour', time) AS hour,
-              AVG(temperature) AS avg_temperature,
-              MAX(temperature) AS max_temperature,
-              MIN(temperature) AS min_temperature
-            FROM sensor_readings
-            WHERE plot_id = {plotId}
-              AND time > now() - interval '7 days'
-            GROUP BY hour
-            ORDER BY hour DESC
-        ")
-        .ToListAsync();
-
-    return new DashboardAnalyticsResponse { Data = result };
-}
-```
-
-#### Cache Strategy
-
-```csharp
-// Short TTL for real-time data
-const int CacheTtlSeconds = 60;
-
-var cacheKey = $"dashboard:latest:{plotId}";
-var cached = await _redis.GetAsync(cacheKey);
-
-if (cached != null)
-    return JsonSerializer.Deserialize(cached);
-
-var data = await FetchFromDatabase();
-await _redis.SetAsync(cacheKey, JsonSerializer.Serialize(data),
-    TimeSpan.FromSeconds(CacheTtlSeconds));
-
-return data;
-```
-
----
-
-## 🚀 11. Deployment Guide
-
-### 11.1 Infrastructure (IaC with Terraform)
-
-**Environment Strategy:**
-
-- **Local (Development):** Docker Compose (no Terraform)
-- **Cloud (Production):** Azure via Terraform modules with optimized node pools
-
-**Resource Allocation & Cost Optimization:**
-
-TC Agro Solutions uses a **3-node-pool strategy** on AKS to optimize for stability, cost, and simplicity:
-
-| Node Pool    | Purpose                                                    | SKU               | Min | Max | Justification                                                                                      |
-| ------------ | ---------------------------------------------------------- | ----------------- | --- | --- | -------------------------------------------------------------------------------------------------- |
-| **system**   | Kubernetes infrastructure (kube-system, CoreDNS, CNI, CSI) | B2ms (2vCPU, 8GB) | 1   | 2   | Critical components with unpredictable memory; isolation prevents cluster-wide failure             |
-| **platform** | ArgoCD, Ingress, cert-manager                              | B2s (2vCPU, 4GB)  | 1   | 3   | Infrastructure services with controlled consumption; cost-optimized without observability overhead |
-| **worker**   | .NET microservices, domain workers                         | B2s (2vCPU, 4GB)  | 2   | 5   | Business applications with bounded resource requests/limits; horizontal scaling enabled            |
-
-**See [ADR-007: AKS Node Pool Strategy](docs/adr/ADR-007-node-pool-strategy.md)** for detailed justification, performance implications, and cost analysis.
-
-**Terraform Structure:**
-
-```
-terraform/
-├── providers.tf           # Azure provider configuration
-├── versions.tf            # Terraform and provider versions
-├── variables.tf           # Input variables
-├── outputs.tf             # Outputs
-├── main.tf                # Root module orchestration
-│
-└── modules/               # Modular resources
-    ├── resource-group/
-    │   └── main.tf
-    ├── aks/
-    │   ├── main.tf        # 3-node-pool configuration
-    │   ├── variables.tf
-    │   └── outputs.tf
-    ├── acr/
-    │   └── main.tf
-    ├── postgres/
-    │   ├── main.tf
-    │   └── outputs.tf
-    ├── servicebus/
-    │   └── main.tf
-    ├── redis/
-    │   └── main.tf
-    ├── observability/
-    │   └── main.tf
-    └── keyvault/
-        └── main.tf
-```
-
-**Root main.tf Example:**
-
-```hcl
-module "rg" {
-  source   = "./modules/resource-group"
-  name     = var.resource_group_name
-  location = var.location
-}
-
-module "aks" {
-  source              = "./modules/aks"
-  resource_group_name = module.rg.name
-  location            = var.location
-
-  # 3-node-pool configuration (see ADR-007)
-  system_node_count   = 1
-  platform_node_count = 1
-  worker_node_count   = 2
-}
-
-module "postgres" {
-  source              = "./modules/postgres"
-  resource_group_name = module.rg.name
-  location            = var.location
-  enable_timescaledb  = true
-}
-
-module "servicebus" {
-  source              = "./modules/servicebus"
-  resource_group_name = module.rg.name
-  sku                 = "Standard"
-}
-
-module "redis" {
-  source              = "./modules/redis"
-  resource_group_name = module.rg.name
-  sku                 = "Standard"
-}
-
-module "observability" {
-  source              = "./modules/observability"
-  resource_group_name = module.rg.name
-  location            = var.location
-}
-
-module "keyvault" {
-  source              = "./modules/keyvault"
-  resource_group_name = module.rg.name
-  location            = var.location
-}
-```
-
-**Resources to provision:**
-
-- ✅ Azure Resource Group
-- ✅ Azure Kubernetes Service (AKS) with 3+ nodes
-- ✅ Azure Container Registry (ACR)
-- ✅ Azure PostgreSQL Flexible Server
-- ✅ TimescaleDB extension enabled
-- ✅ Azure Service Bus (Standard tier)
-- ✅ Azure Redis Cache (Standard tier)
-- ✅ Application Insights
-- ✅ Log Analytics Workspace
-- ✅ Azure Key Vault
 
 ### 11.2 CI/CD (GitHub Actions)
 
+Each service repository has its own pipeline:
+
 ```yaml
-name: Build and Deploy
-on: [push]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build Docker images
-        run: |
-          docker build -t agro-identity:${{ github.sha }} ./src/Identity
-          docker build -t agro-farm:${{ github.sha }} ./src/Farm
-          # ... more services
-
-      - name: Push to ACR
-        run: |
-          az acr build --registry $ACR_NAME \
-            --image agro-identity:${{ github.sha }} ./src/Identity
-
-      - name: Deploy to AKS
-        run: |
-          kubectl set image deployment/identity \
-            identity=agro-identity:${{ github.sha }}
+# On push to main:
+# 1. dotnet test (all tests must pass)
+# 2. docker build
+# 3. docker push → Docker Hub (rdpresser/tc-agro-*)
+# 4. ArgoCD detects new image → deploys to k3d
 ```
-
-**Local deploy note (hackathon requirement):** if the deploy target is local, the CI pipeline must at minimum run unit tests, build container images, and push them to a registry (e.g., Docker Hub); green checks are required even without cloud deploy.
 
 ### 11.3 GitOps (ArgoCD)
 
-```yaml
-# argocd/agro-farm-app.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: agro-farm-app
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/your-org/agro-solutions
-    path: k8s/
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: agro
+ArgoCD monitors `infrastructure/kubernetes/apps/` and reconciles deployments for all 4 services automatically.
+
 ```
+infrastructure/kubernetes/
+├── apps/
+│   ├── base/
+│   │   ├── identity/
+│   │   ├── farm/
+│   │   ├── sensor-ingest/
+│   │   └── analytics-worker/
+│   └── overlays/
+└── platform/
+    ├── base/ (ingress, namespaces, otel-daemonset)
+    └── overlays/
+```
+
+### 11.4 🟣 Future: Azure (Post-Hackathon)
+
+The architecture was designed to migrate to Azure with minimal changes:
+
+| Component         | Local                 | Azure (Future)                   |
+| ----------------- | --------------------- | -------------------------------- |
+| Kubernetes        | k3d                   | AKS (3 node pool strategy)       |
+| Database          | PostgreSQL + TSdb      | Azure PostgreSQL Flexible Server |
+| Messaging         | RabbitMQ              | Azure Service Bus                |
+| Cache             | Redis                 | Azure Redis Cache                |
+| Observability     | Prometheus/Grafana    | Application Insights             |
+| IaC               | —                     | Terraform (modules designed)     |
+
+See [ADR-007](docs/adr/ADR-007-node-pool-strategy.md) for AKS node pool strategy and [ADR-005](docs/adr/ADR-005-local-vs-cloud.md) for the local vs cloud rationale.
 
 ---
 
-## 📈 12. Monitoring and SLA
+## 📈 12. Observability
 
-### 12.1 Critical Metrics (Application Insights)
+### 12.1 What is instrumented
 
-```
-1. Ingestion
-   - Events per second rate
-   - Latency P50, P95, P99
-   - Error rate
+Every service exposes:
+- **`/metrics`** — Prometheus format (HTTP request counts, latencies, GC, thread pool)
+- **`/health`** — overall health
+- **`/ready`** — readiness probe (DB + Redis connectivity)
+- **`/live`** — liveness probe
 
-2. Analytics
-   - Alert processing time
-   - Number of alerts generated
-   - Error rate in handlers
+Custom metrics per service:
+- Sensor Ingest: ingestion rate, cache hit/miss ratio, simulation job execution
+- Analytics: alerts generated per type/severity, alert processing latency
+- Farm: property/plot/sensor registration rates
+- Identity: login attempts, token generation latency
 
-3. Dashboard
-   - Query latency (P99 < 500ms)
-   - Cache hit rate
-   - API error rate
+### 12.2 Distributed Tracing
 
-4. Database
-   - Active connections
-   - Slow queries (> 1s)
-   - Disk space
-```
+- W3C Trace Context propagation across all HTTP calls and RabbitMQ messages
+- `X-Correlation-Id` header propagated by `CorrelationMiddleware` in all services
+- Traces visible in Grafana Tempo, correlated with logs in Loki
 
-### 12.2 Alerts (Azure Monitor)
+### 12.3 Grafana Access (Local)
 
 ```
-- Error rate > 1%     → Page
-- Latency P99 > 1s    → Alert
-- Disk usage > 85%    → Alert
-- CPU > 80%           → Alert
+Grafana:            http://localhost:3000  (admin/admin)
+Prometheus:         http://localhost:9090
+RabbitMQ UI:        http://localhost:15672 (guest/guest)
+ArgoCD:             http://localhost:8090/argocd/ (admin/Argo@123!)
 ```
-
-### 12.3 Dashboard in Azure Monitor Workbooks
-
-**Panels:**
-
-- 🟢 System Health (green = ok)
-- 📊 Ingest Metrics (volume chart)
-- 🚨 Alerts Status (active alerts)
-- 📈 Query Performance (latencies)
-- 🗄️ Database Stats (space, connections)
 
 ---
 
 ## ✅ Mandatory Deliverables (Hackathon 8NETT)
 
-- Architecture: diagram of the MVP and written rationale for decisions.
-- Infrastructure proof: app running (cloud or local) with evidence of Kubernetes objects and APM traces/metrics/logs plus monitoring/alerts dashboard.
-- CI/CD: pipeline run showing green checks; for local deploy, include unit tests, image build, and push to a registry.
-- MVP demo scope: producer authentication, property/plot registration, authenticated sensor ingestion API, dashboard with historical data, plot status badges, and alert visibility.
-- Video: demo up to 15 minutes covering architecture, infra evidence, CI/CD, and MVP.
-- Repositories: accessible source code links (preferably public for evaluation).
-- Delivery report (PDF/TXT): group name, participants + Discord usernames, documentation link, repository links, demo video link.
-
----
-
-## 🎯 13. Next Steps and Recommendations
-
-1. ✅ **Start with Phase 0-1:** Infra setup and code structure
-2. ✅ **Parallelize when possible:** Identity, Farm, Ingest can be developed independently
-3. ✅ **Validate early:** Load tests in Phase 2, do not leave to the end
-4. ✅ **Document ADRs:** Keep a record of decisions for presentation
-5. ✅ **Observability from the start:** Instrument from Phase 1, do not add later
-6. ✅ **Incremental demo:** Every 2 weeks, validate with stakeholders
+| Deliverable | Status |
+|---|---|
+| Architecture diagram + decision rationale (ADRs) | ✅ Delivered |
+| Kubernetes evidence (k3d) + observability (Grafana/Loki/Tempo) | ✅ Delivered |
+| CI/CD pipelines with green checks (GitHub Actions + Docker Hub) | ✅ Delivered |
+| Producer auth, property/plot registration, authenticated sensor ingestion | ✅ Delivered |
+| Dashboard with historical data + plot status from alert rules | ✅ Delivered |
+| Alert engine + alert visibility | ✅ Delivered |
+| Demo video (≤ 15 min) | ✅ Delivered |
+| Public repositories | ✅ Delivered |
+| Delivery report (PDF) | ✅ Delivered |
 
 ---
 
 ## 📚 Documentation Structure
 
-The project documentation is organized as follows:
-
 ```
 /docs
-├── adr/                                # Architectural Decision Records
-│   ├── ADR-001-microservices.md
-│   ├── ADR-002-persistence.md
-│   ├── ADR-003-timeseries.md
-│   ├── ADR-004-observability.md
-│   ├── ADR-005-local-vs-cloud.md
-│   └── ADR-006-local-orchestration.md
-├── architecture/                        # Architecture Documentation
-│   ├── c4-context.md
-│   ├── c4-container.md
-│   ├── infrastructure-terraform.md      # 🆕 Terraform IaC guide
-│   ├── data-model.md
-│   └── deployment.md
-├── operations/                          # Operations & Monitoring
-│   ├── monitoring.md
-│   ├── troubleshooting.md
-│   ├── scaling.md
-│   └── backup-recovery.md
-└── development/                         # Development Guides
-    ├── local-setup.md                   # Local development environment
-    ├── api-conventions.md
-    ├── testing-strategy.md
-    └── deployment-checklist.md
+├── adr/                    # Architectural Decision Records (ADR-001 to ADR-007)
+├── architecture/           # C4 diagrams, data model, deployment
+├── development/            # Local setup guide
+└── domain/                 # Domain glossary
 ```
 
-### Quick Links
-
-- **Getting Started:** [Local Development Setup](docs/development/local-setup.md)
-- **Architecture:** [C4 Diagrams](docs/architecture/c4-context.md) | [ADRs](docs/adr/)
-- **Infrastructure:** [Terraform Guide](docs/architecture/infrastructure-terraform.md)
-- **Deployment:** [Deployment Guide](docs/architecture/deployment.md)
-
-### Documentation consolidation
-
-- Treat this roadmap as the single high-level source; keep ADRs for decisions only.
-- Prefer linking to authoritative guides instead of duplicating content in new Markdown files.
+**Quick Links:**
+- **Local Setup:** [docs/development/local-setup.md](docs/development/local-setup.md)
+- **Architecture:** [C4 Context](docs/architecture/c4-context.md) | [C4 Container](docs/architecture/c4-container.md)
+- **ADRs:** [docs/adr/](docs/adr/)
+- **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](docs/REQUIREMENTS_MAPPING.md)
+- **New Service Template:** [NEW_MICROSERVICE_TEMPLATE.md](NEW_MICROSERVICE_TEMPLATE.md)
 
 ---
 
 ## ✨ Final Summary
 
-This **Roadmap** provides:
+✅ **4 microservices delivered** — Identity, Farm, Sensor Ingest, Analytics  
+✅ **Event-driven** — RabbitMQ + Wolverine Outbox Pattern across all services  
+✅ **Real-time** — SignalR hubs for live sensor readings and live alerts  
+✅ **Observable** — OpenTelemetry + Prometheus + Grafana + Loki + Tempo  
+✅ **Tested** — 700+ unit tests, 82–94% coverage across services  
+✅ **GitOps** — ArgoCD managing all deployments in k3d  
+✅ **Production-ready patterns** — DDD, CQRS, Outbox, Snapshot, Result Pattern  
 
-✅ **Clear architectural view** (Mermaid diagram)  
-✅ **Traceable ADRs** (documented decisions)  
-✅ **C4 diagrams** (professional architecture)  
-✅ **Detailed timeline** (5 phases, 6 weeks)  
-✅ **Technical specifications** (endpoints, models, queries)  
-✅ **Deployment guide** (IaC, CI/CD, GitOps)  
-✅ **Observability strategy** (metrics, alerts, dashboards)
-
-**Deadline:** February 27, 2026  
-**Team:** 4 backend developers  
-**Objective:** Demonstrate excellence in architecture, scalability, and observability
+**Delivered:** February 27, 2026 · **Team:** 4 backend developers · **Platform:** k3d + Docker Compose
 
 ---
 
-> **Version 3.0** - Complete Roadmap with Architecture, Detailed Phases, ADRs, and C4 Diagrams
->
-> Ready for presentation, technical documentation, and execution. ✅
+> **Version 4.0** — Updated to reflect what was actually built and delivered.
