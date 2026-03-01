@@ -16,6 +16,7 @@ export function useFallbackPolling() {
   const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
   const isAdmin = user?.role?.toLowerCase() === 'admin';
   const ownerId = isAdmin ? (selectedOwnerId || undefined) : ownerScopeId;
+  const requiresOwnerSelection = isAdmin && !ownerId;
   const sensorHubState = useConnectionStore((s) => s.sensorHubState);
   const alertHubState = useConnectionStore((s) => s.alertHubState);
   const setFallbackActive = useConnectionStore((s) => s.setFallbackActive);
@@ -28,11 +29,14 @@ export function useFallbackPolling() {
   const needsFallback = sensorHubState !== 'connected' || alertHubState !== 'connected';
 
   useEffect(() => {
-    if (!isAuthenticated || !needsFallback) {
+    if (!isAuthenticated || !needsFallback || requiresOwnerSelection) {
       setFallbackActive(false);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (requiresOwnerSelection) {
+        knownAlertIdsRef.current = null;
       }
       return;
     }
@@ -75,5 +79,5 @@ export function useFallbackPolling() {
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, needsFallback, ownerId]);
+  }, [isAuthenticated, needsFallback, ownerId, requiresOwnerSelection]);
 }

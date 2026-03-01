@@ -3,8 +3,9 @@ import { propertiesApi } from '@/api/properties.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { PaginatedRequest, CreatePropertyRequest, UpdatePropertyRequest } from '@/types';
 
-export function useProperties(params?: PaginatedRequest) {
-  const ownerId = useOwnerScope();
+export function useProperties(params?: PaginatedRequest & { ownerId?: string }) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerScopeId || params?.ownerId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery({
     queryKey: ['properties', scopedParams],

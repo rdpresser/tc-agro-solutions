@@ -130,6 +130,7 @@ export interface CreateSensorRequest {
   label: string;
   type: string;
   plotId: string;
+  ownerId?: string;
 }
 
 // Readings

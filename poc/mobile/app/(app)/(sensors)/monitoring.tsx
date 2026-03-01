@@ -5,17 +5,45 @@ import { TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLatestReadings } from '@/hooks/queries/use-dashboard';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useRealtimeStore } from '@/stores/realtime.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import { ConnectionBadge } from '@/components/dashboard/ConnectionBadge';
 import { Card } from '@/components/ui/Card';
+import { Select } from '@/components/ui/Select';
 import { formatRelativeTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 import type { SensorReading } from '@/types';
 
 export default function MonitoringScreen() {
   const { colors } = useTheme();
-  const { data: apiReadings, refetch, isRefetching } = useLatestReadings(20);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const dashboardOwnerId = isAdmin ? (selectedOwnerId || undefined) : undefined;
+  const { data: owners = [] } = useOwners();
+  const { data: apiReadings, refetch, isRefetching } = useLatestReadings(20, dashboardOwnerId);
   const realtimeReadings = useRealtimeStore((s) => s.latestReadings);
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    if (selectedOwnerId) return;
+    if (owners.length === 0) return;
+    setSelectedOwnerId(owners[0].id);
+  }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
+
+  const ownerOptions = useMemo(
+    () => [
+      { value: '', label: 'All owners' },
+      ...owners.map((owner) => ({
+        value: owner.id,
+        label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
+      })),
+    ],
+    [owners],
+  );
 
   const readings = useMemo(() => {
     const map = new Map<string, SensorReading>();
@@ -36,6 +64,18 @@ export default function MonitoringScreen() {
         </View>
         <ConnectionBadge />
       </View>
+
+      {isAdmin && (
+        <View className="px-4 pb-2">
+          <Select
+            label="Owner scope"
+            placeholder="Select owner scope"
+            options={ownerOptions}
+            value={selectedOwnerId || ''}
+            onChange={(value) => setSelectedOwnerId(value || null)}
+          />
+        </View>
+      )}
 
       <ScrollView
         className="flex-1 px-4"

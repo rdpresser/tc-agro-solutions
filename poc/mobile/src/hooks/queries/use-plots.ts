@@ -3,8 +3,9 @@ import { plotsApi } from '@/api/plots.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { PaginatedRequest, CreatePlotRequest } from '@/types';
 
-export function usePlots(params?: PaginatedRequest & { propertyId?: string; cropType?: string; status?: string }) {
-  const ownerId = useOwnerScope();
+export function usePlots(params?: PaginatedRequest & { propertyId?: string; cropType?: string; status?: string; ownerId?: string }) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerScopeId || params?.ownerId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery({
     queryKey: ['plots', scopedParams],

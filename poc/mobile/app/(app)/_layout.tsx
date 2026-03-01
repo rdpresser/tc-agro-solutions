@@ -7,14 +7,26 @@ import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useSignalR } from '@/hooks/use-signalr';
 import { useFallbackPolling } from '@/hooks/use-fallback-polling';
 import { useAlertsSummary } from '@/hooks/queries/use-alerts';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import type { User } from '@/types';
 
 function AuthenticatedTabs({ user }: { user: User }) {
   const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const { data: owners = [] } = useOwners();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    const isAdmin = user.role?.toLowerCase() === 'admin';
+    if (!isAdmin) return;
+    if (selectedOwnerId) return;
+    if (owners.length === 0) return;
+
+    setSelectedOwnerId(owners[0].id);
+  }, [user, selectedOwnerId, owners, setSelectedOwnerId]);
 
   useSignalR();
   useFallbackPolling();
@@ -121,8 +133,19 @@ export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const isOnboardingHydrated = useOnboardingStore((s) => s.isHydrated);
+  const skipOnboarding = useOnboardingStore((s) => s.skipOnboarding);
   const segments = useSegments();
   const params = useGlobalSearchParams<{ wizard?: string }>();
+
+  React.useEffect(() => {
+    if (!isOnboardingHydrated) return;
+    if (!user || user.role?.toLowerCase() !== 'admin') return;
+    if (!isWizardActive) return;
+
+    skipOnboarding().then(() => {
+      router.replace('/(app)/(dashboard)');
+    });
+  }, [isOnboardingHydrated, user, isWizardActive, skipOnboarding]);
 
   React.useEffect(() => {
     if (!isOnboardingHydrated || isWizardActive || params.wizard !== '1') {

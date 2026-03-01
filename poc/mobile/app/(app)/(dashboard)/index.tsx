@@ -47,7 +47,7 @@ export default function DashboardScreen() {
 
   const dashboardOwnerId = isAdmin ? (selectedOwnerId || undefined) : undefined;
 
-  const showSlides = isOnboardingHydrated && !hasCompletedOnboarding && !isWizardActive;
+  const showSlides = isOnboardingHydrated && !isAdmin && !hasCompletedOnboarding && !isWizardActive;
   const { data: stats, isLoading: statsLoading, isRefetching } = useDashboardStats(dashboardOwnerId);
   const { data: alertSummary } = useAlertsSummary(24, dashboardOwnerId);
   const alertCount = alertSummary?.pendingAlertsTotal || 0;
@@ -61,6 +61,13 @@ export default function DashboardScreen() {
     if (owners.length === 0) return;
     setSelectedOwnerId(owners[0].id);
   }, [isAdmin, owners, selectedOwnerId, setSelectedOwnerId]);
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    if (!isOnboardingHydrated) return;
+    if (hasCompletedOnboarding) return;
+    skipOnboarding();
+  }, [isAdmin, isOnboardingHydrated, hasCompletedOnboarding, skipOnboarding]);
 
   const ownerOptions = useMemo(
     () => [

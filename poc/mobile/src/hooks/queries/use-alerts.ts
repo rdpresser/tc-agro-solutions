@@ -3,8 +3,9 @@ import { alertsApi } from '@/api/alerts.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
 import type { AlertSummary, PaginatedResponse, Alert } from '@/types';
 
-export function useAlertsPending(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string }) {
-  const ownerId = useOwnerScope();
+export function useAlertsPending(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string; ownerId?: string }, ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'pending', scopedParams],
@@ -16,8 +17,9 @@ export function useAlertsPending(params?: { pageNumber?: number; pageSize?: numb
   });
 }
 
-export function useAlertsResolved(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string }) {
-  const ownerId = useOwnerScope();
+export function useAlertsResolved(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string; ownerId?: string }, ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'resolved', scopedParams],
@@ -29,8 +31,9 @@ export function useAlertsResolved(params?: { pageNumber?: number; pageSize?: num
   });
 }
 
-export function useAlertsAll(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string; status?: string }) {
-  const ownerId = useOwnerScope();
+export function useAlertsAll(params?: { pageNumber?: number; pageSize?: number; severity?: string; search?: string; status?: string; ownerId?: string }, ownerIdOverride?: string) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerIdOverride ?? ownerScopeId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery<PaginatedResponse<Alert>>({
     queryKey: ['alerts', 'all', scopedParams],

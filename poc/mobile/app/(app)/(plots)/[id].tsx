@@ -7,8 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlot, useCreatePlot, useUpdatePlot } from '@/hooks/queries/use-plots';
 import { useProperties, useProperty as usePropertyDetail } from '@/hooks/queries/use-properties';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useSensors } from '@/hooks/queries/use-sensors';
 import { useOnboardingStore } from '@/stores/onboarding.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import { plotSchema, type PlotFormData } from '@/lib/validation';
 import { CROP_TYPES, IRRIGATION_TYPES } from '@/constants/crop-types';
@@ -27,6 +30,10 @@ export default function PlotFormScreen() {
   const isNew = id === 'new';
   const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const globalSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setGlobalSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const wizardStep = useOnboardingStore((s) => s.wizardStep);
   const createdPropertyId = useOnboardingStore((s) => s.createdPropertyId);
@@ -47,7 +54,12 @@ export default function PlotFormScreen() {
   }, [isWizardActive, isWizardRoute, navigateBackToList]);
 
   const { data: plot, isLoading } = usePlot(isNew ? '' : id);
-  const { data: propertiesData } = useProperties({ pageSize: 100 });
+  const { data: owners = [] } = useOwners();
+  const [selectedOwnerId, setSelectedOwnerId] = React.useState<string>('');
+  const { data: propertiesData } = useProperties({
+    pageSize: 100,
+    ...(isAdmin && isNew && selectedOwnerId ? { ownerId: selectedOwnerId } : {}),
+  });
   const { data: sensorsData } = useSensors(
     !isNew ? { plotId: id, pageSize: 50 } : undefined
   );
@@ -96,8 +108,30 @@ export default function PlotFormScreen() {
     }
   }, [isWizardActive, wizardStep, createdPropertyId, isNew, setValue]);
 
+  useEffect(() => {
+    if (!isNew || !isAdmin) return;
+
+    const fallbackOwnerId = globalSelectedOwnerId || owners?.[0]?.id;
+    if (!fallbackOwnerId) return;
+
+    setSelectedOwnerId(fallbackOwnerId);
+    if (!globalSelectedOwnerId) {
+      setGlobalSelectedOwnerId(fallbackOwnerId);
+    }
+  }, [isNew, isAdmin, globalSelectedOwnerId, owners, setGlobalSelectedOwnerId]);
+
+  useEffect(() => {
+    if (!isNew || !isAdmin) return;
+    setValue('propertyId', '', { shouldValidate: true });
+  }, [selectedOwnerId, isNew, isAdmin, setValue]);
+
   const onSubmit = async (data: PlotFormData) => {
     try {
+      if (isAdmin && isNew && !selectedOwnerId) {
+        Alert.alert('Owner required', 'Select an owner to create a plot as admin.');
+        return;
+      }
+
       // Convert date strings to ISO 8601 datetime (API expects full datetime)
       const toIso = (d?: string) => d ? new Date(d + 'T00:00:00.000Z').toISOString() : undefined;
       const ownerId = selectedPropertyFromList?.ownerId || selectedPropertyDetail?.ownerId;
@@ -148,9 +182,13 @@ export default function PlotFormScreen() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   if (!isNew && isLoading) return <LoadingOverlay fullScreen />;
 
+  const ownerOptions = owners.map((o) => ({ value: o.id, label: `${o.name}${o.email ? ` - ${o.email}` : ''}` }));
   const propertyOptions = (propertiesData?.items || []).map((p) => ({ value: p.id, label: p.name }));
   const cropOptions = CROP_TYPES.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }));
-  const irrigationOptions = IRRIGATION_TYPES.map((i) => ({ value: i.value, label: i.label }));
+  const irrigationOptions = IRRIGATION_TYPES.map((i) => ({
+    value: i.value,
+    label: `${i.icon} ${i.label}`,
+  }));
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -167,6 +205,19 @@ export default function PlotFormScreen() {
 
         <ScrollView className="flex-1 px-4" keyboardShouldPersistTaps="handled">
           <View className="rounded-2xl p-4 shadow-sm mb-4" style={{ backgroundColor: colors.card }}>
+            {isAdmin && isNew && (
+              <Select
+                label="Owner"
+                options={ownerOptions}
+                value={selectedOwnerId}
+                onChange={(nextOwnerId) => {
+                  setSelectedOwnerId(nextOwnerId);
+                  setGlobalSelectedOwnerId(nextOwnerId || null);
+                }}
+                placeholder="Select owner..."
+              />
+            )}
+
             <Controller control={control} name="name" render={({ field: { onChange, onBlur, value } }) => (
               <Input label="Plot Name" placeholder="Plot name" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
             )} />

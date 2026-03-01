@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sensorsApi } from '@/api/sensors.api';
 import { useOwnerScope } from '@/hooks/use-owner-scope';
-import type { PaginatedRequest } from '@/types';
+import type { PaginatedRequest, CreateSensorRequest } from '@/types';
 
-export function useSensors(params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string }) {
-  const ownerId = useOwnerScope();
+export function useSensors(params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string; ownerId?: string }) {
+  const ownerScopeId = useOwnerScope();
+  const ownerId = ownerScopeId || params?.ownerId;
   const scopedParams = { ...params, ...(ownerId ? { ownerId } : {}) };
   return useQuery({
     queryKey: ['sensors', scopedParams],
@@ -38,7 +39,7 @@ export function useSensorReadings(sensorId: string, days = 7) {
 export function useCreateSensor() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { label: string; type: string; plotId: string }) =>
+    mutationFn: (data: CreateSensorRequest) =>
       sensorsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sensors'] });

@@ -7,7 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useSensor, useSensorReadings, useCreateSensor, useChangeSensorStatus } from '@/hooks/queries/use-sensors';
 import { usePlots } from '@/hooks/queries/use-plots';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useOnboardingStore } from '@/stores/onboarding.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { useOwnerScope } from '@/hooks/use-owner-scope';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import { sensorSchema, type SensorFormData } from '@/lib/validation';
 import { SENSOR_TYPES, SENSOR_STATUSES, getSensorIcon } from '@/constants/crop-types';
@@ -26,6 +30,12 @@ export default function SensorDetailScreen() {
   const isNew = id === 'new';
   const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const ownerScopeId = useOwnerScope();
+  const dashboardOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setDashboardOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>('');
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const wizardStep = useOnboardingStore((s) => s.wizardStep);
   const createdPlotId = useOnboardingStore((s) => s.createdPlotId);
@@ -49,7 +59,11 @@ export default function SensorDetailScreen() {
 
   const { data: sensor, isLoading } = useSensor(isNew ? '' : id);
   const { data: readings } = useSensorReadings(isNew ? '' : id);
-  const { data: plotsData } = usePlots({ pageSize: 100 });
+  const { data: owners = [] } = useOwners();
+  const { data: plotsData } = usePlots({
+    pageSize: 100,
+    ...(isAdmin && selectedOwnerId ? { ownerId: selectedOwnerId } : {}),
+  });
   const createMutation = useCreateSensor();
   const changeStatusMutation = useChangeSensorStatus();
 
@@ -65,9 +79,45 @@ export default function SensorDetailScreen() {
     }
   }, [isWizardActive, wizardStep, createdPlotId, isNew, setValue]);
 
+  useEffect(() => {
+    if (!isNew) return;
+    if (isAdmin) {
+      if (dashboardOwnerId) {
+        setSelectedOwnerId(dashboardOwnerId);
+        return;
+      }
+
+      const fallbackOwnerId = owners?.[0]?.id;
+      if (fallbackOwnerId) {
+        setSelectedOwnerId(fallbackOwnerId);
+        setDashboardOwnerId(fallbackOwnerId);
+      }
+      return;
+    }
+
+    if (ownerScopeId) {
+      setSelectedOwnerId(ownerScopeId);
+    }
+  }, [isNew, isAdmin, dashboardOwnerId, ownerScopeId, owners, setDashboardOwnerId]);
+
+  useEffect(() => {
+    if (!isNew) return;
+    setValue('plotId', '', { shouldValidate: true });
+  }, [selectedOwnerId, isNew, setValue]);
+
   const onSubmit = async (data: SensorFormData) => {
     try {
-      await createMutation.mutateAsync(data);
+      if (isAdmin && !selectedOwnerId) {
+        Alert.alert('Owner required', 'Select an owner to create a sensor as admin.');
+        return;
+      }
+
+      const payload = {
+        ...data,
+        ...(selectedOwnerId ? { ownerId: selectedOwnerId } : {}),
+      };
+
+      await createMutation.mutateAsync(payload);
       if (isWizardActive) {
         await completeOnboarding();
         setShowCelebration(true);
@@ -96,6 +146,7 @@ export default function SensorDetailScreen() {
     }
   };
 
+  const ownerOptions = owners.map((o) => ({ value: o.id, label: `${o.name}${o.email ? ` - ${o.email}` : ''}` }));
   const plotOptions = (plotsData?.items || []).map((p) => ({ value: p.id, label: `${p.name} (${p.propertyName})` }));
 
   if (!isNew && isLoading) return <LoadingOverlay fullScreen />;
@@ -121,6 +172,19 @@ export default function SensorDetailScreen() {
           </View>
           <ScrollView className="flex-1 px-4" keyboardShouldPersistTaps="handled">
             <View className="rounded-2xl p-4 shadow-sm" style={{ backgroundColor: colors.card }}>
+              {isAdmin && (
+                <Select
+                  label="Owner"
+                  options={ownerOptions}
+                  value={selectedOwnerId}
+                  onChange={(nextOwnerId) => {
+                    setSelectedOwnerId(nextOwnerId);
+                    setDashboardOwnerId(nextOwnerId || null);
+                  }}
+                  placeholder="Select owner..."
+                />
+              )}
+
               <Controller control={control} name="label" render={({ field: { onChange, onBlur, value } }) => (
                 <Input label="Label" placeholder="Sensor label" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.label?.message} />
               )} />

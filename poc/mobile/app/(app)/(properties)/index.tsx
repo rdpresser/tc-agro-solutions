@@ -4,9 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProperties } from '@/hooks/queries/use-properties';
+import { useOwners } from '@/hooks/queries/use-owners';
+import { useAuthStore } from '@/stores/auth.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useTheme } from '@/providers/theme-provider';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { SortControl } from '@/components/ui/SortControl';
+import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +22,11 @@ import type { Property } from '@/types';
 
 export default function PropertiesListScreen() {
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const { data: owners = [] } = useOwners();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('name');
@@ -29,7 +38,23 @@ export default function PropertiesListScreen() {
     filter: search || undefined,
     sortBy,
     sortDirection,
+    ...(isAdmin && selectedOwnerId ? { ownerId: selectedOwnerId } : {}),
   });
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    if (selectedOwnerId) return;
+    if (owners.length === 0) return;
+    setSelectedOwnerId(owners[0].id);
+  }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
+
+  const ownerOptions = [
+    { value: '', label: 'All owners' },
+    ...owners.map((owner) => ({
+      value: owner.id,
+      label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
+    })),
+  ];
 
   const properties = data?.items || [];
 
@@ -95,6 +120,19 @@ export default function PropertiesListScreen() {
       </View>
 
       <View className="px-4">
+        {isAdmin && (
+          <Select
+            label="Owner scope"
+            placeholder="Select owner scope"
+            options={ownerOptions}
+            value={selectedOwnerId || ''}
+            onChange={(value) => {
+              setSelectedOwnerId(value || null);
+              setPage(1);
+            }}
+          />
+        )}
+
         <SearchBar value={search} onChangeText={(value) => { setSearch(value); setPage(1); }} placeholder="Search properties..." />
         <SortControl
           options={[

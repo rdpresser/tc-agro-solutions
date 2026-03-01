@@ -15,13 +15,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAlertsPending, useAlertsResolved, useAlertsAll, useResolveAlert, useAlertsSummary } from '@/hooks/queries/use-alerts';
+import { useOwners } from '@/hooks/queries/use-owners';
 import { useTheme } from '@/providers/theme-provider';
+import { useAuthStore } from '@/stores/auth.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { Select } from '@/components/ui/Select';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatRelativeTime, formatDateTime } from '@/lib/format';
 import type { Alert } from '@/types';
@@ -73,6 +77,11 @@ const severityIcon = (s: string) => {
 
 export default function AlertsScreen() {
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const dashboardOwnerId = isAdmin ? (selectedOwnerId || undefined) : undefined;
   const [tab, setTab] = useState<Tab>('pending');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -89,14 +98,14 @@ export default function AlertsScreen() {
       pageSize,
       severity: severityFilter || undefined,
       search: search || undefined,
-    });
+    }, dashboardOwnerId);
   const { data: resolvedAlerts, isLoading: loadingResolved, refetch: refetchResolved, isRefetching: refetchingResolved } =
     useAlertsResolved({
       pageNumber: page,
       pageSize,
       severity: severityFilter || undefined,
       search: search || undefined,
-    });
+    }, dashboardOwnerId);
   const { data: allAlerts, isLoading: loadingAll, refetch: refetchAll, isRefetching: refetchingAll } =
     useAlertsAll({
       pageNumber: page,
@@ -104,9 +113,28 @@ export default function AlertsScreen() {
       severity: severityFilter || undefined,
       search: search || undefined,
       status: statusFilter || 'all',
-    });
-  const { data: summary } = useAlertsSummary();
+    }, dashboardOwnerId);
+  const { data: summary } = useAlertsSummary(24, dashboardOwnerId);
+  const { data: owners = [] } = useOwners();
   const resolveMutation = useResolveAlert();
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    if (selectedOwnerId) return;
+    if (owners.length === 0) return;
+    setSelectedOwnerId(owners[0].id);
+  }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
+
+  const ownerOptions = useMemo(
+    () => [
+      { value: '', label: 'All owners' },
+      ...owners.map((owner) => ({
+        value: owner.id,
+        label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
+      })),
+    ],
+    [owners],
+  );
 
   const currentPageData = useMemo(() => {
     if (tab === 'pending') return pending;
@@ -222,6 +250,21 @@ export default function AlertsScreen() {
       <View className="px-4 pt-2 pb-2">
         <Text className="text-2xl font-bold" style={{ color: colors.text }}>Alerts</Text>
       </View>
+
+      {isAdmin && (
+        <View className="px-4 mb-3">
+          <Select
+            label="Owner scope"
+            placeholder="Select owner scope"
+            options={ownerOptions}
+            value={selectedOwnerId || ''}
+            onChange={(value) => {
+              setSelectedOwnerId(value || null);
+              setPage(1);
+            }}
+          />
+        </View>
+      )}
 
       {/* Summary Cards */}
       {summary && (

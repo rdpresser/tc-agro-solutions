@@ -1,6 +1,6 @@
 import { farmApi, sensorApi } from './clients';
 import { pascalizeRequest } from './normalize';
-import type { Sensor, SensorReading, PaginatedResponse, PaginatedRequest } from '@/types';
+import type { Sensor, SensorReading, PaginatedResponse, PaginatedRequest, CreateSensorRequest } from '@/types';
 
 export const sensorsApi = {
   list: async (params?: PaginatedRequest & { type?: string; status?: string; propertyId?: string; plotId?: string; ownerId?: string }): Promise<PaginatedResponse<Sensor>> => {
@@ -21,7 +21,7 @@ export const sensorsApi = {
     return response.data;
   },
 
-  create: async (data: { label: string; type: string; plotId: string }): Promise<Sensor> => {
+  create: async (data: CreateSensorRequest): Promise<Sensor> => {
     const response = await farmApi.post('/api/sensors', pascalizeRequest(data));
     return response.data;
   },

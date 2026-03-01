@@ -23,6 +23,7 @@ export function useSignalR() {
   const alertHubRef = useRef<HubConnection | null>(null);
   const isAdmin = user?.role?.toLowerCase() === 'admin';
   const ownerScopeId = isAdmin ? (selectedOwnerId || undefined) : (user?.id || undefined);
+  const requiresOwnerSelection = isAdmin && !ownerScopeId;
 
   const buildHub = useCallback((path: string, onStateChange: (s: ConnectionState) => void) => {
     const url = `${API_CONFIG.SENSOR_BASE_URL}${path}`;
@@ -48,6 +49,12 @@ export function useSignalR() {
   };
 
   useEffect(() => {
+    if (requiresOwnerSelection) {
+      setSensorHubState('disconnected');
+      setAlertHubState('disconnected');
+      return;
+    }
+
     if (!isAuthenticated || !token || !API_CONFIG.SIGNALR_ENABLED) return;
     let disposed = false;
 
@@ -59,6 +66,7 @@ export function useSignalR() {
     sensorHub.on('sensorStatusChanged', () => {});
     sensorHub.onreconnected(async () => {
       setSensorHubState('connected');
+      if (!ownerScopeId) return;
       try {
         await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
       } catch {
@@ -80,6 +88,7 @@ export function useSignalR() {
     alertHub.onreconnecting(() => setAlertHubState('reconnecting'));
     alertHub.onreconnected(async () => {
       setAlertHubState('connected');
+      if (!ownerScopeId) return;
       try {
         await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
       } catch {
@@ -102,6 +111,7 @@ export function useSignalR() {
         await sensorHub.start();
         if (!disposed) {
           setSensorHubState('connected');
+          if (!ownerScopeId) return;
           try {
             await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
           } catch {
@@ -118,6 +128,7 @@ export function useSignalR() {
         await alertHub.start();
         if (!disposed) {
           setAlertHubState('connected');
+          if (!ownerScopeId) return;
           try {
             await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
           } catch {
@@ -140,7 +151,7 @@ export function useSignalR() {
       setSensorHubState('disconnected');
       setAlertHubState('disconnected');
     };
-  }, [isAuthenticated, token, ownerScopeId]);
+  }, [isAuthenticated, token, ownerScopeId, requiresOwnerSelection]);
 
   return { sensorHub: sensorHubRef, alertHub: alertHubRef };
 }

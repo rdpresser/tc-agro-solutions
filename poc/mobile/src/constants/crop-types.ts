@@ -22,11 +22,11 @@ export const CROP_TYPES = [
 ] as const;
 
 export const IRRIGATION_TYPES = [
-  { value: 'Drip Irrigation', label: 'Drip Irrigation' },
-  { value: 'Sprinkler', label: 'Sprinkler' },
-  { value: 'Center Pivot', label: 'Center Pivot' },
-  { value: 'Flood/Furrow', label: 'Flood/Furrow' },
-  { value: 'Rainfed (No Irrigation)', label: 'Rainfed (No Irrigation)' },
+  { value: 'Drip Irrigation', label: 'Drip Irrigation', icon: '💧' },
+  { value: 'Sprinkler', label: 'Sprinkler', icon: '🚿' },
+  { value: 'Center Pivot', label: 'Center Pivot', icon: '🔄' },
+  { value: 'Flood/Furrow', label: 'Flood/Furrow', icon: '🌊' },
+  { value: 'Rainfed (No Irrigation)', label: 'Rainfed (No Irrigation)', icon: '🌧️' },
 ] as const;
 
 export const SENSOR_TYPES = [

@@ -10,6 +10,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useProperty, useCreateProperty, useUpdateProperty } from '@/hooks/queries/use-properties';
 import { useOwners } from '@/hooks/queries/use-owners';
+import { useOwnerScope } from '@/hooks/use-owner-scope';
+import { useAuthStore } from '@/stores/auth.store';
+import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { useOnboardingStore } from '@/stores/onboarding.store';
 import { useTheme } from '@/providers/theme-provider';
 import { propertySchema, type PropertyFormData } from '@/lib/validation';
@@ -25,6 +28,11 @@ export default function PropertyFormScreen() {
   const isNew = id === 'new';
   const isWizardRoute = wizard === '1';
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const ownerScopeId = useOwnerScope();
+  const selectedOwnerId = useDashboardOwnerFilterStore((s) => s.selectedOwnerId);
+  const setSelectedOwnerId = useDashboardOwnerFilterStore((s) => s.setSelectedOwnerId);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
   const isWizardActive = useOnboardingStore((s) => s.isWizardActive);
   const advanceToStep2 = useOnboardingStore((s) => s.advanceToStep2);
 
@@ -72,6 +80,25 @@ export default function PropertyFormScreen() {
       });
     }
   }, [property, isNew, reset]);
+
+  useEffect(() => {
+    if (isNew && !isAdmin && ownerScopeId) {
+      setValue('ownerId', ownerScopeId, { shouldValidate: true });
+    }
+  }, [isNew, isAdmin, ownerScopeId, setValue]);
+
+  useEffect(() => {
+    if (!isNew || !isAdmin) return;
+
+    const fallbackOwnerId = selectedOwnerId || owners?.[0]?.id;
+    if (!fallbackOwnerId) return;
+
+    setValue('ownerId', fallbackOwnerId, { shouldValidate: true });
+
+    if (!selectedOwnerId) {
+      setSelectedOwnerId(fallbackOwnerId);
+    }
+  }, [isNew, isAdmin, owners, selectedOwnerId, setSelectedOwnerId, setValue]);
 
   const onSubmit = async (data: PropertyFormData) => {
     try {
@@ -178,13 +205,30 @@ export default function PropertyFormScreen() {
               )}
             />
 
-            <Controller
-              control={control}
-              name="ownerId"
-              render={({ field: { onChange, value } }) => (
-                <Select label="Owner" options={ownerOptions} value={value} onChange={onChange} error={errors.ownerId?.message} placeholder="Select owner..." />
-              )}
-            />
+            {isAdmin && (
+              <View
+                pointerEvents={isNew ? 'auto' : 'none'}
+                style={isNew ? undefined : { opacity: 0.6 }}
+              >
+                <Controller
+                  control={control}
+                  name="ownerId"
+                  render={({ field: { onChange, value } }) => (
+                    <Select
+                      label={isNew ? 'Owner' : 'Owner (locked on edit)'}
+                      options={ownerOptions}
+                      value={value}
+                      onChange={(nextOwnerId) => {
+                        onChange(nextOwnerId);
+                        setSelectedOwnerId(nextOwnerId || null);
+                      }}
+                      error={errors.ownerId?.message}
+                      placeholder="Select owner..."
+                    />
+                  )}
+                />
+              </View>
+            )}
 
             <Controller
               control={control}
