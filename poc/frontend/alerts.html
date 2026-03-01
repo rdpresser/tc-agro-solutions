@@ -83,6 +83,18 @@
         </header>
 
         <div class="content">
+          <div id="alerts-owner-filter" class="card" style="margin-bottom: 16px; display: none">
+            <div class="form-row" style="align-items: end">
+              <div class="form-group" style="margin-bottom: 0; min-width: 320px">
+                <label for="alerts-owner-select" class="form-label">Owner</label>
+                <select id="alerts-owner-select" class="form-control form-select">
+                  <option value="">Loading owners...</option>
+                </select>
+                <span class="form-text">Admin view filter for alerts HTTP and SignalR data.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Page Header -->
           <div class="page-header">
             <div class="page-header-title">
@@ -102,7 +114,7 @@
                 class="text-muted"
                 style="font-size: 0.85em; display: none"
               >
-                Updated just now
+                No updates yet
               </span>
               <button id="refresh-alerts" class="btn btn-outline" type="button">⟳ Refresh</button>
             </div>

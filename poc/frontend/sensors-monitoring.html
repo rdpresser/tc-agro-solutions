@@ -82,6 +82,18 @@
         </header>
 
         <div class="content">
+          <div id="sensors-owner-filter" class="card" style="margin-bottom: 16px; display: none">
+            <div class="form-row" style="align-items: end">
+              <div class="form-group" style="margin-bottom: 0; min-width: 320px">
+                <label for="sensors-owner-select" class="form-label">Owner</label>
+                <select id="sensors-owner-select" class="form-control form-select">
+                  <option value="">Loading owners...</option>
+                </select>
+                <span class="form-text">Admin view filter for sensors HTTP and SignalR data.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Page Header -->
           <div class="page-header">
             <div class="page-header-title">
@@ -101,7 +113,7 @@
                 class="text-muted"
                 style="font-size: 0.85em; display: none"
               >
-                Updated just now
+                No updates yet
               </span>
               <button id="refresh-sensors" class="btn btn-outline">⟳ Refresh</button>
             </div>
@@ -236,14 +248,14 @@
           <div class="card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
               <div class="d-flex align-center gap-2">
-                <span id="signalrStatus" class="badge badge-success">🟢 Live Updates Active</span>
-                <span id="transport-mode-status" class="badge badge-info">SignalR</span>
+                <span id="signalrStatus" class="badge badge-warning">🟡 Connecting...</span>
+                <span id="transport-mode-status" class="badge badge-warning">Awaiting realtime</span>
                 <span class="text-muted" style="font-size: 0.85em"
                   >Readings update every 5 seconds</span
                 >
               </div>
               <span class="text-muted" style="font-size: 0.85em">
-                Last sync: <span id="lastSync">Just now</span>
+                Last sync: <span id="lastSync">--</span>
               </span>
             </div>
           </div>

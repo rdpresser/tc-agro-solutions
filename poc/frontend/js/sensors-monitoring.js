@@ -4,6 +4,8 @@
 
 import {
   changeSensorOperationalStatus,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger,
   getSensorsPaginated,
   getReadingsLatest,
   getHistoricalDataPage,
@@ -53,8 +55,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadStatusFilterOptions();
   loadTypeFilterOptions();
   hydrateInitialViewState();
+  await setupOwnerSelectorForMonitoring();
   setupSensorStatusModal();
   setupSensorHistoryModal();
+  resetMonitoringSyncIndicators();
   await loadSensors();
   setupRealTimeUpdates();
   setupEventListeners();
@@ -120,6 +124,7 @@ let isSensorHistoryLoading = false;
 let sensorStatusModalElements = null;
 let sensorStatusTarget = null;
 let isSensorStatusUpdating = false;
+let selectedOwnerIdForMonitoring = null;
 const sensorHistoryViewState = {
   days: 7,
   pageNumber: 1,
@@ -289,13 +294,19 @@ async function loadSensors({ forceSummaryRefresh = false } = {}) {
     renderSensorsGrid(sensors);
     updateStatusSummary(summaryStats || null);
     renderPaginationControls();
-    updateLastSyncTimestamp();
+    const latestReadingTimestamp = findLatestReadingTimestamp(latestReadings);
+    if (latestReadingTimestamp) {
+      updateLastSyncTimestamp(latestReadingTimestamp);
+    } else {
+      resetMonitoringSyncIndicators();
+    }
     persistViewStateToUrl();
   } catch (error) {
     console.error('Error loading sensors:', error);
     if (!hasRenderedCards) {
       grid.innerHTML = `<div class="error">${t('sensors.load_failed')}</div>`;
     }
+    resetMonitoringSyncIndicators();
     toast('sensors.load_failed', 'error');
   } finally {
     isSensorsLoading = false;
@@ -703,10 +714,122 @@ function isCurrentUserAdmin() {
   return roles.some((role) => String(role).trim().toLowerCase() === 'admin');
 }
 
+async function setupOwnerSelectorForMonitoring() {
+  const filterContainer = $('#sensors-owner-filter');
+  const ownerSelect = $('#sensors-owner-select');
+
+  if (!filterContainer || !ownerSelect) {
+    return;
+  }
+
+  if (!isCurrentUserAdmin()) {
+    filterContainer.style.display = 'none';
+    selectedOwnerIdForMonitoring = null;
+    return;
+  }
+
+  filterContainer.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwnersForMonitoring(parameterMap);
+    const sortedOwners = [...owners].sort((left, right) => {
+      const leftName = String(left?.name || '').toLowerCase();
+      const rightName = String(right?.name || '').toLowerCase();
+      return leftName.localeCompare(rightName);
+    });
+
+    ownerSelect.innerHTML = sortedOwners
+      .map(
+        (owner) =>
+          `<option value="${owner.id}">${owner?.name || 'Unnamed owner'} - ${owner?.email || 'no-email'}</option>`
+      )
+      .join('');
+
+    if (sortedOwners.length > 0) {
+      selectedOwnerIdForMonitoring = sortedOwners[0].id;
+      ownerSelect.value = selectedOwnerIdForMonitoring;
+      ownerSelect.disabled = false;
+    } else {
+      selectedOwnerIdForMonitoring = null;
+      ownerSelect.innerHTML = '<option value="">No owners found</option>';
+      ownerSelect.disabled = true;
+    }
+
+    ownerSelect.addEventListener('change', async () => {
+      const previousOwnerId = currentOwnerScopeId || selectedOwnerIdForMonitoring;
+      selectedOwnerIdForMonitoring = ownerSelect.value || null;
+      monitoringViewState.pageNumber = 1;
+      cachedSummaryStats = null;
+      cachedSummaryCacheKey = null;
+
+      if (realtimeConnectionState === 'connected') {
+        await switchMonitoringOwnerGroup(previousOwnerId, selectedOwnerIdForMonitoring);
+      }
+
+      await loadSensors({ forceSummaryRefresh: true });
+    });
+  } catch (error) {
+    console.warn('[SensorsMonitoring] Failed to load owners for admin filter.', error);
+    selectedOwnerIdForMonitoring = null;
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+  }
+}
+
+async function getAllOwnersForMonitoring(parameterMap) {
+  const owners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: 1000,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    owners.push(...items);
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(owners.map((owner) => [owner.id, owner])).values());
+}
+
+async function switchMonitoringOwnerGroup(previousOwnerId, nextOwnerId) {
+  if (previousOwnerId && previousOwnerId !== nextOwnerId) {
+    try {
+      await leaveOwnerGroup(previousOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave owner group ${previousOwnerId}:`, error);
+    }
+  }
+
+  ownerGroupJoined = false;
+  lastJoinedOwnerScopeId = null;
+  currentOwnerScopeId = nextOwnerId;
+
+  await ensureOwnerGroupSubscription();
+}
+
 function getOwnerScopeIdForMonitoring() {
   if (isCurrentUserAdmin()) {
-    const ownerId = new URLSearchParams(window.location.search).get('ownerId');
-    return ownerId || null;
+    return selectedOwnerIdForMonitoring || null;
   }
 
   const currentUser = getUser();
@@ -736,7 +859,7 @@ async function ensureOwnerGroupSubscription() {
   if (isCurrentUserAdmin() && !currentOwnerScopeId) {
     ownerGroupJoined = false;
     console.warn(
-      '[SensorsRealtime] Admin user without ownerId query param. Skipping owner-group subscription.'
+      '[SensorsRealtime] Admin user without selected owner. Skipping owner-group subscription.'
     );
     fallbackPoller.start('admin-owner-scope-required');
     return;
@@ -744,12 +867,9 @@ async function ensureOwnerGroupSubscription() {
 
   if (isCurrentUserAdmin() && !isValidGuid(currentOwnerScopeId)) {
     ownerGroupJoined = false;
-    console.warn(
-      '[SensorsRealtime] Invalid ownerId query param. Skipping owner-group subscription.',
-      {
-        ownerId: currentOwnerScopeId
-      }
-    );
+    console.warn('[SensorsRealtime] Invalid selected ownerId. Skipping owner-group subscription.', {
+      ownerId: currentOwnerScopeId
+    });
     fallbackPoller.start('admin-owner-scope-invalid');
     return;
   }
@@ -910,7 +1030,11 @@ function updateLastSyncTimestamp(timestamp = null) {
     return;
   }
 
-  const value = timestamp || new Date().toISOString();
+  if (!timestamp) {
+    return;
+  }
+
+  const value = timestamp;
   lastSyncTimestampIso = value;
   target.textContent = formatRelativeTime(value);
   refreshHeaderSyncIndicator();
@@ -923,11 +1047,41 @@ function refreshHeaderSyncIndicator() {
   }
 
   if (!lastSyncTimestampIso) {
-    indicator.textContent = 'Updated just now';
+    indicator.textContent = 'No updates yet';
     return;
   }
 
   indicator.textContent = `✓ Updated ${formatRelativeTime(lastSyncTimestampIso)}`;
+}
+
+function resetMonitoringSyncIndicators() {
+  lastSyncTimestampIso = null;
+
+  const lastSync = $('#lastSync');
+  if (lastSync) {
+    lastSync.textContent = '--';
+  }
+
+  refreshHeaderSyncIndicator();
+}
+
+function findLatestReadingTimestamp(readings) {
+  if (!Array.isArray(readings) || readings.length === 0) {
+    return null;
+  }
+
+  const timestamps = readings
+    .map((reading) => reading?.timestamp || reading?.Timestamp || null)
+    .filter(Boolean)
+    .map((raw) => new Date(raw).getTime())
+    .filter((value) => !Number.isNaN(value));
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  const latest = Math.max(...timestamps);
+  return new Date(latest).toISOString();
 }
 
 function createSensorCardHtml(sensor, status = 'Active') {

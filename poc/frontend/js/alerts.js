@@ -5,6 +5,8 @@
 import {
   getPendingAlertsPage,
   getPendingAlertsSummary,
+  getOwnersPaginated,
+  getOwnersQueryParameterMapFromSwagger,
   initAlertSignalRConnection,
   joinAlertOwnerGroup,
   leaveAlertOwnerGroup,
@@ -34,6 +36,8 @@ let latestPendingAlerts = [];
 let latestSummary = null;
 let ownerGroupJoined = false;
 let ownerScopeId = null;
+let selectedOwnerId = null;
+let alertsRealtimeState = 'disconnected';
 let searchTerm = '';
 let severityFilter = '';
 let statusFilter = '';
@@ -78,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   hydrateInitialAlertsViewState();
+  await setupOwnerSelectorForAlerts();
   setupAlertDialogs();
   await loadAlertsData();
   await setupAlertRealtime();
@@ -285,13 +290,16 @@ async function setupAlertRealtime() {
     return;
   }
 
-  ownerScopeId = getOwnerScopeForAlerts();
-  ownerGroupJoined = await joinAlertOwnerGroup(ownerScopeId);
+  alertsRealtimeState = 'connected';
+  await ensureAlertOwnerGroupSubscription();
 }
 
 function handleConnectionChange(state) {
+  alertsRealtimeState = state;
+
   if (state === 'connected') {
     fallbackPoller.stop('signalr-restored');
+    void ensureAlertOwnerGroupSubscription();
     return;
   }
 
@@ -504,7 +512,7 @@ function refreshAlertHeaderSyncIndicator() {
   }
 
   if (!lastSyncTimestampIso) {
-    indicator.textContent = 'Updated just now';
+    indicator.textContent = 'No updates yet';
     return;
   }
 
@@ -641,10 +649,152 @@ function isCurrentUserAdmin() {
   return roles.some((role) => String(role).trim().toLowerCase() === 'admin');
 }
 
+async function setupOwnerSelectorForAlerts() {
+  const filterContainer = $('#alerts-owner-filter');
+  const ownerSelect = $('#alerts-owner-select');
+
+  if (!filterContainer || !ownerSelect) {
+    return;
+  }
+
+  if (!isCurrentUserAdmin()) {
+    filterContainer.style.display = 'none';
+    selectedOwnerId = null;
+    return;
+  }
+
+  filterContainer.style.display = 'block';
+  ownerSelect.disabled = true;
+  ownerSelect.innerHTML = '<option value="">Loading owners...</option>';
+
+  try {
+    let parameterMap = null;
+    try {
+      parameterMap = await getOwnersQueryParameterMapFromSwagger();
+    } catch {
+      parameterMap = null;
+    }
+
+    const owners = await getAllOwnersForAlerts(parameterMap);
+    const sortedOwners = [...owners].sort((left, right) => {
+      const leftName = String(left?.name || '').toLowerCase();
+      const rightName = String(right?.name || '').toLowerCase();
+      return leftName.localeCompare(rightName);
+    });
+
+    ownerSelect.innerHTML = sortedOwners
+      .map(
+        (owner) =>
+          `<option value="${owner.id}">${owner?.name || 'Unnamed owner'} - ${owner?.email || 'no-email'}</option>`
+      )
+      .join('');
+
+    if (sortedOwners.length > 0) {
+      selectedOwnerId = sortedOwners[0].id;
+      ownerSelect.value = selectedOwnerId;
+      ownerSelect.disabled = false;
+    } else {
+      selectedOwnerId = null;
+      ownerSelect.innerHTML = '<option value="">No owners found</option>';
+      ownerSelect.disabled = true;
+    }
+
+    ownerSelect.addEventListener('change', async () => {
+      const previousOwnerId = ownerScopeId;
+      selectedOwnerId = ownerSelect.value || null;
+      alertsViewState.pageNumber = 1;
+
+      if (alertsRealtimeState === 'connected') {
+        await switchAlertOwnerGroup(previousOwnerId, selectedOwnerId);
+      }
+
+      await loadAlertsData();
+    });
+  } catch (error) {
+    console.warn('[Alerts] Failed to load owners for admin filter.', error);
+    selectedOwnerId = null;
+    ownerSelect.innerHTML = '<option value="">Failed to load owners</option>';
+    ownerSelect.disabled = true;
+  }
+}
+
+async function getAllOwnersForAlerts(parameterMap) {
+  const owners = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await getOwnersPaginated(
+      {
+        pageNumber,
+        pageSize: 1000,
+        sortBy: 'name',
+        sortDirection: 'asc',
+        filter: ''
+      },
+      parameterMap
+    );
+
+    const items = response?.data || response?.items || response?.results || [];
+    owners.push(...items);
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  return Array.from(new Map(owners.map((owner) => [owner.id, owner])).values());
+}
+
+async function ensureAlertOwnerGroupSubscription() {
+  if (alertsRealtimeState !== 'connected') {
+    return;
+  }
+
+  const nextOwnerScopeId = getOwnerScopeForAlerts();
+
+  if (isCurrentUserAdmin() && !nextOwnerScopeId) {
+    ownerGroupJoined = false;
+    return;
+  }
+
+  if (ownerGroupJoined && ownerScopeId === nextOwnerScopeId) {
+    return;
+  }
+
+  if (ownerGroupJoined && ownerScopeId && ownerScopeId !== nextOwnerScopeId) {
+    await leaveAlertOwnerGroup(ownerScopeId);
+  }
+
+  ownerGroupJoined = await joinAlertOwnerGroup(nextOwnerScopeId);
+
+  if (!ownerGroupJoined) {
+    console.warn('[AlertsRealtime] Failed to join owner group.', {
+      ownerId: nextOwnerScopeId
+    });
+    fallbackPoller.start('owner-join-failed');
+    return;
+  }
+
+  ownerScopeId = nextOwnerScopeId;
+}
+
+async function switchAlertOwnerGroup(previousOwnerId, nextOwnerId) {
+  if (previousOwnerId && previousOwnerId !== nextOwnerId) {
+    try {
+      await leaveAlertOwnerGroup(previousOwnerId);
+    } catch (error) {
+      console.warn(`Failed to leave alert owner group ${previousOwnerId}:`, error);
+    }
+  }
+
+  ownerScopeId = nextOwnerId;
+  ownerGroupJoined = false;
+
+  await ensureAlertOwnerGroupSubscription();
+}
+
 function getOwnerScopeForAlerts() {
   if (isCurrentUserAdmin()) {
-    const ownerId = new URLSearchParams(window.location.search).get('ownerId');
-    return ownerId || null;
+    return selectedOwnerId || null;
   }
 
   const currentUser = getUser();
@@ -665,7 +815,7 @@ function getOwnerScopeForAlerts() {
 }
 
 function getSelectedOwnerIdForAlerts() {
-  return getOwnerScopeForAlerts();
+  return isCurrentUserAdmin() ? selectedOwnerId || null : getOwnerScopeForAlerts();
 }
 
 // ============================================
