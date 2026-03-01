@@ -1,0 +1,14 @@
+{
+  "folders": [
+    { "path": "." },
+    { "path": "common" },
+    { "path": "services/farm-service" },
+    { "path": "services/identity-service" },
+    { "path": "services/sensor-ingest-service" },
+    { "path": "services/analytics-worker" },
+    { "path": "services/dashboard-service" }
+  ],
+  "settings": {
+    "git.scanSubfolders": true
+  }
+}
