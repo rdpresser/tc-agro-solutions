@@ -33,6 +33,12 @@
         backdrop-filter: blur(4px);
       }
 
+      .top-actions,
+      .bottom-actions {
+        display: flex;
+        justify-content: flex-start;
+      }
+
       h1 {
         margin: 0 0 8px;
         font-size: clamp(1.4rem, 2.6vw, 2rem);
@@ -57,20 +63,22 @@
       }
 
       .back-link {
-        display: inline-flex;
+        display: inline-flex !important;
         align-items: center;
         gap: 8px;
         margin-bottom: 16px;
         padding: 10px 14px;
         border-radius: 10px;
         text-decoration: none;
-        color: #f5f8f2;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(0, 0, 0, 0.38);
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
       }
 
       .back-link:hover {
-        background: rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.52);
       }
 
       a {
@@ -80,12 +88,14 @@
   </head>
   <body>
     <main class="card">
-      <a
-        class="back-link"
-        href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
-      >
-        ← Back to README: Meet the Farmers
-      </a>
+      <div class="top-actions">
+        <a
+          class="back-link"
+          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+        >
+          ← Back to README: Meet the Farmers
+        </a>
+      </div>
 
       <h1>🌾 Meet the Farmers</h1>
       <p>A quick team intro from TC Agro Solutions.</p>
@@ -97,6 +107,15 @@
 
       <div class="links">
         <a href="./meet_the_farmers.mp4">Open MP4 directly</a>
+      </div>
+
+      <div class="bottom-actions" style="margin-top: 18px;">
+        <a
+          class="back-link"
+          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+        >
+          ← Back to README: Meet the Farmers
+        </a>
       </div>
     </main>
   </body>
