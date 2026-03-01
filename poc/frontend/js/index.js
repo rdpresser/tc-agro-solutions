@@ -6,6 +6,30 @@ import { handleLogin, isAuthenticated, redirectToDashboard } from './auth.js';
 import { toast, t } from './i18n.js';
 import { $, getPageUrl } from './utils.js';
 
+const REMEMBER_EMAIL_COOKIE = 'tc_agro_remember_email';
+const REMEMBER_EMAIL_DAYS = 30;
+
+function getCookie(name) {
+  const encodedName = encodeURIComponent(name);
+  const cookie = document.cookie.split('; ').find((row) => row.startsWith(`${encodedName}=`));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.split('=').slice(1).join('='));
+}
+
+function setCookie(name, value, days) {
+  const expires = new Date();
+  expires.setDate(expires.getDate() + days);
+  document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+}
+
 // ============================================
 // ERROR HANDLING UTILITIES
 // ============================================
@@ -88,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginForm = $('#login-form');
   const emailInput = $('#email');
   const passwordInput = $('#password');
+  const rememberInput = $('#remember');
   const submitBtn = loginForm?.querySelector('button[type="submit"]');
   const errorMessage = $('.error-message');
 
@@ -121,8 +146,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const params = new URLSearchParams(window.location.search);
   const prefilledEmail = params.get('email');
-  if (prefilledEmail && emailInput) {
-    emailInput.value = prefilledEmail;
+  const rememberedEmail = getCookie(REMEMBER_EMAIL_COOKIE);
+
+  if (emailInput) {
+    if (prefilledEmail) {
+      emailInput.value = prefilledEmail;
+    } else if (rememberedEmail) {
+      emailInput.value = rememberedEmail;
+      if (rememberInput) {
+        rememberInput.checked = true;
+      }
+    }
+
     passwordInput?.focus();
   }
 
@@ -163,6 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       await handleLogin(email, password);
+
+      if (rememberInput?.checked) {
+        setCookie(REMEMBER_EMAIL_COOKIE, email, REMEMBER_EMAIL_DAYS);
+      } else {
+        deleteCookie(REMEMBER_EMAIL_COOKIE);
+      }
+
       toast('auth.login_success', 'success');
       redirectToDashboard();
     } catch (error) {
