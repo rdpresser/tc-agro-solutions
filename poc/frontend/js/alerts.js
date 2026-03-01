@@ -134,6 +134,25 @@ async function loadAlertsData() {
   }
 
   try {
+    if (isCurrentUserAdmin() && !selectedOwnerId) {
+      if (container) {
+        container.innerHTML =
+          '<div class="empty-state"><div class="empty-icon">👤</div><p>Select an owner to load alerts.</p></div>';
+      }
+
+      latestPendingAlerts = [];
+      latestSummary = null;
+      latestTabCounts = { pending: 0, resolved: 0, all: 0 };
+      renderStats(null, null, latestTabCounts);
+      alertsViewState.totalCount = 0;
+      alertsViewState.totalPages = 1;
+      alertsViewState.hasPreviousPage = false;
+      alertsViewState.hasNextPage = false;
+      renderPaginationControls();
+      persistAlertsViewStateToUrl();
+      return;
+    }
+
     const requestedStatus = getRequestedAlertStatus();
 
     const [alertsPage, summary] = await Promise.all([
@@ -278,6 +297,11 @@ async function refreshAlertsFromHttp() {
 }
 
 async function setupAlertRealtime() {
+  if (isCurrentUserAdmin() && !selectedOwnerId) {
+    fallbackPoller.stop('admin-owner-scope-required', { silent: true });
+    return;
+  }
+
   const connection = await initAlertSignalRConnection({
     onAlertCreated: () => void loadAlertsData(),
     onAlertAcknowledged: () => void loadAlertsData(),
@@ -304,6 +328,10 @@ function handleConnectionChange(state) {
   }
 
   if (state === 'reconnecting' || state === 'disconnected') {
+    if (isCurrentUserAdmin() && !selectedOwnerId) {
+      fallbackPoller.stop('admin-owner-scope-required', { silent: true });
+      return;
+    }
     fallbackPoller.start(state);
   }
 }
@@ -753,6 +781,7 @@ async function ensureAlertOwnerGroupSubscription() {
 
   if (isCurrentUserAdmin() && !nextOwnerScopeId) {
     ownerGroupJoined = false;
+    fallbackPoller.stop('admin-owner-scope-required', { silent: true });
     return;
   }
 

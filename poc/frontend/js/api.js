@@ -7,7 +7,45 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import axios from 'axios';
 
 import { toast } from './i18n.js';
-import { APP_CONFIG, getToken, clearToken, navigateTo, getPaginatedTotalCount } from './utils.js';
+import {
+  APP_CONFIG,
+  getToken,
+  clearToken,
+  navigateTo,
+  getPaginatedTotalCount,
+  getUser
+} from './utils.js';
+
+export const OWNER_SCOPE_REQUIRED_CODE = 'OWNER_SCOPE_REQUIRED';
+
+export function parseRealtimeErrorCode(error) {
+  const message = error?.message || (typeof error === 'string' ? error : null);
+  if (!message || typeof message !== 'string') {
+    return null;
+  }
+
+  const separatorIndex = message.indexOf(':');
+  const candidate = separatorIndex >= 0 ? message.slice(0, separatorIndex) : message;
+  const code = String(candidate || '').trim().toUpperCase();
+  return code || null;
+}
+
+export function isOwnerScopeRequiredRealtimeError(error) {
+  return parseRealtimeErrorCode(error) === OWNER_SCOPE_REQUIRED_CODE;
+}
+
+function isCurrentUserAdminForRealtime() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return false;
+  }
+
+  const roles = Array.isArray(currentUser.role)
+    ? currentUser.role
+    : [currentUser.role].filter(Boolean);
+
+  return roles.some((role) => String(role).trim().toLowerCase() === 'admin');
+}
 
 // ============================================
 // AXIOS INSTANCE WITH INTERCEPTORS
@@ -1133,6 +1171,11 @@ export async function initAlertSignalRConnection(handlers = {}) {
 export async function joinOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
+      if (isCurrentUserAdminForRealtime() && !ownerId) {
+        console.warn(`[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup skipped without ownerId.`);
+        return false;
+      }
+
       if (ownerId === null || ownerId === undefined || ownerId === '') {
         await signalRConnection.invoke('JoinOwnerGroup');
       } else {
@@ -1140,6 +1183,10 @@ export async function joinOwnerGroup(ownerId = null) {
       }
       return true;
     } catch (error) {
+      if (isOwnerScopeRequiredRealtimeError(error)) {
+        console.warn(`[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup rejected by hub.`);
+        return false;
+      }
       console.error(`Failed to join owner group ${ownerId}:`, error);
       return false;
     }
@@ -1168,6 +1215,11 @@ export async function leaveOwnerGroup(ownerId = null) {
 export async function joinAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
+      if (isCurrentUserAdminForRealtime() && !ownerId) {
+        console.warn(`[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup skipped without ownerId.`);
+        return false;
+      }
+
       if (ownerId === null || ownerId === undefined || ownerId === '') {
         await alertSignalRConnection.invoke('JoinOwnerGroup');
       } else {
@@ -1175,6 +1227,10 @@ export async function joinAlertOwnerGroup(ownerId = null) {
       }
       return true;
     } catch (error) {
+      if (isOwnerScopeRequiredRealtimeError(error)) {
+        console.warn(`[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup rejected by hub.`);
+        return false;
+      }
       console.error(`Failed to join alert owner group ${ownerId}:`, error);
       return false;
     }

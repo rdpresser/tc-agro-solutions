@@ -26,3 +26,24 @@ export function extractApiErrorMessage(
     ? message
     : fallback;
 }
+
+export const OWNER_SCOPE_REQUIRED_CODE = 'OWNER_SCOPE_REQUIRED';
+
+export function parseRealtimeErrorCode(error: unknown): string | null {
+  const message =
+    (error as any)?.message ||
+    (typeof error === 'string' ? error : null);
+
+  if (!message || typeof message !== 'string') {
+    return null;
+  }
+
+  const separatorIndex = message.indexOf(':');
+  const candidate = separatorIndex >= 0 ? message.slice(0, separatorIndex) : message;
+  const code = candidate.trim().toUpperCase();
+  return code.length > 0 ? code : null;
+}
+
+export function isOwnerScopeRequiredRealtimeError(error: unknown): boolean {
+  return parseRealtimeErrorCode(error) === OWNER_SCOPE_REQUIRED_CODE;
+}

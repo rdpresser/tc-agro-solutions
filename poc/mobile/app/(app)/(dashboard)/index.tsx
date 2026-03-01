@@ -70,13 +70,10 @@ export default function DashboardScreen() {
   }, [isAdmin, isOnboardingHydrated, hasCompletedOnboarding, skipOnboarding]);
 
   const ownerOptions = useMemo(
-    () => [
-      { value: '', label: 'All owners' },
-      ...owners.map((owner) => ({
+    () => owners.map((owner) => ({
         value: owner.id,
         label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
       })),
-    ],
     [owners],
   );
 

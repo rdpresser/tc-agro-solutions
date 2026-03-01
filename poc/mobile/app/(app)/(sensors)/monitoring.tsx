@@ -12,6 +12,7 @@ import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.st
 import { useTheme } from '@/providers/theme-provider';
 import { ConnectionBadge } from '@/components/dashboard/ConnectionBadge';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
 import { formatRelativeTime, formatTemperature, formatPercentage, getTemperatureColor, getHumidityColor, getSoilMoistureColor } from '@/lib/format';
 import type { SensorReading } from '@/types';
@@ -35,15 +36,14 @@ export default function MonitoringScreen() {
   }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
 
   const ownerOptions = useMemo(
-    () => [
-      { value: '', label: 'All owners' },
-      ...owners.map((owner) => ({
+    () => owners.map((owner) => ({
         value: owner.id,
         label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
       })),
-    ],
     [owners],
   );
+
+  const canLoadOwnerScopedData = !isAdmin || Boolean(selectedOwnerId);
 
   const readings = useMemo(() => {
     const map = new Map<string, SensorReading>();
@@ -83,7 +83,13 @@ export default function MonitoringScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.primary} />
         }
       >
-        {readings.length === 0 ? (
+        {!canLoadOwnerScopedData ? (
+          <EmptyState
+            icon="person-outline"
+            title="Owner selection required"
+            message="Select an owner scope to load realtime monitoring data."
+          />
+        ) : readings.length === 0 ? (
           <View className="items-center justify-center py-20">
             <Ionicons name="pulse-outline" size={64} color={colors.textMuted} />
             <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>

@@ -37,7 +37,6 @@ export const SENSOR_TYPES = [
   { value: 'WindSpeed', label: 'Wind Speed', icon: '💨' },
   { value: 'SolarRadiation', label: 'Solar Radiation', icon: '☀️' },
   { value: 'Ph', label: 'pH', icon: '🧪' },
-  { value: 'MultiSensor', label: 'Multi Sensor', icon: '📟' },
 ] as const;
 
 export const SENSOR_STATUSES = [

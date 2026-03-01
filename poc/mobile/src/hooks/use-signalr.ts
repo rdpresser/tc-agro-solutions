@@ -6,6 +6,7 @@ import { useRealtimeStore } from '@/stores/realtime.store';
 import { useDashboardOwnerFilterStore } from '@/stores/dashboard-owner-filter.store';
 import { API_CONFIG } from '@/constants/api-config';
 import { triggerAlertNotification } from '@/lib/notifications';
+import { isOwnerScopeRequiredRealtimeError } from '@/lib/api-error';
 import type { SensorReading, Alert, ConnectionState } from '@/types';
 
 export function useSignalR() {
@@ -69,7 +70,11 @@ export function useSignalR() {
       if (!ownerScopeId) return;
       try {
         await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
-      } catch {
+      } catch (error) {
+        if (isOwnerScopeRequiredRealtimeError(error)) {
+          setSensorHubState('disconnected');
+          return;
+        }
         // Keep connection alive; fallback polling may still serve data.
       }
     });
@@ -91,7 +96,11 @@ export function useSignalR() {
       if (!ownerScopeId) return;
       try {
         await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
-      } catch {
+      } catch (error) {
+        if (isOwnerScopeRequiredRealtimeError(error)) {
+          setAlertHubState('disconnected');
+          return;
+        }
         // Keep connection alive; fallback polling may still serve data.
       }
     });
@@ -114,7 +123,11 @@ export function useSignalR() {
           if (!ownerScopeId) return;
           try {
             await sensorHub.invoke('JoinOwnerGroup', ownerScopeId);
-          } catch {
+          } catch (error) {
+            if (isOwnerScopeRequiredRealtimeError(error)) {
+              setSensorHubState('disconnected');
+              return;
+            }
             // Keep connection alive; fallback polling may still serve data.
           }
         }
@@ -131,7 +144,11 @@ export function useSignalR() {
           if (!ownerScopeId) return;
           try {
             await alertHub.invoke('JoinOwnerGroup', ownerScopeId);
-          } catch {
+          } catch (error) {
+            if (isOwnerScopeRequiredRealtimeError(error)) {
+              setAlertHubState('disconnected');
+              return;
+            }
             // Keep connection alive; fallback polling may still serve data.
           }
         }

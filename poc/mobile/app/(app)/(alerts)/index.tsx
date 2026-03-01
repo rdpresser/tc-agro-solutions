@@ -126,15 +126,14 @@ export default function AlertsScreen() {
   }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
 
   const ownerOptions = useMemo(
-    () => [
-      { value: '', label: 'All owners' },
-      ...owners.map((owner) => ({
+    () => owners.map((owner) => ({
         value: owner.id,
         label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,
       })),
-    ],
     [owners],
   );
+
+  const canLoadOwnerScopedData = !isAdmin || Boolean(selectedOwnerId);
 
   const currentPageData = useMemo(() => {
     if (tab === 'pending') return pending;
@@ -265,6 +264,17 @@ export default function AlertsScreen() {
           />
         </View>
       )}
+
+      {!canLoadOwnerScopedData ? (
+        <View className="px-4 pt-6">
+          <EmptyState
+            icon="person-outline"
+            title="Owner selection required"
+            message="Select an owner scope to load alerts and realtime updates."
+          />
+        </View>
+      ) : (
+        <>
 
       {/* Summary Cards */}
       {summary && (
@@ -520,6 +530,8 @@ export default function AlertsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+        </>
+      )}
 
       {/* Resolve with Notes Modal */}
       <Modal visible={!!resolveAlert} transparent animationType="fade">

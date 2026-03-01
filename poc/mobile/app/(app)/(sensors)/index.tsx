@@ -69,7 +69,6 @@ export default function SensorsListScreen() {
   }, [isAdmin, selectedOwnerId, owners, setSelectedOwnerId]);
 
   const ownerOptions = [
-    { value: '', label: 'All owners' },
     ...owners.map((owner) => ({
       value: owner.id,
       label: `${owner.name}${owner.email ? ` - ${owner.email}` : ''}`,

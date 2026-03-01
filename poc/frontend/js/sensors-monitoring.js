@@ -262,6 +262,22 @@ async function loadSensors({ forceSummaryRefresh = false } = {}) {
 
   try {
     const ownerId = getOwnerScopeIdForMonitoring();
+
+    if (isCurrentUserAdmin() && !isValidGuid(ownerId)) {
+      if (grid) {
+        grid.innerHTML =
+          '<div class="empty-state"><div class="empty-icon">👤</div><p>Select an owner to load monitoring data.</p></div>';
+      }
+
+      resetMonitoringSyncIndicators();
+      monitoringViewState.totalCount = 0;
+      monitoringViewState.totalPages = 1;
+      monitoringViewState.hasPreviousPage = false;
+      monitoringViewState.hasNextPage = false;
+      renderPaginationControls();
+      return;
+    }
+
     const [sensorsPage, latestReadings, summaryStats] = await Promise.all([
       getSensorsPaginated({
         pageNumber: monitoringViewState.pageNumber,
@@ -642,6 +658,13 @@ const fallbackPoller = createFallbackPoller({
 });
 
 async function setupRealTimeUpdates() {
+  if (isCurrentUserAdmin() && !isValidGuid(getOwnerScopeIdForMonitoring())) {
+    realtimeConnectionState = 'disconnected';
+    updateRealtimeBadges('disconnected');
+    stopFallbackPollingSilently();
+    return;
+  }
+
   updateRealtimeBadges('reconnecting');
 
   const connection = await initSignalRConnection({
@@ -672,6 +695,11 @@ async function setupRealTimeUpdates() {
           stopFallbackPolling();
         }
       } else if (state === 'reconnecting' || state === 'disconnected') {
+        if (isCurrentUserAdmin() && !isValidGuid(getOwnerScopeIdForMonitoring())) {
+          stopFallbackPollingSilently();
+          return;
+        }
+
         console.warn(
           '[SensorsRealtime] SignalR stream degraded. HTTP fallback remains active until recovery.',
           {
@@ -861,7 +889,7 @@ async function ensureOwnerGroupSubscription() {
     console.warn(
       '[SensorsRealtime] Admin user without selected owner. Skipping owner-group subscription.'
     );
-    fallbackPoller.start('admin-owner-scope-required');
+    stopFallbackPollingSilently();
     return;
   }
 
@@ -870,7 +898,7 @@ async function ensureOwnerGroupSubscription() {
     console.warn('[SensorsRealtime] Invalid selected ownerId. Skipping owner-group subscription.', {
       ownerId: currentOwnerScopeId
     });
-    fallbackPoller.start('admin-owner-scope-invalid');
+    stopFallbackPollingSilently();
     return;
   }
 
