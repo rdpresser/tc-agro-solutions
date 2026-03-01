@@ -4,24 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meet the Farmers | TC Agro Solutions</title>
-    <script>
-      const README_MEET_FARMERS_URL =
-        'https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers';
-
-      function goBackToReadme(event) {
-        if (event) {
-          event.preventDefault();
-        }
-
-        if (window.top) {
-          window.top.location.href = README_MEET_FARMERS_URL;
-          return false;
-        }
-
-        window.location.href = README_MEET_FARMERS_URL;
-        return false;
-      }
-    </script>
     <style>
       :root {
         color-scheme: dark;
@@ -80,6 +62,10 @@
         gap: 12px;
       }
 
+      .back-form {
+        margin: 0;
+      }
+
       .back-link {
         display: inline-flex !important;
         align-items: center;
@@ -93,6 +79,7 @@
         background: rgba(0, 0, 0, 0.38);
         font-weight: 700;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
       }
 
       .back-link:hover {
@@ -107,15 +94,14 @@
   <body>
     <main class="card">
       <div class="top-actions">
-        <a
-          class="back-link"
-          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+        <form
+          class="back-form"
+          action="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+          method="get"
           target="_top"
-          rel="noopener noreferrer"
-          onclick="return goBackToReadme(event)"
         >
-          ← Back to README: Meet the Farmers
-        </a>
+          <button class="back-link" type="submit">← Back to README: Meet the Farmers</button>
+        </form>
       </div>
 
       <h1>🌾 Meet the Farmers</h1>
@@ -131,15 +117,14 @@
       </div>
 
       <div class="bottom-actions" style="margin-top: 18px;">
-        <a
-          class="back-link"
-          href="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+        <form
+          class="back-form"
+          action="https://github.com/rdpresser/tc-agro-solutions/blob/main/README.md#meet-the-farmers"
+          method="get"
           target="_top"
-          rel="noopener noreferrer"
-          onclick="return goBackToReadme(event)"
         >
-          ← Back to README: Meet the Farmers
-        </a>
+          <button class="back-link" type="submit">← Back to README: Meet the Farmers</button>
+        </form>
       </div>
     </main>
   </body>
