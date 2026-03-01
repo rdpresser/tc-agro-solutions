@@ -4,13 +4,13 @@ metadata:
   name: analytics-worker-config
   namespace: agro-apps
 data:
+  # Runtime
   ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://0.0.0.0:8080"
   ASPNETCORE_APPL_PATH: "/analytics-worker"
   DOTNET_USE_POLLING_FILE_WATCHER: "1"
 
   # Database (non-sensitive)
-  # Use Docker container name - k3d shares Docker network with compose
   Database__Postgres__Host: "tc-agro-postgres"
   Database__Postgres__Port: "5432"
   Database__Postgres__Database: "tc-agro-analytics-db"
@@ -22,14 +22,12 @@ data:
   Database__Postgres__MaxPoolSize: "20"
 
   # Redis (non-sensitive)
-  # Use Docker container name - k3d shares Docker network with compose
   Cache__Redis__Host: "tc-agro-redis"
   Cache__Redis__Port: "6379"
   Cache__Redis__Password: ""
   Cache__Redis__DefaultTTL: "300"
 
-  # RabbitMQ (non-sensitive parts)
-  # Use Docker container name - k3d shares Docker network with compose
+  # RabbitMQ (non-sensitive)
   Messaging__RabbitMQ__Host: "tc-agro-rabbitmq"
   Messaging__RabbitMQ__Port: "5672"
   Messaging__RabbitMQ__ManagementPort: "15672"
@@ -52,19 +50,17 @@ data:
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
   Logging__LogLevel__System: "Warning"
 
-  # Auth / JWT (non-sensitive)
+  # JWT (non-sensitive)
   Auth__Jwt__Issuer: "tc-agro-identity-service"
   Auth__Jwt__Audience__0: "tc-agro-analytics-worker"
   Auth__Jwt__ExpirationInMinutes: "480"
 
-  # Agent Configuration (OpenTelemetry SDK auto-instrumentation)
+  # Telemetry (OTEL SDK)
   Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
   Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"
   Telemetry__Grafana__Agent__OtlpHttpPort: "4318"
   Telemetry__Grafana__Agent__MetricsPort: "8889"
   Telemetry__Grafana__Agent__Enabled: "true"
-
-  # OTLP Endpoint (OpenTelemetry Protocol - for traces/metrics, NOT logs)
   Telemetry__Grafana__Otlp__Endpoint: "http://otel-collector-agent.observability.svc.cluster.local:4317"
   Telemetry__Grafana__Otlp__Protocol: "grpc"
   Telemetry__Grafana__Otlp__TimeoutSeconds: "10"
