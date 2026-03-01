@@ -53,6 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  resetDashboardStatSubtextsToZero();
+
   const user = getUser();
   if (user && user.name) {
     const userDisplay = $('#userDisplay');
@@ -113,6 +115,7 @@ async function loadDashboardData() {
     if (!hasPlots) {
       hasSetupForRealtime = false;
       syncRealtimeStateFromReadings([]);
+      resetDashboardStatSubtextsToZero();
       renderInitialSetupState({ preserveStats: true });
       return false;
     }
@@ -166,6 +169,7 @@ async function loadDashboardData() {
     return true;
   } catch (error) {
     console.error('Error loading dashboard data:', error);
+    resetDashboardStatSubtextsToZero();
     toast('dashboard.load_failed', 'error');
     return false;
   }
@@ -503,6 +507,17 @@ function updateStatSubtextsFromData(data) {
 
     alertsSubtext.textContent = `↑ ${newAlerts24h} new (24h)`;
   }
+}
+
+function resetDashboardStatSubtextsToZero() {
+  updateStatSubtextsFromData({
+    propertiesCreatedThisMonth: 0,
+    plotsCreatedThisMonth: 0,
+    activeSensorsCount: 0,
+    sensorsTotal: 0,
+    pendingAlerts: [],
+    newPendingInWindowCount: 0
+  });
 }
 
 async function loadDashboardAlertsData(ownerId) {
