@@ -1,0 +1,5 @@
+.env
+output/*.json
+output/*.csv
+results/*.json
+results/*.csv

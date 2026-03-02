@@ -1,0 +1,7 @@
+{
+  "identity": {
+    "registerPath": "/api/auth/register",
+    "loginPath": "/api/auth/login",
+    "checkEmailPath": "/api/auth/check-email/{email}"
+  }
+}

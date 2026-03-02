@@ -13,6 +13,7 @@
     "chat.tools.terminal.autoApprove": {
       "npm run lint": true,
       "npx tsc": true
-    }
+    },
+    "powershell.cwd": "tc-agro-solutions"
   }
 }

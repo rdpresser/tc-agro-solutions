@@ -1,0 +1,20 @@
+{
+  "name": "tc-agro-k6",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "node scripts/run-k6.mjs smoke",
+    "smoke:identity:docker": "node scripts/run-k6.mjs smoke identity docker",
+    "smoke:farm:docker": "node scripts/run-k6.mjs smoke farm docker",
+    "smoke:sensor-ingest:docker": "node scripts/run-k6.mjs smoke sensor-ingest docker",
+    "smoke:analytics-worker:docker": "node scripts/run-k6.mjs smoke analytics-worker docker",
+    "smoke:identity:k8s": "node scripts/run-k6.mjs smoke identity k8s",
+    "smoke:farm:k8s": "node scripts/run-k6.mjs smoke farm k8s",
+    "smoke:sensor-ingest:k8s": "node scripts/run-k6.mjs smoke sensor-ingest k8s",
+    "smoke:analytics-worker:k8s": "node scripts/run-k6.mjs smoke analytics-worker k8s",
+    "smoke:identity:summary": "node scripts/run-k6.mjs smoke identity docker --summary-export=output/identity-smoke-summary.json",
+    "smoke:farm:summary": "node scripts/run-k6.mjs smoke farm docker --summary-export=output/farm-smoke-summary.json",
+    "smoke:sensor-ingest:summary": "node scripts/run-k6.mjs smoke sensor-ingest docker --summary-export=output/sensor-ingest-smoke-summary.json",
+    "smoke:analytics-worker:summary": "node scripts/run-k6.mjs smoke analytics-worker docker --summary-export=output/analytics-worker-smoke-summary.json"
+  }
+}
