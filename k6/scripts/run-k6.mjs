@@ -9,6 +9,12 @@ const scriptMap = {
     "sensor-ingest": "smoke/sensor-ingest/sensor-ingest-smoke.js",
     "analytics-worker": "smoke/analytics-worker/analytics-worker-smoke.js",
   },
+  load: {
+    identity: "load/identity/auth-load.js",
+    farm: "load/farm/farm-load.js",
+    "sensor-ingest": "load/sensor-ingest/sensor-ingest-load.js",
+    "analytics-worker": "load/analytics-worker/analytics-worker-load.js",
+  },
 };
 
 const dockerConfig = {
@@ -62,7 +68,9 @@ const k8sConfig = {
 };
 
 if (!testType || !service) {
-  console.error("Usage: npm run smoke -- identity [docker|k8s]");
+  console.error(
+    "Usage: npm run <smoke|load> -- <identity|farm|sensor-ingest|analytics-worker> [docker|k8s]",
+  );
   process.exit(1);
 }
 
