@@ -25,6 +25,7 @@ export function setup() {
 export default function (data) {
   const base = analyticsServiceBase();
   const timeout = `${timeoutMs()}ms`;
+  const okOrNotFound = http.expectedStatuses(200, 404);
   const authHeader = {
     Authorization: `Bearer ${data.token}`,
   };
@@ -42,23 +43,26 @@ export default function (data) {
     "analytics load pending alerts success": (r) => r.status === 200,
   });
 
-  const summaryResponse = http.get(`${base}/api/alerts/summary?Days=7`, {
-    headers: authHeader,
-    timeout,
-    tags: { endpoint: "analytics-summary-load" },
-  });
+  const summaryResponse = http.get(
+    `${base}/api/alerts/pending/summary?WindowHours=24`,
+    {
+      headers: authHeader,
+      timeout,
+      tags: { endpoint: "analytics-summary-load" },
+    },
+  );
 
   check(summaryResponse, {
     "analytics load summary success": (r) => r.status === 200,
   });
 
   const sensorAlertsResponse = http.get(
-    `${base}/api/sensors/${data.sensorId}/alerts?PageNumber=1&PageSize=10`,
+    `${base}/api/alerts/history/${data.sensorId}?Days=7&PageNumber=1&PageSize=10`,
     {
       headers: authHeader,
       timeout,
       tags: { endpoint: "analytics-sensor-alerts-load" },
-      expectedStatuses: [200, 404],
+      responseCallback: okOrNotFound,
     },
   );
 
@@ -68,12 +72,12 @@ export default function (data) {
   });
 
   const sensorTimelineResponse = http.get(
-    `${base}/api/sensors/${data.sensorId}/alerts/timeline?Days=7`,
+    `${base}/api/sensors/${data.sensorId}/status`,
     {
       headers: authHeader,
       timeout,
       tags: { endpoint: "analytics-sensor-timeline-load" },
-      expectedStatuses: [200, 404],
+      responseCallback: okOrNotFound,
     },
   );
 

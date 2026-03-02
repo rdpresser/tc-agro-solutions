@@ -3,31 +3,66 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "_comment:core": "echo Core runners",
     "smoke": "node scripts/run-k6.mjs smoke",
     "load": "node scripts/run-k6.mjs load",
+
+    "_comment:smoke-docker": "echo Smoke tests on Docker",
     "smoke:identity:docker": "node scripts/run-k6.mjs smoke identity docker",
     "smoke:farm:docker": "node scripts/run-k6.mjs smoke farm docker",
     "smoke:sensor-ingest:docker": "node scripts/run-k6.mjs smoke sensor-ingest docker",
     "smoke:analytics-worker:docker": "node scripts/run-k6.mjs smoke analytics-worker docker",
+
+    "_comment:load-docker": "echo Load tests on Docker",
     "load:identity:docker": "node scripts/run-k6.mjs load identity docker",
     "load:farm:docker": "node scripts/run-k6.mjs load farm docker",
     "load:sensor-ingest:docker": "node scripts/run-k6.mjs load sensor-ingest docker",
     "load:analytics-worker:docker": "node scripts/run-k6.mjs load analytics-worker docker",
+
+    "_comment:smoke-k8s": "echo Smoke tests on K8s",
     "smoke:identity:k8s": "node scripts/run-k6.mjs smoke identity k8s",
     "smoke:farm:k8s": "node scripts/run-k6.mjs smoke farm k8s",
     "smoke:sensor-ingest:k8s": "node scripts/run-k6.mjs smoke sensor-ingest k8s",
     "smoke:analytics-worker:k8s": "node scripts/run-k6.mjs smoke analytics-worker k8s",
+
+    "_comment:load-k8s": "echo Load tests on K8s",
     "load:identity:k8s": "node scripts/run-k6.mjs load identity k8s",
     "load:farm:k8s": "node scripts/run-k6.mjs load farm k8s",
     "load:sensor-ingest:k8s": "node scripts/run-k6.mjs load sensor-ingest k8s",
     "load:analytics-worker:k8s": "node scripts/run-k6.mjs load analytics-worker k8s",
-    "smoke:identity:summary": "node scripts/run-k6.mjs smoke identity docker --summary-export=output/identity-smoke-summary.json",
-    "smoke:farm:summary": "node scripts/run-k6.mjs smoke farm docker --summary-export=output/farm-smoke-summary.json",
-    "smoke:sensor-ingest:summary": "node scripts/run-k6.mjs smoke sensor-ingest docker --summary-export=output/sensor-ingest-smoke-summary.json",
-    "smoke:analytics-worker:summary": "node scripts/run-k6.mjs smoke analytics-worker docker --summary-export=output/analytics-worker-smoke-summary.json",
-    "load:identity:summary": "node scripts/run-k6.mjs load identity docker --summary-export=output/identity-load-summary.json",
-    "load:farm:summary": "node scripts/run-k6.mjs load farm docker --summary-export=output/farm-load-summary.json",
-    "load:sensor-ingest:summary": "node scripts/run-k6.mjs load sensor-ingest docker --summary-export=output/sensor-ingest-load-summary.json",
-    "load:analytics-worker:summary": "node scripts/run-k6.mjs load analytics-worker docker --summary-export=output/analytics-worker-load-summary.json"
+
+    "_comment:smoke-summary-docker": "echo Smoke summaries on Docker",
+    "smoke:identity:summary:docker": "node scripts/run-k6.mjs smoke identity docker --summary-export=output/identity-smoke-summary-docker.json",
+    "smoke:farm:summary:docker": "node scripts/run-k6.mjs smoke farm docker --summary-export=output/farm-smoke-summary-docker.json",
+    "smoke:sensor-ingest:summary:docker": "node scripts/run-k6.mjs smoke sensor-ingest docker --summary-export=output/sensor-ingest-smoke-summary-docker.json",
+    "smoke:analytics-worker:summary:docker": "node scripts/run-k6.mjs smoke analytics-worker docker --summary-export=output/analytics-worker-smoke-summary-docker.json",
+
+    "_comment:smoke-summary-k8s": "echo Smoke summaries on K8s",
+    "smoke:identity:summary:k8s": "node scripts/run-k6.mjs smoke identity k8s --summary-export=output/identity-smoke-summary-k8s.json",
+    "smoke:farm:summary:k8s": "node scripts/run-k6.mjs smoke farm k8s --summary-export=output/farm-smoke-summary-k8s.json",
+    "smoke:sensor-ingest:summary:k8s": "node scripts/run-k6.mjs smoke sensor-ingest k8s --summary-export=output/sensor-ingest-smoke-summary-k8s.json",
+    "smoke:analytics-worker:summary:k8s": "node scripts/run-k6.mjs smoke analytics-worker k8s --summary-export=output/analytics-worker-smoke-summary-k8s.json",
+
+    "_comment:load-summary-docker": "echo Load summaries on Docker",
+    "load:identity:summary:docker": "node scripts/run-k6.mjs load identity docker --summary-export=output/identity-load-summary-docker.json",
+    "load:farm:summary:docker": "node scripts/run-k6.mjs load farm docker --summary-export=output/farm-load-summary-docker.json",
+    "load:sensor-ingest:summary:docker": "node scripts/run-k6.mjs load sensor-ingest docker --summary-export=output/sensor-ingest-load-summary-docker.json",
+    "load:analytics-worker:summary:docker": "node scripts/run-k6.mjs load analytics-worker docker --summary-export=output/analytics-worker-load-summary-docker.json",
+
+    "_comment:load-summary-k8s": "echo Load summaries on K8s",
+    "load:identity:summary:k8s": "node scripts/run-k6.mjs load identity k8s --summary-export=output/identity-load-summary-k8s.json",
+    "load:farm:summary:k8s": "node scripts/run-k6.mjs load farm k8s --summary-export=output/farm-load-summary-k8s.json",
+    "load:sensor-ingest:summary:k8s": "node scripts/run-k6.mjs load sensor-ingest k8s --summary-export=output/sensor-ingest-load-summary-k8s.json",
+    "load:analytics-worker:summary:k8s": "node scripts/run-k6.mjs load analytics-worker k8s --summary-export=output/analytics-worker-load-summary-k8s.json",
+
+    "_comment:legacy-aliases": "echo Backward-compatible aliases",
+    "smoke:identity:summary": "npm run smoke:identity:summary:docker",
+    "smoke:farm:summary": "npm run smoke:farm:summary:docker",
+    "smoke:sensor-ingest:summary": "npm run smoke:sensor-ingest:summary:docker",
+    "smoke:analytics-worker:summary": "npm run smoke:analytics-worker:summary:docker",
+    "load:identity:summary": "npm run load:identity:summary:docker",
+    "load:farm:summary": "npm run load:farm:summary:docker",
+    "load:sensor-ingest:summary": "npm run load:sensor-ingest:summary:docker",
+    "load:analytics-worker:summary": "npm run load:analytics-worker:summary:docker"
   }
 }
