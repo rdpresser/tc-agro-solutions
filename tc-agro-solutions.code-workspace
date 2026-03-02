@@ -9,6 +9,10 @@
     { "path": "services/dashboard-service" }
   ],
   "settings": {
-    "git.scanSubfolders": true
+    "git.scanSubfolders": true,
+    "chat.tools.terminal.autoApprove": {
+      "npm run lint": true,
+      "npx tsc": true
+    }
   }
 }
