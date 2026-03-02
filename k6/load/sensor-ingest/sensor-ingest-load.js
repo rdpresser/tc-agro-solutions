@@ -1,5 +1,5 @@
 import http from "k6/http";
-import { check, sleep } from "k6";
+import { check, fail, sleep } from "k6";
 import {
   sensorIngestServiceBase,
   sleepSeconds,
@@ -8,17 +8,110 @@ import {
 import { ensureSmokeProducerSession } from "../../shared/auth.js";
 import { createFarmFixture } from "../../shared/farm-fixture.js";
 import { dockerLoadOptions } from "../../shared/load-profile.js";
+import { parseJsonSafely } from "../../shared/json.js";
 
 export const options = dockerLoadOptions();
+
+function waitForSensorRegistration(base, token, sensorId, timeout) {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  const maxAttempts = 20;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = http.post(
+      `${base}/api/readings`,
+      JSON.stringify({
+        sensorId,
+        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        temperature: 25.0,
+        humidity: 50.0,
+        soilMoisture: 40.0,
+        rainfall: 0,
+        batteryLevel: 90.0,
+      }),
+      {
+        headers,
+        timeout,
+        tags: { endpoint: "sensor-ingest-registration-probe" },
+      },
+    );
+
+    if ([200, 202].includes(response.status)) {
+      return;
+    }
+
+    if (response.status !== 404) {
+      fail(
+        `Sensor registration probe failed with status ${response.status}: ${(response.body || "").substring(0, 300)}`,
+      );
+    }
+
+    sleep(1);
+  }
+
+  fail(
+    `Sensor ${sensorId} was not registered in sensor-ingest after waiting for propagation.`,
+  );
+}
+
+function tryResolveExistingSensorId(base, token, timeout) {
+  const response = http.get(
+    `${base}/api/dashboard/latest?PageNumber=1&PageSize=1`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout,
+      tags: { endpoint: "sensor-ingest-resolve-sensor-setup" },
+    },
+  );
+
+  if (response.status !== 200) {
+    return null;
+  }
+
+  const body = parseJsonSafely(response);
+  const candidates = [
+    body?.items,
+    body?.readings,
+    body?.data,
+    body?.data?.items,
+    body?.data?.readings,
+  ];
+
+  for (const list of candidates) {
+    if (Array.isArray(list) && list.length > 0 && list[0]?.sensorId) {
+      return list[0].sensorId;
+    }
+  }
+
+  return null;
+}
 
 export function setup() {
   const timeout = `${timeoutMs()}ms`;
   const session = ensureSmokeProducerSession(timeout);
   const fixture = createFarmFixture(session, timeout);
+  const sensorBase = sensorIngestServiceBase();
+
+  const existingSensorId = tryResolveExistingSensorId(
+    sensorBase,
+    session.token,
+    timeout,
+  );
+
+  if (!existingSensorId) {
+    waitForSensorRegistration(
+      sensorBase,
+      session.token,
+      fixture.sensorId,
+      timeout,
+    );
+  }
 
   return {
     token: session.token,
-    sensorId: fixture.sensorId,
+    sensorId: existingSensorId || fixture.sensorId,
   };
 }
 
