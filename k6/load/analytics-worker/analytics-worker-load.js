@@ -11,6 +11,17 @@ import { dockerLoadOptions } from "../../shared/load-profile.js";
 
 export const options = dockerLoadOptions();
 
+const ANALYTICS_PENDING_ALERTS_EVERY = Number(
+  __ENV.ANALYTICS_PENDING_ALERTS_EVERY || 1,
+);
+const ANALYTICS_SUMMARY_EVERY = Number(__ENV.ANALYTICS_SUMMARY_EVERY || 1);
+const ANALYTICS_SENSOR_ALERTS_EVERY = Number(
+  __ENV.ANALYTICS_SENSOR_ALERTS_EVERY || 1,
+);
+const ANALYTICS_SENSOR_TIMELINE_EVERY = Number(
+  __ENV.ANALYTICS_SENSOR_TIMELINE_EVERY || 1,
+);
+
 export function setup() {
   const timeout = `${timeoutMs()}ms`;
   const session = ensureSmokeProducerSession(timeout);
@@ -30,61 +41,69 @@ export default function (data) {
     Authorization: `Bearer ${data.token}`,
   };
 
-  const pendingAlertsResponse = http.get(
-    `${base}/api/alerts/pending?PageNumber=1&PageSize=10`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "analytics-pending-alerts-load" },
-    },
-  );
+  if (__ITER % ANALYTICS_PENDING_ALERTS_EVERY === 0) {
+    const pendingAlertsResponse = http.get(
+      `${base}/api/alerts/pending?PageNumber=1&PageSize=10`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "analytics-pending-alerts-load" },
+      },
+    );
 
-  check(pendingAlertsResponse, {
-    "analytics load pending alerts success": (r) => r.status === 200,
-  });
+    check(pendingAlertsResponse, {
+      "analytics load pending alerts success": (r) => r.status === 200,
+    });
+  }
 
-  const summaryResponse = http.get(
-    `${base}/api/alerts/pending/summary?WindowHours=24`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "analytics-summary-load" },
-    },
-  );
+  if (__ITER % ANALYTICS_SUMMARY_EVERY === 0) {
+    const summaryResponse = http.get(
+      `${base}/api/alerts/pending/summary?WindowHours=24`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "analytics-summary-load" },
+      },
+    );
 
-  check(summaryResponse, {
-    "analytics load summary success": (r) => r.status === 200,
-  });
+    check(summaryResponse, {
+      "analytics load summary success": (r) => r.status === 200,
+    });
+  }
 
-  const sensorAlertsResponse = http.get(
-    `${base}/api/alerts/history/${data.sensorId}?Days=7&PageNumber=1&PageSize=10`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "analytics-sensor-alerts-load" },
-      responseCallback: okOrNotFound,
-    },
-  );
+  if (__ITER % ANALYTICS_SENSOR_ALERTS_EVERY === 0) {
+    const sensorAlertsResponse = http.get(
+      `${base}/api/alerts/history/${data.sensorId}?Days=7&PageNumber=1&PageSize=10`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "analytics-sensor-alerts-load" },
+        responseCallback: okOrNotFound,
+      },
+    );
 
-  check(sensorAlertsResponse, {
-    "analytics load sensor alerts acceptable": (r) =>
-      [200, 404].includes(r.status),
-  });
+    check(sensorAlertsResponse, {
+      "analytics load sensor alerts acceptable": (r) =>
+        [200, 404].includes(r.status),
+    });
+  }
 
-  const sensorTimelineResponse = http.get(
-    `${base}/api/sensors/${data.sensorId}/status`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "analytics-sensor-timeline-load" },
-      responseCallback: okOrNotFound,
-    },
-  );
+  if (__ITER % ANALYTICS_SENSOR_TIMELINE_EVERY === 0) {
+    const sensorTimelineResponse = http.get(
+      `${base}/api/sensors/${data.sensorId}/status`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "analytics-sensor-timeline-load" },
+        responseCallback: okOrNotFound,
+      },
+    );
 
-  check(sensorTimelineResponse, {
-    "analytics load sensor timeline acceptable": (r) =>
-      [200, 404].includes(r.status),
-  });
+    check(sensorTimelineResponse, {
+      "analytics load sensor timeline acceptable": (r) =>
+        [200, 404].includes(r.status),
+    });
+  }
 
   sleep(sleepSeconds());
 }

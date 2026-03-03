@@ -12,6 +12,17 @@ import { parseJsonSafely } from "../../shared/json.js";
 
 export const options = dockerLoadOptions();
 
+const SENSOR_CREATE_READING_EVERY = Number(
+  __ENV.SENSOR_CREATE_READING_EVERY || 1,
+);
+const SENSOR_LATEST_READINGS_EVERY = Number(
+  __ENV.SENSOR_LATEST_READINGS_EVERY || 1,
+);
+const SENSOR_DASHBOARD_LATEST_EVERY = Number(
+  __ENV.SENSOR_DASHBOARD_LATEST_EVERY || 1,
+);
+const SENSOR_HISTORY_EVERY = Number(__ENV.SENSOR_HISTORY_EVERY || 1);
+
 function waitForSensorRegistration(base, token, sensorId, timeout) {
   const headers = {
     "Content-Type": "application/json",
@@ -125,70 +136,78 @@ export default function (data) {
     Authorization: `Bearer ${data.token}`,
   };
 
-  const createReadingResponse = http.post(
-    `${base}/api/readings`,
-    JSON.stringify({
-      sensorId: data.sensorId,
-      timestamp: readingTimestamp,
-      temperature: 26.8,
-      humidity: 58.7,
-      soilMoisture: 44.3,
-      rainfall: 0,
-      batteryLevel: 86.2,
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader,
+  if (__ITER % SENSOR_CREATE_READING_EVERY === 0) {
+    const createReadingResponse = http.post(
+      `${base}/api/readings`,
+      JSON.stringify({
+        sensorId: data.sensorId,
+        timestamp: readingTimestamp,
+        temperature: 26.8,
+        humidity: 58.7,
+        soilMoisture: 44.3,
+        rainfall: 0,
+        batteryLevel: 86.2,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader,
+        },
+        timeout,
+        tags: { endpoint: "sensor-ingest-create-reading-load" },
       },
-      timeout,
-      tags: { endpoint: "sensor-ingest-create-reading-load" },
-    },
-  );
+    );
 
-  check(createReadingResponse, {
-    "sensor-ingest load create reading success": (r) =>
-      [200, 202].includes(r.status),
-  });
+    check(createReadingResponse, {
+      "sensor-ingest load create reading success": (r) =>
+        [200, 202].includes(r.status),
+    });
+  }
 
-  const latestReadingsResponse = http.get(
-    `${base}/api/readings/latest?SensorId=${data.sensorId}&PageNumber=1&PageSize=10`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "sensor-ingest-latest-readings-load" },
-    },
-  );
+  if (__ITER % SENSOR_LATEST_READINGS_EVERY === 0) {
+    const latestReadingsResponse = http.get(
+      `${base}/api/readings/latest?SensorId=${data.sensorId}&PageNumber=1&PageSize=10`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "sensor-ingest-latest-readings-load" },
+      },
+    );
 
-  check(latestReadingsResponse, {
-    "sensor-ingest load latest readings success": (r) => r.status === 200,
-  });
+    check(latestReadingsResponse, {
+      "sensor-ingest load latest readings success": (r) => r.status === 200,
+    });
+  }
 
-  const dashboardLatestResponse = http.get(
-    `${base}/api/dashboard/latest?SensorId=${data.sensorId}&PageNumber=1&PageSize=10`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "sensor-ingest-dashboard-latest-load" },
-    },
-  );
+  if (__ITER % SENSOR_DASHBOARD_LATEST_EVERY === 0) {
+    const dashboardLatestResponse = http.get(
+      `${base}/api/dashboard/latest?SensorId=${data.sensorId}&PageNumber=1&PageSize=10`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "sensor-ingest-dashboard-latest-load" },
+      },
+    );
 
-  check(dashboardLatestResponse, {
-    "sensor-ingest load dashboard latest success": (r) => r.status === 200,
-  });
+    check(dashboardLatestResponse, {
+      "sensor-ingest load dashboard latest success": (r) => r.status === 200,
+    });
+  }
 
-  const historyResponse = http.get(
-    `${base}/api/sensors/${data.sensorId}/readings?Days=7&PageNumber=1&PageSize=10`,
-    {
-      headers: authHeader,
-      timeout,
-      tags: { endpoint: "sensor-ingest-history-load" },
-    },
-  );
+  if (__ITER % SENSOR_HISTORY_EVERY === 0) {
+    const historyResponse = http.get(
+      `${base}/api/sensors/${data.sensorId}/readings?Days=7&PageNumber=1&PageSize=10`,
+      {
+        headers: authHeader,
+        timeout,
+        tags: { endpoint: "sensor-ingest-history-load" },
+      },
+    );
 
-  check(historyResponse, {
-    "sensor-ingest load history success": (r) => r.status === 200,
-  });
+    check(historyResponse, {
+      "sensor-ingest load history success": (r) => r.status === 200,
+    });
+  }
 
   sleep(sleepSeconds());
 }

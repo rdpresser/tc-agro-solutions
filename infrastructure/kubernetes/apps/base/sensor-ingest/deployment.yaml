@@ -7,6 +7,7 @@ metadata:
     app: sensor-ingest-service
     component: ingest
 spec:
+  replicas: 4
   selector:
     matchLabels:
       app: sensor-ingest-service
@@ -69,11 +70,11 @@ spec:
           failureThreshold: 3
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
             memory: "512Mi"
             cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "2000m"
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001

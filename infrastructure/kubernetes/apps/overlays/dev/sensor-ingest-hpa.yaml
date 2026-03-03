@@ -8,12 +8,36 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: sensor-ingest-service
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: 4
+  maxReplicas: 8
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 3
+        periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 420
+      policies:
+      - type: Percent
+        value: 30
+        periodSeconds: 60
+      selectPolicy: Min
   metrics:
   - type: Resource
     resource:
       name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 55
+  - type: Resource
+    resource:
+      name: memory
       target:
         type: Utilization
         averageUtilization: 75

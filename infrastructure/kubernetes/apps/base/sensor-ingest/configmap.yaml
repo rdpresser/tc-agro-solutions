@@ -8,7 +8,8 @@ data:
   ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://0.0.0.0:8080"
   ASPNETCORE_APPL_PATH: "/sensor-ingest"
-  DOTNET_USE_POLLING_FILE_WATCHER: "1"
+  DOTNET_USE_POLLING_FILE_WATCHER: "0"
+  DOTNET_ThreadPool_MinThreads: "32"
 
   # Database (non-sensitive)
   Database__Postgres__Host: "tc-agro-postgres"
@@ -18,8 +19,8 @@ data:
   Database__Postgres__Schema: "public"
   Database__Postgres__MaintenanceDatabase: "postgres"
   Database__Postgres__ConnectionTimeout: "60"
-  Database__Postgres__MinPoolSize: "2"
-  Database__Postgres__MaxPoolSize: "30"
+  Database__Postgres__MinPoolSize: "5"
+  Database__Postgres__MaxPoolSize: "50"
 
   # Redis (non-sensitive)
   Cache__Redis__Host: "tc-agro-redis"
