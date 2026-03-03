@@ -111,9 +111,17 @@ jobs:
       - name: 🧪 Run Playwright tests
         working-directory: poc/frontend
         env:
-          PLAYWRIGHT_JUNIT_OUTPUT_DIR: test-results
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME: junit.xml
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/junit.xml
         run: npm run test -- --reporter=html,junit
+
+      - name: 🔎 Debug JUnit output files
+        if: always()
+        working-directory: poc/frontend
+        run: |
+          echo "Listing test-results directory:"
+          ls -la test-results || true
+          echo "Listing project root XML files:"
+          ls -la *.xml || true
 
       - name: 📊 Upload test results
         if: always()
@@ -128,7 +136,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-junit-${{ github.sha }}
-          path: poc/frontend/test-results/junit.xml
+          path: |
+            poc/frontend/test-results/junit.xml
+            poc/frontend/test-results/*.xml
+            poc/frontend/*.xml
           if-no-files-found: error
           retention-days: 30
 
