@@ -39,7 +39,9 @@ import {
   formatTemperature,
   getUser,
   getPaginatedTotalCount,
-  getPaginatedPageSize
+  getPaginatedPageSize,
+  getAdminOwnerSelection,
+  setAdminOwnerInStorage
 } from './utils.js';
 
 // ============================================
@@ -783,8 +785,18 @@ async function setupOwnerSelectorForMonitoring() {
       .join('');
 
     if (sortedOwners.length > 0) {
-      selectedOwnerIdForMonitoring = sortedOwners[0].id;
+      // Try to get owner from URL/storage first, otherwise use first owner
+      const storedOwnerId = getAdminOwnerSelection();
+      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
+      
+      if (storedOwnerId && ownerExists) {
+        selectedOwnerIdForMonitoring = storedOwnerId;
+      } else {
+        selectedOwnerIdForMonitoring = sortedOwners[0].id;
+      }
+      
       ownerSelect.value = selectedOwnerIdForMonitoring;
+      setAdminOwnerInStorage(selectedOwnerIdForMonitoring);
       ownerSelect.disabled = false;
     } else {
       selectedOwnerIdForMonitoring = null;
@@ -798,6 +810,9 @@ async function setupOwnerSelectorForMonitoring() {
       monitoringViewState.pageNumber = 1;
       cachedSummaryStats = null;
       cachedSummaryCacheKey = null;
+
+      // Persist owner selection to storage and URL
+      setAdminOwnerInStorage(selectedOwnerIdForMonitoring);
 
       if (realtimeConnectionState === 'connected') {
         await switchMonitoringOwnerGroup(previousOwnerId, selectedOwnerIdForMonitoring);

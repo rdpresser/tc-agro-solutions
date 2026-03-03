@@ -17,10 +17,19 @@ dayjs.locale('pt-br');
 
 /**
  * Shared detector for service API base URLs.
+ *
+ * Context detection:
+ * 1. Manual override via env var (highest priority)
+ * 2. Cluster context (BASE_URL === '/agro/'):
+ *    - If localhost (dev/preview): http://localhost/path → k3d Traefik on port 80
+ *    - If production: /path → same host via relative URL
+ * 3. Local Docker Compose (localhost:3000): http://localhost:<service-port>
+ * 4. Default Local Docker Compose
  */
 function detectServiceApiBaseUrl({ envKey, clusterPath, localUrl }) {
   const base = import.meta.env.BASE_URL || '/';
   const currentHost = window.location.host;
+  const currentHostname = window.location.hostname;
 
   const envOverride = import.meta.env[envKey];
   if (envOverride) {
@@ -28,6 +37,9 @@ function detectServiceApiBaseUrl({ envKey, clusterPath, localUrl }) {
   }
 
   if (base === '/agro/') {
+    if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+      return `http://localhost${clusterPath}`;
+    }
     return clusterPath;
   }
 
@@ -41,7 +53,7 @@ function detectServiceApiBaseUrl({ envKey, clusterPath, localUrl }) {
 /**
  * Detect API base URL based on context:
  * 1. Manual override: VITE_API_BASE_URL env var
- * 2. Cluster context: BASE_URL === '/agro/' → API at '/identity'
+ * 2. Cluster context: BASE_URL === '/agro/' → 'http://localhost/identity' (locally) or '/identity' (prod)
  * 3. Local/dev context: default to 'http://localhost:5001'
  */
 function detectApiBaseUrl() {
@@ -55,7 +67,7 @@ function detectApiBaseUrl() {
 /**
  * Detect Identity API base URL based on context:
  * 1. Manual override: VITE_IDENTITY_API_BASE_URL env var
- * 2. Cluster context: BASE_URL === '/agro/' → Identity at '/identity'
+ * 2. Cluster context: BASE_URL === '/agro/' → 'http://localhost/identity' (locally) or '/identity' (prod)
  * 3. Dev mode: localhost:3000 → Identity at 'http://localhost:5001'
  * 4. Docker Compose or other: default to 'http://localhost:5001'
  */
@@ -70,8 +82,8 @@ function detectIdentityApiBaseUrl() {
 /**
  * Detect Farm API base URL based on context:
  * 1. Manual override: VITE_FARM_API_BASE_URL env var
- * 2. Cluster context: BASE_URL === '/agro/' -> Farm API at '/farm'
- * 3. Dev mode: localhost:3000 -> Farm API at 'http://localhost:5002'
+ * 2. Cluster context: BASE_URL === '/agro/' → 'http://localhost/farm' (locally) or '/farm' (prod)
+ * 3. Dev mode: localhost:3000 → Farm API at 'http://localhost:5002'
  * 4. Docker Compose or other: default to 'http://localhost:5002'
  */
 function detectFarmApiBaseUrl() {
@@ -85,8 +97,8 @@ function detectFarmApiBaseUrl() {
 /**
  * Detect Sensor API base URL based on context:
  * 1. Manual override: VITE_SENSOR_API_BASE_URL env var
- * 2. Cluster context: BASE_URL === '/agro/' -> Sensor API at '/sensor-ingest'
- * 3. Dev mode: localhost:3000 -> Sensor API at 'http://localhost:5003'
+ * 2. Cluster context: BASE_URL === '/agro/' → 'http://localhost/sensor-ingest' (locally) or '/sensor-ingest' (prod)
+ * 3. Dev mode: localhost:3000 → Sensor API at 'http://localhost:5003'
  * 4. Docker Compose or other: default to 'http://localhost:5003'
  */
 function detectSensorApiBaseUrl() {
@@ -100,8 +112,8 @@ function detectSensorApiBaseUrl() {
 /**
  * Detect Analytics API base URL based on context:
  * 1. Manual override: VITE_ANALYTICS_API_BASE_URL env var
- * 2. Cluster context: BASE_URL === '/agro/' -> Analytics API at '/analytics-worker'
- * 3. Dev mode: localhost:3000 -> Analytics API at 'http://localhost:5004'
+ * 2. Cluster context: BASE_URL === '/agro/' → 'http://localhost/analytics-worker' (locally) or '/analytics-worker' (prod)
+ * 3. Dev mode: localhost:3000 → Analytics API at 'http://localhost:5004'
  * 4. Docker Compose or other: default to 'http://localhost:5004'
  */
 function detectAnalyticsApiBaseUrl() {
@@ -716,6 +728,101 @@ export function initSidebar() {
       }
     });
   });
+}
+
+// ============================================
+// ADMIN OWNER SELECTION STORAGE
+// ============================================
+
+/**
+ * Session storage key for admin owner selection
+ */
+const ADMIN_OWNER_SESSION_KEY = 'agro_admin_owner_selection';
+
+/**
+ * Query parameter name for admin owner in URL
+ */
+const ADMIN_OWNER_QUERY_PARAM = 'ownerid';
+
+/**
+ * Get admin owner selection from sessionStorage
+ * Returns the last selected owner ID in admin view, or null if not set
+ *
+ * @returns {string|null} Owner ID from sessionStorage
+ */
+export function getAdminOwnerFromStorage() {
+  return sessionStorage.getItem(ADMIN_OWNER_SESSION_KEY);
+}
+
+/**
+ * Save admin owner selection to sessionStorage
+ * Also updates the URL with the owner ID as query parameter
+ *
+ * @param {string} ownerId - The owner ID to store
+ */
+export function setAdminOwnerInStorage(ownerId) {
+  if (ownerId) {
+    sessionStorage.setItem(ADMIN_OWNER_SESSION_KEY, ownerId);
+    setAdminOwnerInUrl(ownerId);
+  } else {
+    sessionStorage.removeItem(ADMIN_OWNER_SESSION_KEY);
+    removeAdminOwnerFromUrl();
+  }
+}
+
+/**
+ * Get admin owner ID from URL query parameter
+ * Returns the ownerid query parameter if present
+ *
+ * @returns {string|null} Owner ID from URL or null
+ */
+export function getAdminOwnerFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(ADMIN_OWNER_QUERY_PARAM);
+}
+
+/**
+ * Update URL with admin owner ID as query parameter
+ * Uses replaceState to avoid adding to browser history
+ *
+ * @param {string} ownerId - The owner ID to set in URL
+ */
+export function setAdminOwnerInUrl(ownerId) {
+  const url = new URL(window.location);
+  if (ownerId) {
+    url.searchParams.set(ADMIN_OWNER_QUERY_PARAM, ownerId);
+  } else {
+    url.searchParams.delete(ADMIN_OWNER_QUERY_PARAM);
+  }
+  window.history.replaceState({}, '', url.toString());
+}
+
+/**
+ * Remove admin owner from URL query parameters
+ */
+export function removeAdminOwnerFromUrl() {
+  const url = new URL(window.location);
+  url.searchParams.delete(ADMIN_OWNER_QUERY_PARAM);
+  window.history.replaceState({}, '', url.toString());
+}
+
+/**
+ * Get admin owner selection from URL or sessionStorage
+ * Priority: URL query param > sessionStorage
+ *
+ * @returns {string|null} Owner ID from URL or sessionStorage
+ */
+export function getAdminOwnerSelection() {
+  // Check URL first (highest priority)
+  const urlOwner = getAdminOwnerFromUrl();
+  if (urlOwner) {
+    // Sync to sessionStorage if found in URL
+    sessionStorage.setItem(ADMIN_OWNER_SESSION_KEY, urlOwner);
+    return urlOwner;
+  }
+
+  // Fall back to sessionStorage
+  return getAdminOwnerFromStorage();
 }
 
 // ============================================

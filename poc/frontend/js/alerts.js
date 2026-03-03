@@ -24,7 +24,9 @@ import {
   getUser,
   getPaginatedTotalCount,
   getPaginatedPageNumber,
-  getPaginatedPageSize
+  getPaginatedPageSize,
+  getAdminOwnerSelection,
+  setAdminOwnerInStorage
 } from './utils.js';
 
 // ============================================
@@ -718,8 +720,18 @@ async function setupOwnerSelectorForAlerts() {
       .join('');
 
     if (sortedOwners.length > 0) {
-      selectedOwnerId = sortedOwners[0].id;
+      // Try to get owner from URL/storage first, otherwise use first owner
+      const storedOwnerId = getAdminOwnerSelection();
+      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
+      
+      if (storedOwnerId && ownerExists) {
+        selectedOwnerId = storedOwnerId;
+      } else {
+        selectedOwnerId = sortedOwners[0].id;
+      }
+      
       ownerSelect.value = selectedOwnerId;
+      setAdminOwnerInStorage(selectedOwnerId);
       ownerSelect.disabled = false;
     } else {
       selectedOwnerId = null;
@@ -731,6 +743,9 @@ async function setupOwnerSelectorForAlerts() {
       const previousOwnerId = ownerScopeId;
       selectedOwnerId = ownerSelect.value || null;
       alertsViewState.pageNumber = 1;
+
+      // Persist owner selection to storage and URL
+      setAdminOwnerInStorage(selectedOwnerId);
 
       if (alertsRealtimeState === 'connected') {
         await switchAlertOwnerGroup(previousOwnerId, selectedOwnerId);

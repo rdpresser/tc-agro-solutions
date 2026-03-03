@@ -41,7 +41,9 @@ import {
   formatRelativeTime,
   formatTemperature,
   getPaginatedTotalCount,
-  getUser
+  getUser,
+  getAdminOwnerSelection,
+  setAdminOwnerInStorage
 } from './utils.js';
 
 // ============================================
@@ -262,8 +264,18 @@ async function setupOwnerSelectorForDashboard() {
       .join('');
 
     if (sortedOwners.length > 0) {
-      selectedOwnerId = sortedOwners[0].id;
+      // Try to get owner from URL/storage first, otherwise use first owner
+      const storedOwnerId = getAdminOwnerSelection();
+      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
+      
+      if (storedOwnerId && ownerExists) {
+        selectedOwnerId = storedOwnerId;
+      } else {
+        selectedOwnerId = sortedOwners[0].id;
+      }
+      
       ownerSelect.value = selectedOwnerId;
+      setAdminOwnerInStorage(selectedOwnerId);
       ownerSelect.disabled = false;
     } else {
       selectedOwnerId = null;
@@ -274,6 +286,10 @@ async function setupOwnerSelectorForDashboard() {
     ownerSelect.addEventListener('change', async () => {
       const previousOwnerId = selectedOwnerId;
       selectedOwnerId = ownerSelect.value || null;
+      
+      // Persist owner selection to storage and URL
+      setAdminOwnerInStorage(selectedOwnerId);
+      
       await refreshDashboardAdminAlertsBell();
       updateDashboardAlertsNavigationLinks();
 
