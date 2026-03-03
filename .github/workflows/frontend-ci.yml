@@ -62,7 +62,7 @@ jobs:
 
       - name: 🔍 Lint check
         working-directory: poc/frontend
-        run: npm run lint || true  # Don't fail on lint warnings
+        run: npm run lint
 
       - name: 🏗️ Build frontend (Vite dist)
         working-directory: poc/frontend
@@ -104,10 +104,16 @@ jobs:
         working-directory: poc/frontend
         run: npx playwright install --with-deps
 
+      - name: 📁 Prepare test results directory
+        working-directory: poc/frontend
+        run: mkdir -p test-results
+
       - name: 🧪 Run Playwright tests
         working-directory: poc/frontend
-        run: npm run test -- --reporter=html,json,junit
-        continue-on-error: true
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_DIR: test-results
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: junit.xml
+        run: npm run test -- --reporter=html,junit
 
       - name: 📊 Upload test results
         if: always()
@@ -122,7 +128,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-junit-${{ github.sha }}
-          path: poc/frontend/test-results
+          path: poc/frontend/test-results/junit.xml
+          if-no-files-found: error
           retention-days: 30
 
       - name: ✅ Test Summary
