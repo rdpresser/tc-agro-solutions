@@ -104,7 +104,7 @@ export async function handleLogin(email, password) {
       errorMessage = 'Too many attempts. Please wait a moment.';
     }
 
-    throw new Error(errorMessage);
+    throw new Error(errorMessage, { cause: error });
   }
 }
 

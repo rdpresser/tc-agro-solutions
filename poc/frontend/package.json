@@ -36,7 +36,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "health:check": "npm run lint && npm run test:e2e:fast && npm audit --omit=dev",
+    "health:check:full": "npm run lint && npm run test:e2e:all:fast && npm audit --omit=dev"
   },
   "_scriptsHelp": {
     "_comment": "Script groups and conventions for local/frontend workflows.",
@@ -90,6 +92,13 @@
         "test:e2e:all:stable"
       ]
     },
+    "healthChecks": {
+      "_comment": "Post-upgrade verification commands.",
+      "commands": [
+        "health:check",
+        "health:check:full"
+      ]
+    },
     "aliases": {
       "_comment": "Compatibility aliases kept for convenience.",
       "commands": [
@@ -109,13 +118,14 @@
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^9.39.3",
     "@playwright/test": "^1.58.2",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.3",
     "eslint-plugin-import": "^2.32.0",
     "npm-check-updates": "^19.6.3",
     "prettier": "^3.8.1",
+    "rollup": "^4.59.0",
     "vite": "^7.3.1"
   },
   "repository": {
