@@ -19,7 +19,7 @@ data:
   Database__Postgres__MaintenanceDatabase: "postgres"
   Database__Postgres__ConnectionTimeout: "60"
   Database__Postgres__MinPoolSize: "2"
-  Database__Postgres__MaxPoolSize: "50"
+  Database__Postgres__MaxPoolSize: "30"
 
   # Redis (non-sensitive)
   Cache__Redis__Host: "tc-agro-redis"
