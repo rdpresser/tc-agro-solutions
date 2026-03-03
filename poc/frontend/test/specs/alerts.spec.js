@@ -27,13 +27,25 @@ test.describe('Alerts management flow', () => {
     await applySession(page, buildProducerSession());
     await page.goto('alerts.html');
 
+    const searchInput = page.locator('#search-alerts');
+    await expect(searchInput).toBeVisible();
+
+    // Ensure a value transition happens (prevents occasional no-op when already set)
+    if ((await searchInput.inputValue()).trim().toLowerCase() === 'north') {
+      await searchInput.fill('');
+      await page.waitForTimeout(300);
+    }
+
     const requestPromise = page.waitForRequest((request) => {
-      const url = decodeURIComponent(request.url());
+      const url = decodeURIComponent(request.url()).toLowerCase();
       return url.includes('/api/alerts/pending') && /search=north/i.test(url);
     });
 
-    await page.locator('#search-alerts').fill('north');
+    await searchInput.fill('north');
     await page.waitForTimeout(450);
+    await expect
+      .poll(() => decodeURIComponent(page.url()).toLowerCase())
+      .toContain('search=north');
 
     await requestPromise;
   });
