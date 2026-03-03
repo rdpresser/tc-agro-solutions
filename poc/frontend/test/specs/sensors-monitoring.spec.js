@@ -34,7 +34,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: page loads with latest readings', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Check page title/heading
     await expect(page.locator('h1')).toContainText(/monitor|sensor|reading/i);
@@ -45,7 +45,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: display readings in card/grid layout', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for readings display
     const readingsContainer = page.locator('[id*="reading"], [class*="reading"]').first();
@@ -79,7 +79,7 @@ test.describe('Sensor monitoring real-time flow', () => {
       { timeout: 2000 }
     );
 
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Wait for initial load
     try {
@@ -91,7 +91,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: filter by sensor/plot (if available)', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for filter controls
     const sensorFilter = page.locator('[id*="sensor"][id*="filter"]');
@@ -113,7 +113,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: display alert status on readings', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for alert indicators
     const alertIndicator = page
@@ -128,7 +128,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: chart/graph display (if implemented)', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for chart containers
     const chartContainers = page.locator('[id*="chart"], [class*="chart"], canvas, svg').all();
@@ -147,7 +147,7 @@ test.describe('Sensor monitoring real-time flow', () => {
   test('sensor monitoring: admin sees all sensors, producer sees only own', async ({ page }) => {
     // Test as Admin
     await applySession(page, buildAdminSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     const adminReadingRows = page.locator('[id*="reading"], tr').all();
     const adminCount = await adminReadingRows;
@@ -165,7 +165,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: reading details modal/popup (if available)', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Current UI may not expose a reading details modal; ensure page remains stable
     await expect(page.locator('#sensors-grid')).toBeVisible();
@@ -174,7 +174,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: refresh button (if available)', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for refresh button
     const refreshButton = page
@@ -203,7 +203,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: navigate to sensor details from monitoring', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for links to sensor details or direct to sensors list
     const sensorLink = page.locator('a[href*="sensors.html"]').first();
@@ -217,7 +217,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: time range selector (if available)', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Look for time range controls
     const timeRangeSelect = page.locator('[id*="time"], [id*="range"]').first();
@@ -236,7 +236,7 @@ test.describe('Sensor monitoring real-time flow', () => {
 
   test('sensor monitoring: status badges update correctly', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     // Validate summary status counters rendered by monitoring page
     await expect(page.locator('#stat-total-sensors')).toBeVisible();
@@ -244,3 +244,4 @@ test.describe('Sensor monitoring real-time flow', () => {
     await expect(page.locator('#stat-inactive-sensors')).toBeVisible();
   });
 });
+

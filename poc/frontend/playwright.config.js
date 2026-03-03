@@ -1,6 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseUrl = process.env.E2E_BASE_URL || 'http://127.0.0.1:3001';
+const externalBaseUrl = process.env.E2E_BASE_URL;
+const normalizedExternalBaseUrl = externalBaseUrl
+  ? externalBaseUrl.endsWith('/')
+    ? externalBaseUrl
+    : `${externalBaseUrl}/`
+  : null;
+const baseUrl = normalizedExternalBaseUrl || 'http://127.0.0.1:3001';
 
 export default defineConfig({
   testDir: './test/specs',
@@ -18,12 +24,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
   },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 3001',
-    url: baseUrl,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000
-  },
+  webServer: externalBaseUrl
+    ? undefined
+    : {
+        command: 'npm run dev -- --host 127.0.0.1 --port 3001',
+        url: baseUrl,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120000
+      },
   projects: [
     {
       name: 'chromium',

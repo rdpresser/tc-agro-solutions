@@ -14,7 +14,7 @@ test.describe('Admin flows', () => {
   });
 
   test('dashboard displays owner selector for admin', async ({ page }) => {
-    await page.goto('/dashboard.html');
+    await page.goto('dashboard.html');
 
     await expect(page.locator('#dashboard-owner-filter')).toBeVisible();
     await expect(page.locator('#dashboard-owner-select')).toBeEnabled();
@@ -22,7 +22,7 @@ test.describe('Admin flows', () => {
   });
 
   test('alerts owner selector changes request scope', async ({ page }) => {
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     const ownerSelect = page.locator('#alerts-owner-select');
     await expect(page.locator('#alerts-owner-filter')).toBeVisible();
@@ -39,7 +39,7 @@ test.describe('Admin flows', () => {
   });
 
   test('sensors owner selector changes request scope', async ({ page }) => {
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     const ownerSelect = page.locator('#sensors-owner-select');
     await expect(page.locator('#sensors-owner-filter')).toBeVisible();
@@ -52,9 +52,10 @@ test.describe('Admin flows', () => {
   });
 
   test('admin can access users page', async ({ page }) => {
-    await page.goto('/users.html');
+    await page.goto('users.html');
 
     await expect(page).toHaveURL(/users\.html/);
     await expect(page.locator('#users-tbody')).toBeVisible();
   });
 });
+

@@ -14,10 +14,10 @@ test.describe('Producer CRUD coverage', () => {
   });
 
   test('properties: read list, create, update, delete behavior', async ({ page }) => {
-    await page.goto('/properties.html');
+    await page.goto('properties.html');
     await expect(page.locator('#properties-tbody tr')).toHaveCount(1);
 
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeHidden();
     await page.locator('#name').fill('Producer Created Property');
     await page.locator('#address').fill('Road 200');
@@ -40,7 +40,7 @@ test.describe('Producer CRUD coverage', () => {
     expect(createPayload.ownerId).toBeUndefined();
     expect(createPayload.name).toBe('Producer Created Property');
 
-    await page.goto('/properties-form.html?id=property-001');
+    await page.goto('properties-form.html?id=property-001');
     await expect(page.locator('#ownerFieldGroup')).toBeHidden();
     await page.locator('#name').fill('Producer Updated Property');
 
@@ -59,7 +59,7 @@ test.describe('Producer CRUD coverage', () => {
     expect(updatePayload.ownerId).toBeUndefined();
     expect(updatePayload.name).toBe('Producer Updated Property');
 
-    await page.goto('/properties.html');
+    await page.goto('properties.html');
     page.once('dialog', (dialog) => dialog.accept());
     const dialogPromise = page.waitForEvent('dialog');
     await page.locator('[data-action="delete"]').first().click();
@@ -69,7 +69,7 @@ test.describe('Producer CRUD coverage', () => {
   });
 
   test('plots: create without owner field and edit read-only', async ({ page }) => {
-    await page.goto('/plots-form.html');
+    await page.goto('plots-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeHidden();
     await page.locator('#propertyId').selectOption('property-001');
     await page.locator('#name').fill('Producer Plot');
@@ -92,7 +92,7 @@ test.describe('Producer CRUD coverage', () => {
     const createPayload = parsePayload(createRequest);
     expect(createPayload.ownerId).toBeUndefined();
 
-    await page.goto('/plots-form.html?id=plot-001');
+    await page.goto('plots-form.html?id=plot-001');
     await expect(page.locator('#formErrors')).toContainText('read-only');
     await expect(page.locator('#plotForm button[type="submit"]')).toBeDisabled();
   });
@@ -100,7 +100,7 @@ test.describe('Producer CRUD coverage', () => {
   test('sensors: create without owner field, status update and edit read-only', async ({
     page
   }) => {
-    await page.goto('/sensors-form.html');
+    await page.goto('sensors-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeHidden();
     await page.locator('#type').selectOption({ index: 1 });
     await page.locator('#plotId').selectOption('plot-001');
@@ -119,7 +119,7 @@ test.describe('Producer CRUD coverage', () => {
     const createPayload = parsePayload(createRequest);
     expect(createPayload.ownerId).toBeUndefined();
 
-    await page.goto('/sensors.html');
+    await page.goto('sensors.html');
     await page.locator('.js-change-status').first().click();
     await page.locator('#sensor-new-status').selectOption('Maintenance');
 
@@ -135,16 +135,17 @@ test.describe('Producer CRUD coverage', () => {
     const statusPayload = parsePayload(statusRequest);
     expect(statusPayload.newStatus).toBe('Maintenance');
 
-    await page.goto('/sensors-form.html?id=sensor-001');
+    await page.goto('sensors-form.html?id=sensor-001');
     await expect(page.locator('#formErrors')).toContainText('read-only');
     await expect(page.locator('#sensorForm button[type="submit"]')).toBeDisabled();
   });
 
   test('producer cannot access admin-only users pages', async ({ page }) => {
-    await page.goto('/users.html');
+    await page.goto('users.html');
     await expect(page).toHaveURL(/dashboard\.html/);
 
-    await page.goto('/users-form.html');
+    await page.goto('users-form.html');
     await expect(page).toHaveURL(/dashboard\.html/);
   });
 });
+

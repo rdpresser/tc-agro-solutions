@@ -15,7 +15,7 @@ test.describe('Alerts management flow', () => {
 
   test('loads alerts page and list container', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     await expect(page.locator('#alerts-container')).toBeVisible();
     await expect(page.locator('#search-alerts')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Alerts management flow', () => {
 
   test('search filter updates request query', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     const requestPromise = page.waitForRequest((request) => {
       const url = decodeURIComponent(request.url());
@@ -40,20 +40,29 @@ test.describe('Alerts management flow', () => {
 
   test('severity filter updates request query', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
-    const requestPromise = page.waitForRequest(
-      (request) =>
-        request.url().includes('/api/alerts/pending') && request.url().includes('severity=critical')
-    );
+    const severitySelect = page.locator('#alerts-severity-filter');
+    await expect(severitySelect).toBeVisible();
 
-    await page.locator('#alerts-severity-filter').selectOption('critical');
+    // Ensure a value transition happens (prevents flaky no-op when already set to "critical")
+    if ((await severitySelect.inputValue()) === 'critical') {
+      await severitySelect.selectOption('');
+      await page.waitForTimeout(50);
+    }
+
+    const requestPromise = page.waitForRequest((request) => {
+      const url = decodeURIComponent(request.url()).toLowerCase();
+      return url.includes('/api/alerts/pending') && url.includes('severity=critical');
+    });
+
+    await severitySelect.selectOption('critical');
     await requestPromise;
   });
 
   test('status filter updates request query', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     const requestPromise = page.waitForRequest((request) => {
       const url = decodeURIComponent(request.url());
@@ -66,7 +75,7 @@ test.describe('Alerts management flow', () => {
 
   test('resolve action triggers update request', async ({ page }) => {
     await applySession(page, buildProducerSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     await expect(page.locator('[data-action="resolve"]').first()).toBeVisible();
 
@@ -82,7 +91,7 @@ test.describe('Alerts management flow', () => {
 
   test('admin owner selector is visible and changes scope', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     await expect(page.locator('#alerts-owner-filter')).toBeVisible();
 

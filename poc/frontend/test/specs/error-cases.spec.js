@@ -13,7 +13,7 @@ test.describe('Error handling and edge cases', () => {
       route.abort('timedout');
     });
 
-    await page.goto('/index.html');
+    await page.goto('index.html');
     await page.locator('#email').fill('user@tcagro.com');
     await page.locator('#password').fill('WrongPassword123');
 
@@ -24,7 +24,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('login: session expiration handled gracefully', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/dashboard.html');
+    await page.goto('dashboard.html');
 
     // Clear session storage to simulate expiration
     await page.evaluate(() => {
@@ -49,7 +49,7 @@ test.describe('Error handling and edge cases', () => {
       }
     });
 
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
     await page.locator('#name').fill('Existing Property');
     await page.locator('#address').fill('Address');
     await page.locator('#city').fill('City');
@@ -70,7 +70,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('plot creation: area validation range', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/plots-form.html');
+    await page.goto('plots-form.html');
 
     // Try negative area
     await page.locator('#areaHectares').fill('-5');
@@ -92,7 +92,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('sensor creation: missing required fields error', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/sensors-form.html');
+    await page.goto('sensors-form.html');
 
     // Try submitting without filling required fields
     await page.locator('#sensorForm button[type="submit"]').click();
@@ -122,7 +122,7 @@ test.describe('Error handling and edge cases', () => {
       route.abort('timedout');
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('dashboard.html');
 
     await page.waitForTimeout(1200);
     await expect(page.locator('body')).toBeVisible();
@@ -139,7 +139,7 @@ test.describe('Error handling and edge cases', () => {
       }
     });
 
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
     await page.locator('#name').fill('Test Property');
     await page.locator('#address').fill('Address');
     await page.locator('#city').fill('City');
@@ -165,7 +165,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('navigation: unsaved changes warning', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
 
     // Start filling form
     await page.locator('#name').fill('Property Name');
@@ -173,7 +173,7 @@ test.describe('Error handling and edge cases', () => {
     // Try to navigate away
     const confirmPromise = page.waitForEvent('dialog', { timeout: 1000 }).catch(() => null);
 
-    await page.click('a[href="dashboard.html"]');
+    await page.click('a[href$="dashboard.html"]');
 
     const dialog = await confirmPromise;
     if (dialog) {
@@ -195,7 +195,7 @@ test.describe('Error handling and edge cases', () => {
     await applySession(page, buildAdminSession());
 
     for (const testCase of emailTestCases) {
-      await page.goto('/properties-form.html');
+      await page.goto('properties-form.html');
 
       // Try with properties form if it has email field
       const emailInput = page.locator('[type="email"]').first();
@@ -224,7 +224,7 @@ test.describe('Error handling and edge cases', () => {
       }
     });
 
-    await page.goto('/plots-form.html');
+    await page.goto('plots-form.html');
 
     // Check property dropdown behavior
     const propertySelect = page.locator('#propertyId');
@@ -236,7 +236,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('numeric input: boundary values', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
 
     const areaInput = page.locator('#areaHectares');
 
@@ -271,7 +271,7 @@ test.describe('Error handling and edge cases', () => {
       }
     });
 
-    await page.goto('/sensors.html');
+    await page.goto('sensors.html');
 
     // Check error handling
     const errorElement = page.locator('[class*="error"]').first();
@@ -293,7 +293,7 @@ test.describe('Error handling and edge cases', () => {
       });
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('dashboard.html');
 
     await page.waitForTimeout(800);
     await expect(page.locator('body')).toBeVisible();
@@ -301,7 +301,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('form reset: clear button functionality', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
 
     // Fill form
     await page.locator('#name').fill('Test Property');
@@ -324,7 +324,7 @@ test.describe('Error handling and edge cases', () => {
   });
 
   test('keyboard navigation: form submission with Enter key', async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('index.html');
 
     await page.locator('#email').fill('admin@tcagro.com');
     await page.locator('#password').fill('Admin@123');
@@ -346,7 +346,7 @@ test.describe('Error handling and edge cases', () => {
 
   test('long text handling: fields with max length', async ({ page }) => {
     await applySession(page, buildAdminSession());
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
 
     const nameInput = page.locator('#name');
     const maxLength = await nameInput.getAttribute('maxlength');
@@ -361,3 +361,4 @@ test.describe('Error handling and edge cases', () => {
     }
   });
 });
+

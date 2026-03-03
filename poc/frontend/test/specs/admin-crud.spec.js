@@ -14,12 +14,12 @@ test.describe('Admin CRUD coverage', () => {
   });
 
   test('properties: read list, create, update, delete behavior', async ({ page }) => {
-    await page.goto('/properties.html');
+    await page.goto('properties.html');
 
     await expect(page.locator('#properties-tbody tr')).toHaveCount(1);
     await expect(page.locator('#properties-tbody tr td').first()).toContainText('Alpha Farms');
 
-    await page.goto('/properties-form.html');
+    await page.goto('properties-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeVisible();
     await page.locator('#ownerId').selectOption(DEFAULT_OWNER_ID_ALPHA);
     await page.locator('#name').fill('Admin Created Property');
@@ -43,7 +43,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(createPayload.ownerId).toBe(DEFAULT_OWNER_ID_ALPHA);
     expect(createPayload.name).toBe('Admin Created Property');
 
-    await page.goto('/properties-form.html?id=property-001');
+    await page.goto('properties-form.html?id=property-001');
     await expect(page.locator('#name')).toHaveValue('Alpha Main Property');
     await page.locator('#name').fill('Admin Updated Property');
     await page.locator('#city').fill('Campinas');
@@ -63,7 +63,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(updatePayload.name).toBe('Admin Updated Property');
     expect(updatePayload.city).toBe('Campinas');
 
-    await page.goto('/properties.html');
+    await page.goto('properties.html');
     page.once('dialog', (dialog) => dialog.accept());
     const dialogPromise = page.waitForEvent('dialog');
     await page.locator('[data-action="delete"]').first().click();
@@ -73,10 +73,10 @@ test.describe('Admin CRUD coverage', () => {
   });
 
   test('plots: create and edit read-only constraint', async ({ page }) => {
-    await page.goto('/plots.html');
+    await page.goto('plots.html');
     await expect(page.locator('#plots-tbody tr')).toHaveCount(1);
 
-    await page.goto('/plots-form.html');
+    await page.goto('plots-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeVisible();
     await page.locator('#ownerId').selectOption(DEFAULT_OWNER_ID_ALPHA);
     await page.locator('#propertyId').selectOption('property-001');
@@ -101,16 +101,16 @@ test.describe('Admin CRUD coverage', () => {
     expect(createPayload.ownerId).toBe(DEFAULT_OWNER_ID_ALPHA);
     expect(createPayload.propertyId).toBe('property-001');
 
-    await page.goto('/plots-form.html?id=plot-001');
+    await page.goto('plots-form.html?id=plot-001');
     await expect(page.locator('#formErrors')).toContainText('read-only');
     await expect(page.locator('#plotForm button[type="submit"]')).toBeDisabled();
   });
 
   test('sensors: create, status update and edit read-only constraint', async ({ page }) => {
-    await page.goto('/sensors.html');
+    await page.goto('sensors.html');
     await expect(page.locator('#sensors-tbody tr')).toHaveCount(1);
 
-    await page.goto('/sensors-form.html');
+    await page.goto('sensors-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeVisible();
     await page.locator('#ownerId').selectOption(DEFAULT_OWNER_ID_ALPHA);
     await page.locator('#type').selectOption({ index: 1 });
@@ -131,7 +131,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(createPayload.ownerId).toBe(DEFAULT_OWNER_ID_ALPHA);
     expect(createPayload.plotId).toBe('plot-001');
 
-    await page.goto('/sensors.html');
+    await page.goto('sensors.html');
     await page.locator('.js-change-status').first().click();
     await page.locator('#sensor-new-status').selectOption('Inactive');
     await page.locator('#sensor-status-reason').fill('Test status change');
@@ -148,16 +148,16 @@ test.describe('Admin CRUD coverage', () => {
     const statusPayload = parsePayload(statusRequest);
     expect(statusPayload.newStatus).toBe('Inactive');
 
-    await page.goto('/sensors-form.html?id=sensor-001');
+    await page.goto('sensors-form.html?id=sensor-001');
     await expect(page.locator('#formErrors')).toContainText('read-only');
     await expect(page.locator('#sensorForm button[type="submit"]')).toBeDisabled();
   });
 
   test('users: create, update and delete', async ({ page }) => {
-    await page.goto('/users.html');
+    await page.goto('users.html');
     await expect(page.locator('#users-tbody tr')).toHaveCount(2);
 
-    await page.goto('/users-form.html');
+    await page.goto('users-form.html');
     await page.locator('#name').fill('Created By Admin');
     await page.locator('#email').fill('created-admin@tcagro.com');
     await page.locator('#username').fill('createdadmin');
@@ -178,7 +178,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(createPayload.email).toBe('created-admin@tcagro.com');
     expect(createPayload.role).toBe('Producer');
 
-    await page.goto('/users-form.html?id=user-admin-001&email=admin%40tcagro.com');
+    await page.goto('users-form.html?id=user-admin-001&email=admin%40tcagro.com');
     await expect(page.locator('#email')).toHaveValue('admin@tcagro.com');
     await page.locator('#name').fill('Admin User Updated');
     await page.locator('#username').fill('adminupdated');
@@ -197,7 +197,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(updatePayload.name).toBe('Admin User Updated');
     expect(updatePayload.username).toBe('adminupdated');
 
-    await page.goto('/users.html');
+    await page.goto('users.html');
     page.on('dialog', (dialog) => dialog.accept());
 
     const deleteRequestPromise = page.waitForRequest(
@@ -209,3 +209,4 @@ test.describe('Admin CRUD coverage', () => {
     await deleteRequestPromise;
   });
 });
+

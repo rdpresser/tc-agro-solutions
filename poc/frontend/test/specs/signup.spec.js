@@ -12,7 +12,7 @@ test.describe('Signup flow', () => {
   });
 
   test('renders signup fields and default role', async ({ page }) => {
-    await page.goto('/signup.html');
+    await page.goto('signup.html');
 
     await expect(page.locator('#signupForm')).toBeVisible();
     await expect(page.locator('#name')).toBeVisible();
@@ -24,7 +24,7 @@ test.describe('Signup flow', () => {
   });
 
   test('invalid email blocks submit', async ({ page }) => {
-    await page.goto('/signup.html');
+    await page.goto('signup.html');
 
     await page.locator('#name').fill('John Producer');
     await page.locator('#email').fill('invalid-email');
@@ -37,7 +37,7 @@ test.describe('Signup flow', () => {
   });
 
   test('successful signup posts payload and redirects to sign-in', async ({ page }) => {
-    await page.goto('/signup.html');
+    await page.goto('signup.html');
 
     await page.locator('#name').fill('Jane Producer');
     await page.locator('#email').fill('jane@farm.com');
@@ -61,7 +61,7 @@ test.describe('Signup flow', () => {
   });
 
   test('double-click unlocks role selector', async ({ page }) => {
-    await page.goto('/signup.html');
+    await page.goto('signup.html');
 
     await page.evaluate(() => {
       const roleGroup = document.getElementById('roleGroup');
@@ -77,7 +77,7 @@ test.describe('Signup flow', () => {
   });
 
   test('email availability check endpoint is called', async ({ page }) => {
-    await page.goto('/signup.html');
+    await page.goto('signup.html');
 
     const requestPromise = page.waitForRequest(
       (request) => request.method() === 'GET' && request.url().includes('/auth/check-email/')
@@ -90,3 +90,4 @@ test.describe('Signup flow', () => {
     await expect(page.locator('#emailAvailabilityIcon')).toBeVisible();
   });
 });
+

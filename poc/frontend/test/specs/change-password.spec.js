@@ -12,7 +12,7 @@ test.describe('Change password flow', () => {
   });
 
   test('renders form fields', async ({ page }) => {
-    await page.goto('/change-password.html');
+    await page.goto('change-password.html');
 
     await expect(page.locator('#changePasswordForm')).toBeVisible();
     await expect(page.locator('#email')).toBeVisible();
@@ -21,7 +21,7 @@ test.describe('Change password flow', () => {
   });
 
   test('invalid email shows validation error', async ({ page }) => {
-    await page.goto('/change-password.html');
+    await page.goto('change-password.html');
 
     await page.locator('#email').fill('invalid-email');
     await page.locator('#password').fill('NewSecure@2026');
@@ -31,7 +31,7 @@ test.describe('Change password flow', () => {
   });
 
   test('successful password change posts payload and redirects', async ({ page }) => {
-    await page.goto('/change-password.html');
+    await page.goto('change-password.html');
 
     await page.locator('#email').fill('admin@tcagro.com');
     await page.locator('#password').fill('NewSecure@2026');
@@ -53,7 +53,7 @@ test.describe('Change password flow', () => {
   });
 
   test('password visibility toggle works', async ({ page }) => {
-    await page.goto('/change-password.html');
+    await page.goto('change-password.html');
 
     const passwordInput = page.locator('#password');
     const toggleButton = page.locator('#togglePassword');
@@ -65,3 +65,4 @@ test.describe('Change password flow', () => {
     await expect(passwordInput).toHaveAttribute('type', 'password');
   });
 });
+

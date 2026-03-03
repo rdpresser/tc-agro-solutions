@@ -216,9 +216,33 @@ export async function installApiMocks(
     const request = route.request();
     const requestUrl = new URL(request.url());
 
-    const isBackendHost =
-      (requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1') &&
-      ['5001', '5002', '5003', '5004'].includes(requestUrl.port);
+    const isLocalHost = requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1';
+
+    let servicePort = requestUrl.port;
+    let normalizedPathname = requestUrl.pathname;
+
+    // Support cluster-style path routing on localhost, e.g.:
+    // http://localhost/identity/*, /farm/*, /sensor-ingest/*, /analytics-worker/*
+    if (isLocalHost && !servicePort) {
+      const pathServiceMap = [
+        { prefix: '/identity', port: '5001' },
+        { prefix: '/farm', port: '5002' },
+        { prefix: '/sensor-ingest', port: '5003' },
+        { prefix: '/analytics-worker', port: '5004' }
+      ];
+
+      const matchedService = pathServiceMap.find(
+        (service) =>
+          normalizedPathname === service.prefix || normalizedPathname.startsWith(`${service.prefix}/`)
+      );
+
+      if (matchedService) {
+        servicePort = matchedService.port;
+        normalizedPathname = normalizedPathname.slice(matchedService.prefix.length) || '/';
+      }
+    }
+
+    const isBackendHost = isLocalHost && ['5001', '5002', '5003', '5004'].includes(servicePort);
 
     if (!isBackendHost) {
       await route.continue();
@@ -226,7 +250,9 @@ export async function installApiMocks(
     }
 
     const method = request.method().toUpperCase();
-    const { pathname, searchParams, port } = requestUrl;
+    const { searchParams } = requestUrl;
+    const pathname = normalizedPathname;
+    const port = servicePort;
 
     if (port === '5001') {
       if (pathname === '/auth/login' && method === 'POST') {

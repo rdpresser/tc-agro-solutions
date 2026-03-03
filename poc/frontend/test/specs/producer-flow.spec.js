@@ -10,27 +10,28 @@ test.describe('Producer flows', () => {
   });
 
   test('dashboard hides owner selector and shows producer alert bell', async ({ page }) => {
-    await page.goto('/dashboard.html');
+    await page.goto('dashboard.html');
 
     await expect(page.locator('#dashboard-owner-filter')).toBeHidden();
     await expect(page.locator('[data-role="topbar-alert-bell"]')).toBeVisible();
   });
 
   test('alerts page hides owner selector for producer', async ({ page }) => {
-    await page.goto('/alerts.html');
+    await page.goto('alerts.html');
 
     await expect(page.locator('#alerts-owner-filter')).toBeHidden();
   });
 
   test('sensors page hides owner selector for producer', async ({ page }) => {
-    await page.goto('/sensors-monitoring.html');
+    await page.goto('sensors-monitoring.html');
 
     await expect(page.locator('#sensors-owner-filter')).toBeHidden();
   });
 
   test('producer is redirected from users page to dashboard', async ({ page }) => {
-    await page.goto('/users.html');
+    await page.goto('users.html');
 
     await expect(page).toHaveURL(/dashboard\.html/);
   });
 });
+

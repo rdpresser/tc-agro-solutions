@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
   test('login redirects to dashboard and stores session', async ({ page }) => {
     await installApiMocks(page);
 
-    await page.goto('/index.html');
+    await page.goto('index.html');
 
     await page.locator('#email').fill('admin@tcagro.com');
     await page.locator('#password').fill('Admin@123');
@@ -21,3 +21,4 @@ test.describe('Authentication', () => {
     expect(user).toContain('admin@tcagro.com');
   });
 });
+

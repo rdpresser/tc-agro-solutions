@@ -18,14 +18,88 @@
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,html,css,md}\"",
     "typecheck": "echo \"No TypeScript configured\" && exit 0",
-    "test": "playwright test",
-    "test:watch": "playwright test --ui",
+    "test": "npm run test:e2e",
+    "test:watch": "npm run test:e2e:ui",
     "test:coverage": "echo \"Coverage for E2E tests is not configured yet\" && exit 0",
     "test:e2e": "playwright test",
+    "test:e2e:fast": "playwright test --reporter=line",
+    "test:e2e:stable": "playwright test --reporter=line --workers=1",
+    "test:e2e:cluster": "cross-env E2E_BASE_URL=http://localhost:3002/agro playwright test",
+    "test:e2e:cluster:fast": "cross-env E2E_BASE_URL=http://localhost:3002/agro playwright test --reporter=line",
+    "test:e2e:cluster:stable": "cross-env E2E_BASE_URL=http://localhost:3002/agro playwright test --reporter=line --workers=1",
+    "test:e2e:agro": "npm run test:e2e:cluster",
+    "test:e2e:agro:fast": "npm run test:e2e:cluster:fast",
+    "test:e2e:agro:ci": "npm run test:e2e:cluster:stable",
+    "test:e2e:all": "npm run test:e2e && npm run test:e2e:cluster:stable",
+    "test:e2e:all:fast": "npm run test:e2e:fast && npm run test:e2e:cluster:fast",
+    "test:e2e:all:stable": "npm run test:e2e:stable && npm run test:e2e:cluster:stable",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:install": "playwright install chromium"
+  },
+  "_scriptsHelp": {
+    "_comment": "Script groups and conventions for local/frontend workflows.",
+    "buildAndServe": {
+      "_comment": "Build and local serving commands.",
+      "commands": [
+        "dev",
+        "build",
+        "build:watch",
+        "build:k8s",
+        "build:root",
+        "build-and-preview",
+        "preview"
+      ]
+    },
+    "quality": {
+      "_comment": "Code quality and formatting.",
+      "commands": [
+        "lint",
+        "lint:fix",
+        "format",
+        "format:check",
+        "typecheck"
+      ]
+    },
+    "e2eCore": {
+      "_comment": "Canonical Playwright entrypoints.",
+      "commands": [
+        "test:e2e",
+        "test:e2e:fast",
+        "test:e2e:stable",
+        "test:e2e:ui",
+        "test:e2e:headed",
+        "test:e2e:debug",
+        "test:e2e:install"
+      ]
+    },
+    "e2eCluster": {
+      "_comment": "Cluster-path execution using E2E_BASE_URL=http://localhost:3002/agro.",
+      "commands": [
+        "test:e2e:cluster",
+        "test:e2e:cluster:fast",
+        "test:e2e:cluster:stable"
+      ]
+    },
+    "e2eCombined": {
+      "_comment": "Run local and cluster suites in sequence.",
+      "commands": [
+        "test:e2e:all",
+        "test:e2e:all:fast",
+        "test:e2e:all:stable"
+      ]
+    },
+    "aliases": {
+      "_comment": "Compatibility aliases kept for convenience.",
+      "commands": [
+        "test",
+        "test:watch",
+        "test:e2e:agro",
+        "test:e2e:agro:fast",
+        "test:e2e:agro:ci"
+      ]
+    }
   },
   "dependencies": {
     "@microsoft/signalr": "^10.0.0",
