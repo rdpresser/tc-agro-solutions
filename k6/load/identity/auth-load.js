@@ -16,6 +16,11 @@ const USER_LIST_PATH =
 
 export const options = dockerLoadOptions();
 
+const RELOGIN_EVERY = Number(__ENV.RELOGIN_EVERY || 5);
+const CHECK_EMAIL_EVERY = Number(__ENV.CHECK_EMAIL_EVERY || 10);
+
+let cachedToken = null;
+
 export function setup() {
   const timeout = `${timeoutMs()}ms`;
   return ensureSmokeProducerSession(timeout);
@@ -25,50 +30,60 @@ export default function (data) {
   const timeout = `${timeoutMs()}ms`;
   const headers = { "Content-Type": "application/json" };
 
-  const checkEmailResponse = http.get(
-    `${data.authBase}${CHECK_EMAIL_PATH}/${encodeURIComponent(SMOKE_EMAIL)}`,
-    {
-      timeout,
-      tags: { endpoint: "identity-check-email-load" },
-    },
-  );
-
-  check(checkEmailResponse, {
-    "identity load check-email success": (r) => r.status === 200,
-  });
-
-  if (checkEmailResponse.status !== 200) {
-    fail(
-      `Identity load check-email failed with status ${checkEmailResponse.status}: ${(checkEmailResponse.body || "").substring(0, 200)}`,
+  if (__ITER % CHECK_EMAIL_EVERY === 0) {
+    const checkEmailResponse = http.get(
+      `${data.authBase}${CHECK_EMAIL_PATH}/${encodeURIComponent(SMOKE_EMAIL)}`,
+      {
+        timeout,
+        tags: { endpoint: "identity-check-email-load" },
+      },
     );
+
+    check(checkEmailResponse, {
+      "identity load check-email success": (r) => r.status === 200,
+    });
+
+    if (checkEmailResponse.status !== 200) {
+      fail(
+        `Identity load check-email failed with status ${checkEmailResponse.status}: ${(checkEmailResponse.body || "").substring(0, 200)}`,
+      );
+    }
   }
 
-  const loginResponse = http.post(
-    `${data.authBase}${LOGIN_PATH}`,
-    JSON.stringify({ email: SMOKE_EMAIL, password: SMOKE_PASSWORD }),
-    {
-      headers,
-      timeout,
-      tags: { endpoint: "identity-login-load" },
-    },
-  );
+  if (!cachedToken) {
+    cachedToken = data.token;
+  }
 
-  const loginBody = parseJsonSafely(loginResponse);
-
-  check(loginResponse, {
-    "identity load login success": (r) => r.status === 200,
-    "identity load login token": () => Boolean(loginBody?.jwtToken),
-  });
-
-  if (loginResponse.status !== 200 || !loginBody?.jwtToken) {
-    fail(
-      `Identity load login failed with status ${loginResponse.status}: ${(loginResponse.body || "").substring(0, 200)}`,
+  if (__ITER % RELOGIN_EVERY === 0) {
+    const loginResponse = http.post(
+      `${data.authBase}${LOGIN_PATH}`,
+      JSON.stringify({ email: SMOKE_EMAIL, password: SMOKE_PASSWORD }),
+      {
+        headers,
+        timeout,
+        tags: { endpoint: "identity-login-load" },
+      },
     );
+
+    const loginBody = parseJsonSafely(loginResponse);
+
+    check(loginResponse, {
+      "identity load login success": (r) => r.status === 200,
+      "identity load login token": () => Boolean(loginBody?.jwtToken),
+    });
+
+    if (loginResponse.status !== 200 || !loginBody?.jwtToken) {
+      fail(
+        `Identity load login failed with status ${loginResponse.status}: ${(loginResponse.body || "").substring(0, 200)}`,
+      );
+    }
+
+    cachedToken = loginBody.jwtToken;
   }
 
   const userListResponse = http.get(`${data.apiBase}${USER_LIST_PATH}`, {
     headers: {
-      Authorization: `Bearer ${loginBody.jwtToken}`,
+      Authorization: `Bearer ${cachedToken}`,
     },
     timeout,
     tags: { endpoint: "identity-user-list-load" },

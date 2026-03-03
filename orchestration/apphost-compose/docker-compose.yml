@@ -17,6 +17,16 @@ services:
     image: timescale/timescaledb:latest-pg17
     container_name: tc-agro-postgres
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - max_connections=750
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - log_statement=all
+      - -c
+      - log_duration=on
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: ${POSTGRES_USER}

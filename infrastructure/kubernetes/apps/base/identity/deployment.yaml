@@ -7,6 +7,7 @@ metadata:
     app: identity-service
     component: auth
 spec:
+  replicas: 4
   selector:
     matchLabels:
       app: identity-service
@@ -77,11 +78,11 @@ spec:
           failureThreshold: 24
         resources:
           requests:
-            memory: "384Mi"
-            cpu: "250m"
+            memory: "512Mi"
+            cpu: "500m"
           limits:
-            memory: "768Mi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "2000m"
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001
