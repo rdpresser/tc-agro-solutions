@@ -32,6 +32,9 @@ build/
 .env.*.local
 
 # Testing files
+test/
+test-results/
+playwright-report/
 coverage/
 .nyc_output/
 

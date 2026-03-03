@@ -271,6 +271,31 @@ export async function installApiMocks(
         return;
       }
 
+      if (pathname.startsWith('/auth/check-email/') && method === 'GET') {
+        const email = decodeURIComponent(
+          pathname.split('/auth/check-email/')[1] || ''
+        ).toLowerCase();
+        const exists = state.users.some((user) => String(user.email || '').toLowerCase() === email);
+        await fulfillJson(route, { isAvailable: !exists });
+        return;
+      }
+
+      if (pathname === '/auth/change-password' && method === 'POST') {
+        const body = parseRequestBody(request);
+        const user = state.users.find(
+          (item) =>
+            String(item.email || '').toLowerCase() === String(body.email || '').toLowerCase()
+        );
+
+        if (!user) {
+          await fulfillJson(route, { message: 'User not found' }, 404);
+          return;
+        }
+
+        await fulfillJson(route, { success: true });
+        return;
+      }
+
       if (pathname === '/swagger/v1/swagger.json' && method === 'GET') {
         await fulfillJson(route, {
           openapi: '3.0.1',

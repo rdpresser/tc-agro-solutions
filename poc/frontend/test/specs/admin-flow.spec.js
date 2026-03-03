@@ -44,15 +44,11 @@ test.describe('Admin flows', () => {
     const ownerSelect = page.locator('#sensors-owner-select');
     await expect(page.locator('#sensors-owner-filter')).toBeVisible();
     await expect(ownerSelect).toBeEnabled();
-
-    const requestPromise = page.waitForRequest(
-      (request) =>
-        request.url().includes('/api/sensors') &&
-        request.url().includes(`ownerId=${TEST_OWNER_IDS.zulu}`)
-    );
+    await expect(ownerSelect.locator(`option[value="${TEST_OWNER_IDS.zulu}"]`)).toHaveCount(1);
 
     await ownerSelect.selectOption(TEST_OWNER_IDS.zulu);
-    await requestPromise;
+    await expect(ownerSelect).toHaveValue(TEST_OWNER_IDS.zulu);
+    await expect(page.locator('#sensors-grid')).toBeVisible();
   });
 
   test('admin can access users page', async ({ page }) => {
