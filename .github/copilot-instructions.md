@@ -36,6 +36,8 @@
 ### Testing
 
 - **Unit Tests:** xUnit
+- **Frontend E2E (Web POC):** Playwright
+- **Mobile POC (recommended):** Jest + @testing-library/react-native + Maestro/Detox
 - **Load Tests:** k6
 - **Mocking:** NSubstitute or Moq
 
@@ -664,7 +666,7 @@ ENTRYPOINT ["dotnet", "Agro.Farm.Api.dll"]
 
 ---
 
-## � Local Development Environment
+## 🖥️ Local Development Environment
 
 ### Local vs Cloud Strategy
 
@@ -697,13 +699,15 @@ The project supports two distinct environments:
 
 ### Local Technology Stack
 
-| Component     | Local                    | Cloud (Azure)                    |
-| ------------- | ------------------------ | -------------------------------- |
-| Database      | PostgreSQL + TimescaleDB | Azure PostgreSQL Flexible Server |
-| Cache         | Redis (Docker)           | Azure Redis Cache                |
-| Messaging     | RabbitMQ                 | Azure Service Bus                |
-| Orchestration | Docker Compose           | AKS                              |
-| Observability | Console logs             | Application Insights             |
+| Component     | Local                    | Cloud (Azure)                     |
+| ------------- | ------------------------ | --------------------------------- |
+| Database      | PostgreSQL + TimescaleDB | Azure PostgreSQL Flexible Server  |
+| Cache         | Redis (Docker)           | Azure Redis Cache                 |
+| Messaging     | RabbitMQ                 | Azure Service Bus                 |
+| Orchestration | Docker Compose           | AKS                               |
+| Observability | Console logs             | Application Insights              |
+| Web Dashboard | Vite + Vanilla JS POC    | Hosted static app/API integration |
+| Mobile POC    | Expo React Native        | Future native/web deployment      |
 
 ### Running Locally
 
@@ -776,6 +780,10 @@ dotnet run --project src/Agro.Farm.Api
 - Instrument with **distributed tracing**
 - Write **unit tests** for handlers
 - Support both local (Docker Compose) and cloud (Azure) configurations
+- Follow the **Build and Unit Test Validation Protocol** for every code change
+- For **frontend changes** (`poc/frontend` or `poc/mobile`), always evaluate whether existing tests still cover the changed behavior
+- For **frontend changes**, add/update automated tests whenever user-visible behavior, validations, filters, or navigation flows change
+- After **frontend changes**, always suggest running tests (targeted first, then broader suite)
 
 ### ❌ NEVER Do:
 
@@ -822,7 +830,7 @@ dotnet run --project src/Agro.Farm.Api
 
 ### Local Development
 
-````bash
+```bash
 # Start all infrastructure services
 docker compose up -d
 
@@ -833,11 +841,22 @@ docker compose up -d postgres
 docker compose logs -f
 
 # Stop all services
-dockTerraform (Azure Production)
+docker compose down
+
+# Stop and remove volumes (cleans data)
+docker compose down -v
+```
+
+### Terraform (Azure Production)
+
 ```bash
 # Initialize Terraform
 cd terraform
 terraform init
+
+# Format and validate configuration
+terraform fmt -recursive
+terraform validate
 
 # Plan infrastructure changes
 terraform plan
@@ -847,23 +866,10 @@ terraform apply
 
 # Destroy infrastructure (careful!)
 terraform destroy
-
-# Validate configuration
-terraform validate
-
-# Format code
-terraform fmt -recursive
-````
-
-### er compose down
-
-# Stop and remove volumes (cleans data)
-
-docker compose down -v
-
-````
+```
 
 ### Entity Framework Migrations
+
 ```bash
 # Add new migration
 dotnet ef migrations add <MigrationName> --project src/Agro.Farm.Api
@@ -873,7 +879,7 @@ dotnet ef database update --project src/Agro.Farm.Api
 
 # Generate SQL script (for production)
 dotnet ef migrations script --project src/Agro.Farm.Api --output migration.sql
-````
+```
 
 ### Docker (for Cloud Deployment)
 
@@ -883,33 +889,14 @@ docker build -t agro-farm-api:latest -f src/Agro.Farm.Api/Dockerfile .
 
 # Run local
 docker run -p 8080:8080 --env-file .env agro-farm-api:latest
-### Technology Stack
-- **FastEndpoints:** https://fast-endpoints.com/
-- **Wolverine:** https://wolverine.netlify.app/
-- **TimescaleDB:** https://docs.timescale.com/
-- **EF Core 10:** https://learn.microsoft.com/ef/core/
-- **Application Insights:** https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview
-
-### Project Documentation
-- **Local Setup:** [docs/development/local-setup.md](../docs/development/local-setup.md)
-- **Architecture Decisions:** [docs/adr/](../docs/adr/)
-- **C4 Diagrams:** [docs/architecture/](../docs/architecture/)
-- **Terraform Infrastructure:** [docs/architecture/infrastructure-terraform.md](../docs/architecture/infrastructure-terraform.md)
-- **Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md)
-
-### Key ADRs
-- [ADR-001: Microservices Architecture](../docs/adr/ADR-001-microservices.md)
-- [ADR-002: Data Persistence Strategy](../docs/adr/ADR-002-persistence.md)
-- [ADR-003: TimescaleDB for Time Series](../docs/adr/ADR-003-timeseries.md)
-- [ADR-004: Observability and Dashboards](../docs/adr/ADR-004-observability.md)
-- [ADR-005: Local vs Cloud Strategy](../docs/adr/ADR-005-local-vs-cloud.md)
-- [ADR-006: Docker Compose vs .NET Aspire](../docs/adr/ADR-006-local-orchestration.md)- [ADR-007: AKS Node Pool Strategy](../docs/adr/ADR-007-node-pool-strategy.md)
+```
 
 ---
 
 ## 🏗️ Infrastructure as Code (IaC) & AKS Node Pools
 
 ### Environment Strategy
+
 - **Local (Development):** Docker Compose (PostgreSQL, Redis, RabbitMQ in containers)
 - **Cloud (Production):** Terraform + Azure (AKS, managed services, Application Insights)
 
@@ -917,18 +904,19 @@ docker run -p 8080:8080 --env-file .env agro-farm-api:latest
 
 Three optimized pools by criticality and resource predictability:
 
-| Pool | SKU | Min | Max | Workloads |
-|------|-----|-----|-----|-----------|
-| **system** | B2ms (8GB) | 1 | 2 | kube-system, CoreDNS, CNI, CSI, Azure agents |
-| **platform** | B2s (4GB) | 1 | 3 | ArgoCD, Ingress Controller, cert-manager |
-| **worker** | B2s (4GB) | 2 | 5 | .NET APIs, domain workers |
+| Pool         | SKU        | Min | Max | Workloads                                    |
+| ------------ | ---------- | --- | --- | -------------------------------------------- |
+| **system**   | B2ms (8GB) | 1   | 2   | kube-system, CoreDNS, CNI, CSI, Azure agents |
+| **platform** | B2s (4GB)  | 1   | 3   | ArgoCD, Ingress Controller, cert-manager     |
+| **worker**   | B2s (4GB)  | 2   | 5   | .NET APIs, domain workers                    |
 
 **Key Rationale:** System pool handles unpredictable infrastructure components; platform pool uses moderate resources without in-cluster observability; worker pool applies cost optimization where workloads are bounded (requests/limits defined).
 
 See [ADR-007: AKS Node Pool Strategy](../docs/adr/ADR-007-node-pool-strategy.md) for detailed justification.
 
 ### Terraform Module Structure
-```
+
+```text
 
 terraform/
 ├── main.tf # Root orchestration
@@ -939,7 +927,7 @@ terraform/
 ├── modules/observability/ # App Insights + Log Analytics
 └── ...other modules
 
-````
+```
 
 ### Terraform Deployment
 
@@ -950,13 +938,11 @@ terraform validate && terraform fmt -recursive
 terraform plan -out=tfplan
 terraform apply tfplan
 terraform output -json > outputs.json
-````
+```
 
----
+### Kubernetes Operations
 
-> **Last update:** January 2026  
-> **Version:** 1.1
-
+```bash
 # Apply manifests
 
 kubectl apply -f k8s/
@@ -977,15 +963,17 @@ kubectl port-forward svc/farm-api 8080:80 -n agro
 
 ---
 
-## �️ Frontend POC (Demo Dashboard)
+## 🖥️ Frontend POC (Demo Dashboard)
 
 ### Overview
+
 A pure HTML/CSS/JavaScript frontend for demonstrating the dashboard UI without requiring Azure/backend dependencies.
 
 **Location:** `poc/frontend/`
 **Documentation:** [poc/frontend/README.md](../poc/frontend/README.md)
 
 ### Structure
+
 ```
 
 poc/frontend/
@@ -1004,17 +992,18 @@ poc/frontend/
 │ └── api.js # API client with mock data
 └── README.md # Integration guide
 
-````
+```
 
 ### Key Patterns
 
 #### Token Management (sessionStorage)
+
 ```javascript
 // Token is stored in sessionStorage (clears on browser close)
-sessionStorage.setItem('agro_token', token);
-sessionStorage.getItem('agro_token');
-sessionStorage.removeItem('agro_token');
-````
+sessionStorage.setItem("agro_token", token);
+sessionStorage.getItem("agro_token");
+sessionStorage.removeItem("agro_token");
+```
 
 #### Mock Data Pattern
 
@@ -1063,6 +1052,56 @@ cd poc/frontend && python -m http.server 8000
 - **Icons:** Unicode emoji (🌾🏘️📊📡🔔)
 - **Responsive:** Mobile-first with breakpoints at 768px/1024px
 
+### Frontend Test Parity Protocol (MANDATORY)
+
+- **Parity-first rule:** Keep frontend implementation and automated tests aligned at all times.
+- **Change review rule:** For every frontend change, explicitly validate whether a new test is required.
+- **Coverage rule:** If the change affects a user flow, visible state, or validation, add/update tests in the same task.
+- **Execution rule:** After frontend edits, always recommend test execution (targeted command + full suite when relevant).
+- **Parity target:** Maintain full parity between available screens/allowed flows and test coverage to reduce regressions.
+
+### Build and Unit Test Validation Protocol (MANDATORY)
+
+- **Build rule:** After code changes, run the relevant build command and ensure it succeeds.
+- **Unit test rule:** Run unit tests after changes (targeted first, broader suite when relevant).
+- **Coverage rule:** If changed behavior is not covered by unit tests, add/update unit tests in the same task.
+- **Completion rule:** Do not close a task without automated coverage for modified/new behavior.
+
+## 📱 Mobile POC (Expo React Native) - Recommended Testing Stack & CI (Reference)
+
+### Scope
+
+- This section is **guidance only** for historical reference.
+- Do **not** scaffold or implement this stack unless explicitly requested.
+
+### Recommended Test Stack
+
+- **Unit/Component tests:** Jest + `@testing-library/react-native` (primary).
+- **Hook/store tests:** Jest for business/state logic (`src/hooks`, `src/stores`, `src/lib`).
+- **API contract mocks:** Mock Service Worker (MSW) or equivalent deterministic mocks.
+- **Native E2E (smoke):** Maestro for critical user journeys (low setup complexity).
+- **Native E2E (advanced):** Detox for deeper interaction/regression suites when needed.
+- **Web surface (optional):** Playwright for Expo Web smoke and responsive checks.
+
+### Recommended CI Strategy (GitHub Actions)
+
+- **Triggers:** PR and push to main for path `poc/mobile/**`.
+- **Job 1 - Quality gate:** install, lint, typecheck.
+- **Job 2 - Unit/Component:** run Jest in CI mode with coverage output.
+- **Job 3 - Native smoke E2E:** run Maestro flows on Android emulator (PR or nightly, based on runtime budget).
+- **Job 4 - Optional web smoke:** Playwright against Expo Web build when web delivery is in scope.
+- **Artifacts:** publish JUnit + screenshots/videos/logs for failed E2E jobs.
+- **Branch policy:** block merge on quality + unit; keep E2E smoke required for release-sensitive branches.
+
+### Baseline Mobile Flows to Keep Covered
+
+- Authentication (`login`, `signup`, token/session handling).
+- Dashboard/alerts visibility by role and owner scope.
+- CRUD critical flows for properties, plots, sensors, users.
+- Plot/sensor details and monitoring transitions.
+- Settings and password change paths.
+- Error handling flows (401/403/500, retries, empty states).
+
 ---
 
 ## 📚 References and Documentation
@@ -1078,6 +1117,7 @@ cd poc/frontend && python -m http.server 8000
 ### Project Documentation
 
 - **Frontend POC:** [poc/frontend/README.md](../poc/frontend/README.md) - Dashboard demo guide
+- **Mobile POC:** [poc/mobile/README.md](../poc/mobile/README.md) - Expo React Native reference
 - **Requirements Mapping:** [docs/REQUIREMENTS_MAPPING.md](../docs/REQUIREMENTS_MAPPING.md) - Hackathon spec → roadmap traceability
 - **Technical Roadmap:** [README_ROADMAP.md](../README_ROADMAP.md) - Complete strategy, phases, deliverables
 - **Bootstrap Setup:** [docs/BOOTSTRAP_SETUP.md](../docs/BOOTSTRAP_SETUP.md) - Quick setup guide
@@ -1216,9 +1256,9 @@ When updating docs, clearly separate these two perspectives. Make it obvious to 
 
 ---
 
-> **Last update:** January 17, 2026  
-> **Version:** 1.4  
-> **Key Addition:** Documentation maintenance protocol + reference audit procedures
+> **Last update:** March 4, 2026  
+> **Version:** 1.7  
+> **Key Addition:** Instruction cleanup + stack alignment (web/mobile POC) + mandatory frontend/unit-test/build parity protocol
 >
 > Use these instructions to guide code generation in the TC Agro Solutions project.
 > Always validate documentation references when making infrastructure changes.
