@@ -4,6 +4,10 @@
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
     <ProjectGuid>81dded9d-158b-e303-5f62-77a2896d2a5a</ProjectGuid>
+    <!-- Disable project validation for independent microservices in separate repositories -->
+    <DockerComposeProjectName>
+    </DockerComposeProjectName>
+    <DockerComposeIgnoreMissingProjects>true</DockerComposeIgnoreMissingProjects>
   </PropertyGroup>
   <!-- Docker Compose Files (nested under docker-compose.yml) -->
   <ItemGroup>
