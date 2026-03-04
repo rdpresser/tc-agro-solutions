@@ -73,6 +73,24 @@ function findOwner(owners, ownerId) {
   return owners.find((owner) => owner.id === ownerId) || owners[0] || null;
 }
 
+function resolvePlotCoordinates(plot, properties) {
+  const relatedProperty = properties.find((property) => property.id === plot.propertyId) || null;
+
+  return {
+    latitude: plot.latitude ?? relatedProperty?.latitude ?? null,
+    longitude: plot.longitude ?? relatedProperty?.longitude ?? null
+  };
+}
+
+function withResolvedPlotCoordinates(plot, properties) {
+  const resolvedCoordinates = resolvePlotCoordinates(plot, properties);
+  return {
+    ...plot,
+    latitude: resolvedCoordinates.latitude,
+    longitude: resolvedCoordinates.longitude
+  };
+}
+
 function createInitialState({ owners, users, properties, plots, sensors } = {}) {
   const ownersState = owners || [...DEFAULT_OWNERS];
 
@@ -237,7 +255,8 @@ export async function installApiMocks(
 
       const matchedService = pathServiceMap.find(
         (service) =>
-          normalizedPathname === service.prefix || normalizedPathname.startsWith(`${service.prefix}/`)
+          normalizedPathname === service.prefix ||
+          normalizedPathname.startsWith(`${service.prefix}/`)
       );
 
       if (matchedService) {
@@ -507,7 +526,11 @@ export async function installApiMocks(
         }
         items = applyTextFilter(items, filter, ['name', 'propertyName', 'ownerName']);
 
-        await fulfillJson(route, buildPaginated(items, pageNumber, pageSize));
+        const resolvedItems = items.map((plot) =>
+          withResolvedPlotCoordinates(plot, state.properties)
+        );
+
+        await fulfillJson(route, buildPaginated(resolvedItems, pageNumber, pageSize));
         return;
       }
 
@@ -568,7 +591,7 @@ export async function installApiMocks(
           return;
         }
 
-        await fulfillJson(route, plot);
+        await fulfillJson(route, withResolvedPlotCoordinates(plot, state.properties));
         return;
       }
 

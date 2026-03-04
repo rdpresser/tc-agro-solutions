@@ -5,6 +5,7 @@
 import {
   createSensor,
   fetchFarmSwagger,
+  getPlot,
   getPlotsPaginated,
   getSensorById,
   normalizeError,
@@ -23,6 +24,10 @@ const preselectedPlotId = getQueryParam('plotId');
 const OWNER_PAGE_SIZE = 1000;
 const OWNER_SORT_BY = 'name';
 const OWNER_SORT_DIRECTION = 'asc';
+const COORDINATE_DECIMAL_PLACES = 6;
+const ZERO_COORDINATE = '0.000000';
+const plotLocationById = new Map();
+let plotLocationRequestVersion = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return;
@@ -257,17 +262,41 @@ async function loadPlotOptions() {
       filter: ''
     });
 
+    plotLocationById.clear();
+
     select.innerHTML = `<option value="">Select a plot...</option>${plots
-      .map((plot) => `<option value="${plot.id}">${plot.name} • ${plot.propertyName}</option>`)
+      .map((plot) => {
+        const plotId = String(plot?.id || plot?.Id || '');
+        if (!plotId) {
+          return '';
+        }
+
+        const { latitude, longitude } = normalizePlotLocation(plot);
+        plotLocationById.set(plotId, { latitude, longitude });
+
+        const latitudeDataAttribute = latitude !== null ? ` data-latitude="${latitude}"` : '';
+        const longitudeDataAttribute = longitude !== null ? ` data-longitude="${longitude}"` : '';
+
+        const plotName = escapeHtml(plot?.name || plot?.Name || 'Unnamed plot');
+        const propertyName = escapeHtml(
+          plot?.propertyName || plot?.PropertyName || 'Unknown property'
+        );
+
+        return `<option value="${plotId}"${latitudeDataAttribute}${longitudeDataAttribute}>${plotName} • ${propertyName}</option>`;
+      })
+      .filter(Boolean)
       .join('')}`;
 
     if (currentValue) {
       select.value = currentValue;
     }
+
+    await syncPlotLocationFields();
   } catch (error) {
     const { message } = normalizeError(error);
     console.error('Error loading plot options:', error);
     toast(message || 'Failed to load plots', 'error');
+    setPlotLocationMessage('Unable to load location coordinates', true);
   }
 }
 
@@ -281,6 +310,14 @@ function setupFormHandler() {
   if (ownerSelect) {
     ownerSelect.addEventListener('change', () => {
       ownerSelect.setCustomValidity('');
+    });
+  }
+
+  const plotSelect = $id('plotId');
+  if (plotSelect) {
+    plotSelect.addEventListener('change', () => {
+      plotSelect.setCustomValidity('');
+      void syncPlotLocationFields();
     });
   }
 }
@@ -415,8 +452,22 @@ function populateForm(sensor) {
 
   const plotIdSelect = $id('plotId');
   if (plotIdSelect) {
-    plotIdSelect.innerHTML = `<option value="${sensor.plotId}">${sensor.plotName} • ${sensor.propertyName}</option>`;
-    plotIdSelect.value = sensor.plotId;
+    const sensorPlotId = String(sensor.plotId || sensor.PlotId || '');
+    const sensorPlotName = escapeHtml(sensor.plotName || sensor.PlotName || 'Unknown plot');
+    const sensorPropertyName = escapeHtml(
+      sensor.propertyName || sensor.PropertyName || 'Unknown property'
+    );
+    const { latitude, longitude } = normalizePlotLocation(sensor);
+
+    if (sensorPlotId) {
+      plotLocationById.set(sensorPlotId, { latitude, longitude });
+    }
+
+    const latitudeDataAttribute = latitude !== null ? ` data-latitude="${latitude}"` : '';
+    const longitudeDataAttribute = longitude !== null ? ` data-longitude="${longitude}"` : '';
+
+    plotIdSelect.innerHTML = `<option value="${sensorPlotId}"${latitudeDataAttribute}${longitudeDataAttribute}>${sensorPlotName} • ${sensorPropertyName}</option>`;
+    plotIdSelect.value = sensorPlotId;
   }
 
   const typeSelect = $id('type');
@@ -434,6 +485,141 @@ function populateForm(sensor) {
     const element = $id(id);
     if (element) element.value = value;
   });
+
+  void syncPlotLocationFields();
+}
+
+function normalizePlotLocation(plot) {
+  const latitude = normalizeCoordinate(
+    plot?.latitude ?? plot?.Latitude ?? plot?.plotLatitude ?? plot?.PlotLatitude
+  );
+  const longitude = normalizeCoordinate(
+    plot?.longitude ?? plot?.Longitude ?? plot?.plotLongitude ?? plot?.PlotLongitude
+  );
+
+  return { latitude, longitude };
+}
+
+function normalizeCoordinate(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function formatCoordinate(value) {
+  return Number(value).toFixed(COORDINATE_DECIMAL_PLACES);
+}
+
+function setPlotLocationValues(latitude, longitude) {
+  const latitudeField = $id('plotLatitude');
+  const longitudeField = $id('plotLongitude');
+
+  if (latitudeField) {
+    latitudeField.value = latitude;
+  }
+
+  if (longitudeField) {
+    longitudeField.value = longitude;
+  }
+}
+
+function resetPlotLocationValues() {
+  setPlotLocationValues('', '');
+  setPlotLocationMessage('Select a plot to view location coordinates');
+}
+
+function setPlotLocationMessage(message, isWarning = false) {
+  const messageElement = $id('plotLocationMessage');
+  if (!messageElement) return;
+
+  messageElement.textContent = message;
+  messageElement.classList.toggle('text-warning', isWarning);
+}
+
+function readLocationFromOption(plotId) {
+  const plotSelect = $id('plotId');
+  if (!plotSelect) {
+    return null;
+  }
+
+  const selectedOption = Array.from(plotSelect.options).find((option) => option.value === plotId);
+  if (!selectedOption) {
+    return null;
+  }
+
+  return {
+    latitude: normalizeCoordinate(selectedOption.dataset.latitude),
+    longitude: normalizeCoordinate(selectedOption.dataset.longitude)
+  };
+}
+
+async function resolvePlotLocation(plotId) {
+  const normalizedPlotId = String(plotId || '').trim();
+  if (!normalizedPlotId) {
+    return { latitude: null, longitude: null };
+  }
+
+  const cachedLocation = plotLocationById.get(normalizedPlotId);
+  if (cachedLocation) {
+    return cachedLocation;
+  }
+
+  const optionLocation = readLocationFromOption(normalizedPlotId);
+  if (optionLocation) {
+    plotLocationById.set(normalizedPlotId, optionLocation);
+    return optionLocation;
+  }
+
+  try {
+    const plot = await getPlot(normalizedPlotId);
+    const location = normalizePlotLocation(plot);
+    plotLocationById.set(normalizedPlotId, location);
+    return location;
+  } catch (error) {
+    console.error('Error loading plot location:', error);
+    return { latitude: null, longitude: null };
+  }
+}
+
+async function syncPlotLocationFields() {
+  const plotSelect = $id('plotId');
+  if (!plotSelect) {
+    return;
+  }
+
+  const selectedPlotId = String(plotSelect.value || '').trim();
+  if (!selectedPlotId) {
+    resetPlotLocationValues();
+    return;
+  }
+
+  const requestVersion = ++plotLocationRequestVersion;
+  const { latitude, longitude } = await resolvePlotLocation(selectedPlotId);
+  if (requestVersion !== plotLocationRequestVersion) {
+    return;
+  }
+
+  const hasNoCoordinates = latitude === null && longitude === null;
+  if (hasNoCoordinates) {
+    setPlotLocationValues(ZERO_COORDINATE, ZERO_COORDINATE);
+    setPlotLocationMessage(
+      '⚠️ Plot and property coordinates are not configured. Showing 0.000000 fallback.',
+      true
+    );
+    return;
+  }
+
+  const normalizedLatitude = latitude ?? 0;
+  const normalizedLongitude = longitude ?? 0;
+
+  setPlotLocationValues(
+    formatCoordinate(normalizedLatitude),
+    formatCoordinate(normalizedLongitude)
+  );
+  setPlotLocationMessage('Coordinates loaded from selected plot or property fallback');
 }
 
 function extractApiErrorMessage(error) {
