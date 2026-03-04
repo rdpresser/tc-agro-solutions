@@ -44,9 +44,7 @@ Deadline: February 27, 2026 | Team: 4 backend developers
 
 A quick, fun intro to the team behind TC Agro Solutions. 🌱
 
-[![Meet the Farmers](docs/images/meet-the-farmers-thumbnail.svg)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/rdpresser/tc-agro-solutions/b546875b3663d59aeb447c426b0a34cc0d1aab60/docs/video/meet-the-farmers.html)
-
-> Click the thumbnail to open an embedded player page.
+![grok_video_2026-03-01-02-38-27](https://github.com/user-attachments/assets/09f092bd-5d94-4766-ac55-c08bf9a9f8dd)
 
 Alternative links:
 
