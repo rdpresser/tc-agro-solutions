@@ -634,8 +634,10 @@ services:
       - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
 
       # .NET Configuration - Weather Provider (WeatherProvider.*)
+      - WeatherProvider__BaseUrl=https://api.open-meteo.com
       - WeatherProvider__Latitude=-22.7256
       - WeatherProvider__Longitude=-47.6492
+      - WeatherProvider__MaxCoordinatesPerRequest=50
 
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}

@@ -47,8 +47,10 @@ data:
   Services__Dashboard__HttpPort: "5005"
 
   # Weather provider (service-specific)
+  WeatherProvider__BaseUrl: "https://api.open-meteo.com"
   WeatherProvider__Latitude: "-22.7256"
   WeatherProvider__Longitude: "-47.6492"
+  WeatherProvider__MaxCoordinatesPerRequest: "50"
 
   # Logging
   Logging__LogLevel__Default: "Information"
