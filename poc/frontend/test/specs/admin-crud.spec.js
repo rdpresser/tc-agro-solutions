@@ -75,6 +75,9 @@ test.describe('Admin CRUD coverage', () => {
   test('plots: create and edit read-only constraint', async ({ page }) => {
     await page.goto('plots.html');
     await expect(page.locator('#plots-tbody tr')).toHaveCount(1);
+    const cropTypeCell = page.locator('#plots-tbody tr').first().locator('td').nth(3);
+    await expect(cropTypeCell).toContainText('🌿');
+    await expect(cropTypeCell).toContainText('Soybean');
 
     await page.goto('plots-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeVisible();

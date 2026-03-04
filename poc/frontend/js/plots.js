@@ -265,9 +265,7 @@ function renderPlotsTable(plots) {
       <td>${plot.ownerName}</td>
       <td><strong>${plot.name}</strong></td>
       <td>${plot.propertyName}</td>
-      <td>
-        <span class="badge badge-info">${formatCropType(plot.cropType)}</span>
-      </td>
+      <td>${formatCropType(plot.cropType)}</td>
       <td>${formatDate(plot.plantingDate)}</td>
       <td>${formatDate(plot.expectedHarvestDate)}</td>
       <td>${getIrrigationTypeDisplay(plot.irrigationType)}</td>
@@ -322,11 +320,12 @@ function renderSummary(state) {
 
 function formatCropType(cropType) {
   const value = String(cropType || '').trim();
-  if (!value) return '-';
+  if (!value || value === '-') return '-';
 
   const normalized = value.toLowerCase();
-  const match = COMMON_CROP_TYPES.find((item) => item.toLowerCase() === normalized);
-  return match || value;
+  const match = COMMON_CROP_TYPES.find((item) => item.toLowerCase() === normalized) || value;
+  const icon = CROP_TYPE_ICONS[match] || '🌿';
+  return `${icon} ${match}`;
 }
 
 // ============================================

@@ -193,6 +193,111 @@
                   <span class="form-helper">Total cultivable area in hectares</span>
                 </div>
               </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="latitude" class="form-label">Latitude (centroid)</label>
+                  <input
+                    type="number"
+                    id="latitude"
+                    name="latitude"
+                    class="form-control"
+                    placeholder="e.g., -21.177500"
+                    step="0.000001"
+                    readonly
+                  />
+                  <span class="form-helper">Generated from polygon draw (or map center fallback)</span>
+                </div>
+                <div class="form-group">
+                  <label for="longitude" class="form-label">Longitude (centroid)</label>
+                  <input
+                    type="number"
+                    id="longitude"
+                    name="longitude"
+                    class="form-control"
+                    placeholder="e.g., -47.810300"
+                    step="0.000001"
+                    readonly
+                  />
+                  <span class="form-helper">Generated from polygon draw (or map center fallback)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="form-section-title">🗺️ Plot Boundary</h3>
+              <p class="text-muted" style="margin-bottom: 16px">
+                Draw the plot boundary polygon. Area is calculated automatically in hectares.
+              </p>
+              <div class="location-search-wrapper" style="margin-bottom: 12px">
+                <div class="location-search">
+                  <input
+                    type="text"
+                    id="plotBoundarySearchInput"
+                    class="form-control"
+                    placeholder="Search location for this plot (e.g., Ribeirão Preto, SP)"
+                  />
+                  <button type="button" id="plotBoundarySearchBtn" class="btn btn-outline">
+                    🔍 Search
+                  </button>
+                </div>
+                <div id="plotBoundarySearchResults" class="search-results" style="display: none">
+                  <div class="search-results-title">Results:</div>
+                  <div id="plotBoundaryResultsList" class="results-list"></div>
+                </div>
+              </div>
+              <div id="plotBoundaryLocationInfo" class="location-info" style="margin-bottom: 12px">
+                📍 Select a location to preview on map
+              </div>
+              <div id="plotBoundaryMapWrapper" class="plot-map-wrapper">
+                <button
+                  type="button"
+                  id="plotBoundaryExpandBtn"
+                  class="plot-map-expand-btn"
+                  aria-label="Expand boundary map"
+                  title="Expand map"
+                >
+                  ⛶
+                </button>
+                <div id="plotBoundaryMap" class="map-container" style="height: 420px"></div>
+              </div>
+              <div class="form-row" style="margin-top: 16px">
+                <div class="form-group">
+                  <label for="calculatedAreaDisplay" class="form-label">Calculated Area</label>
+                  <input
+                    type="text"
+                    id="calculatedAreaDisplay"
+                    class="form-control"
+                    value="Not calculated yet"
+                    readonly
+                    disabled
+                  />
+                </div>
+                <div class="form-group" style="display: flex; align-items: end">
+                  <button id="useCurrentPointBtn" type="button" class="btn btn-secondary" style="width: 100%">
+                    📍 Use Current Point as Center
+                  </button>
+                </div>
+                <div class="form-group" style="display: flex; align-items: end">
+                  <button id="clearBoundaryBtn" type="button" class="btn btn-outline" style="width: 100%">
+                    🧹 Clear Boundary
+                  </button>
+                </div>
+              </div>
+              <span id="useCurrentPointHint" class="form-helper">
+                Available when no boundary polygon is defined.
+              </span>
+              <div class="form-group">
+                <label for="boundaryGeoJson" class="form-label">Boundary GeoJSON</label>
+                <textarea
+                  id="boundaryGeoJson"
+                  name="boundaryGeoJson"
+                  class="form-control"
+                  rows="4"
+                  readonly
+                  placeholder="Generated automatically after drawing polygon"
+                ></textarea>
+                <span class="form-helper">Stored as GeoJSON Polygon for backend processing</span>
+              </div>
             </div>
 
             <!-- Crop Information (MANDATORY per hackathon requirements) -->
@@ -204,8 +309,19 @@
                   <select id="cropType" name="cropType" class="form-control form-select" required>
                     <option value="">Select crop type...</option>
                   </select>
+                  <div style="display: flex; gap: 8px; margin-top: 8px">
+                    <button type="button" id="openCropPickerBtn" class="btn btn-outline btn-sm">
+                      🔎 Search Crop
+                    </button>
+                    <button type="button" id="openCropDefaultsTableBtn" class="btn btn-outline btn-sm">
+                      📊 View Defaults
+                    </button>
+                  </div>
                   <span class="form-helper required-note">
                     ⚠️ Required: Type of crop planted in this plot
+                  </span>
+                  <span id="cropTypePlantingHint" class="form-helper">
+                    Select a crop to see suggested planting window.
                   </span>
                 </div>
                 <div class="form-group">
@@ -347,6 +463,82 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <div id="cropPickerModal" class="modal" aria-hidden="true" inert>
+      <div id="cropPickerModalContent" class="modal-content" style="max-width: 720px">
+        <div class="modal-header">
+          <h3>🌿 Select Crop Type</h3>
+          <button id="cropPickerCloseBtn" class="modal-close" type="button" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button id="cropPickerSearchModeBtn" type="button" class="btn btn-secondary btn-sm">
+              🔎 Search & Select
+            </button>
+            <button id="cropPickerTableModeBtn" type="button" class="btn btn-outline btn-sm">
+              📊 Defaults Table
+            </button>
+          </div>
+
+          <div id="cropPickerSearchPanel">
+            <div class="form-group" style="margin-bottom: 0">
+              <label for="cropPickerSearch" class="form-label">Search Crop</label>
+              <input
+                id="cropPickerSearch"
+                type="text"
+                class="form-control"
+                placeholder="Type crop name (e.g., Corn, Soy, Coffee)"
+              />
+              <span class="form-helper">
+                Local search using crop list configured in the frontend.
+              </span>
+            </div>
+            <div
+              id="cropPickerResults"
+              class="results-list"
+              style="border: 1px solid var(--color-border); border-radius: var(--border-radius)"
+            ></div>
+          </div>
+
+          <div id="cropDefaultsTablePanel" style="display: none">
+            <div class="form-helper" style="margin-bottom: 10px">
+              Fixed values used to prefill planting, harvest, irrigation and alert thresholds. Click
+              any row to select that crop type.
+            </div>
+            <div class="form-group" style="margin-bottom: 10px">
+              <label for="cropDefaultsFilterInput" class="form-label">Filter Defaults Table</label>
+              <input
+                id="cropDefaultsFilterInput"
+                type="text"
+                class="form-control"
+                placeholder="Filter by crop, irrigation, planting window or thresholds"
+              />
+            </div>
+            <div id="cropDefaultsTableContainer" class="table-container">
+              <table id="cropDefaultsTable" class="table">
+                <thead>
+                  <tr>
+                    <th>Crop</th>
+                    <th>Planting Window</th>
+                    <th>Harvest (months)</th>
+                    <th>Suggested Irrigation</th>
+                    <th>Min Soil Moisture</th>
+                    <th>Max Temperature</th>
+                    <th>Min Humidity</th>
+                  </tr>
+                </thead>
+                <tbody id="cropDefaultsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cropPickerCancelBtn" type="button" class="btn btn-outline">Close</button>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts (ES Module) -->

@@ -1624,6 +1624,82 @@ p {
   justify-content: flex-end;
 }
 
+#cropDefaultsTableContainer {
+  max-height: min(56vh, 520px);
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+#cropDefaultsTable {
+  min-width: 980px;
+}
+
+#cropDefaultsTable th,
+#cropDefaultsTable td {
+  padding: 12px 14px;
+}
+
+#cropDefaultsTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-background);
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+#cropDefaultsTable th:first-child,
+#cropDefaultsTable td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  z-index: 1;
+  box-shadow: inset -1px 0 0 var(--color-border);
+}
+
+#cropDefaultsTable thead th:first-child {
+  z-index: 3;
+  background: var(--color-background);
+}
+
+#cropDefaultsTable tbody tr:hover td:first-child {
+  background: rgba(45, 80, 22, 0.02);
+}
+
+#cropDefaultsTable tbody tr.crop-default-selectable-row {
+  cursor: pointer;
+}
+
+#cropDefaultsTable tbody tr.crop-default-selectable-row:focus-visible td {
+  background: rgba(45, 80, 22, 0.06);
+}
+
+#cropDefaultsTable tbody tr.crop-default-selectable-row:focus-visible td:first-child {
+  background: rgba(45, 80, 22, 0.06);
+}
+
+@media (max-width: 1280px) {
+  #cropDefaultsTable {
+    min-width: 900px;
+  }
+
+  #cropDefaultsTable th,
+  #cropDefaultsTable td {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  #cropDefaultsTable {
+    min-width: 820px;
+  }
+
+  #cropDefaultsTable th,
+  #cropDefaultsTable td {
+    padding: 9px 10px;
+    font-size: 0.9rem;
+  }
+}
+
 /* Location Search */
 .location-search-wrapper {
   position: relative;
@@ -1744,6 +1820,69 @@ p {
   flex-shrink: 0;
 }
 
+.plot-map-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.plot-map-expand-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 700;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.plot-map-expand-btn:hover {
+  background-color: var(--color-background);
+}
+
+.plot-map-wrapper.is-expanded {
+  --map-overlay-gutter-x: clamp(16px, 4vw, 120px);
+  --map-overlay-gutter-y: clamp(12px, 2vh, 24px);
+  position: fixed;
+  top: var(--map-overlay-gutter-y);
+  bottom: var(--map-overlay-gutter-y);
+  left: var(--map-overlay-gutter-x);
+  right: var(--map-overlay-gutter-x);
+  width: auto;
+  max-width: calc(100dvw - (var(--map-overlay-gutter-x) * 2));
+  display: flex;
+  align-items: stretch;
+  z-index: 1200;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-hover);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.plot-map-wrapper.is-expanded .map-container {
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+}
+
+.plot-map-wrapper.is-expanded .map-container .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+}
+
+body.map-overlay-open {
+  overflow: hidden;
+}
+
 .location-info {
   padding: 12px 16px;
   background-color: var(--color-background);
@@ -1775,6 +1914,30 @@ p {
 
   .map-container {
     height: 300px;
+  }
+
+  .plot-map-wrapper.is-expanded {
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    max-width: calc(100dvw - 16px);
+    display: flex;
+    align-items: stretch;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  .plot-map-wrapper.is-expanded .map-container {
+    width: 100%;
+    height: 100% !important;
+    min-height: 0;
+  }
+
+  .plot-map-wrapper.is-expanded .map-container .leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
   }
 
   .results-list {
