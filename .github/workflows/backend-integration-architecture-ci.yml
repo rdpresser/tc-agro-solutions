@@ -1,4 +1,4 @@
-name: Backend Integration + Architecture
+name: 🏗️ Backend Integration + Architecture
 
 on:
   workflow_dispatch:

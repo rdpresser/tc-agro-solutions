@@ -42,7 +42,7 @@
     <File Path="../../.github/workflows/backend-integration-architecture-ci.yml" />
     <File Path="../../.github/workflows/frontend-ci.yml" />
   </Folder>
-  <Folder Name="/Test/">
+  <Folder Name="/Test_E2E/">
     <File Path="../../test/Directory.Build.props" />
     <File Path="../../test/Directory.Build.targets" />
     <File Path="../../test/Directory.Packages.props" />
@@ -50,7 +50,7 @@
     <Project Path="../../test/TC.Agro.Architecture.Tests/TC.Agro.Architecture.Tests.csproj" />
     <Project Path="../../test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj" />
   </Folder>
-  <Folder Name="/Test/Test Items/">
+  <Folder Name="/Test_E2E/Test Items/">
     <File Path="../../test/Directory.Build.props" />
     <File Path="../../test/Directory.Build.targets" />
     <File Path="../../test/Directory.Packages.props" />
