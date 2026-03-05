@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <TestingPlatformDotnetTestSupport>false</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatform>false</UseMicrosoftTestingPlatform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\services\analytics-worker\src\Adapters\Inbound\TC.Agro.Analytics.Service\TC.Agro.Analytics.Service.csproj" />
+    <ProjectReference Include="..\..\services\analytics-worker\src\Core\TC.Agro.Analytics.Application\TC.Agro.Analytics.Application.csproj" />
+    <ProjectReference Include="..\..\services\farm-service\src\Core\TC.Agro.Farm.Application\TC.Agro.Farm.Application.csproj" />
+    <ProjectReference Include="..\..\services\identity-service\src\Adapters\Inbound\TC.Agro.Identity.Service\TC.Agro.Identity.Service.csproj" />
+    <ProjectReference Include="..\..\services\farm-service\src\Adapters\Inbound\TC.Agro.Farm.Service\TC.Agro.Farm.Service.csproj" />
+    <ProjectReference Include="..\..\services\identity-service\src\Core\TC.Agro.Identity.Application\TC.Agro.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\services\sensor-ingest-service\src\Adapters\Inbound\TC.Agro.SensorIngest.Service\TC.Agro.SensorIngest.Service.csproj" />
+    <ProjectReference Include="..\..\services\sensor-ingest-service\src\Core\TC.Agro.SensorIngest.Application\TC.Agro.SensorIngest.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

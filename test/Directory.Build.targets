@@ -1,0 +1,29 @@
+<Project>
+  <!-- ===========================================
+       Enforce: Central Package Management (CPM)
+       =========================================== -->
+  <Target Name="FailIfPackageReferenceHasVersion" BeforeTargets="CollectPackageReferences" Condition="'$(ManagePackageVersionsCentrally)' == 'true'">
+
+    <!-- Get all PackageReference with Version -->
+    <ItemGroup>
+      <PackageRefsWithVersion Include="@(PackageReference)" Condition="'%(PackageReference.Version)' != ''" />
+    </ItemGroup>
+
+    <Error Condition="'@(PackageRefsWithVersion)' != ''" Text="Central Package Management (CPM) is enabled. Do not specify Version attribute in .csproj files. Move the version to Directory.Packages.props. Violations: @(PackageRefsWithVersion->'%(Identity)=%(Version)', ' | ')" />
+  </Target>
+
+  <Target Name="FailIfTargetFrameworkIsNotNet10" BeforeTargets="Build">
+    <Error Condition="'$(TargetFramework)' != '' AND '$(TargetFramework)' != 'net10.0'" Text="Invalid TargetFramework: $(TargetFramework). Required standard: net10.0" />
+  </Target>
+
+  <!-- Suppress NU1608 warnings for CodeAnalysis transitive version conflicts -->
+  <!-- SonarAnalyzer 10.18.0 requires CodeAnalysis 4.14.0, but EF Core 10.0.2 requires 5.0.0 -->
+  <!-- We force 5.0.0 which is backward compatible with 4.14.0 -->
+  <PropertyGroup>
+    <!-- Convert NU1608 from error to warning (if TreatWarningsAsErrors is set) -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1608</WarningsNotAsErrors>
+    
+    <!-- Completely suppress NU1608 from build output (no warnings shown) -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
+  </PropertyGroup>
+</Project>
