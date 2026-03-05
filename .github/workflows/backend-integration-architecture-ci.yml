@@ -19,15 +19,15 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout parent repository
+      - name: 01/18 ⬇️ Checkout parent repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
+      - name: 02/18 🧰 Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
-      - name: Clone required repositories
+      - name: 03/18 📚 Clone required repositories
         run: |
           rm -rf common services/identity-service services/farm-service services/sensor-ingest-service services/analytics-worker
           mkdir -p services
@@ -37,22 +37,49 @@ jobs:
           git clone --depth 1 https://github.com/rdpresser/tc-agro-sensor-ingest-service.git services/sensor-ingest-service
           git clone --depth 1 https://github.com/rdpresser/tc-agro-analytics-worker.git services/analytics-worker
 
-      - name: Docker info
+      - name: 04/18 🐳 Docker info
         run: docker version
 
-      - name: Restore architecture tests
-        run: dotnet restore test/TC.Agro.Architecture.Tests/TC.Agro.Architecture.Tests.csproj
+      - name: 05/18 🧭 Phase 1 - Restore Architecture Test Projects
+        run: echo "Restoring architecture test projects by service."
 
-      - name: Restore integration tests
+      - name: 06/18 📦 [Architecture Restore] Identity Service
+        run: dotnet restore services/identity-service/test/TC.Agro.Identity.Architecture.Tests/TC.Agro.Identity.Architecture.Tests.csproj
+
+      - name: 07/18 📦 [Architecture Restore] Farm Service
+        run: dotnet restore services/farm-service/test/TC.Agro.Farm.Architecture.Tests/TC.Agro.Farm.Architecture.Tests.csproj
+
+      - name: 08/18 📦 [Architecture Restore] Sensor Ingest Service
+        run: dotnet restore services/sensor-ingest-service/test/TC.Agro.SensorIngest.Architecture.Tests/TC.Agro.SensorIngest.Architecture.Tests.csproj
+
+      - name: 09/18 📦 [Architecture Restore] Analytics Worker
+        run: dotnet restore services/analytics-worker/test/TC.Agro.Analytics.Architecture.Tests/TC.Agro.Analytics.Architecture.Tests.csproj
+
+      - name: 10/18 🧭 Phase 2 - Run Architecture Test Suites
+        run: echo "Running architecture tests per service for visual CI progress."
+
+      - name: 11/18 🧪 [Architecture Tests] Identity Service
+        run: dotnet test services/identity-service/test/TC.Agro.Identity.Architecture.Tests/TC.Agro.Identity.Architecture.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=identity-architecture.trx" -p:RunSettingsFilePath=
+
+      - name: 12/18 🧪 [Architecture Tests] Farm Service
+        run: dotnet test services/farm-service/test/TC.Agro.Farm.Architecture.Tests/TC.Agro.Farm.Architecture.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=farm-architecture.trx" -p:RunSettingsFilePath=
+
+      - name: 13/18 🧪 [Architecture Tests] Sensor Ingest Service
+        run: dotnet test services/sensor-ingest-service/test/TC.Agro.SensorIngest.Architecture.Tests/TC.Agro.SensorIngest.Architecture.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=sensor-ingest-architecture.trx" -p:RunSettingsFilePath=
+
+      - name: 14/18 🧪 [Architecture Tests] Analytics Worker
+        run: dotnet test services/analytics-worker/test/TC.Agro.Analytics.Architecture.Tests/TC.Agro.Analytics.Architecture.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=analytics-architecture.trx" -p:RunSettingsFilePath=
+
+      - name: 15/18 🧭 Phase 3 - Integration Tests
+        run: echo "Restoring and running full integration test suite."
+
+      - name: 16/18 📦 [Integration Restore] Identity -> Farm flow
         run: dotnet restore test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj
 
-      - name: Run architecture tests
-        run: dotnet test test/TC.Agro.Architecture.Tests/TC.Agro.Architecture.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=architecture.trx" -p:RunSettingsFilePath=
-
-      - name: Run integration tests (Identity -> Farm)
+      - name: 17/18 🔗 [Integration Tests] Identity -> Farm flow
         run: dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=integration.trx" -p:RunSettingsFilePath=
 
-      - name: Upload test results
+      - name: 18/18 📤 Upload test results artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:

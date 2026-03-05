@@ -10,24 +10,28 @@
     <Project Path="../../services/identity-service/src/Adapters/Outbound/TC.Agro.Identity.Infrastructure/TC.Agro.Identity.Infrastructure.csproj" />
     <Project Path="../../services/identity-service/src/Core/TC.Agro.Identity.Application/TC.Agro.Identity.Application.csproj" />
     <Project Path="../../services/identity-service/src/Core/TC.Agro.Identity.Domain/TC.Agro.Identity.Domain.csproj" />
+    <Project Path="../../services/identity-service/test/TC.Agro.Identity.Architecture.Tests/TC.Agro.Identity.Architecture.Tests.csproj" />
   </Folder>
   <Folder Name="/Services/02-Farm-Service/">
     <Project Path="../../services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/TC.Agro.Farm.Service.csproj" />
     <Project Path="../../services/farm-service/src/Adapters/Outbound/TC.Agro.Farm.Infrastructure/TC.Agro.Farm.Infrastructure.csproj" />
     <Project Path="../../services/farm-service/src/Core/TC.Agro.Farm.Application/TC.Agro.Farm.Application.csproj" />
     <Project Path="../../services/farm-service/src/Core/TC.Agro.Farm.Domain/TC.Agro.Farm.Domain.csproj" />
+    <Project Path="../../services/farm-service/test/TC.Agro.Farm.Architecture.Tests/TC.Agro.Farm.Architecture.Tests.csproj" />
   </Folder>
   <Folder Name="/Services/03-Sensor-Ingest-Service/">
     <Project Path="../../services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service/TC.Agro.SensorIngest.Service.csproj" />
     <Project Path="../../services/sensor-ingest-service/src/Adapters/Outbound/TC.Agro.SensorIngest.Infrastructure/TC.Agro.SensorIngest.Infrastructure.csproj" />
     <Project Path="../../services/sensor-ingest-service/src/Core/TC.Agro.SensorIngest.Application/TC.Agro.SensorIngest.Application.csproj" />
     <Project Path="../../services/sensor-ingest-service/src/Core/TC.Agro.SensorIngest.Domain/TC.Agro.SensorIngest.Domain.csproj" />
+    <Project Path="../../services/sensor-ingest-service/test/TC.Agro.SensorIngest.Architecture.Tests/TC.Agro.SensorIngest.Architecture.Tests.csproj" />
   </Folder>
   <Folder Name="/Services/04-Analytics-Worker-Service/">
     <Project Path="../../services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/TC.Agro.Analytics.Service.csproj" />
     <Project Path="../../services/analytics-worker/src/Adapters/Outbound/TC.Agro.Analytics.Infrastructure/TC.Agro.Analytics.Infrastructure.csproj" />
     <Project Path="../../services/analytics-worker/src/Core/TC.Agro.Analytics.Application/TC.Agro.Analytics.Application.csproj" />
     <Project Path="../../services/analytics-worker/src/Core/TC.Agro.Analytics.Domain/TC.Agro.Analytics.Domain.csproj" />
+    <Project Path="../../services/analytics-worker/test/TC.Agro.Analytics.Architecture.Tests/TC.Agro.Analytics.Architecture.Tests.csproj" />
   </Folder>
   <Folder Name="/Shared/">
     <Project Path="../../common/src/TC.Agro.Contracts/TC.Agro.Contracts.csproj" />
@@ -47,7 +51,6 @@
     <File Path="../../test/Directory.Build.targets" />
     <File Path="../../test/Directory.Packages.props" />
     <File Path="../../test/global.json" />
-    <Project Path="../../test/TC.Agro.Architecture.Tests/TC.Agro.Architecture.Tests.csproj" />
     <Project Path="../../test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj" />
   </Folder>
   <Folder Name="/Test_E2E/Test Items/">
