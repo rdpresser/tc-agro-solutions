@@ -1,12 +1,12 @@
 namespace TC.Agro.Integration.Tests.Abstractions;
 
-[Collection(nameof(IntegrationTestCollection))]
+[Collection(nameof(CrossServiceIntegrationTestCollection))]
 public abstract class BaseIntegrationTest
 {
-    protected BaseIntegrationTest(IdentityFarmIntegrationFixture fixture)
+    protected BaseIntegrationTest(CrossServiceIntegrationFixture fixture)
     {
         Fixture = fixture;
     }
 
-    protected IdentityFarmIntegrationFixture Fixture { get; }
+    protected CrossServiceIntegrationFixture Fixture { get; }
 }
