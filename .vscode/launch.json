@@ -1,0 +1,120 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Docker Compose (Infrastructure Only)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "docker-compose-infra-up",
+      "program": "dotnet",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "K8s: Infra Only (Run)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "prepare-k8s-run",
+      "program": "dotnet",
+      "args": [
+        "--info"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": ".NET: Identity Service (Debug - K8s Infra Ready)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "prepare-k8s-debug-identity",
+      "program": "${workspaceFolder}/services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/bin/Debug/net10.0/TC.Agro.Identity.Service.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5001"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": ".NET: Farm Service (Debug - K8s Infra Ready)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/bin/Debug/net10.0/TC.Agro.Farm.Service.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5002"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": ".NET: Sensor Ingest Service (Debug - K8s Infra Ready)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service/bin/Debug/net10.0/TC.Agro.SensorIngest.Service.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5003"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": ".NET: Analytics Worker (Debug - K8s Infra Ready)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/bin/Debug/net10.0/TC.Agro.Analytics.Service.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5004"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack + Aspire + Identity Debug",
+      "configurations": [
+        ".NET: Identity Service (Debug - K8s Infra Ready)"
+      ],
+      "stopAll": true,
+      "preLaunchTask": "prepare-fullstack"
+    },
+    {
+      "name": "Run K8s + Infra (No Debug)",
+      "configurations": [
+        "K8s: Infra Only (Run)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Run K8s + Services (Debug)",
+      "configurations": [
+        ".NET: Identity Service (Debug - K8s Infra Ready)",
+        ".NET: Farm Service (Debug - K8s Infra Ready)",
+        ".NET: Sensor Ingest Service (Debug - K8s Infra Ready)",
+        ".NET: Analytics Worker (Debug - K8s Infra Ready)"
+      ],
+      "stopAll": true,
+      "preLaunchTask": "prepare-k8s-debug-services"
+    }
+  ]
+}

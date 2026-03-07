@@ -1,0 +1,482 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "docker-compose-infra-up",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"up",
+				"-d",
+				"postgres",
+				"redis",
+				"rabbitmq",
+				"loki",
+				"tempo",
+				"prometheus",
+				"otel-collector",
+				"grafana"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"label": "docker-compose-fullstack-up",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.aspire.yml",
+				"up",
+				"-d",
+				"--no-build",
+				"postgres",
+				"redis",
+				"rabbitmq",
+				"loki",
+				"tempo",
+				"prometheus",
+				"otel-collector",
+				"grafana"
+				//"aspire-dashboard-ui"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"label": "stop-identity-container",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"stop",
+				"tc-agro-identity-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false
+			}
+		},
+		{
+			"label": "stop-farm-container",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"stop",
+				"tc-agro-farm-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false
+			}
+		},
+		{
+			"label": "stop-sensor-ingest-container",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"stop",
+				"tc-agro-sensor-ingest-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false
+			}
+		},
+		{
+			"label": "stop-analytics-worker-container",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"stop",
+				"tc-agro-analytics-worker"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-aspire-up",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.aspire.yml",
+				"up",
+				"-d",
+				"--no-build"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"label": "build-identity-service",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/TC.Agro.Identity.Service.csproj",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "build-farm-service",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/TC.Agro.Farm.Service.csproj",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "build-sensor-ingest-service",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service/TC.Agro.SensorIngest.Service.csproj",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "build-analytics-worker-service",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/TC.Agro.Analytics.Service.csproj",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "prepare-fullstack",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"stop-identity-container",
+				"docker-compose-fullstack-up",
+				"build-identity-service"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "k3d-ensure-compose-infrastructure",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/k3d/ensure-compose-infrastructure.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "k3d-start-cluster",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/k3d/start-cluster.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/scripts/k3d"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "k3d-cluster-status",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/k3d/status.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/scripts/k3d"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "prepare-k8s-run",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"k3d-ensure-compose-infrastructure",
+				"k3d-start-cluster",
+				"k3d-cluster-status"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "prepare-k8s-debug-identity",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"prepare-k8s-run",
+				"stop-identity-container",
+				"build-identity-service"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "prepare-k8s-debug-services",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"prepare-k8s-run",
+				"stop-identity-container",
+				"stop-farm-container",
+				"stop-sensor-ingest-container",
+				"stop-analytics-worker-container",
+				"build-identity-service",
+				"build-farm-service",
+				"build-sensor-ingest-service",
+				"build-analytics-worker-service"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "docker-compose-down",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"down"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-logs",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"logs",
+				"-f"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"isBackground": true,
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": false
+			}
+		},
+		{
+			"label": "frontend-playwright-ci-check",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"playwright",
+				"test",
+				"--reporter=line",
+				"--workers=1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/poc/frontend"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": "test"
+		}
+	]
+}
