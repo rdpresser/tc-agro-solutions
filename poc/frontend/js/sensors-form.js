@@ -5,6 +5,7 @@
 import {
   createSensor,
   fetchFarmSwagger,
+  getProperty,
   getPlot,
   getPlotsPaginated,
   getSensorById,
@@ -26,7 +27,12 @@ const OWNER_SORT_BY = 'name';
 const OWNER_SORT_DIRECTION = 'asc';
 const COORDINATE_DECIMAL_PLACES = 6;
 const ZERO_COORDINATE = '0.000000';
+const COORDINATE_SOURCE_PROPERTY = 'property';
+const COORDINATE_SOURCE_PLOT = 'plot';
+const COORDINATE_SOURCE_MIXED = 'mixed';
+const COORDINATE_SOURCE_NONE = 'none';
 const plotLocationById = new Map();
+const propertyLocationById = new Map();
 let plotLocationRequestVersion = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -249,6 +255,207 @@ function loadSensorTypeOptions() {
   }
 }
 
+function resolveCoordinateFromCandidates(candidates) {
+  for (const candidate of candidates) {
+    const coordinate = normalizeCoordinate(candidate);
+    if (coordinate !== null) {
+      return coordinate;
+    }
+  }
+
+  return null;
+}
+
+function hasAnyCoordinates(location) {
+  return location && (location.latitude !== null || location.longitude !== null);
+}
+
+function hasBothCoordinates(location) {
+  return location && location.latitude !== null && location.longitude !== null;
+}
+
+function normalizeCoordinateSource(source) {
+  const normalized = String(source || '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized === COORDINATE_SOURCE_PROPERTY ||
+    normalized === COORDINATE_SOURCE_PLOT ||
+    normalized === COORDINATE_SOURCE_MIXED ||
+    normalized === COORDINATE_SOURCE_NONE
+  ) {
+    return normalized;
+  }
+
+  return COORDINATE_SOURCE_NONE;
+}
+
+function getCoordinateSourceMessage(source) {
+  switch (normalizeCoordinateSource(source)) {
+    case COORDINATE_SOURCE_PROPERTY:
+      return 'Coordinates source: property (priority)';
+    case COORDINATE_SOURCE_PLOT:
+      return 'Coordinates source: plot';
+    case COORDINATE_SOURCE_MIXED:
+      return 'Coordinates source: mixed (property priority with plot fallback)';
+    default:
+      return 'Coordinates loaded from selected plot';
+  }
+}
+
+function extractPropertyId(record) {
+  const rawPropertyId =
+    record?.propertyId ||
+    record?.PropertyId ||
+    record?.property?.id ||
+    record?.property?.Id ||
+    record?.Property?.id ||
+    record?.Property?.Id ||
+    null;
+
+  const normalizedPropertyId = String(rawPropertyId || '').trim();
+  return normalizedPropertyId.length > 0 ? normalizedPropertyId : null;
+}
+
+function getPropertyLatitude(plot) {
+  return resolveCoordinateFromCandidates([
+    plot?.propertyLatitude,
+    plot?.PropertyLatitude,
+    plot?.property?.latitude,
+    plot?.property?.Latitude,
+    plot?.Property?.latitude,
+    plot?.Property?.Latitude,
+    plot?.propertyLocation?.latitude,
+    plot?.propertyLocation?.Latitude,
+    plot?.PropertyLocation?.latitude,
+    plot?.PropertyLocation?.Latitude,
+    plot?.property?.location?.latitude,
+    plot?.property?.location?.Latitude,
+    plot?.Property?.location?.latitude,
+    plot?.Property?.location?.Latitude
+  ]);
+}
+
+function getPropertyLongitude(plot) {
+  return resolveCoordinateFromCandidates([
+    plot?.propertyLongitude,
+    plot?.PropertyLongitude,
+    plot?.property?.longitude,
+    plot?.property?.Longitude,
+    plot?.Property?.longitude,
+    plot?.Property?.Longitude,
+    plot?.propertyLocation?.longitude,
+    plot?.propertyLocation?.Longitude,
+    plot?.PropertyLocation?.longitude,
+    plot?.PropertyLocation?.Longitude,
+    plot?.property?.location?.longitude,
+    plot?.property?.location?.Longitude,
+    plot?.Property?.location?.longitude,
+    plot?.Property?.location?.Longitude
+  ]);
+}
+
+function getPlotLatitude(plot) {
+  return resolveCoordinateFromCandidates([
+    plot?.plotLatitude,
+    plot?.PlotLatitude,
+    plot?.latitude,
+    plot?.Latitude,
+    plot?.plot?.latitude,
+    plot?.plot?.Latitude,
+    plot?.Plot?.latitude,
+    plot?.Plot?.Latitude
+  ]);
+}
+
+function getPlotLongitude(plot) {
+  return resolveCoordinateFromCandidates([
+    plot?.plotLongitude,
+    plot?.PlotLongitude,
+    plot?.longitude,
+    plot?.Longitude,
+    plot?.plot?.longitude,
+    plot?.plot?.Longitude,
+    plot?.Plot?.longitude,
+    plot?.Plot?.Longitude
+  ]);
+}
+
+function normalizePropertyLocation(property) {
+  const latitude = resolveCoordinateFromCandidates([
+    property?.latitude,
+    property?.Latitude,
+    property?.propertyLatitude,
+    property?.PropertyLatitude,
+    property?.location?.latitude,
+    property?.location?.Latitude,
+    property?.Location?.latitude,
+    property?.Location?.Latitude
+  ]);
+
+  const longitude = resolveCoordinateFromCandidates([
+    property?.longitude,
+    property?.Longitude,
+    property?.propertyLongitude,
+    property?.PropertyLongitude,
+    property?.location?.longitude,
+    property?.location?.Longitude,
+    property?.Location?.longitude,
+    property?.Location?.Longitude
+  ]);
+
+  const source =
+    latitude !== null || longitude !== null ? COORDINATE_SOURCE_PROPERTY : COORDINATE_SOURCE_NONE;
+
+  return {
+    latitude,
+    longitude,
+    source,
+    propertyId: extractPropertyId(property)
+  };
+}
+
+function mergeLocationWithPropertyPriority(plotLocation, propertyLocation, propertyId = null) {
+  const plotLatitude = normalizeCoordinate(plotLocation?.latitude);
+  const plotLongitude = normalizeCoordinate(plotLocation?.longitude);
+  const propertyLatitude = normalizeCoordinate(propertyLocation?.latitude);
+  const propertyLongitude = normalizeCoordinate(propertyLocation?.longitude);
+
+  const latitude = propertyLatitude ?? plotLatitude;
+  const longitude = propertyLongitude ?? plotLongitude;
+
+  let source = COORDINATE_SOURCE_NONE;
+
+  if (propertyLatitude !== null && propertyLongitude !== null) {
+    source = COORDINATE_SOURCE_PROPERTY;
+  } else if (plotLatitude !== null && plotLongitude !== null) {
+    const normalizedPlotSource = normalizeCoordinateSource(plotLocation?.source);
+    source =
+      normalizedPlotSource === COORDINATE_SOURCE_NONE
+        ? COORDINATE_SOURCE_PLOT
+        : normalizedPlotSource;
+  } else if (latitude !== null || longitude !== null) {
+    const hasPropertyCoordinate = propertyLatitude !== null || propertyLongitude !== null;
+    const hasPlotCoordinate = plotLatitude !== null || plotLongitude !== null;
+
+    if (hasPropertyCoordinate && hasPlotCoordinate) {
+      source = COORDINATE_SOURCE_MIXED;
+    } else if (hasPropertyCoordinate) {
+      source = COORDINATE_SOURCE_PROPERTY;
+    } else {
+      source = COORDINATE_SOURCE_PLOT;
+    }
+  }
+
+  return {
+    latitude,
+    longitude,
+    source,
+    propertyId: propertyId || propertyLocation?.propertyId || plotLocation?.propertyId || null
+  };
+}
+
 async function loadPlotOptions() {
   const select = $id('plotId');
   if (!select) return;
@@ -271,18 +478,21 @@ async function loadPlotOptions() {
           return '';
         }
 
-        const { latitude, longitude } = normalizePlotLocation(plot);
-        plotLocationById.set(plotId, { latitude, longitude });
+        const location = normalizePlotLocation(plot);
+        const { latitude, longitude, source, propertyId } = location;
+        plotLocationById.set(plotId, location);
 
         const latitudeDataAttribute = latitude !== null ? ` data-latitude="${latitude}"` : '';
         const longitudeDataAttribute = longitude !== null ? ` data-longitude="${longitude}"` : '';
+        const sourceDataAttribute = ` data-coordinate-source="${source}"`;
+        const propertyIdDataAttribute = propertyId ? ` data-property-id="${propertyId}"` : '';
 
         const plotName = escapeHtml(plot?.name || plot?.Name || 'Unnamed plot');
         const propertyName = escapeHtml(
           plot?.propertyName || plot?.PropertyName || 'Unknown property'
         );
 
-        return `<option value="${plotId}"${latitudeDataAttribute}${longitudeDataAttribute}>${plotName} • ${propertyName}</option>`;
+        return `<option value="${plotId}"${latitudeDataAttribute}${longitudeDataAttribute}${sourceDataAttribute}${propertyIdDataAttribute}>${plotName} • ${propertyName}</option>`;
       })
       .filter(Boolean)
       .join('')}`;
@@ -457,16 +667,19 @@ function populateForm(sensor) {
     const sensorPropertyName = escapeHtml(
       sensor.propertyName || sensor.PropertyName || 'Unknown property'
     );
-    const { latitude, longitude } = normalizePlotLocation(sensor);
+    const location = normalizePlotLocation(sensor);
+    const { latitude, longitude, source, propertyId } = location;
 
     if (sensorPlotId) {
-      plotLocationById.set(sensorPlotId, { latitude, longitude });
+      plotLocationById.set(sensorPlotId, location);
     }
 
     const latitudeDataAttribute = latitude !== null ? ` data-latitude="${latitude}"` : '';
     const longitudeDataAttribute = longitude !== null ? ` data-longitude="${longitude}"` : '';
+    const sourceDataAttribute = ` data-coordinate-source="${source}"`;
+    const propertyIdDataAttribute = propertyId ? ` data-property-id="${propertyId}"` : '';
 
-    plotIdSelect.innerHTML = `<option value="${sensorPlotId}"${latitudeDataAttribute}${longitudeDataAttribute}>${sensorPlotName} • ${sensorPropertyName}</option>`;
+    plotIdSelect.innerHTML = `<option value="${sensorPlotId}"${latitudeDataAttribute}${longitudeDataAttribute}${sourceDataAttribute}${propertyIdDataAttribute}>${sensorPlotName} • ${sensorPropertyName}</option>`;
     plotIdSelect.value = sensorPlotId;
   }
 
@@ -490,14 +703,76 @@ function populateForm(sensor) {
 }
 
 function normalizePlotLocation(plot) {
-  const latitude = normalizeCoordinate(
-    plot?.latitude ?? plot?.Latitude ?? plot?.plotLatitude ?? plot?.PlotLatitude
-  );
-  const longitude = normalizeCoordinate(
-    plot?.longitude ?? plot?.Longitude ?? plot?.plotLongitude ?? plot?.PlotLongitude
-  );
+  const propertyLatitude = getPropertyLatitude(plot);
+  const propertyLongitude = getPropertyLongitude(plot);
+  const plotLatitude = getPlotLatitude(plot);
+  const plotLongitude = getPlotLongitude(plot);
 
-  return { latitude, longitude };
+  const latitude = propertyLatitude ?? plotLatitude;
+  const longitude = propertyLongitude ?? plotLongitude;
+
+  let source = COORDINATE_SOURCE_NONE;
+
+  if (propertyLatitude !== null && propertyLongitude !== null) {
+    source = COORDINATE_SOURCE_PROPERTY;
+  } else if (plotLatitude !== null && plotLongitude !== null) {
+    source = COORDINATE_SOURCE_PLOT;
+  } else if (latitude !== null || longitude !== null) {
+    const hasPropertyCoordinate = propertyLatitude !== null || propertyLongitude !== null;
+    const hasPlotCoordinate = plotLatitude !== null || plotLongitude !== null;
+
+    if (hasPropertyCoordinate && hasPlotCoordinate) {
+      source = COORDINATE_SOURCE_MIXED;
+    } else if (hasPropertyCoordinate) {
+      source = COORDINATE_SOURCE_PROPERTY;
+    } else {
+      source = COORDINATE_SOURCE_PLOT;
+    }
+  }
+
+  return {
+    latitude,
+    longitude,
+    source,
+    propertyId: extractPropertyId(plot)
+  };
+}
+
+async function resolvePropertyLocation(propertyId) {
+  const normalizedPropertyId = String(propertyId || '').trim();
+  if (!normalizedPropertyId) {
+    return {
+      latitude: null,
+      longitude: null,
+      source: COORDINATE_SOURCE_NONE,
+      propertyId: null
+    };
+  }
+
+  const cachedLocation = propertyLocationById.get(normalizedPropertyId);
+  if (cachedLocation) {
+    return cachedLocation;
+  }
+
+  try {
+    const property = await getProperty(normalizedPropertyId);
+    const location = {
+      ...normalizePropertyLocation(property),
+      propertyId: normalizedPropertyId
+    };
+    propertyLocationById.set(normalizedPropertyId, location);
+    return location;
+  } catch (error) {
+    console.error('Error loading property location:', error);
+    const emptyLocation = {
+      latitude: null,
+      longitude: null,
+      source: COORDINATE_SOURCE_NONE,
+      propertyId: normalizedPropertyId
+    };
+    propertyLocationById.set(normalizedPropertyId, emptyLocation);
+    return emptyLocation;
+  }
 }
 
 function normalizeCoordinate(value) {
@@ -550,38 +825,97 @@ function readLocationFromOption(plotId) {
     return null;
   }
 
-  return {
+  const location = {
     latitude: normalizeCoordinate(selectedOption.dataset.latitude),
-    longitude: normalizeCoordinate(selectedOption.dataset.longitude)
+    longitude: normalizeCoordinate(selectedOption.dataset.longitude),
+    source: normalizeCoordinateSource(selectedOption.dataset.coordinateSource),
+    propertyId: extractPropertyId({ propertyId: selectedOption.dataset.propertyId })
   };
+
+  if (!hasAnyCoordinates(location)) {
+    return null;
+  }
+
+  return location;
 }
 
 async function resolvePlotLocation(plotId) {
   const normalizedPlotId = String(plotId || '').trim();
   if (!normalizedPlotId) {
-    return { latitude: null, longitude: null };
+    return {
+      latitude: null,
+      longitude: null,
+      source: COORDINATE_SOURCE_NONE,
+      propertyId: null
+    };
   }
 
   const cachedLocation = plotLocationById.get(normalizedPlotId);
-  if (cachedLocation) {
+  if (
+    cachedLocation &&
+    hasBothCoordinates(cachedLocation) &&
+    normalizeCoordinateSource(cachedLocation.source) === COORDINATE_SOURCE_PROPERTY
+  ) {
     return cachedLocation;
   }
 
+  let propertyId = extractPropertyId(cachedLocation);
+  let bestEffortLocation = hasAnyCoordinates(cachedLocation) ? cachedLocation : null;
+
   const optionLocation = readLocationFromOption(normalizedPlotId);
   if (optionLocation) {
-    plotLocationById.set(normalizedPlotId, optionLocation);
-    return optionLocation;
+    propertyId = propertyId || extractPropertyId(optionLocation);
+    bestEffortLocation = optionLocation;
   }
 
   try {
     const plot = await getPlot(normalizedPlotId);
     const location = normalizePlotLocation(plot);
-    plotLocationById.set(normalizedPlotId, location);
-    return location;
+    propertyId = propertyId || extractPropertyId(location);
+
+    if (hasAnyCoordinates(location)) {
+      bestEffortLocation = location;
+    }
   } catch (error) {
     console.error('Error loading plot location:', error);
-    return { latitude: null, longitude: null };
   }
+
+  if (propertyId) {
+    const propertyLocation = await resolvePropertyLocation(propertyId);
+    const prioritizedLocation = mergeLocationWithPropertyPriority(
+      bestEffortLocation || {
+        latitude: null,
+        longitude: null,
+        source: COORDINATE_SOURCE_NONE,
+        propertyId
+      },
+      propertyLocation,
+      propertyId
+    );
+
+    if (hasAnyCoordinates(prioritizedLocation)) {
+      plotLocationById.set(normalizedPlotId, prioritizedLocation);
+      return prioritizedLocation;
+    }
+  }
+
+  if (bestEffortLocation) {
+    const normalizedBestEffort = {
+      ...bestEffortLocation,
+      propertyId: propertyId || extractPropertyId(bestEffortLocation)
+    };
+    plotLocationById.set(normalizedPlotId, normalizedBestEffort);
+    return normalizedBestEffort;
+  }
+
+  const emptyLocation = {
+    latitude: null,
+    longitude: null,
+    source: COORDINATE_SOURCE_NONE,
+    propertyId
+  };
+  plotLocationById.set(normalizedPlotId, emptyLocation);
+  return emptyLocation;
 }
 
 async function syncPlotLocationFields() {
@@ -597,7 +931,7 @@ async function syncPlotLocationFields() {
   }
 
   const requestVersion = ++plotLocationRequestVersion;
-  const { latitude, longitude } = await resolvePlotLocation(selectedPlotId);
+  const { latitude, longitude, source } = await resolvePlotLocation(selectedPlotId);
   if (requestVersion !== plotLocationRequestVersion) {
     return;
   }
@@ -606,7 +940,7 @@ async function syncPlotLocationFields() {
   if (hasNoCoordinates) {
     setPlotLocationValues(ZERO_COORDINATE, ZERO_COORDINATE);
     setPlotLocationMessage(
-      '⚠️ Plot and property coordinates are not configured. Showing 0.000000 fallback.',
+      '⚠️ Coordinates source: fallback 0.000000 (plot/property not configured).',
       true
     );
     return;
@@ -619,7 +953,7 @@ async function syncPlotLocationFields() {
     formatCoordinate(normalizedLatitude),
     formatCoordinate(normalizedLongitude)
   );
-  setPlotLocationMessage('Coordinates loaded from selected plot or property fallback');
+  setPlotLocationMessage(getCoordinateSourceMessage(source));
 }
 
 function extractApiErrorMessage(error) {

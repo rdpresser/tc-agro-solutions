@@ -65,7 +65,20 @@ test.describe('Sensors form location with property fallback', () => {
     await expect(page.locator('#plotLatitude')).toHaveValue('-22.903500');
     await expect(page.locator('#plotLongitude')).toHaveValue('-43.209600');
     await expect(page.locator('#plotLocationMessage')).toContainText(
-      'Coordinates loaded from selected plot or property fallback'
+      'Coordinates source: property'
+    );
+    await expect(page.locator('#plotLocationMessage')).not.toHaveClass(/text-warning/);
+  });
+
+  test('fills coordinates in edit mode by loading plot/property coordinates from plot details', async ({
+    page
+  }) => {
+    await page.goto('sensors-form.html?id=sensor-001');
+
+    await expect(page.locator('#plotLatitude')).toHaveValue('-22.903500');
+    await expect(page.locator('#plotLongitude')).toHaveValue('-43.209600');
+    await expect(page.locator('#plotLocationMessage')).toContainText(
+      'Coordinates source: property'
     );
     await expect(page.locator('#plotLocationMessage')).not.toHaveClass(/text-warning/);
   });
@@ -132,7 +145,7 @@ test.describe('Sensors form location with missing coordinates', () => {
     await expect(page.locator('#plotLatitude')).toHaveValue('0.000000');
     await expect(page.locator('#plotLongitude')).toHaveValue('0.000000');
     await expect(page.locator('#plotLocationMessage')).toContainText(
-      'Plot and property coordinates are not configured'
+      'Coordinates source: fallback 0.000000'
     );
     await expect(page.locator('#plotLocationMessage')).toHaveClass(/text-warning/);
   });
