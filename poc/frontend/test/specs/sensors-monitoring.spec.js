@@ -242,6 +242,7 @@ test.describe('Sensor monitoring real-time flow', () => {
     await expect(page.locator('#stat-total-sensors')).toBeVisible();
     await expect(page.locator('#stat-active-sensors')).toBeVisible();
     await expect(page.locator('#stat-inactive-sensors')).toBeVisible();
+    await expect(page.locator('#stat-maintenance-sensors')).toBeVisible();
+    await expect(page.locator('#stat-faulty-sensors')).toBeVisible();
   });
 });
-

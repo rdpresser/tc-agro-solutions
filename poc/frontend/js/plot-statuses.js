@@ -21,6 +21,12 @@ export const PLOT_STATUS_BADGE_CLASSES = {
   critical: 'badge-danger'
 };
 
+export const PLOT_SUMMARY_BADGE_CLASSES = {
+  healthy: 'badge-success',
+  warning: 'badge-warning',
+  alert: 'badge-danger'
+};
+
 export const PLOT_SUMMARY_GROUPS = {
   healthy: {
     statuses: ['healthy'],
@@ -108,4 +114,8 @@ export function getPlotSummaryBadgeText(groupKey, count) {
 
   const icon = getPlotStatusIcon(group.iconStatus);
   return `${count} ${icon} ${group.label}`;
+}
+
+export function getPlotSummaryBadgeClass(groupKey) {
+  return PLOT_SUMMARY_BADGE_CLASSES[groupKey] || 'badge-secondary';
 }

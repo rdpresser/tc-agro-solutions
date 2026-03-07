@@ -41,6 +41,7 @@ import {
   getIrrigationTypeDisplay,
   normalizeIrrigationType
 } from './irrigation-types.js';
+import { getSensorStatusBadgeClass, getSensorStatusDisplay } from './sensor-statuses.js';
 import { $id, getQueryParam, navigateTo, showLoading, hideLoading, getUser } from './utils.js';
 
 // ============================================
@@ -590,7 +591,9 @@ function setupBoundaryMapSearch() {
       return;
     }
 
-    const clickedInsideSearch = target.closest('#plotBoundarySearchResults, #plotBoundarySearchInput, #plotBoundarySearchBtn');
+    const clickedInsideSearch = target.closest(
+      '#plotBoundarySearchResults, #plotBoundarySearchInput, #plotBoundarySearchBtn'
+    );
     if (!clickedInsideSearch) {
       resultsContainer.style.display = 'none';
     }
@@ -739,7 +742,9 @@ function centerBoundaryMapFromSelectedProperty() {
 
   if (typeof latitude === 'number' && typeof longitude === 'number') {
     boundaryMap.setView([latitude, longitude], 15);
-    setPlotBoundaryLocationInfo(`📍 Centered on property: ${selectedProperty?.name || 'Selected property'}`);
+    setPlotBoundaryLocationInfo(
+      `📍 Centered on property: ${selectedProperty?.name || 'Selected property'}`
+    );
     return;
   }
 
@@ -1152,19 +1157,21 @@ function setupCropTypePicker() {
       return;
     }
 
-    tableBody.innerHTML = filteredDefaults.map((item) => {
-      const icon = CROP_TYPE_ICONS[item.cropType] || '🌿';
-      const suggestedIrrigationDisplay = getIrrigationTypeDisplay(item.suggestedIrrigationType);
-      const soilMoistureDisplay = `🌱 ${String(item.minSoilMoisture)}%`;
-      const temperatureDisplay = `🌡️ ${String(item.maxTemperature)}°C`;
-      const humidityDisplay = `💧 ${String(item.minHumidity)}%`;
-      const monthsLabel = Array.isArray(item.plantingMonths) && item.plantingMonths.length > 0
-        ? item.plantingMonths
-            .map((month) => monthNames[Number(month) - 1] || String(month))
-            .join(', ')
-        : 'Year-round / custom';
+    tableBody.innerHTML = filteredDefaults
+      .map((item) => {
+        const icon = CROP_TYPE_ICONS[item.cropType] || '🌿';
+        const suggestedIrrigationDisplay = getIrrigationTypeDisplay(item.suggestedIrrigationType);
+        const soilMoistureDisplay = `🌱 ${String(item.minSoilMoisture)}%`;
+        const temperatureDisplay = `🌡️ ${String(item.maxTemperature)}°C`;
+        const humidityDisplay = `💧 ${String(item.minHumidity)}%`;
+        const monthsLabel =
+          Array.isArray(item.plantingMonths) && item.plantingMonths.length > 0
+            ? item.plantingMonths
+                .map((month) => monthNames[Number(month) - 1] || String(month))
+                .join(', ')
+            : 'Year-round / custom';
 
-      return `
+        return `
         <tr
           class="crop-default-selectable-row"
           data-crop-type="${escapeHtml(item.cropType)}"
@@ -1184,7 +1191,8 @@ function setupCropTypePicker() {
           <td>${escapeHtml(humidityDisplay)}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join('');
 
     tableBody.querySelectorAll('tr[data-crop-type]').forEach((row) => {
       const selectFromRow = () => {
@@ -1350,7 +1358,10 @@ function applySuggestedExpectedHarvestForCrop(cropType, plantingDateInputValue =
   }
 
   const resolvedPlantingDate = plantingDateInputValue || $id('plantingDate')?.value || '';
-  const suggestedExpectedHarvestDate = getSuggestedExpectedHarvestDate(cropType, resolvedPlantingDate);
+  const suggestedExpectedHarvestDate = getSuggestedExpectedHarvestDate(
+    cropType,
+    resolvedPlantingDate
+  );
 
   if (!suggestedExpectedHarvestDate) {
     return;
@@ -1482,6 +1493,7 @@ async function loadSensorsForPlot(plotId) {
         const status = String(sensor?.status || 'Inactive');
         const installedAt = formatDateTime(sensor?.installedAt);
         const badgeClass = getSensorStatusBadgeClass(status);
+        const statusDisplay = getSensorStatusDisplay(status);
 
         return `
     <div class="d-flex justify-between align-center" style="padding: 12px; border-bottom: 1px solid #e0e0e0; gap: 12px;">
@@ -1490,7 +1502,7 @@ async function loadSensorsForPlot(plotId) {
         <div class="text-muted" style="font-size: 0.85em;">ID: ${sensorId}</div>
         <div class="text-muted" style="font-size: 0.85em;">Type: ${type} • Installed: ${installedAt}</div>
       </div>
-      <span class="badge ${badgeClass}">${escapeHtml(status)}</span>
+      <span class="badge ${badgeClass}">${escapeHtml(statusDisplay)}</span>
     </div>
   `;
       })
@@ -1514,17 +1526,6 @@ async function loadSensorsForPlot(plotId) {
       'warning'
     );
   }
-}
-
-function getSensorStatusBadgeClass(status) {
-  const normalized = String(status || '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized === 'active') return 'badge-success';
-  if (normalized === 'maintenance') return 'badge-warning';
-  if (normalized === 'faulty') return 'badge-danger';
-  return 'badge-info';
 }
 
 function formatDateTime(value) {

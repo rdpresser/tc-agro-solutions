@@ -13,6 +13,7 @@ import {
   getPlotStatusDisplay,
   getPlotStatusFilterOptionsHtml,
   getPlotSummaryCount,
+  getPlotSummaryBadgeClass,
   getPlotSummaryBadgeText
 } from './plot-statuses.js';
 import {
@@ -24,7 +25,8 @@ import {
   getPaginatedItems,
   getPaginatedTotalCount,
   getPaginatedPageNumber,
-  getPaginatedPageSize
+  getPaginatedPageSize,
+  getUser
 } from './utils.js';
 // import { showConfirm } from './utils.js'; // Commented out - delete functionality disabled
 // import { deletePlot } from './api.js'; // Commented out - no delete route available
@@ -53,16 +55,22 @@ let lastPageState = {
   totalCount: 0
 };
 
+const GLOBAL_PLOTS_PAGE_SIZE = 200;
+const GLOBAL_PLOTS_MAX_PAGES = 50;
+
 // ============================================
 // DATA LOADING
 // ============================================
 
 function getCurrentFilters() {
+  const ownerId = getOwnerScopeIdForPlotsPage();
+
   return {
     pageNumber: Number($('#plots-page-number')?.value || 1),
     pageSize: Number($('#plots-page-size')?.value || 10),
     sortBy: $('#plots-sort-by')?.value || 'name',
     sortDirection: $('#plots-sort-direction')?.value || 'asc',
+    ownerId: ownerId || '',
     propertyId: $('#filter-property')?.value || '',
     cropType: $('#filter-crop')?.value || '',
     status: $('#filter-status')?.value || '',
@@ -78,22 +86,26 @@ async function loadPlots() {
 
   try {
     const filters = getCurrentFilters();
-    const data = await getPlotsPaginated(filters);
-    const normalized = normalizePlotsResponse(data, filters);
-    const plots = normalized.items;
+    const [data, globalPlots] = await Promise.all([
+      getPlotsPaginated(filters),
+      loadGlobalPlotsForSummary(filters)
+    ]);
 
-    updatePageOptions(normalized.pageCount, normalized.pageNumber);
-    updatePagerControls(normalized);
-    lastPageState = normalized;
+    const pagedState = normalizePlotsResponse(data, filters);
+    const tableState = filters.status ? normalizePlotsResponse(globalPlots, filters) : pagedState;
 
-    renderPlotsTable(plots);
-    renderSummary(normalized);
+    updatePageOptions(tableState.pageCount, tableState.pageNumber);
+    updatePagerControls(tableState);
+    lastPageState = tableState;
+
+    renderPlotsTable(tableState.items);
+    renderSummary(tableState, globalPlots);
   } catch (error) {
     const { message } = normalizeError(error);
     console.error('Error loading plots:', error);
     tbody.innerHTML =
       '<tr><td colspan="11" class="text-center text-danger">Error loading plots</td></tr>';
-    renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
+    renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1, pageSize: 10 }, []);
     toast(message || 'plots.load_failed', 'error');
   }
 }
@@ -198,19 +210,126 @@ function normalizeStatus(plot) {
   return normalizePlotStatus(plot?.status || plot?.healthStatus);
 }
 
+async function loadGlobalPlotsForSummary(filters) {
+  const allPlots = [];
+
+  const baseFilters = {
+    pageNumber: 1,
+    pageSize: GLOBAL_PLOTS_PAGE_SIZE,
+    sortBy: filters?.sortBy || 'name',
+    sortDirection: filters?.sortDirection || 'asc',
+    ownerId: filters?.ownerId || '',
+    propertyId: filters?.propertyId || '',
+    cropType: filters?.cropType || '',
+    filter: filters?.filter || ''
+  };
+
+  let response = await getPlotsPaginated(baseFilters);
+
+  if (Array.isArray(response)) {
+    return response.map(normalizePlotItem);
+  }
+
+  allPlots.push(...getPaginatedItems(response, []));
+
+  let pageNumber = getPaginatedPageNumber(response, 1);
+  let hasNextPage = Boolean(response?.hasNextPage);
+  let pagesFetched = 1;
+
+  while (hasNextPage && pagesFetched < GLOBAL_PLOTS_MAX_PAGES) {
+    pageNumber += 1;
+    response = await getPlotsPaginated({
+      ...baseFilters,
+      pageNumber
+    });
+
+    if (Array.isArray(response)) {
+      allPlots.push(...response);
+      break;
+    }
+
+    allPlots.push(...getPaginatedItems(response, []));
+    hasNextPage = Boolean(response?.hasNextPage);
+    pagesFetched += 1;
+  }
+
+  return allPlots.map(normalizePlotItem);
+}
+
+function isCurrentUserAdminForPlotsPage() {
+  const user = getUser();
+  if (!user) {
+    return false;
+  }
+
+  const roleCandidates = [];
+
+  if (Array.isArray(user.role)) {
+    roleCandidates.push(...user.role);
+  } else if (user.role) {
+    roleCandidates.push(user.role);
+  }
+
+  if (Array.isArray(user.roles)) {
+    roleCandidates.push(...user.roles);
+  } else if (user.roles) {
+    roleCandidates.push(user.roles);
+  }
+
+  return roleCandidates.some(
+    (role) =>
+      String(role || '')
+        .trim()
+        .toLowerCase() === 'admin'
+  );
+}
+
+function getOwnerScopeIdForPlotsPage() {
+  if (isCurrentUserAdminForPlotsPage()) {
+    return '';
+  }
+
+  const user = getUser();
+  if (!user) {
+    return '';
+  }
+
+  const ownerIdCandidates = [user.ownerId, user.sub, user.id, user.userId, user.nameIdentifier];
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+
+  return ownerId ? String(ownerId).trim() : '';
+}
+
 async function loadPropertyFilter() {
   const select = $('#filter-property');
   if (!select) return;
 
   try {
-    const response = await getProperties();
-    const properties = response?.data || response || [];
+    const currentValue = select.value;
+    const ownerId = getOwnerScopeIdForPlotsPage();
+    const response = await getProperties({
+      pageNumber: 1,
+      pageSize: 1000,
+      sortBy: 'name',
+      sortDirection: 'asc',
+      ownerId: ownerId || ''
+    });
+    const properties = getPaginatedItems(response, []);
+
     select.innerHTML = `<option value="">All Properties</option>${(Array.isArray(properties)
       ? properties
       : []
     )
       .map((p) => `<option value="${p.id}">${p.name}</option>`)
       .join('')}`;
+
+    const isCurrentValueStillAvailable = (Array.isArray(properties) ? properties : []).some(
+      (property) => property.id === currentValue
+    );
+
+    if (currentValue && isCurrentValueStillAvailable) {
+      select.value = currentValue;
+    }
   } catch (error) {
     console.error('Error loading properties for filter:', error);
   }
@@ -287,7 +406,7 @@ function renderPlotsTable(plots) {
     .join('');
 }
 
-function renderSummary(state) {
+function renderSummary(state, globalPlots = null) {
   const summaryText = $('#plots-summary-text');
   const summaryArea = $('#plots-summary-area');
   const healthyBadge = $('#plots-summary-healthy');
@@ -295,10 +414,12 @@ function renderSummary(state) {
   const alertBadge = $('#plots-summary-alert');
 
   const plots = state?.items || [];
-  const totalArea = plots.reduce((sum, plot) => sum + Number(plot.areaHectares || 0), 0);
-  const healthyCount = getPlotSummaryCount(plots, 'healthy');
-  const warningCount = getPlotSummaryCount(plots, 'warning');
-  const alertCount = getPlotSummaryCount(plots, 'alert');
+  const summarySource = Array.isArray(globalPlots) ? globalPlots : [];
+  const source = summarySource.length ? summarySource : plots;
+  const totalArea = source.reduce((sum, plot) => sum + Number(plot.areaHectares || 0), 0);
+  const healthyCount = getPlotSummaryCount(source, 'healthy');
+  const warningCount = getPlotSummaryCount(source, 'warning');
+  const alertCount = getPlotSummaryCount(source, 'alert');
 
   if (summaryText) {
     const total = Number(state?.totalCount ?? plots.length ?? 0);
@@ -309,9 +430,18 @@ function renderSummary(state) {
     summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
   if (summaryArea) summaryArea.textContent = `Total Area: ${formatArea(totalArea)}`;
-  if (healthyBadge) healthyBadge.textContent = getPlotSummaryBadgeText('healthy', healthyCount);
-  if (warningBadge) warningBadge.textContent = getPlotSummaryBadgeText('warning', warningCount);
-  if (alertBadge) alertBadge.textContent = getPlotSummaryBadgeText('alert', alertCount);
+  if (healthyBadge) {
+    healthyBadge.className = `badge plot-status-summary-badge ${getPlotSummaryBadgeClass('healthy')}`;
+    healthyBadge.textContent = getPlotSummaryBadgeText('healthy', healthyCount);
+  }
+  if (warningBadge) {
+    warningBadge.className = `badge plot-status-summary-badge ${getPlotSummaryBadgeClass('warning')}`;
+    warningBadge.textContent = getPlotSummaryBadgeText('warning', warningCount);
+  }
+  if (alertBadge) {
+    alertBadge.className = `badge plot-status-summary-badge ${getPlotSummaryBadgeClass('alert')}`;
+    alertBadge.textContent = getPlotSummaryBadgeText('alert', alertCount);
+  }
 }
 
 // ============================================

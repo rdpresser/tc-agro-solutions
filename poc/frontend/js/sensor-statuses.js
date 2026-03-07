@@ -1,18 +1,43 @@
 export const SENSOR_STATUSES = ['Active', 'Inactive', 'Maintenance', 'Faulty'];
 
-export const SENSOR_STATUS_ICONS = {
-  Active: '🟢',
-  Inactive: '⚪',
-  Maintenance: '🟡',
-  Faulty: '🔴'
+export const SENSOR_STATUS_META = {
+  Active: {
+    icon: '🟢',
+    label: 'Active',
+    badgeClass: 'badge-status-active',
+    cardClass: 'sensor-card-status-active',
+    statIconClass: 'sensor-status-stat-icon-active'
+  },
+  Inactive: {
+    icon: '🔵',
+    label: 'Inactive',
+    badgeClass: 'badge-status-inactive',
+    cardClass: 'sensor-card-status-inactive',
+    statIconClass: 'sensor-status-stat-icon-inactive'
+  },
+  Maintenance: {
+    icon: '🟠',
+    label: 'Maintenance',
+    badgeClass: 'badge-status-maintenance',
+    cardClass: 'sensor-card-status-maintenance',
+    statIconClass: 'sensor-status-stat-icon-maintenance'
+  },
+  Faulty: {
+    icon: '🔴',
+    label: 'Faulty',
+    badgeClass: 'badge-status-faulty',
+    cardClass: 'sensor-card-status-faulty',
+    statIconClass: 'sensor-status-stat-icon-faulty'
+  }
 };
 
-export const SENSOR_STATUS_LABELS = {
-  Active: 'Active',
-  Inactive: 'Inactive',
-  Maintenance: 'Maintenance',
-  Faulty: 'Faulty'
-};
+export const SENSOR_STATUS_ICONS = Object.fromEntries(
+  SENSOR_STATUSES.map((status) => [status, SENSOR_STATUS_META[status]?.icon || '⚫'])
+);
+
+export const SENSOR_STATUS_LABELS = Object.fromEntries(
+  SENSOR_STATUSES.map((status) => [status, SENSOR_STATUS_META[status]?.label || status])
+);
 
 const SENSOR_STATUS_ALIASES = {
   active: 'Active',
@@ -35,14 +60,26 @@ export function normalizeSensorStatus(value) {
   return SENSOR_STATUS_ALIASES[normalized] || raw;
 }
 
-export function getSensorStatusIcon(value) {
+export function getSensorStatusMeta(value) {
   const status = normalizeSensorStatus(value);
-  return SENSOR_STATUS_ICONS[status] || '⚫';
+  return (
+    SENSOR_STATUS_META[status] || {
+      icon: '⚫',
+      label: status || 'Unknown',
+      badgeClass: 'badge-secondary',
+      cardClass: 'sensor-card-status-unknown',
+      statIconClass: 'sensor-status-stat-icon-unknown'
+    }
+  );
+}
+
+export function getSensorStatusIcon(value) {
+  return getSensorStatusMeta(value).icon;
 }
 
 export function getSensorStatusLabel(value) {
   const status = normalizeSensorStatus(value);
-  return SENSOR_STATUS_LABELS[status] || status || '';
+  return SENSOR_STATUS_LABELS[status] || getSensorStatusMeta(value).label || '';
 }
 
 export function getSensorStatusDisplay(value) {
@@ -52,10 +89,18 @@ export function getSensorStatusDisplay(value) {
 }
 
 export function getSensorStatusBadgeClass(value) {
-  const status = normalizeSensorStatus(value);
-  if (status === 'Active') return 'badge-success';
-  if (status === 'Maintenance') return 'badge-warning';
-  if (status === 'Inactive') return 'badge-secondary';
-  if (status === 'Faulty') return 'badge-danger';
-  return 'badge-secondary';
+  return getSensorStatusMeta(value).badgeClass;
+}
+
+export function getSensorStatusCardClass(value) {
+  return getSensorStatusMeta(value).cardClass;
+}
+
+export function getSensorStatusStatIconClass(value) {
+  return getSensorStatusMeta(value).statIconClass;
+}
+
+export function getSensorStatusCounterText(value, count = 0) {
+  const meta = getSensorStatusMeta(value);
+  return `${Number(count || 0)} ${meta.icon} ${meta.label}`;
 }

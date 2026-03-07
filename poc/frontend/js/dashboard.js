@@ -3,6 +3,15 @@
  */
 
 import {
+  getAlertSeverityBadgeClass,
+  getAlertSeverityCardClass,
+  getAlertSeverityIcon,
+  getAlertSeverityLabel,
+  getAlertStatusBadgeClass,
+  getAlertStatusLabel,
+  normalizeAlertSeverity
+} from './alert-statuses.js';
+import {
   getDashboardStats,
   getLatestReadings,
   getReadingsLatest,
@@ -266,14 +275,14 @@ async function setupOwnerSelectorForDashboard() {
     if (sortedOwners.length > 0) {
       // Try to get owner from URL/storage first, otherwise use first owner
       const storedOwnerId = getAdminOwnerSelection();
-      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
-      
+      const ownerExists = sortedOwners.some((o) => o.id === storedOwnerId);
+
       if (storedOwnerId && ownerExists) {
         selectedOwnerId = storedOwnerId;
       } else {
         selectedOwnerId = sortedOwners[0].id;
       }
-      
+
       ownerSelect.value = selectedOwnerId;
       setAdminOwnerInStorage(selectedOwnerId);
       ownerSelect.disabled = false;
@@ -286,10 +295,10 @@ async function setupOwnerSelectorForDashboard() {
     ownerSelect.addEventListener('change', async () => {
       const previousOwnerId = selectedOwnerId;
       selectedOwnerId = ownerSelect.value || null;
-      
+
       // Persist owner selection to storage and URL
       setAdminOwnerInStorage(selectedOwnerId);
-      
+
       await refreshDashboardAdminAlertsBell();
       updateDashboardAlertsNavigationLinks();
 
@@ -752,54 +761,32 @@ function updateAlertsSection(alerts) {
 
   container.innerHTML = alerts
     .slice(0, 5)
-    .map(
-      (alert) => `
-    <div class="alert-item alert-${alert.severity}" data-alert-id="${alert.id || alert.Id || ''}">
+    .map((alert) => {
+      const normalizedSeverity = normalizeAlertSeverity(alert?.severity || alert?.Severity);
+
+      return `
+    <div class="alert-item ${getAlertSeverityCardClass(normalizedSeverity)}" data-alert-id="${alert.id || alert.Id || ''}">
       <div class="alert-header">
-        <span class="badge badge-${alert.severity}">
-          ${getSeverityIcon(alert.severity)} ${getSeverityLabel(alert.severity)}
+        <span class="badge ${getAlertSeverityBadgeClass(normalizedSeverity)}">
+          ${getAlertSeverityIcon(normalizedSeverity)} ${getAlertSeverityLabel(normalizedSeverity)}
         </span>
         <span class="badge ${getAlertStatusBadgeClass(alert.status || alert.Status)}" data-alert-status>
           ${getAlertStatusLabel(alert.status || alert.Status)}
         </span>
-        <span class="alert-time" title="${formatDate(alert.createdAt)}">
-          ${formatRelativeTime(alert.createdAt)}
+        <span class="alert-time" title="${formatDate(alert.createdAt || alert.CreatedAt)}">
+          ${formatRelativeTime(alert.createdAt || alert.CreatedAt)}
         </span>
       </div>
       <h4 class="alert-title">${alert.title || alert.alertType || 'Alert'}</h4>
-      <p class="alert-message">${alert.message}</p>
+      <p class="alert-message">${alert.message || '-'}</p>
       <div class="alert-meta">
-        <span>📍 ${alert.plotName}</span>
-        <span>📡 ${alert.sensorId}</span>
+        <span>📍 ${alert.plotName || alert.PlotName || '-'}</span>
+        <span>📡 ${alert.sensorId || alert.SensorId || '-'}</span>
       </div>
     </div>
-  `
-    )
+  `;
+    })
     .join('');
-}
-
-function getSeverityIcon(severity) {
-  const icons = { critical: '🚨', warning: '⚠️', info: 'ℹ️' };
-  return icons[severity] || 'ℹ️';
-}
-
-function getSeverityLabel(severity) {
-  const labels = { critical: 'Critical', warning: 'Warning', info: 'Info' };
-  return labels[severity] || severity;
-}
-
-function getAlertStatusLabel(status) {
-  const normalized = String(status || 'Pending').toLowerCase();
-  if (normalized === 'acknowledged') return 'Acknowledged';
-  if (normalized === 'resolved') return 'Resolved';
-  return 'Pending';
-}
-
-function getAlertStatusBadgeClass(status) {
-  const normalized = String(status || 'Pending').toLowerCase();
-  if (normalized === 'resolved') return 'badge-success';
-  if (normalized === 'acknowledged') return 'badge-warning';
-  return 'badge-danger';
 }
 
 function extractAlertId(payload) {
@@ -1283,7 +1270,7 @@ function computeAlertsDistribution(alerts) {
   }
 
   alerts.forEach((alert) => {
-    const severity = String(alert?.severity || alert?.Severity || 'info').toLowerCase();
+    const severity = normalizeAlertSeverity(alert?.severity || alert?.Severity);
 
     if (severity === 'critical') {
       distribution.critical += 1;

@@ -5,6 +5,7 @@
 import { getProperties, normalizeError } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
+import { getPropertyStatusBadgeClass, getPropertyStatusLabel } from './property-statuses.js';
 import {
   $,
   getPageUrl,
@@ -148,7 +149,7 @@ function renderPropertiesTable(properties) {
       const location = [prop.city, prop.state, prop.country].filter(Boolean).join(', ') || '-';
       const area = Number(prop.areaHectares || 0);
       const plots = Number(prop.plotCount || 0);
-      const isActive = prop.isActive !== false;
+      const normalizedStatus = prop.isActive !== false;
       const createdAt = formatDate(prop.createdAt);
 
       return `
@@ -159,8 +160,8 @@ function renderPropertiesTable(properties) {
       <td>${formatArea(area)}</td>
       <td>${plots} plot(s)</td>
       <td>
-        <span class="badge ${isActive ? 'badge-success' : 'badge-secondary'}">
-          ${isActive ? 'Active' : 'Inactive'}
+        <span class="badge ${getPropertyStatusBadgeClass(normalizedStatus)}">
+          ${getPropertyStatusLabel(normalizedStatus)}
         </span>
       </td>
       <td>${createdAt}</td>

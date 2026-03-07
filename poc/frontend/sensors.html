@@ -169,10 +169,25 @@
           </div>
 
           <div class="d-flex gap-2" style="margin-bottom: 16px; flex-wrap: wrap">
-            <span id="sensors-summary-active" class="badge badge-success">0 ● Active</span>
-            <span id="sensors-summary-inactive" class="badge badge-danger">0 ● Inactive</span>
-            <span id="sensors-summary-maintenance" class="badge badge-warning"
-              >0 ● Maintenance</span
+            <span
+              id="sensors-summary-active"
+              class="badge sensor-status-summary-badge badge-status-active"
+              >0 🟢 Active</span
+            >
+            <span
+              id="sensors-summary-inactive"
+              class="badge sensor-status-summary-badge badge-status-inactive"
+              >0 🔵 Inactive</span
+            >
+            <span
+              id="sensors-summary-maintenance"
+              class="badge sensor-status-summary-badge badge-status-maintenance"
+              >0 🟠 Maintenance</span
+            >
+            <span
+              id="sensors-summary-faulty"
+              class="badge sensor-status-summary-badge badge-status-faulty"
+              >0 🔴 Faulty</span
             >
           </div>
 

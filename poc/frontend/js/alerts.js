@@ -17,6 +17,17 @@ import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
 import {
+  getAlertSeverityBadgeClass,
+  getAlertSeverityIcon,
+  getAlertSeverityLabel,
+  getAlertStatusLabel,
+  getAlertTabBadgeClass,
+  normalizeAlertSeverity,
+  normalizeAlertSeverityFilter,
+  normalizeAlertStatus,
+  normalizeAlertStatusFilter
+} from './alert-statuses.js';
+import {
   $,
   $$,
   formatDate,
@@ -83,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  applyAlertBadgeStyles();
   hydrateInitialAlertsViewState();
   await setupOwnerSelectorForAlerts();
   setupAlertDialogs();
@@ -374,10 +386,10 @@ function renderAlerts(alerts, activeFilter) {
 
       return `
     <div class="alert-item ${normalizedSeverity}" data-alert-id="${alert.id}">
-      <div class="alert-item-icon">${getSeverityIcon(normalizedSeverity)}</div>
+      <div class="alert-item-icon">${getAlertSeverityIcon(normalizedSeverity)}</div>
       <div class="alert-item-content">
         <div class="alert-item-header">
-          <span class="badge ${getSeverityBadgeClass(normalizedSeverity)}">${formatSeverity(normalizedSeverity)}</span>
+          <span class="badge ${getAlertSeverityBadgeClass(normalizedSeverity)}">${getAlertSeverityLabel(normalizedSeverity)}</span>
           <span class="alert-item-time" data-alert-time="${alert.createdAt || ''}" title="${formatDate(alert.createdAt)}">
             ${formatRelativeTime(alert.createdAt)}
           </span>
@@ -445,14 +457,17 @@ async function updateTabCountsFromBackend() {
   ]);
 
   if (pendingTabBadge) {
+    pendingTabBadge.className = `badge ${getAlertTabBadgeClass('pending')}`;
     pendingTabBadge.textContent = String(pendingCount);
   }
 
   if (resolvedTabBadge) {
+    resolvedTabBadge.className = `badge ${getAlertTabBadgeClass('resolved')}`;
     resolvedTabBadge.textContent = String(resolvedCount);
   }
 
   if (allTabBadge) {
+    allTabBadge.className = `badge ${getAlertTabBadgeClass('all')}`;
     allTabBadge.textContent = String(allCount);
   }
 
@@ -495,6 +510,29 @@ function renderStats(summary, alertsOverride = null, countsOverride = null) {
   if (statInfo) statInfo.textContent = String(info);
   if (statResolved) statResolved.textContent = String(resolvedCount);
   if (navPendingBadge) navPendingBadge.textContent = String(pendingTotal);
+}
+
+function applyAlertBadgeStyles() {
+  const tabPendingBadge = $('[data-tab="pending"] .badge');
+  const tabResolvedBadge = $('[data-tab="resolved"] .badge');
+  const tabAllBadge = $('[data-tab="all"] .badge');
+  const navPendingBadge = $('#alerts-nav-pending-count');
+
+  if (tabPendingBadge) {
+    tabPendingBadge.className = `badge ${getAlertTabBadgeClass('pending')}`;
+  }
+
+  if (tabResolvedBadge) {
+    tabResolvedBadge.className = `badge ${getAlertTabBadgeClass('resolved')}`;
+  }
+
+  if (tabAllBadge) {
+    tabAllBadge.className = `badge ${getAlertTabBadgeClass('all')}`;
+  }
+
+  if (navPendingBadge) {
+    navPendingBadge.className = `badge ${getAlertTabBadgeClass('pending')}`;
+  }
 }
 
 function setAlertsLoadingState(isLoading) {
@@ -615,57 +653,6 @@ function renderPaginationControls() {
   }
 }
 
-function normalizeAlertSeverity(severity) {
-  const normalized = String(severity || '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized === 'critical' || normalized === 'high') {
-    return 'critical';
-  }
-
-  if (normalized === 'warning' || normalized === 'medium') {
-    return 'warning';
-  }
-
-  return 'info';
-}
-
-function normalizeAlertStatus(status) {
-  const normalized = String(status || '')
-    .trim()
-    .toLowerCase();
-  if (normalized === 'resolved' || normalized === 'acknowledged') {
-    return normalized;
-  }
-
-  return 'pending';
-}
-
-function normalizeAlertSeverityFilter(value) {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized === 'critical' || normalized === 'warning' || normalized === 'info') {
-    return normalized;
-  }
-
-  return '';
-}
-
-function normalizeAlertStatusFilter(value) {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized === 'pending' || normalized === 'acknowledged' || normalized === 'resolved') {
-    return normalized;
-  }
-
-  return '';
-}
-
 function isCurrentUserAdmin() {
   const currentUser = getUser();
   if (!currentUser) {
@@ -722,14 +709,14 @@ async function setupOwnerSelectorForAlerts() {
     if (sortedOwners.length > 0) {
       // Try to get owner from URL/storage first, otherwise use first owner
       const storedOwnerId = getAdminOwnerSelection();
-      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
-      
+      const ownerExists = sortedOwners.some((o) => o.id === storedOwnerId);
+
       if (storedOwnerId && ownerExists) {
         selectedOwnerId = storedOwnerId;
       } else {
         selectedOwnerId = sortedOwners[0].id;
       }
-      
+
       ownerSelect.value = selectedOwnerId;
       setAdminOwnerInStorage(selectedOwnerId);
       ownerSelect.disabled = false;
@@ -865,30 +852,6 @@ function getSelectedOwnerIdForAlerts() {
 // ============================================
 // HELPERS
 // ============================================
-
-function getSeverityIcon(severity) {
-  const icons = {
-    critical: '🚨',
-    warning: '⚠️',
-    info: 'ℹ️'
-  };
-  return icons[severity] || 'ℹ️';
-}
-
-function formatSeverity(severity) {
-  const labels = {
-    critical: 'Critical',
-    warning: 'Warning',
-    info: 'Info'
-  };
-  return labels[severity] || severity;
-}
-
-function getSeverityBadgeClass(severity) {
-  if (severity === 'critical') return 'badge-danger';
-  if (severity === 'warning') return 'badge-warning';
-  return 'badge-info';
-}
 
 // ============================================
 // EVENT LISTENERS
@@ -1204,8 +1167,8 @@ function openAlertDetailsDialog(alert) {
   const rows = [
     ['Alert ID', alert?.id],
     ['Type', alert?.alertType || alert?.title || '-'],
-    ['Status', normalizedStatus],
-    ['Severity', normalizedSeverity],
+    ['Status', getAlertStatusLabel(normalizedStatus)],
+    ['Severity', getAlertSeverityLabel(normalizedSeverity)],
     ['Message', alert?.message || '-'],
     ['Sensor', formatDiagnosticText(alert?.sensorId)],
     ['Plot', formatDiagnosticText(alert?.plotName)],

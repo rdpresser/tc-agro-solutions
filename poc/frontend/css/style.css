@@ -31,6 +31,27 @@
   --color-danger: #dc3545;
   --color-info: #17a2b8;
 
+  /* Sensor Status Theme */
+  --sensor-status-active: #1f8f4e;
+  --sensor-status-active-soft: rgba(31, 143, 78, 0.14);
+  --sensor-status-active-gradient-start: #1f8f4e;
+  --sensor-status-active-gradient-end: #37b46b;
+
+  --sensor-status-inactive: #1f4f9a;
+  --sensor-status-inactive-soft: rgba(31, 79, 154, 0.16);
+  --sensor-status-inactive-gradient-start: #1f4f9a;
+  --sensor-status-inactive-gradient-end: #366ac3;
+
+  --sensor-status-maintenance: #bf6b00;
+  --sensor-status-maintenance-soft: rgba(242, 149, 0, 0.18);
+  --sensor-status-maintenance-gradient-start: #c97500;
+  --sensor-status-maintenance-gradient-end: #f39a1f;
+
+  --sensor-status-faulty: #b4232f;
+  --sensor-status-faulty-soft: rgba(180, 35, 47, 0.14);
+  --sensor-status-faulty-gradient-start: #b4232f;
+  --sensor-status-faulty-gradient-end: #d84b58;
+
   /* Layout */
   --sidebar-width: 250px;
   --sidebar-collapsed: 60px;
@@ -582,6 +603,47 @@ p {
   font-size: 1.75rem;
 }
 
+.stat-icon.sensor-status-stat-icon-total {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  color: white;
+}
+
+.stat-icon.sensor-status-stat-icon-active {
+  background: linear-gradient(
+    135deg,
+    var(--sensor-status-active-gradient-start) 0%,
+    var(--sensor-status-active-gradient-end) 100%
+  );
+  color: white;
+}
+
+.stat-icon.sensor-status-stat-icon-inactive {
+  background: linear-gradient(
+    135deg,
+    var(--sensor-status-inactive-gradient-start) 0%,
+    var(--sensor-status-inactive-gradient-end) 100%
+  );
+  color: white;
+}
+
+.stat-icon.sensor-status-stat-icon-maintenance {
+  background: linear-gradient(
+    135deg,
+    var(--sensor-status-maintenance-gradient-start) 0%,
+    var(--sensor-status-maintenance-gradient-end) 100%
+  );
+  color: white;
+}
+
+.stat-icon.sensor-status-stat-icon-faulty {
+  background: linear-gradient(
+    135deg,
+    var(--sensor-status-faulty-gradient-start) 0%,
+    var(--sensor-status-faulty-gradient-end) 100%
+  );
+  color: white;
+}
+
 .stat-icon.green {
   background: rgba(45, 80, 22, 0.1);
 }
@@ -903,27 +965,94 @@ p {
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
+  border: 1px solid transparent;
 }
 
 .badge-success {
   background: rgba(40, 167, 69, 0.1);
   color: var(--color-success);
+  border-color: rgba(40, 167, 69, 0.34);
 }
 .badge-warning {
   background: rgba(255, 193, 7, 0.1);
   color: #856404;
+  border-color: rgba(191, 107, 0, 0.35);
 }
 .badge-danger {
   background: rgba(220, 53, 69, 0.1);
   color: var(--color-danger);
+  border-color: rgba(180, 35, 47, 0.3);
 }
 .badge-info {
   background: rgba(23, 162, 184, 0.1);
   color: var(--color-info);
+  border-color: rgba(23, 110, 184, 0.3);
 }
 .badge-primary {
   background: rgba(45, 80, 22, 0.1);
   color: var(--color-primary);
+  border-color: rgba(45, 80, 22, 0.3);
+}
+
+.badge-secondary {
+  background: rgba(73, 80, 87, 0.12);
+  color: #495057;
+  border: 1px solid rgba(73, 80, 87, 0.28);
+}
+
+.badge-status-active {
+  background: var(--sensor-status-active-soft);
+  color: var(--sensor-status-active);
+  border: 1px solid rgba(31, 143, 78, 0.3);
+}
+
+.badge-status-inactive {
+  background: var(--sensor-status-inactive-soft);
+  color: var(--sensor-status-inactive);
+  border: 1px solid rgba(31, 79, 154, 0.34);
+}
+
+.badge-status-maintenance {
+  background: var(--sensor-status-maintenance-soft);
+  color: var(--sensor-status-maintenance);
+  border: 1px solid rgba(191, 107, 0, 0.35);
+}
+
+.badge-status-faulty {
+  background: var(--sensor-status-faulty-soft);
+  color: var(--sensor-status-faulty);
+  border: 1px solid rgba(180, 35, 47, 0.3);
+}
+
+.sensor-status-summary-badge {
+  font-weight: 600;
+}
+
+.plot-status-summary-badge {
+  font-weight: 600;
+}
+
+.sensor-card-status-active {
+  border-left: 4px solid var(--sensor-status-active);
+}
+
+.sensor-card-status-inactive {
+  border-left: 4px solid var(--sensor-status-inactive);
+  opacity: 0.96;
+}
+
+.sensor-card-status-maintenance {
+  border-left: 4px solid var(--sensor-status-maintenance);
+}
+
+.sensor-card-status-faulty {
+  border-left: 4px solid var(--sensor-status-faulty);
+  opacity: 0.88;
+}
+
+.sensor-card-status-unknown {
+  border-left: 4px solid #6c757d;
+  opacity: 0.95;
 }
 
 /* --------------------------------------------------------------------------

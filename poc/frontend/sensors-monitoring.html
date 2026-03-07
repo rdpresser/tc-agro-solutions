@@ -122,10 +122,7 @@
           <!-- Status Summary Cards -->
           <div class="stats-grid" style="margin-bottom: 24px">
             <div class="stat-card">
-              <div
-                class="stat-icon"
-                style="background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%)"
-              >
+              <div class="stat-icon sensor-status-stat-icon-total">
                 📡
               </div>
               <div class="stat-info">
@@ -134,11 +131,8 @@
               </div>
             </div>
             <div class="stat-card">
-              <div
-                class="stat-icon"
-                style="background: linear-gradient(135deg, #28a745 0%, #48c774 100%)"
-              >
-                ✅
+              <div id="stat-icon-active" class="stat-icon sensor-status-stat-icon-active">
+                🟢
               </div>
               <div class="stat-info">
                 <span id="stat-active-sensors" class="stat-value">0</span>
@@ -146,18 +140,17 @@
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon">⚪</div>
+              <div id="stat-icon-inactive" class="stat-icon sensor-status-stat-icon-inactive">
+                🔵
+              </div>
               <div class="stat-info">
                 <span id="stat-inactive-sensors" class="stat-value">0</span>
                 <span class="stat-label">Inactive</span>
               </div>
             </div>
             <div class="stat-card">
-              <div
-                class="stat-icon"
-                style="background: linear-gradient(135deg, #ffc107 0%, #ffdd57 100%)"
-              >
-                ⚠️
+              <div id="stat-icon-maintenance" class="stat-icon sensor-status-stat-icon-maintenance">
+                🟠
               </div>
               <div class="stat-info">
                 <span id="stat-maintenance-sensors" class="stat-value">0</span>
@@ -165,11 +158,8 @@
               </div>
             </div>
             <div class="stat-card">
-              <div
-                class="stat-icon"
-                style="background: linear-gradient(135deg, #dc3545 0%, #f14668 100%)"
-              >
-                ❌
+              <div id="stat-icon-faulty" class="stat-icon sensor-status-stat-icon-faulty">
+                🔴
               </div>
               <div class="stat-info">
                 <span id="stat-faulty-sensors" class="stat-value">0</span>

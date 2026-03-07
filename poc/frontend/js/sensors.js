@@ -14,6 +14,7 @@ import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import {
   getSensorStatusBadgeClass,
+  getSensorStatusCounterText,
   getSensorStatusDisplay,
   normalizeSensorStatus,
   SENSOR_STATUSES
@@ -27,7 +28,8 @@ import {
   getPaginatedItems,
   getPaginatedTotalCount,
   getPaginatedPageNumber,
-  getPaginatedPageSize
+  getPaginatedPageSize,
+  getUser
 } from './utils.js';
 
 let lastPageState = {
@@ -99,17 +101,91 @@ async function checkFarmApi() {
 }
 
 function getCurrentFilters() {
+  const ownerId = getOwnerScopeIdForSensorsPage();
+
   return {
     pageNumber: Number($('#sensors-page-number')?.value || 1),
     pageSize: Number($('#sensors-page-size')?.value || 10),
     sortBy: $('#sensors-sort-by')?.value || 'installedAt',
     sortDirection: $('#sensors-sort-direction')?.value || 'desc',
     filter: $('#search-sensors')?.value?.trim() || '',
+    ownerId,
     propertyId: $('#filter-property')?.value || '',
     plotId: $('#filter-plot')?.value || '',
     type: $('#filter-type')?.value || '',
     status: $('#filter-status')?.value || ''
   };
+}
+
+function getCurrentUserRoles() {
+  const currentUser = getUser();
+  if (!currentUser) {
+    return [];
+  }
+
+  if (Array.isArray(currentUser.role)) {
+    return currentUser.role;
+  }
+
+  const role = String(currentUser.role || '').trim();
+  if (!role) {
+    return [];
+  }
+
+  return role.split(',');
+}
+
+function isCurrentUserAdmin() {
+  return getCurrentUserRoles().some((role) => String(role).trim().toLowerCase() === 'admin');
+}
+
+function getOwnerScopeIdForSensorsPage() {
+  if (isCurrentUserAdmin()) {
+    return '';
+  }
+
+  const currentUser = getUser();
+  if (!currentUser) {
+    return '';
+  }
+
+  const ownerIdCandidates = [
+    currentUser.sub,
+    currentUser.id,
+    currentUser.userId,
+    currentUser.ownerId,
+    currentUser.nameIdentifier
+  ];
+
+  const ownerId = ownerIdCandidates.find((candidate) => String(candidate || '').trim().length > 0);
+  return ownerId ? String(ownerId).trim() : '';
+}
+
+async function loadGlobalStatusCounts(filters = {}) {
+  const globalStatusBaseFilters = {
+    pageNumber: 1,
+    pageSize: 1,
+    sortBy: filters.sortBy || 'installedAt',
+    sortDirection: filters.sortDirection || 'desc',
+    filter: filters.filter || '',
+    ownerId: filters.ownerId || '',
+    propertyId: filters.propertyId || '',
+    plotId: filters.plotId || '',
+    type: filters.type || ''
+  };
+
+  const responses = await Promise.all(
+    SENSOR_STATUSES.map((status) =>
+      getSensorsPaginated({
+        ...globalStatusBaseFilters,
+        status
+      })
+    )
+  );
+
+  return Object.fromEntries(
+    SENSOR_STATUSES.map((status, index) => [status, getPaginatedTotalCount(responses[index], 0)])
+  );
 }
 
 async function loadSensors() {
@@ -120,20 +196,26 @@ async function loadSensors() {
 
   try {
     const filters = getCurrentFilters();
-    const data = await getSensorsPaginated(filters);
+    const [data, globalStatusCounts] = await Promise.all([
+      getSensorsPaginated(filters),
+      loadGlobalStatusCounts(filters)
+    ]);
     const normalized = normalizeSensorsResponse(data, filters);
 
     renderSensorsTable(normalized.items);
     updatePageOptions(normalized.pageCount, normalized.pageNumber);
     updatePagerControls(normalized);
-    renderSummary(normalized);
+    renderSummary(normalized, globalStatusCounts);
     lastPageState = normalized;
   } catch (error) {
     const { message } = normalizeError(error);
     console.error('Error loading sensors:', error);
     tbody.innerHTML =
       '<tr><td colspan="8" class="text-center text-danger">Error loading sensors</td></tr>';
-    renderSummary({ items: [], totalCount: 0, pageNumber: 1, pageCount: 1 });
+    renderSummary(
+      { items: [], totalCount: 0, pageNumber: 1, pageCount: 1, pageSize: 10 },
+      Object.fromEntries(SENSOR_STATUSES.map((status) => [status, 0]))
+    );
     toast(message || 'sensors.load_failed', 'error');
   }
 }
@@ -324,20 +406,31 @@ async function submitStatusChange(event) {
   }
 }
 
-function renderSummary(state) {
+function renderSummary(state, globalCounts = null) {
   const summaryText = $('#sensors-summary-text');
-  const activeBadge = $('#sensors-summary-active');
-  const inactiveBadge = $('#sensors-summary-inactive');
-  const maintenanceBadge = $('#sensors-summary-maintenance');
+  const summaryBadges = {
+    Active: $('#sensors-summary-active'),
+    Inactive: $('#sensors-summary-inactive'),
+    Maintenance: $('#sensors-summary-maintenance'),
+    Faulty: $('#sensors-summary-faulty')
+  };
 
   const sensors = state?.items || [];
-  const activeCount = sensors.filter((s) => normalizeSensorStatus(s.status) === 'Active').length;
-  const inactiveCount = sensors.filter(
-    (s) => normalizeSensorStatus(s.status) === 'Inactive'
-  ).length;
-  const maintenanceCount = sensors.filter(
-    (s) => normalizeSensorStatus(s.status) === 'Maintenance'
-  ).length;
+  const hasGlobalCounts = Boolean(globalCounts && typeof globalCounts === 'object');
+  const counts = hasGlobalCounts
+    ? Object.fromEntries(
+        SENSOR_STATUSES.map((status) => [status, Number(globalCounts?.[status] || 0)])
+      )
+    : Object.fromEntries(SENSOR_STATUSES.map((status) => [status, 0]));
+
+  if (!hasGlobalCounts) {
+    sensors.forEach((sensor) => {
+      const normalized = normalizeSensorStatus(sensor.status);
+      if (Object.prototype.hasOwnProperty.call(counts, normalized)) {
+        counts[normalized] += 1;
+      }
+    });
+  }
 
   if (summaryText) {
     const total = Number(state?.totalCount ?? sensors.length ?? 0);
@@ -347,9 +440,14 @@ function renderSummary(state) {
     const to = total === 0 ? 0 : from + sensors.length - 1;
     summaryText.textContent = `Showing ${from}-${to} of ${total} (Page ${pageNumber}/${state?.pageCount ?? 1})`;
   }
-  if (activeBadge) activeBadge.textContent = `${activeCount} ● Active`;
-  if (inactiveBadge) inactiveBadge.textContent = `${inactiveCount} ● Inactive`;
-  if (maintenanceBadge) maintenanceBadge.textContent = `${maintenanceCount} ● Maintenance`;
+
+  SENSOR_STATUSES.forEach((status) => {
+    const badge = summaryBadges[status];
+    if (!badge) return;
+
+    badge.className = `badge sensor-status-summary-badge ${getSensorStatusBadgeClass(status)}`;
+    badge.textContent = getSensorStatusCounterText(status, counts[status]);
+  });
 }
 
 function updatePageOptions(pageCount, currentPage) {
@@ -403,12 +501,14 @@ async function loadPropertyFilter() {
   if (!select) return;
 
   const currentValue = select.value;
+  const ownerId = getOwnerScopeIdForSensorsPage();
 
   try {
     const properties = await fetchAllPages((params) => getProperties(params), {
       sortBy: 'name',
       sortDirection: 'asc',
-      filter: ''
+      filter: '',
+      ownerId: ownerId || ''
     });
 
     select.innerHTML = `<option value="">All Properties</option>${properties
@@ -428,12 +528,14 @@ async function loadPlotFilter(propertyId = '') {
   if (!select) return;
 
   const currentValue = select.value;
+  const ownerId = getOwnerScopeIdForSensorsPage();
 
   try {
     const plots = await fetchAllPages((params) => getPlotsPaginated(params), {
       sortBy: 'name',
       sortDirection: 'asc',
       filter: '',
+      ownerId: ownerId || '',
       propertyId: propertyId || ''
     });
 

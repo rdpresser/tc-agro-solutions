@@ -20,7 +20,9 @@ import { toast, t } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
 import {
   getSensorStatusBadgeClass,
+  getSensorStatusCardClass,
   getSensorStatusDisplay,
+  getSensorStatusStatIconClass,
   normalizeSensorStatus,
   SENSOR_STATUSES
 } from './sensor-statuses.js';
@@ -56,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadStatusFilterOptions();
   loadTypeFilterOptions();
+  applyMonitoringStatusThemeClasses();
   hydrateInitialViewState();
   await setupOwnerSelectorForMonitoring();
   setupSensorStatusModal();
@@ -242,6 +245,21 @@ function loadTypeFilterOptions() {
   if (currentValue) {
     select.value = currentValue;
   }
+}
+
+function applyMonitoringStatusThemeClasses() {
+  const statusIconTargets = [
+    ['stat-icon-active', 'Active'],
+    ['stat-icon-inactive', 'Inactive'],
+    ['stat-icon-maintenance', 'Maintenance'],
+    ['stat-icon-faulty', 'Faulty']
+  ];
+
+  statusIconTargets.forEach(([elementId, status]) => {
+    const iconElement = $(`#${elementId}`);
+    if (!iconElement) return;
+    iconElement.className = `stat-icon ${getSensorStatusStatIconClass(status)}`;
+  });
 }
 
 async function loadSensors({ forceSummaryRefresh = false } = {}) {
@@ -787,14 +805,14 @@ async function setupOwnerSelectorForMonitoring() {
     if (sortedOwners.length > 0) {
       // Try to get owner from URL/storage first, otherwise use first owner
       const storedOwnerId = getAdminOwnerSelection();
-      const ownerExists = sortedOwners.some(o => o.id === storedOwnerId);
-      
+      const ownerExists = sortedOwners.some((o) => o.id === storedOwnerId);
+
       if (storedOwnerId && ownerExists) {
         selectedOwnerIdForMonitoring = storedOwnerId;
       } else {
         selectedOwnerIdForMonitoring = sortedOwners[0].id;
       }
-      
+
       ownerSelect.value = selectedOwnerIdForMonitoring;
       setAdminOwnerInStorage(selectedOwnerIdForMonitoring);
       ownerSelect.disabled = false;
@@ -1130,16 +1148,16 @@ function findLatestReadingTimestamp(readings) {
 function createSensorCardHtml(sensor, status = 'Active') {
   const normalizedStatus = normalizeSensorStatus(status);
   const badgeClass = getSensorStatusBadgeClass(normalizedStatus);
+  const cardClass = getSensorStatusCardClass(normalizedStatus);
   const sensorTypeIcon = getSensorTypeIcon(sensor.type);
   const sensorTypeLabel = getSensorTypeLabel(sensor.type) || sensor.type || 'Unknown';
-  const cardStyle = getSensorCardStyle(normalizedStatus);
   const statusChangedAt = sensor.statusChangedAt || null;
   const statusChangedText = statusChangedAt
     ? `Status changed ${formatRelativeTime(statusChangedAt)}`
     : 'Status changed: not informed';
 
   return `
-    <div class="card sensor-card" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" data-status-changed-at="${statusChangedAt || ''}" style="${cardStyle}">
+    <div class="card sensor-card ${cardClass}" data-sensor-id="${sensor.id}" data-status="${normalizedStatus}" data-status-changed-at="${statusChangedAt || ''}">
       <div class="d-flex justify-between align-center" style="margin-bottom: 12px">
         <span class="badge ${badgeClass}">${getSensorStatusDisplay(normalizedStatus)}</span>
         <span class="text-muted" style="font-size: 1em; margin-left: 8px" title="Sensor Type: ${sensorTypeLabel}" aria-label="Sensor Type: ${sensorTypeLabel}">${sensorTypeIcon}</span>
@@ -1207,13 +1225,6 @@ function createSensorCardHtml(sensor, status = 'Active') {
   `;
 }
 
-function getSensorCardStyle(status) {
-  if (status === 'Maintenance') return 'border-left: 4px solid #ffc107';
-  if (status === 'Faulty') return 'border-left: 4px solid #dc3545; opacity: 0.85';
-  if (status === 'Inactive') return 'border-left: 4px solid #adb5bd; opacity: 0.9';
-  return '';
-}
-
 function upsertSensorCard(reading) {
   const sensorId = reading.sensorId;
   if (!sensorId) return;
@@ -1276,8 +1287,7 @@ function applySensorStatusToCard(card, status, statusChangedAt = null) {
 
   const normalizedStatus = normalizeSensorStatus(status);
   const changedAt = statusChangedAt || card.dataset.statusChangedAt || null;
-  card.className = 'card sensor-card';
-  card.style.cssText = getSensorCardStyle(normalizedStatus);
+  card.className = `card sensor-card ${getSensorStatusCardClass(normalizedStatus)}`;
   card.dataset.status = normalizedStatus;
   card.dataset.statusChangedAt = changedAt || '';
 

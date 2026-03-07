@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { installApiMocks } from '../fixtures/mock-api.js';
+import { DEFAULT_OWNER_ID_ALPHA, installApiMocks } from '../fixtures/mock-api.js';
 import { applySession, buildProducerSession } from '../fixtures/session.js';
 
 function parsePayload(request) {
@@ -10,7 +10,7 @@ function parsePayload(request) {
 test.describe('Producer CRUD coverage', () => {
   test.beforeEach(async ({ page }) => {
     await installApiMocks(page, { pendingAlertsTotal: 2 });
-    await applySession(page, buildProducerSession());
+    await applySession(page, buildProducerSession(DEFAULT_OWNER_ID_ALPHA));
   });
 
   test('properties: read list, create, update, delete behavior', async ({ page }) => {
@@ -148,4 +148,3 @@ test.describe('Producer CRUD coverage', () => {
     await expect(page).toHaveURL(/dashboard\.html/);
   });
 });
-
