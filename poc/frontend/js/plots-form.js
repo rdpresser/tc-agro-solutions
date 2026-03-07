@@ -17,6 +17,7 @@ import {
   getProperties,
   getPropertiesByOwner,
   normalizeError,
+  updatePlot,
   getOwnersPaginated,
   getOwnersQueryParameterMapFromSwagger
 } from './api.js';
@@ -65,6 +66,7 @@ let boundaryDrawnItems = null;
 let boundaryDrawControl = null;
 let boundarySearchMarker = null;
 let isBoundaryMapExpanded = false;
+let isEditModeReady = !isEditMode;
 
 // ============================================
 // Page Initialization
@@ -76,6 +78,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize protected page (sidebar, user display)
   initProtectedPage();
+
+  setupFormHandler();
+
+  if (isEditMode) {
+    setEditSubmitState(false, 'Loading plot...');
+  }
 
   await checkFarmApi();
   await setupOwnerSelector();
@@ -93,9 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isEditMode) {
     await setupEditMode();
   }
-
-  // Setup form handler
-  setupFormHandler();
 });
 
 function isCurrentUserAdmin() {
@@ -330,45 +335,43 @@ function setupBoundaryMap() {
     void updatePlotBoundaryLocationInfo(clickedLat, clickedLon);
   });
 
-  if (!isEditMode) {
-    boundaryDrawControl = new L.Control.Draw({
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: false
-        },
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false,
-        polyline: false
+  boundaryDrawControl = new L.Control.Draw({
+    draw: {
+      polygon: {
+        allowIntersection: false,
+        showArea: false
       },
-      edit: {
-        featureGroup: boundaryDrawnItems,
-        remove: true
-      }
-    });
+      rectangle: false,
+      circle: false,
+      circlemarker: false,
+      marker: false,
+      polyline: false
+    },
+    edit: {
+      featureGroup: boundaryDrawnItems,
+      remove: true
+    }
+  });
 
-    boundaryMap.addControl(boundaryDrawControl);
+  boundaryMap.addControl(boundaryDrawControl);
 
-    boundaryMap.on(L.Draw.Event.CREATED, (event) => {
-      boundaryDrawnItems.clearLayers();
-      const layer = event.layer;
-      boundaryDrawnItems.addLayer(layer);
-      syncBoundaryDataFromLayer(layer);
-    });
+  boundaryMap.on(L.Draw.Event.CREATED, (event) => {
+    boundaryDrawnItems.clearLayers();
+    const layer = event.layer;
+    boundaryDrawnItems.addLayer(layer);
+    syncBoundaryDataFromLayer(layer);
+  });
 
-    boundaryMap.on(L.Draw.Event.EDITED, (event) => {
-      const layers = event.layers.getLayers();
-      if (layers.length > 0) {
-        syncBoundaryDataFromLayer(layers[0]);
-      }
-    });
+  boundaryMap.on(L.Draw.Event.EDITED, (event) => {
+    const layers = event.layers.getLayers();
+    if (layers.length > 0) {
+      syncBoundaryDataFromLayer(layers[0]);
+    }
+  });
 
-    boundaryMap.on(L.Draw.Event.DELETED, () => {
-      clearBoundarySelection();
-    });
-  }
+  boundaryMap.on(L.Draw.Event.DELETED, () => {
+    clearBoundarySelection();
+  });
 }
 
 function setupBoundaryMapExpandToggle() {
@@ -823,20 +826,38 @@ async function setupEditMode() {
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = 'Edit';
   if (sensorsSection) sensorsSection.style.display = 'block';
 
+  const submitButton = document.querySelector('#plotForm button[type="submit"]');
+  if (submitButton) {
+    submitButton.textContent = '💾 Update Plot';
+  }
+
   try {
     const plot = await getPlot(editId);
     updateEditHeaderWithOwner(plot);
     updateOwnerNameDisplay(plot);
     populateForm(plot);
-    setReadOnlyEditMode();
+    setEditModeFieldConstraints();
     setupAssociatedSensorsActions(plot?.id || editId);
     await loadSensorsForPlot(plot?.id || editId);
-    toast('Edit mode is not available yet. Fields are read-only.', 'warning');
+    isEditModeReady = true;
+    setEditSubmitState(true, 'Update Plot');
   } catch (error) {
     const { message } = normalizeError(error);
     showFormError(message || 'Failed to load plot');
     toast(message || 'Failed to load plot', 'error');
+    isEditModeReady = false;
+    setEditSubmitState(false, 'Update Plot');
   }
+}
+
+function setEditSubmitState(isEnabled, labelText = 'Update Plot') {
+  const submitButton = document.querySelector('#plotForm button[type="submit"]');
+  if (!submitButton) {
+    return;
+  }
+
+  submitButton.disabled = !isEnabled;
+  submitButton.textContent = `\ud83d\udcbe ${labelText}`;
 }
 
 function updateEditHeaderWithOwner(plot) {
@@ -876,42 +897,14 @@ function updateOwnerNameDisplay(plot) {
   ownerNameField.value = shouldDisplay ? ownerName : '';
 }
 
-function setReadOnlyEditMode() {
+function setEditModeFieldConstraints() {
   const form = $id('plotForm');
   if (!form) return;
 
-  const interactiveElements = form.querySelectorAll('input, select, textarea, button');
-  interactiveElements.forEach((element) => {
-    element.disabled = true;
-  });
-
-  const formLinks = form.querySelectorAll('a');
-  formLinks.forEach((link) => {
-    const isCancelLink =
-      link.closest('.form-actions') && link.getAttribute('href') === 'plots.html';
-    if (isCancelLink) {
-      return;
-    }
-
-    link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('tabindex', '-1');
-    link.style.pointerEvents = 'none';
-    link.style.opacity = '0.6';
-  });
-
-  const sensorsSection = $id('sensorsSection');
-  const sensorsButtons = sensorsSection?.querySelectorAll('button') || [];
-  sensorsButtons.forEach((button) => {
-    if (button.id === 'addAssociatedSensorBtn') {
-      return;
-    }
-    button.disabled = true;
-  });
-
-  const formError = $id('formErrors');
-  if (formError) {
-    formError.textContent = 'Edit mode is not available yet. This screen is read-only.';
-    formError.style.display = 'block';
+  const propertySelect = $id('propertyId');
+  if (propertySelect) {
+    // Property reassignment is not supported by the API update contract.
+    propertySelect.disabled = true;
   }
 }
 
@@ -933,6 +926,8 @@ function setupAssociatedSensorsActions(plotId) {
 
 function populateForm(plot) {
   const normalizedCropType = normalizeCropType(plot.cropType);
+  const rawCropType = String(plot?.cropType || plot?.CropType || '').trim();
+  const resolvedCropType = normalizedCropType || rawCropType;
 
   const fields = {
     plotId: plot.id,
@@ -943,7 +938,7 @@ function populateForm(plot) {
     latitude: plot.latitude ?? plot.Latitude ?? '',
     longitude: plot.longitude ?? plot.Longitude ?? '',
     boundaryGeoJson: plot.boundaryGeoJson ?? plot.BoundaryGeoJson ?? '',
-    cropType: normalizedCropType,
+    cropType: resolvedCropType,
     plantingDate: formatDateForInput(plot.plantingDate),
     expectedHarvest: formatDateForInput(plot.expectedHarvestDate || plot.expectedHarvest),
     irrigationType: normalizeIrrigationType(plot.irrigationType || ''),
@@ -958,6 +953,20 @@ function populateForm(plot) {
     const element = $id(id);
     if (element) element.value = value;
   });
+
+  const cropTypeSelect = $id('cropType');
+  if (cropTypeSelect && resolvedCropType) {
+    const exists = Array.from(cropTypeSelect.options).some(
+      (option) => option.value === resolvedCropType
+    );
+    if (!exists) {
+      const customOption = document.createElement('option');
+      customOption.value = resolvedCropType;
+      customOption.textContent = `📦 ${resolvedCropType}`;
+      cropTypeSelect.appendChild(customOption);
+    }
+    cropTypeSelect.value = resolvedCropType;
+  }
 
   const parsedArea = parseFloat(fields.areaHectares);
   const areaDisplayInput = $id('calculatedAreaDisplay');
@@ -1487,13 +1496,17 @@ async function loadSensorsForPlot(plotId) {
     const previewSensors = sensors.slice(0, ASSOCIATED_SENSORS_MAX_PREVIEW);
     const html = previewSensors
       .map((sensor) => {
-        const sensorId = escapeHtml(sensor?.id || '-');
+        const sensorIdRaw = String(sensor?.id || '').trim();
+        const sensorId = escapeHtml(sensorIdRaw || '-');
         const label = escapeHtml(sensor?.label || 'Unnamed sensor');
         const type = escapeHtml(sensor?.type || '-');
         const status = String(sensor?.status || 'Inactive');
         const installedAt = formatDateTime(sensor?.installedAt);
         const badgeClass = getSensorStatusBadgeClass(status);
         const statusDisplay = getSensorStatusDisplay(status);
+        const editSensorUrl = sensorIdRaw
+          ? `sensors-form.html?id=${encodeURIComponent(sensorIdRaw)}`
+          : 'sensors.html';
 
         return `
     <div class="d-flex justify-between align-center" style="padding: 12px; border-bottom: 1px solid #e0e0e0; gap: 12px;">
@@ -1502,7 +1515,10 @@ async function loadSensorsForPlot(plotId) {
         <div class="text-muted" style="font-size: 0.85em;">ID: ${sensorId}</div>
         <div class="text-muted" style="font-size: 0.85em;">Type: ${type} • Installed: ${installedAt}</div>
       </div>
-      <span class="badge ${badgeClass}">${escapeHtml(statusDisplay)}</span>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+        <span class="badge ${badgeClass}">${escapeHtml(statusDisplay)}</span>
+        <a href="${editSensorUrl}" class="btn btn-outline btn-sm">Edit Sensor</a>
+      </div>
     </div>
   `;
       })
@@ -1543,16 +1559,17 @@ function setupFormHandler() {
   const form = $id('plotForm');
   if (!form) return;
 
-  if (isEditMode) {
-    return;
-  }
-
   form.addEventListener('submit', handleSubmit);
 }
 
 async function handleSubmit(e) {
   e.preventDefault();
   clearFormErrors();
+
+  if (isEditMode && !isEditModeReady) {
+    showFormError('Please wait for plot data to finish loading before updating.');
+    return;
+  }
 
   const isAdmin = isCurrentUserAdmin();
   const selectedOwnerId = $id('ownerId')?.value?.trim() || '';
@@ -1568,6 +1585,7 @@ async function handleSubmit(e) {
   }
 
   const formData = {
+    plotId: $id('plotId')?.value || editId || null,
     propertyId: $id('propertyId')?.value,
     name: $id('name')?.value,
     areaHectares: parseFloat($id('areaHectares')?.value) || 0,
@@ -1604,6 +1622,18 @@ async function handleSubmit(e) {
     return;
   }
 
+  if (formData.plantingDate && formData.expectedHarvestDate) {
+    const plantingDate = new Date(formData.plantingDate);
+    const expectedHarvestDate = new Date(formData.expectedHarvestDate);
+
+    if (!Number.isNaN(plantingDate.getTime()) && !Number.isNaN(expectedHarvestDate.getTime())) {
+      if (expectedHarvestDate <= plantingDate) {
+        showFormError('Expected harvest must be after planting date.');
+        return;
+      }
+    }
+  }
+
   if (isAdmin && !isEditMode && !selectedOwnerId) {
     const ownerSelect = $id('ownerId');
     if (ownerSelect) {
@@ -1614,30 +1644,46 @@ async function handleSubmit(e) {
     return;
   }
 
-  if (isEditMode) {
-    showFormError('Plot update is not available yet in this screen.');
+  if (isEditMode && !formData.plotId) {
+    showFormError('Plot Id is required for update.');
     return;
   }
 
-  showLoading('Saving plot...');
+  showLoading(isEditMode ? 'Updating plot...' : 'Saving plot...');
 
   try {
-    await createPlot({
-      ownerId: formData.ownerId,
-      propertyId: formData.propertyId,
-      name: formData.name,
-      areaHectares: formData.areaHectares,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      boundaryGeoJson: formData.boundaryGeoJson,
-      cropType: formData.cropType,
-      plantingDate: formData.plantingDate,
-      expectedHarvestDate: formData.expectedHarvestDate,
-      irrigationType: formData.irrigationType,
-      additionalNotes: formData.additionalNotes
-    });
+    if (isEditMode) {
+      await updatePlot(formData.plotId, {
+        plotId: formData.plotId,
+        name: formData.name,
+        cropType: formData.cropType,
+        areaHectares: formData.areaHectares,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        boundaryGeoJson: formData.boundaryGeoJson,
+        plantingDate: formData.plantingDate,
+        expectedHarvestDate: formData.expectedHarvestDate,
+        irrigationType: formData.irrigationType,
+        additionalNotes: formData.additionalNotes
+      });
+    } else {
+      await createPlot({
+        ownerId: formData.ownerId,
+        propertyId: formData.propertyId,
+        name: formData.name,
+        areaHectares: formData.areaHectares,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        boundaryGeoJson: formData.boundaryGeoJson,
+        cropType: formData.cropType,
+        plantingDate: formData.plantingDate,
+        expectedHarvestDate: formData.expectedHarvestDate,
+        irrigationType: formData.irrigationType,
+        additionalNotes: formData.additionalNotes
+      });
+    }
 
-    toast('Plot created successfully', 'success');
+    toast(isEditMode ? 'Plot updated successfully' : 'Plot created successfully', 'success');
     navigateTo('plots.html');
   } catch (error) {
     const message = extractApiErrorMessage(error);

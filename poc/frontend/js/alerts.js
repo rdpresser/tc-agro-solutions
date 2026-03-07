@@ -3,6 +3,17 @@
  */
 
 import {
+  getAlertSeverityBadgeClass,
+  getAlertSeverityIcon,
+  getAlertSeverityLabel,
+  getAlertStatusLabel,
+  getAlertTabBadgeClass,
+  normalizeAlertSeverity,
+  normalizeAlertSeverityFilter,
+  normalizeAlertStatus,
+  normalizeAlertStatusFilter
+} from './alert-statuses.js';
+import {
   getPendingAlertsPage,
   getPendingAlertsSummary,
   getOwnersPaginated,
@@ -16,17 +27,6 @@ import {
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { createFallbackPoller } from './realtime-fallback.js';
-import {
-  getAlertSeverityBadgeClass,
-  getAlertSeverityIcon,
-  getAlertSeverityLabel,
-  getAlertStatusLabel,
-  getAlertTabBadgeClass,
-  normalizeAlertSeverity,
-  normalizeAlertSeverityFilter,
-  normalizeAlertStatus,
-  normalizeAlertStatusFilter
-} from './alert-statuses.js';
 import {
   $,
   $$,

@@ -26,7 +26,9 @@ export function parseRealtimeErrorCode(error) {
 
   const separatorIndex = message.indexOf(':');
   const candidate = separatorIndex >= 0 ? message.slice(0, separatorIndex) : message;
-  const code = String(candidate || '').trim().toUpperCase();
+  const code = String(candidate || '')
+    .trim()
+    .toUpperCase();
   return code || null;
 }
 
@@ -547,13 +549,9 @@ export async function createPlot(plotData) {
  * @returns {Promise<Object>} Updated plot (mock data)
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
-export function updatePlot(id, plotData) {
-  return { id, ...plotData };
-
-  /* REAL API
-  const { data } = await api.put(`/plots/${id}`, plotData);
+export async function updatePlot(id, plotData) {
+  const { data } = await farmApi.put(`/api/plots/${encodeURIComponent(id)}`, plotData);
   return data;
-  */
 }
 
 /**
@@ -1172,7 +1170,9 @@ export async function joinOwnerGroup(ownerId = null) {
   if (signalRConnection && !signalRConnection.isMock) {
     try {
       if (isCurrentUserAdminForRealtime() && !ownerId) {
-        console.warn(`[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup skipped without ownerId.`);
+        console.warn(
+          `[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup skipped without ownerId.`
+        );
         return false;
       }
 
@@ -1184,7 +1184,9 @@ export async function joinOwnerGroup(ownerId = null) {
       return true;
     } catch (error) {
       if (isOwnerScopeRequiredRealtimeError(error)) {
-        console.warn(`[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup rejected by hub.`);
+        console.warn(
+          `[SignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinOwnerGroup rejected by hub.`
+        );
         return false;
       }
       console.error(`Failed to join owner group ${ownerId}:`, error);
@@ -1216,7 +1218,9 @@ export async function joinAlertOwnerGroup(ownerId = null) {
   if (alertSignalRConnection && !alertSignalRConnection.isMock) {
     try {
       if (isCurrentUserAdminForRealtime() && !ownerId) {
-        console.warn(`[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup skipped without ownerId.`);
+        console.warn(
+          `[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup skipped without ownerId.`
+        );
         return false;
       }
 
@@ -1228,7 +1232,9 @@ export async function joinAlertOwnerGroup(ownerId = null) {
       return true;
     } catch (error) {
       if (isOwnerScopeRequiredRealtimeError(error)) {
-        console.warn(`[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup rejected by hub.`);
+        console.warn(
+          `[AlertSignalR] ${OWNER_SCOPE_REQUIRED_CODE}: admin joinAlertOwnerGroup rejected by hub.`
+        );
         return false;
       }
       console.error(`Failed to join alert owner group ${ownerId}:`, error);

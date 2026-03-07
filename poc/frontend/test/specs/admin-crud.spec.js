@@ -72,7 +72,7 @@ test.describe('Admin CRUD coverage', () => {
     expect(dialog.message()).toContain('Property deletion will be implemented');
   });
 
-  test('plots: create and edit read-only constraint', async ({ page }) => {
+  test('plots: create and edit update flow', async ({ page }) => {
     await page.goto('plots.html');
     await expect(page.locator('#plots-tbody tr')).toHaveCount(1);
     const cropTypeCell = page.locator('#plots-tbody tr').first().locator('td').nth(3);
@@ -105,8 +105,22 @@ test.describe('Admin CRUD coverage', () => {
     expect(createPayload.propertyId).toBe('property-001');
 
     await page.goto('plots-form.html?id=plot-001');
-    await expect(page.locator('#formErrors')).toContainText('read-only');
-    await expect(page.locator('#plotForm button[type="submit"]')).toBeDisabled();
+    await expect(page.locator('#plotForm button[type="submit"]')).toBeEnabled();
+    await page.locator('#name').fill('Admin Updated Plot');
+
+    const updateRequestPromise = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().includes('/api/plots/plot-001')
+    );
+
+    await Promise.all([
+      page.waitForURL(/plots\.html/),
+      page.locator('#plotForm button[type="submit"]').click()
+    ]);
+
+    const updateRequest = await updateRequestPromise;
+    const updatePayload = parsePayload(updateRequest);
+    expect(updatePayload.plotId).toBe('plot-001');
+    expect(updatePayload.name).toBe('Admin Updated Plot');
   });
 
   test('sensors: create, status update and edit read-only constraint', async ({ page }) => {
@@ -212,4 +226,3 @@ test.describe('Admin CRUD coverage', () => {
     await deleteRequestPromise;
   });
 });
-

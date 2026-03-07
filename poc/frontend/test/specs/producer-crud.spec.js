@@ -68,7 +68,7 @@ test.describe('Producer CRUD coverage', () => {
     expect(dialog.message()).toContain('Property deletion will be implemented');
   });
 
-  test('plots: create without owner field and edit read-only', async ({ page }) => {
+  test('plots: create without owner field and edit update flow', async ({ page }) => {
     await page.goto('plots-form.html');
     await expect(page.locator('#ownerFieldGroup')).toBeHidden();
     await page.locator('#propertyId').selectOption('property-001');
@@ -93,8 +93,22 @@ test.describe('Producer CRUD coverage', () => {
     expect(createPayload.ownerId).toBeUndefined();
 
     await page.goto('plots-form.html?id=plot-001');
-    await expect(page.locator('#formErrors')).toContainText('read-only');
-    await expect(page.locator('#plotForm button[type="submit"]')).toBeDisabled();
+    await expect(page.locator('#plotForm button[type="submit"]')).toBeEnabled();
+    await page.locator('#name').fill('Producer Updated Plot');
+
+    const updateRequestPromise = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().includes('/api/plots/plot-001')
+    );
+
+    await Promise.all([
+      page.waitForURL(/plots\.html/),
+      page.locator('#plotForm button[type="submit"]').click()
+    ]);
+
+    const updateRequest = await updateRequestPromise;
+    const updatePayload = parsePayload(updateRequest);
+    expect(updatePayload.plotId).toBe('plot-001');
+    expect(updatePayload.name).toBe('Producer Updated Plot');
   });
 
   test('sensors: create without owner field, status update and edit read-only', async ({

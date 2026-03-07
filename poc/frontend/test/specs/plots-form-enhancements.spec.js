@@ -125,6 +125,18 @@ test.describe('Plots form enhancements', () => {
     expect(areaValue).toBeLessThan(10);
   });
 
+  test('edit mode shows associated sensors list with edit action', async ({ page }) => {
+    await page.goto('plots-form.html?id=plot-001');
+
+    await expect(page.locator('#sensorsSection')).toBeVisible();
+    await expect(page.locator('#sensorsList')).toContainText('Soil Sensor 001');
+    await expect(page.locator('#sensorsList')).toContainText('Edit Sensor');
+
+    const editSensorLink = page.locator('#sensorsList a', { hasText: 'Edit Sensor' }).first();
+    await expect(editSensorLink).toBeVisible();
+    await expect(editSensorLink).toHaveAttribute('href', /sensors-form\.html\?id=sensor-001/);
+  });
+
   test('search mode allows selecting crop and pre-fills defaults', async ({ page }) => {
     await page.goto('plots-form.html');
 

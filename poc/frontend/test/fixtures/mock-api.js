@@ -20,6 +20,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function futureIso(daysAhead = 120) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  return date.toISOString();
+}
+
 function buildPaginated(items, pageNumber = 1, pageSize = 10) {
   const normalizedPageNumber = Number(pageNumber) > 0 ? Number(pageNumber) : 1;
   const normalizedPageSize = Number(pageSize) > 0 ? Number(pageSize) : 10;
@@ -153,7 +159,7 @@ function createInitialState({ owners, users, properties, plots, sensors } = {}) 
         '{"type":"Polygon","coordinates":[[[-47.811,-21.178],[-47.809,-21.178],[-47.809,-21.176],[-47.811,-21.176],[-47.811,-21.178]]]}',
       cropType: 'Soybean',
       plantingDate: nowIso(),
-      expectedHarvestDate: nowIso(),
+      expectedHarvestDate: futureIso(),
       irrigationType: 'Drip',
       status: 'healthy',
       sensorsCount: 1,
@@ -569,6 +575,31 @@ export async function installApiMocks(
         }
 
         await fulfillJson(route, newPlot, 201);
+        return;
+      }
+
+      if (pathname.startsWith('/api/plots/') && method === 'PUT') {
+        const plotId = decodeURIComponent(pathname.split('/api/plots/')[1] || '');
+        const body = parseRequestBody(request);
+        const index = state.plots.findIndex((item) => item.id === plotId);
+
+        if (index === -1) {
+          await fulfillJson(route, { message: 'Plot not found' }, 404);
+          return;
+        }
+
+        state.plots[index] = {
+          ...state.plots[index],
+          ...body,
+          id: plotId,
+          ownerId: state.plots[index].ownerId,
+          ownerName: state.plots[index].ownerName,
+          propertyId: state.plots[index].propertyId,
+          propertyName: state.plots[index].propertyName,
+          updatedAt: nowIso()
+        };
+
+        await fulfillJson(route, withResolvedPlotCoordinates(state.plots[index], state.properties));
         return;
       }
 
