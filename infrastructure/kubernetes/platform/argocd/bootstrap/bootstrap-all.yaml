@@ -49,7 +49,7 @@ spec:
   
   source:
     repoURL: https://github.com/rdpresser/tc-agro-solutions.git
-    targetRevision: main
+    targetRevision: feature/phase_06
     path: infrastructure/kubernetes/platform/argocd/applications
     directory:
       recurse: true
@@ -78,7 +78,7 @@ spec:
   
   source:
     repoURL: https://github.com/rdpresser/tc-agro-solutions.git
-    targetRevision: main
+    targetRevision: feature/phase_06
     path: infrastructure/kubernetes/apps/argocd/applications
     directory:
       recurse: true

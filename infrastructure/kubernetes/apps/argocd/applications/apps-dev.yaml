@@ -64,7 +64,7 @@ spec:
       
       source:
         repoURL: https://github.com/rdpresser/tc-agro-solutions.git
-        targetRevision: main
+        targetRevision: feature/phase_06
         path: '{{path}}'  # Points to overlays/dev
       
       destination:
