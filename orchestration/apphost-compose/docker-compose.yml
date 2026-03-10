@@ -527,6 +527,9 @@ services:
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
       - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
+      # .NET Configuration - External Providers (OpenAI.*)
+      - OpenAI__ApiKey=${OpenAI__ApiKey}
+
       # .NET Configuration - Logging (Logging.LogLevel.*)
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}

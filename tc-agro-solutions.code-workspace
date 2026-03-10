@@ -12,7 +12,10 @@
     "git.autoRepositoryDetection": "subFolders",
     "chat.tools.terminal.autoApprove": {
       "npm run lint": true,
-      "npx tsc": true
+      "npx tsc": true,
+      "npm run build": true,
+      "npm run dev": true,
+      "npm run test": true
     },
     "powershell.cwd": "tc-agro-solutions"
   }

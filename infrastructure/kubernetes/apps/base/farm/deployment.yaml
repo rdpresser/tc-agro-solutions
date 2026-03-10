@@ -52,6 +52,12 @@ spec:
             secretKeyRef:
               name: agro-secrets
               key: Auth__Jwt__SecretKey
+        # OpenAI API key from Secret
+        - name: OpenAI__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: OpenAI__ApiKey
         livenessProbe:
           httpGet:
             path: /health
