@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
     "dev": "vite --port 3001",
+    "dev:e2e": "cross-env PLAYWRIGHT=1 vite --host 127.0.0.1 --port 3001 --strictPort",
     "build": "node --no-deprecation -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
     "build:watch": "vite build --watch",
     "build:k8s": "cross-env VITE_BASE_PATH=/agro/ npm run build",

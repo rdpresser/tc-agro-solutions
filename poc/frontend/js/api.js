@@ -531,6 +531,176 @@ export async function getPlotsPaginated({
   return data;
 }
 
+export async function getCropTypesPaginated({
+  pageNumber = 1,
+  pageSize = 25,
+  sortBy = 'createdAt',
+  sortDirection = 'desc',
+  filter = '',
+  ownerId = '',
+  propertyId = '',
+  source = '',
+  includeStale = false,
+  includeInactive = false
+} = {}) {
+  const params = {
+    pageNumber,
+    pageSize,
+    sortBy,
+    sortDirection,
+    filter,
+    ownerId,
+    propertyId,
+    source,
+    includeStale,
+    includeInactive
+  };
+
+  Object.keys(params).forEach((key) => {
+    if (
+      params[key] === '' ||
+      params[key] === null ||
+      params[key] === undefined ||
+      params[key] === false
+    ) {
+      delete params[key];
+    }
+  });
+
+  const { data } = await farmApi.get('/api/crop-types', { params });
+  return data;
+}
+
+export async function getPropertyCropTypes(
+  propertyId,
+  { includeStale = false, includeInactive = false, pageSize = 50, maxPages = 10 } = {}
+) {
+  const normalizedPropertyId = String(propertyId || '').trim();
+  if (!normalizedPropertyId) {
+    return [];
+  }
+
+  const collected = [];
+  let pageNumber = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage && pageNumber <= maxPages) {
+    const response = await getCropTypesPaginated({
+      pageNumber,
+      pageSize,
+      propertyId: normalizedPropertyId,
+      includeStale,
+      includeInactive,
+      sortBy: 'createdAt',
+      sortDirection: 'desc'
+    });
+
+    const items = response?.data || response?.items || response?.results || [];
+    if (Array.isArray(items) && items.length > 0) {
+      collected.push(...items);
+    }
+
+    hasNextPage = Boolean(response?.hasNextPage);
+    pageNumber += 1;
+  }
+
+  const deduplicatedByCropType = new Map();
+
+  collected
+    .map((item) => normalizeCropTypeSuggestion(item))
+    .filter((item) => item && item.cropType)
+    .forEach((item) => {
+      const dedupeKey = String(item.cropType).trim().toLowerCase();
+      if (!deduplicatedByCropType.has(dedupeKey)) {
+        deduplicatedByCropType.set(dedupeKey, item);
+      }
+    });
+
+  return Array.from(deduplicatedByCropType.values());
+}
+
+export async function regeneratePropertyCropTypes(propertyId) {
+  const normalizedPropertyId = String(propertyId || '').trim();
+  if (!normalizedPropertyId) {
+    throw new Error('Property id is required to regenerate crop suggestions.');
+  }
+
+  const { data } = await farmApi.post(
+    `/api/properties/${encodeURIComponent(normalizedPropertyId)}/crop-types/regenerate`
+  );
+
+  return data;
+}
+
+function normalizeCropTypeSuggestion(item) {
+  const cropType = String(item?.cropType || item?.CropType || '').trim();
+  if (!cropType) {
+    return null;
+  }
+
+  const cropTypeCatalogId =
+    String(
+      item?.cropTypeCatalogId || item?.CropTypeCatalogId || item?.catalogId || item?.CatalogId || ''
+    ).trim() || null;
+
+  const selectedCropTypeSuggestionId =
+    String(
+      item?.selectedCropTypeSuggestionId ||
+        item?.SelectedCropTypeSuggestionId ||
+        item?.id ||
+        item?.Id ||
+        ''
+    ).trim() || null;
+
+  return {
+    id: item?.id || item?.Id || '',
+    propertyId: item?.propertyId || item?.PropertyId || '',
+    ownerId: item?.ownerId || item?.OwnerId || '',
+    cropType,
+    source: item?.source || item?.Source || '',
+    isStale: Boolean(item?.isStale ?? item?.IsStale),
+    isActive: item?.isActive ?? item?.IsActive ?? true,
+    confidenceScore: toNullableNumber(item?.confidenceScore ?? item?.ConfidenceScore),
+    plantingWindow: toNullableTrimmedString(item?.plantingWindow ?? item?.PlantingWindow),
+    harvestCycleMonths: toNullableInteger(item?.harvestCycleMonths ?? item?.HarvestCycleMonths),
+    suggestedIrrigationType: toNullableTrimmedString(
+      item?.suggestedIrrigationType ?? item?.SuggestedIrrigationType
+    ),
+    minSoilMoisture: toNullableNumber(item?.minSoilMoisture ?? item?.MinSoilMoisture),
+    maxTemperature: toNullableNumber(item?.maxTemperature ?? item?.MaxTemperature),
+    minHumidity: toNullableNumber(item?.minHumidity ?? item?.MinHumidity),
+    notes: toNullableTrimmedString(item?.notes ?? item?.Notes),
+    model: toNullableTrimmedString(item?.model ?? item?.Model),
+    generatedAt: item?.generatedAt || item?.GeneratedAt || null,
+    createdAt: item?.createdAt || item?.CreatedAt || null,
+    cropTypeCatalogId,
+    selectedCropTypeSuggestionId
+  };
+}
+
+function toNullableTrimmedString(value) {
+  const text = String(value || '').trim();
+  return text.length > 0 ? text : null;
+}
+
+function toNullableNumber(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toNullableInteger(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 /**
  * Create new plot
  * @param {Object} plotData - Plot data

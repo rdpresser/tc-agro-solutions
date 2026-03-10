@@ -27,10 +27,10 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: 'npm run dev -- --host 127.0.0.1 --port 3001',
+        command: 'npm run dev:e2e',
         url: baseUrl,
         reuseExistingServer: !process.env.CI,
-        timeout: 120000
+        timeout: 180000
       },
   projects: [
     {

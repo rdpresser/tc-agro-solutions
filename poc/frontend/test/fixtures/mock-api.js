@@ -97,7 +97,14 @@ function withResolvedPlotCoordinates(plot, properties) {
   };
 }
 
-function createInitialState({ owners, users, properties, plots, sensors } = {}) {
+function createInitialState({
+  owners,
+  users,
+  properties,
+  plots,
+  sensors,
+  cropTypeSuggestions
+} = {}) {
   const ownersState = owners || [...DEFAULT_OWNERS];
 
   const usersState = users || [
@@ -158,6 +165,8 @@ function createInitialState({ owners, users, properties, plots, sensors } = {}) 
       boundaryGeoJson:
         '{"type":"Polygon","coordinates":[[[-47.811,-21.178],[-47.809,-21.178],[-47.809,-21.176],[-47.811,-21.176],[-47.811,-21.178]]]}',
       cropType: 'Soybean',
+      cropTypeCatalogId: '11111111-1111-4111-8111-111111111111',
+      selectedCropTypeSuggestionId: null,
       plantingDate: nowIso(),
       expectedHarvestDate: futureIso(),
       irrigationType: 'Drip',
@@ -185,12 +194,66 @@ function createInitialState({ owners, users, properties, plots, sensors } = {}) 
     }
   ];
 
+  const cropTypeSuggestionsState = cropTypeSuggestions || [
+    {
+      id: 'crop-suggestion-001',
+      propertyId: 'property-001',
+      ownerId: DEFAULT_OWNER_ID_ALPHA,
+      ownerName: 'Alpha Farms',
+      propertyName: 'Alpha Main Property',
+      cropType: 'Sorghum',
+      cropTypeCatalogId: '77777777-7777-4777-8777-777777777777',
+      selectedCropTypeSuggestionId: 'crop-suggestion-001',
+      source: 'ai',
+      isOverride: false,
+      isStale: false,
+      confidenceScore: 88,
+      plantingWindow: 'Late spring to early summer',
+      harvestCycleMonths: 4,
+      suggestedIrrigationType: 'Sprinkler',
+      minSoilMoisture: 26,
+      maxTemperature: 37,
+      minHumidity: 38,
+      notes: 'AI recommendation based on local coordinates',
+      model: 'mock-openai',
+      generatedAt: nowIso(),
+      isActive: true,
+      createdAt: nowIso()
+    },
+    {
+      id: 'crop-suggestion-002',
+      propertyId: 'property-001',
+      ownerId: DEFAULT_OWNER_ID_ALPHA,
+      ownerName: 'Alpha Farms',
+      propertyName: 'Alpha Main Property',
+      cropType: 'Coffee',
+      cropTypeCatalogId: '55555555-5555-4555-8555-555555555555',
+      selectedCropTypeSuggestionId: 'crop-suggestion-002',
+      source: 'manual',
+      isOverride: true,
+      isStale: false,
+      confidenceScore: null,
+      plantingWindow: 'March to May',
+      harvestCycleMonths: 8,
+      suggestedIrrigationType: 'Drip Irrigation',
+      minSoilMoisture: 40,
+      maxTemperature: 30,
+      minHumidity: 60,
+      notes: 'Manual agronomist override',
+      model: null,
+      generatedAt: null,
+      isActive: true,
+      createdAt: nowIso()
+    }
+  ];
+
   return {
     owners: ownersState,
     users: usersState,
     properties: propertiesState,
     plots: plotsState,
-    sensors: sensorsState
+    sensors: sensorsState,
+    cropTypeSuggestions: cropTypeSuggestionsState
   };
 }
 
@@ -236,9 +299,24 @@ function toPageParams(searchParams, defaults = {}) {
 
 export async function installApiMocks(
   page,
-  { owners = DEFAULT_OWNERS, pendingAlertsTotal = 3, users, properties, plots, sensors } = {}
+  {
+    owners = DEFAULT_OWNERS,
+    pendingAlertsTotal = 3,
+    users,
+    properties,
+    plots,
+    sensors,
+    cropTypeSuggestions
+  } = {}
 ) {
-  const state = createInitialState({ owners, users, properties, plots, sensors });
+  const state = createInitialState({
+    owners,
+    users,
+    properties,
+    plots,
+    sensors,
+    cropTypeSuggestions
+  });
 
   await page.route('**/*', async (route) => {
     const request = route.request();
@@ -557,6 +635,8 @@ export async function installApiMocks(
           longitude: body.longitude ?? null,
           boundaryGeoJson: body.boundaryGeoJson ?? null,
           cropType: body.cropType || 'Soybean',
+          cropTypeCatalogId: body.cropTypeCatalogId ?? null,
+          selectedCropTypeSuggestionId: body.selectedCropTypeSuggestionId ?? null,
           plantingDate: body.plantingDate || nowIso(),
           expectedHarvestDate: body.expectedHarvestDate || nowIso(),
           irrigationType: body.irrigationType || 'Drip',
@@ -623,6 +703,79 @@ export async function installApiMocks(
         }
 
         await fulfillJson(route, withResolvedPlotCoordinates(plot, state.properties));
+        return;
+      }
+
+      if (pathname === '/api/crop-types' && method === 'GET') {
+        const { pageNumber, pageSize } = toPageParams(searchParams, { pageSize: 25 });
+        const ownerId = searchParams.get('ownerId') || '';
+        const propertyId = searchParams.get('propertyId') || '';
+        const source = searchParams.get('source') || '';
+        const filter = searchParams.get('filter') || '';
+        const includeStale =
+          String(searchParams.get('includeStale') || 'false').toLowerCase() === 'true';
+        const includeInactive =
+          String(searchParams.get('includeInactive') || 'false').toLowerCase() === 'true';
+
+        let items = [...state.cropTypeSuggestions];
+
+        if (ownerId) {
+          items = items.filter((item) => String(item.ownerId || '') === ownerId);
+        }
+
+        if (propertyId) {
+          items = items.filter((item) => String(item.propertyId || '') === propertyId);
+        }
+
+        if (source) {
+          items = items.filter(
+            (item) => String(item.source || '').toLowerCase() === String(source).toLowerCase()
+          );
+        }
+
+        if (!includeStale) {
+          items = items.filter((item) => !item.isStale);
+        }
+
+        if (!includeInactive) {
+          items = items.filter((item) => item.isActive !== false);
+        }
+
+        items = applyTextFilter(items, filter, [
+          'cropType',
+          'propertyName',
+          'ownerName',
+          'suggestedIrrigationType'
+        ]);
+
+        await fulfillJson(route, buildPaginated(items, pageNumber, pageSize));
+        return;
+      }
+
+      if (
+        pathname.startsWith('/api/properties/') &&
+        pathname.endsWith('/crop-types/regenerate') &&
+        method === 'POST'
+      ) {
+        const propertyId = decodeURIComponent(
+          pathname.split('/api/properties/')[1].split('/crop-types/regenerate')[0] || ''
+        );
+
+        const property = state.properties.find((item) => item.id === propertyId);
+        if (!property) {
+          await fulfillJson(route, { message: 'Property not found' }, 404);
+          return;
+        }
+
+        await fulfillJson(
+          route,
+          {
+            propertyId,
+            status: 'Queued',
+            queuedAt: nowIso()
+          },
+          202
+        );
         return;
       }
 

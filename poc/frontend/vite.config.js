@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
   // Development server
   server: {
     port: 3000,
-    open: true,
+    open: process.env.PLAYWRIGHT !== '1',
     cors: true,
     // Hot Module Replacement
     hmr: {
@@ -109,6 +109,6 @@ export default defineConfig(({ mode }) => ({
   // Preview server (for testing production build)
   preview: {
     port: 3001,
-    open: true
+    open: process.env.PLAYWRIGHT !== '1'
   }
 }));

@@ -105,6 +105,12 @@
           <!-- Form Card -->
           <form id="plotForm" class="card">
             <input type="hidden" id="plotId" name="id" />
+            <input type="hidden" id="cropTypeCatalogId" name="cropTypeCatalogId" />
+            <input
+              type="hidden"
+              id="selectedCropTypeSuggestionId"
+              name="selectedCropTypeSuggestionId"
+            />
 
             <div id="formErrors" class="alert alert-danger" style="display: none"></div>
 
@@ -493,7 +499,7 @@
                 placeholder="Type crop name (e.g., Corn, Soy, Coffee)"
               />
               <span class="form-helper">
-                Local search using crop list configured in the frontend.
+                Search property suggestions first, then fallback crop catalog.
               </span>
             </div>
             <div

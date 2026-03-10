@@ -14,6 +14,7 @@ import {
   fetchFarmSwagger,
   getPlot,
   getPlotSensorsPaginated,
+  getPropertyCropTypes,
   getProperties,
   getPropertiesByOwner,
   normalizeError,
@@ -67,6 +68,14 @@ let boundaryDrawControl = null;
 let boundarySearchMarker = null;
 let isBoundaryMapExpanded = false;
 let isEditModeReady = !isEditMode;
+let propertyCropSuggestions = [];
+let propertyCropSuggestionMap = new Map();
+let cropTypeChangeHandlerAttached = false;
+let selectedCropTypeCatalogId = '';
+let selectedCropTypeSuggestionId = '';
+let loadedPlotCropType = '';
+let loadedPlotCropTypeCatalogId = '';
+let loadedPlotSelectedCropTypeSuggestionId = '';
 
 // ============================================
 // Page Initialization
@@ -240,6 +249,7 @@ async function loadPropertyOptions({ ownerId = '', preserveSelection = true } = 
   if (isAdmin && !ownerId && !isEditMode) {
     select.innerHTML = '<option value="">Select an owner first...</option>';
     select.value = '';
+    await refreshCropTypeOptionsForSelectedProperty({ preserveSelection: false });
     return;
   }
 
@@ -267,6 +277,7 @@ async function loadPropertyOptions({ ownerId = '', preserveSelection = true } = 
       select.innerHTML = '<option value="">No properties available</option>';
       select.value = '';
       centerBoundaryMapToDefault();
+      await refreshCropTypeOptionsForSelectedProperty({ preserveSelection: false });
       return;
     }
 
@@ -279,8 +290,10 @@ async function loadPropertyOptions({ ownerId = '', preserveSelection = true } = 
     }
 
     centerBoundaryMapFromSelectedProperty();
+    await refreshCropTypeOptionsForSelectedProperty({ preserveSelection: true });
   } catch (error) {
     console.error('Error loading properties for plot form:', error);
+    await refreshCropTypeOptionsForSelectedProperty({ preserveSelection: true });
   }
 }
 
@@ -290,6 +303,7 @@ function setupPropertyMapBinding() {
 
   propertySelect.addEventListener('change', () => {
     centerBoundaryMapFromSelectedProperty();
+    void refreshCropTypeOptionsForSelectedProperty({ preserveSelection: false });
   });
 }
 
@@ -836,6 +850,7 @@ async function setupEditMode() {
     updateEditHeaderWithOwner(plot);
     updateOwnerNameDisplay(plot);
     populateForm(plot);
+    await refreshCropTypeOptionsForSelectedProperty({ preserveSelection: true });
     setEditModeFieldConstraints();
     setupAssociatedSensorsActions(plot?.id || editId);
     await loadSensorsForPlot(plot?.id || editId);
@@ -929,6 +944,15 @@ function populateForm(plot) {
   const rawCropType = String(plot?.cropType || plot?.CropType || '').trim();
   const resolvedCropType = normalizedCropType || rawCropType;
 
+  loadedPlotCropType = resolvedCropType;
+  loadedPlotCropTypeCatalogId = normalizeReferenceId(
+    plot?.cropTypeCatalogId ?? plot?.CropTypeCatalogId
+  );
+  loadedPlotSelectedCropTypeSuggestionId = normalizeReferenceId(
+    plot?.selectedCropTypeSuggestionId ?? plot?.SelectedCropTypeSuggestionId
+  );
+  setSelectedCropReferences(loadedPlotCropTypeCatalogId, loadedPlotSelectedCropTypeSuggestionId);
+
   const fields = {
     plotId: plot.id,
     ownerId: plot.ownerId || '',
@@ -968,6 +992,8 @@ function populateForm(plot) {
     cropTypeSelect.value = resolvedCropType;
   }
 
+  updateSelectedCropReferences(resolvedCropType);
+
   const parsedArea = parseFloat(fields.areaHectares);
   const areaDisplayInput = $id('calculatedAreaDisplay');
   if (areaDisplayInput && Number.isFinite(parsedArea) && parsedArea > 0) {
@@ -981,32 +1007,282 @@ function loadCropTypeOptions() {
   const select = $id('cropType');
   if (!select) return;
 
-  const currentValue = select.value;
-
-  select.innerHTML = [`<option value="">Select crop type...</option>`]
-    .concat(
-      COMMON_CROP_TYPES.map((cropType) => {
-        const icon = CROP_TYPE_ICONS[cropType] || '🌿';
-        return `<option value="${cropType}">${icon} ${cropType}</option>`;
-      })
-    )
-    .join('');
-
-  const normalizedCurrent = normalizeCropType(currentValue);
-  if (normalizedCurrent) {
-    select.value = normalizedCurrent;
-  }
+  renderCropTypeSelectOptions(select.value);
 
   updateCropPlantingHint(select.value);
+  updateSelectedCropReferences(select.value);
 
-  select.addEventListener('change', () => {
-    updateCropPlantingHint(select.value);
-    applySuggestedFieldDefaultsForCrop(select.value);
-  });
+  if (!cropTypeChangeHandlerAttached) {
+    cropTypeChangeHandlerAttached = true;
+    select.addEventListener('change', () => {
+      updateCropPlantingHint(select.value);
+      updateSelectedCropReferences(select.value);
+      applySuggestedFieldDefaultsForCrop(select.value);
+    });
+  }
 
   if (!isEditMode && select.value) {
     applySuggestedFieldDefaultsForCrop(select.value);
   }
+}
+
+async function refreshCropTypeOptionsForSelectedProperty({ preserveSelection = true } = {}) {
+  const propertySelect = $id('propertyId');
+  const cropTypeSelect = $id('cropType');
+  if (!cropTypeSelect) {
+    return;
+  }
+
+  const propertyId = String(propertySelect?.value || '').trim();
+  const currentValue = preserveSelection ? cropTypeSelect.value : '';
+
+  if (!propertyId) {
+    setPropertyCropSuggestions([]);
+    renderCropTypeSelectOptions(currentValue);
+    return;
+  }
+
+  try {
+    const suggestions = await getPropertyCropTypes(propertyId, {
+      includeStale: false,
+      includeInactive: false,
+      pageSize: 50
+    });
+
+    setPropertyCropSuggestions(suggestions);
+  } catch (error) {
+    console.warn(
+      '[Plots Form] Failed to load property crop suggestions. Falling back to defaults.',
+      {
+        propertyId,
+        error
+      }
+    );
+    setPropertyCropSuggestions([]);
+  }
+
+  renderCropTypeSelectOptions(currentValue);
+  updateCropPlantingHint(cropTypeSelect.value);
+  updateSelectedCropReferences(cropTypeSelect.value);
+}
+
+function normalizeReferenceId(value) {
+  const normalized = String(value || '').trim();
+  return normalized.length > 0 ? normalized : '';
+}
+
+function setSelectedCropReferences(cropTypeCatalogId, suggestionId) {
+  const normalizedCatalogId = normalizeReferenceId(cropTypeCatalogId);
+  const normalizedSuggestionId = normalizeReferenceId(suggestionId);
+
+  selectedCropTypeCatalogId = normalizedCatalogId;
+  selectedCropTypeSuggestionId = normalizedCatalogId ? normalizedSuggestionId : '';
+
+  const cropTypeCatalogIdInput = $id('cropTypeCatalogId');
+  if (cropTypeCatalogIdInput) {
+    cropTypeCatalogIdInput.value = selectedCropTypeCatalogId;
+  }
+
+  const selectedSuggestionIdInput = $id('selectedCropTypeSuggestionId');
+  if (selectedSuggestionIdInput) {
+    selectedSuggestionIdInput.value = selectedCropTypeSuggestionId;
+  }
+}
+
+function updateSelectedCropReferences(cropType) {
+  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
+  if (!normalizedCropType) {
+    setSelectedCropReferences('', '');
+    return;
+  }
+
+  const propertySuggestion = getCropSuggestionForType(normalizedCropType);
+  const propertyCatalogId = normalizeReferenceId(propertySuggestion?.cropTypeCatalogId);
+  const propertySuggestionId = normalizeReferenceId(
+    propertySuggestion?.selectedCropTypeSuggestionId || propertySuggestion?.id
+  );
+
+  if (propertyCatalogId) {
+    setSelectedCropReferences(propertyCatalogId, propertySuggestionId);
+    return;
+  }
+
+  if (
+    isEditMode &&
+    loadedPlotCropType &&
+    loadedPlotCropType.toLowerCase() === normalizedCropType.toLowerCase()
+  ) {
+    setSelectedCropReferences(loadedPlotCropTypeCatalogId, loadedPlotSelectedCropTypeSuggestionId);
+    return;
+  }
+
+  setSelectedCropReferences('', '');
+}
+
+function setPropertyCropSuggestions(suggestions) {
+  propertyCropSuggestions = Array.isArray(suggestions) ? suggestions : [];
+  propertyCropSuggestionMap = new Map();
+
+  propertyCropSuggestions.forEach((suggestion) => {
+    const cropTypeName = String(suggestion?.cropType || '').trim();
+    if (!cropTypeName) {
+      return;
+    }
+
+    const mapKey = cropTypeName.toLowerCase();
+    if (!propertyCropSuggestionMap.has(mapKey)) {
+      propertyCropSuggestionMap.set(mapKey, suggestion);
+    }
+  });
+}
+
+function getCropSuggestionForType(cropType) {
+  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
+  if (!normalizedCropType) {
+    return null;
+  }
+
+  return propertyCropSuggestionMap.get(normalizedCropType.toLowerCase()) || null;
+}
+
+function getMergedCropTypeList(currentValue = '') {
+  const merged = [];
+  const seen = new Set();
+
+  const addCropType = (value) => {
+    const normalizedValue = normalizeCropType(value) || String(value || '').trim();
+    if (!normalizedValue) {
+      return;
+    }
+
+    const key = normalizedValue.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    merged.push(normalizedValue);
+  };
+
+  propertyCropSuggestions.forEach((suggestion) => addCropType(suggestion?.cropType));
+  COMMON_CROP_TYPES.forEach((cropType) => addCropType(cropType));
+  addCropType(currentValue);
+
+  return merged;
+}
+
+function renderCropTypeSelectOptions(currentValue = '') {
+  const select = $id('cropType');
+  if (!select) {
+    return;
+  }
+
+  const options = getMergedCropTypeList(currentValue);
+  select.innerHTML = [`<option value="">Select crop type...</option>`]
+    .concat(
+      options.map((cropType) => {
+        const icon = CROP_TYPE_ICONS[cropType] || '🌿';
+        const safeCropType = escapeHtml(cropType);
+        return `<option value="${safeCropType}">${icon} ${safeCropType}</option>`;
+      })
+    )
+    .join('');
+
+  const normalizedCurrent = normalizeCropType(currentValue) || String(currentValue || '').trim();
+  if (normalizedCurrent) {
+    select.value = normalizedCurrent;
+  }
+}
+
+function getCropPickerCatalog() {
+  return getMergedCropTypeList('');
+}
+
+function buildCropDefaultsDataset() {
+  const dataset = [];
+  const seen = new Set();
+
+  const pushRow = (row) => {
+    const cropTypeName = normalizeCropType(row?.cropType) || String(row?.cropType || '').trim();
+    if (!cropTypeName) {
+      return;
+    }
+
+    const mapKey = cropTypeName.toLowerCase();
+    if (seen.has(mapKey)) {
+      return;
+    }
+
+    seen.add(mapKey);
+    dataset.push({
+      cropType: cropTypeName,
+      plantingWindow:
+        String(row?.plantingWindow || '').trim() || getCropPlantingWindow(cropTypeName),
+      plantingMonths: Array.isArray(row?.plantingMonths) ? row.plantingMonths : [],
+      harvestCycleMonths:
+        toFiniteInteger(row?.harvestCycleMonths) ??
+        toFiniteInteger(getStaticCropDefaults(cropTypeName)?.harvestCycleMonths) ??
+        6,
+      suggestedIrrigationType:
+        String(row?.suggestedIrrigationType || '').trim() ||
+        getSuggestedIrrigationType(cropTypeName),
+      minSoilMoisture:
+        toFiniteNumber(row?.minSoilMoisture) ??
+        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.minSoilMoisture) ??
+        30,
+      maxTemperature:
+        toFiniteNumber(row?.maxTemperature) ??
+        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.maxTemperature) ??
+        35,
+      minHumidity:
+        toFiniteNumber(row?.minHumidity) ??
+        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.minHumidity) ??
+        40
+    });
+  };
+
+  propertyCropSuggestions.forEach((suggestion) => {
+    pushRow({
+      cropType: suggestion?.cropType,
+      plantingWindow: suggestion?.plantingWindow,
+      harvestCycleMonths: suggestion?.harvestCycleMonths,
+      suggestedIrrigationType: suggestion?.suggestedIrrigationType,
+      minSoilMoisture: suggestion?.minSoilMoisture,
+      maxTemperature: suggestion?.maxTemperature,
+      minHumidity: suggestion?.minHumidity,
+      plantingMonths: []
+    });
+  });
+
+  CROP_TYPE_DEFAULTS_TABLE.forEach((row) => pushRow(row));
+
+  return dataset;
+}
+
+function getStaticCropDefaults(cropType) {
+  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
+  if (!normalizedCropType) {
+    return null;
+  }
+
+  return (
+    CROP_TYPE_DEFAULTS_TABLE.find(
+      (item) =>
+        String(item?.cropType || '')
+          .trim()
+          .toLowerCase() === normalizedCropType.toLowerCase()
+    ) || null
+  );
+}
+
+function toFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toFiniteInteger(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) ? parsed : null;
 }
 
 function setupCropTypePicker() {
@@ -1140,7 +1416,8 @@ function setupCropTypePicker() {
       .trim()
       .toLowerCase();
 
-    const filteredDefaults = CROP_TYPE_DEFAULTS_TABLE.filter((item) => {
+    const defaultsCatalog = buildCropDefaultsDataset();
+    const filteredDefaults = defaultsCatalog.filter((item) => {
       if (!normalizedQuery) {
         return true;
       }
@@ -1227,7 +1504,7 @@ function setupCropTypePicker() {
       .trim()
       .toLowerCase();
 
-    const filtered = COMMON_CROP_TYPES.filter((cropType) =>
+    const filtered = getCropPickerCatalog().filter((cropType) =>
       cropType.toLowerCase().includes(normalizedQuery)
     );
 
@@ -1240,7 +1517,8 @@ function setupCropTypePicker() {
     resultsContainer.innerHTML = filtered
       .map((cropType) => {
         const icon = CROP_TYPE_ICONS[cropType] || '🌿';
-        const plantingWindow = getCropPlantingWindow(cropType);
+        const defaults = resolveCropDefaultsForSelection(cropType);
+        const plantingWindow = defaults.plantingWindow || getCropPlantingWindow(cropType);
 
         return `
           <button
@@ -1322,8 +1600,15 @@ function updateCropPlantingHint(cropType) {
     return;
   }
 
-  const plantingWindow = getCropPlantingWindow(normalizedCropType);
+  const defaults = resolveCropDefaultsForSelection(normalizedCropType);
+  const plantingWindow = defaults.plantingWindow || getCropPlantingWindow(normalizedCropType);
   const suggestedDate = getSuggestedFuturePlantingDate(normalizedCropType);
+
+  if (defaults.isPropertySuggestion && plantingWindow) {
+    hint.textContent = `Property-specific suggestion: ${plantingWindow}`;
+    return;
+  }
+
   if (!suggestedDate) {
     hint.textContent = `Suggested planting window: ${plantingWindow}`;
     return;
@@ -1367,10 +1652,19 @@ function applySuggestedExpectedHarvestForCrop(cropType, plantingDateInputValue =
   }
 
   const resolvedPlantingDate = plantingDateInputValue || $id('plantingDate')?.value || '';
-  const suggestedExpectedHarvestDate = getSuggestedExpectedHarvestDate(
-    cropType,
-    resolvedPlantingDate
-  );
+  const defaults = resolveCropDefaultsForSelection(cropType);
+
+  let suggestedExpectedHarvestDate = '';
+  if (defaults.harvestCycleMonths) {
+    suggestedExpectedHarvestDate = buildDateByAddingMonths(
+      resolvedPlantingDate,
+      defaults.harvestCycleMonths
+    );
+  }
+
+  if (!suggestedExpectedHarvestDate) {
+    suggestedExpectedHarvestDate = getSuggestedExpectedHarvestDate(cropType, resolvedPlantingDate);
+  }
 
   if (!suggestedExpectedHarvestDate) {
     return;
@@ -1384,7 +1678,12 @@ function applySuggestedAlertThresholdsForCrop(cropType) {
     return;
   }
 
-  const thresholds = getCropAlertThresholds(cropType);
+  const defaults = resolveCropDefaultsForSelection(cropType);
+  const thresholds = {
+    minSoilMoisture: defaults.minSoilMoisture,
+    maxTemperature: defaults.maxTemperature,
+    minHumidity: defaults.minHumidity
+  };
 
   const minSoilMoistureInput = $id('minSoilMoisture');
   const maxTemperatureInput = $id('maxTemperature');
@@ -1413,7 +1712,8 @@ function applySuggestedIrrigationTypeForCrop(cropType) {
     return;
   }
 
-  const suggestedIrrigationType = normalizeIrrigationType(getSuggestedIrrigationType(cropType));
+  const defaults = resolveCropDefaultsForSelection(cropType);
+  const suggestedIrrigationType = normalizeIrrigationType(defaults.suggestedIrrigationType);
   if (!suggestedIrrigationType) {
     return;
   }
@@ -1426,6 +1726,78 @@ function applySuggestedFieldDefaultsForCrop(cropType) {
   applySuggestedExpectedHarvestForCrop(cropType, suggestedPlantingDate);
   applySuggestedAlertThresholdsForCrop(cropType);
   applySuggestedIrrigationTypeForCrop(cropType);
+}
+
+function resolveCropDefaultsForSelection(cropType) {
+  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
+  const propertySuggestion = getCropSuggestionForType(normalizedCropType);
+  const staticThresholds = getCropAlertThresholds(normalizedCropType);
+  const staticDefaults = getStaticCropDefaults(normalizedCropType);
+
+  return {
+    cropType: normalizedCropType,
+    isPropertySuggestion: Boolean(propertySuggestion),
+    plantingWindow:
+      String(propertySuggestion?.plantingWindow || '').trim() ||
+      String(staticDefaults?.plantingWindow || '').trim() ||
+      getCropPlantingWindow(normalizedCropType),
+    harvestCycleMonths:
+      toFiniteInteger(propertySuggestion?.harvestCycleMonths) ||
+      toFiniteInteger(staticDefaults?.harvestCycleMonths) ||
+      null,
+    suggestedIrrigationType:
+      String(propertySuggestion?.suggestedIrrigationType || '').trim() ||
+      String(staticDefaults?.suggestedIrrigationType || '').trim() ||
+      getSuggestedIrrigationType(normalizedCropType),
+    minSoilMoisture:
+      toFiniteNumber(propertySuggestion?.minSoilMoisture) ??
+      toFiniteNumber(staticDefaults?.minSoilMoisture) ??
+      staticThresholds.minSoilMoisture,
+    maxTemperature:
+      toFiniteNumber(propertySuggestion?.maxTemperature) ??
+      toFiniteNumber(staticDefaults?.maxTemperature) ??
+      staticThresholds.maxTemperature,
+    minHumidity:
+      toFiniteNumber(propertySuggestion?.minHumidity) ??
+      toFiniteNumber(staticDefaults?.minHumidity) ??
+      staticThresholds.minHumidity
+  };
+}
+
+function buildDateByAddingMonths(baseDateInputValue, monthsToAdd) {
+  const months = toFiniteInteger(monthsToAdd);
+  if (!months || months <= 0) {
+    return '';
+  }
+
+  let baseDate = null;
+  const normalizedDateInput = String(baseDateInputValue || '').trim();
+  if (normalizedDateInput) {
+    const parsed = new Date(`${normalizedDateInput}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      baseDate = parsed;
+    }
+  }
+
+  if (!baseDate) {
+    const now = new Date();
+    baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  const projectedDate = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth() + months,
+    baseDate.getDate()
+  );
+
+  if (Number.isNaN(projectedDate.getTime())) {
+    return '';
+  }
+
+  const year = projectedDate.getFullYear();
+  const month = String(projectedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(projectedDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatDateFromInputValue(dateInputValue) {
@@ -1593,6 +1965,10 @@ async function handleSubmit(e) {
     longitude: $id('longitude')?.value ? parseFloat($id('longitude')?.value) : null,
     boundaryGeoJson: $id('boundaryGeoJson')?.value?.trim() || null,
     cropType: $id('cropType')?.value,
+    cropTypeCatalogId: selectedCropTypeCatalogId || null,
+    selectedCropTypeSuggestionId: selectedCropTypeCatalogId
+      ? selectedCropTypeSuggestionId || null
+      : null,
     plantingDate: toDateTimeOffset(plantingDateValue),
     expectedHarvestDate: toDateTimeOffset(expectedHarvestValue),
     irrigationType: normalizeIrrigationType($id('irrigationType')?.value),
@@ -1657,6 +2033,8 @@ async function handleSubmit(e) {
         plotId: formData.plotId,
         name: formData.name,
         cropType: formData.cropType,
+        cropTypeCatalogId: formData.cropTypeCatalogId,
+        selectedCropTypeSuggestionId: formData.selectedCropTypeSuggestionId,
         areaHectares: formData.areaHectares,
         latitude: formData.latitude,
         longitude: formData.longitude,
@@ -1676,6 +2054,8 @@ async function handleSubmit(e) {
         longitude: formData.longitude,
         boundaryGeoJson: formData.boundaryGeoJson,
         cropType: formData.cropType,
+        cropTypeCatalogId: formData.cropTypeCatalogId,
+        selectedCropTypeSuggestionId: formData.selectedCropTypeSuggestionId,
         plantingDate: formData.plantingDate,
         expectedHarvestDate: formData.expectedHarvestDate,
         irrigationType: formData.irrigationType,
