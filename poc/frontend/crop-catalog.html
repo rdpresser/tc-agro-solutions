@@ -3,14 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="TC Agro Solutions - Properties Management" />
+    <meta name="description" content="TC Agro Solutions - Crop Type Catalog" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Properties | TC Agro Solutions</title>
+    <title>Crop Catalog | TC Agro Solutions</title>
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
     <div class="app-container">
-      <!-- Sidebar -->
       <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
           <span class="sidebar-logo">🌾</span>
@@ -24,7 +23,7 @@
               <span class="nav-icon">📊</span>
               <span class="nav-text">Dashboard</span>
             </a>
-            <a href="properties.html" class="nav-item active">
+            <a href="properties.html" class="nav-item">
               <span class="nav-icon">🏘️</span>
               <span class="nav-text">Properties</span>
             </a>
@@ -44,7 +43,7 @@
 
           <div class="nav-section">
             <div class="nav-section-title">Catalog</div>
-            <a href="crop-catalog.html" class="nav-item">
+            <a href="crop-catalog.html" class="nav-item active">
               <span class="nav-icon">🌿</span>
               <span class="nav-text">Crop Catalog</span>
             </a>
@@ -74,12 +73,11 @@
 
       <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-      <!-- Main Content -->
       <main class="main-content">
         <header class="topbar">
           <div class="topbar-left">
             <button id="menuToggle" class="menu-toggle">☰</button>
-            <h1 class="page-title">Properties</h1>
+            <h1 class="page-title">Crop Catalog</h1>
           </div>
           <div class="topbar-right">
             <div class="user-menu">
@@ -90,118 +88,107 @@
         </header>
 
         <div class="content">
-          <!-- Page Header -->
           <div class="page-header">
             <div class="page-header-title">
-              <span class="page-header-icon">🏘️</span>
+              <span class="page-header-icon">🌿</span>
               <div>
                 <div class="breadcrumb">
                   <a href="dashboard.html">Dashboard</a>
                   <span class="breadcrumb-separator">/</span>
-                  <span>Properties</span>
+                  <span>Crop Catalog</span>
                 </div>
-                <h2 style="margin: 0">Property Management</h2>
+                <h2 style="margin: 0">Crop Type Catalog</h2>
               </div>
             </div>
             <div class="page-header-actions">
-              <a href="properties-form.html" class="btn btn-primary"> ➕ Add Property </a>
+              <button id="addCropTypeBtn" class="btn btn-primary">➕ Add Crop Type</button>
             </div>
           </div>
 
-          <!-- Filters -->
           <div class="card" style="margin-bottom: 24px">
-            <form id="propertiesFilterForm">
+            <form id="catalogFilterForm">
               <div class="form-row">
-                <div class="form-group" style="margin-bottom: 0">
+                <div class="form-group" style="flex: 2; margin-bottom: 0">
                   <input
                     type="text"
                     id="filterInput"
                     class="form-control"
-                    placeholder="🔍 Filter by Owner Name, Property Name, City, State or Country"
+                    placeholder="🔍 Filter by crop type name"
                   />
                 </div>
-              </div>
-
-              <div class="form-row" style="margin-top: 12px">
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label">Page</label>
-                  <select id="pageNumber" class="form-control form-select">
-                    <option value="1">1</option>
+                  <label class="form-label" for="propertyFilter">Property</label>
+                  <select id="propertyFilter" class="form-control form-select">
+                    <option value="">All Properties</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label">Sort By</label>
-                  <select id="sortBy" class="form-control form-select">
-                    <option value="name">Name</option>
-                    <option value="ownername">Owner Name</option>
-                    <option value="city">City</option>
-                    <option value="state">State</option>
-                    <option value="areahectares">Area (ha)</option>
-                    <option value="createdat">Created At</option>
+                  <label class="form-label" for="sourceFilter">Source</label>
+                  <select id="sourceFilter" class="form-control form-select">
+                    <option value="">All Sources</option>
+                    <option value="Catalog">Catalog</option>
+                    <option value="Suggestion">Suggestion</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label">Direction</label>
-                  <select id="sortDirection" class="form-control form-select">
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                  </select>
+                  <label class="form-label">Flags</label>
+                  <div class="d-flex" style="gap: 12px; flex-wrap: wrap; align-items: center; min-height: 44px">
+                    <label class="d-flex align-center" style="gap: 6px">
+                      <input type="checkbox" id="includeStaleFilter" />
+                      <span>Include stale</span>
+                    </label>
+                    <label class="d-flex align-center" style="gap: 6px">
+                      <input type="checkbox" id="includeInactiveFilter" />
+                      <span>Include inactive</span>
+                    </label>
+                  </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0; align-self: flex-end">
+                <div class="form-group" style="margin-bottom: 0; align-self: flex-end; display: flex; gap: 8px">
+                  <button type="button" id="clearFiltersBtn" class="btn btn-outline">Clear</button>
                   <button type="submit" class="btn btn-primary">Apply</button>
                 </div>
               </div>
             </form>
           </div>
 
-          <!-- Properties Table -->
           <div class="table-container">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Owner Name</th>
-                  <th>Property Name</th>
-                  <th>Location</th>
-                  <th>Area (ha)</th>
-                  <th>Plots</th>
+                  <th>Crop Type</th>
+                  <th>Property</th>
+                  <th>Source</th>
+                  <th>Planting Window</th>
+                  <th>Harvest (months)</th>
+                  <th>Irrigation</th>
+                  <th>Thresholds</th>
                   <th>Status</th>
-                  <th>Timestamp</th>
+                  <th>Created</th>
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="properties-tbody">
-                <!-- Data loaded via JavaScript -->
+              <tbody id="catalogTableBody">
                 <tr>
-                  <td colspan="8" class="text-center">Loading...</td>
+                  <td colspan="10" class="text-center">Loading...</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- Summary -->
           <div class="card pagination-sticky-card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
               <div class="d-flex align-center" style="gap: 8px">
-                <button type="button" id="propertiesPrev" class="btn btn-outline btn-sm">
-                  ← Previous
-                </button>
-                <button type="button" id="propertiesNext" class="btn btn-outline btn-sm">
-                  Next →
-                </button>
+                <button type="button" id="prevPageBtn" class="btn btn-outline btn-sm">← Previous</button>
+                <button type="button" id="nextPageBtn" class="btn btn-outline btn-sm">Next →</button>
               </div>
-
-              <span id="propertiesSummary" class="text-muted">Showing 0-0 of 0 (Page 1/1)</span>
-
+              <span id="catalogSummary" class="text-muted">0 item(s) found</span>
+              <span id="pageInfo" class="text-muted">Page 1 of 1</span>
               <div class="d-flex align-center" style="gap: 8px">
-                <label for="pageSize" class="text-muted" style="font-size: 0.9em">Page size</label>
-                <select id="pageSize" class="form-control form-select" style="width: 140px">
-                  <option value="5">5 / page</option>
+                <label for="pageSizeSelect" class="text-muted" style="font-size: 0.9em">Page size</label>
+                <select id="pageSizeSelect" class="form-control form-select" style="width: 140px">
                   <option value="10" selected>10 / page</option>
                   <option value="20">20 / page</option>
-                  <option value="30">30 / page</option>
-                  <option value="40">40 / page</option>
                   <option value="50">50 / page</option>
-                  <option value="100">100 / page</option>
                 </select>
               </div>
             </div>
@@ -210,7 +197,6 @@
       </main>
     </div>
 
-    <!-- Scripts (ES Module) -->
-    <script type="module" src="./js/properties.js"></script>
+    <script type="module" src="./js/crop-catalog.js"></script>
   </body>
 </html>

@@ -168,6 +168,8 @@ public sealed class SensorIngestToCrossServiceAnalyticsAlertFlowTests : BaseInte
 
         createdProperty.ShouldNotBeNull();
 
+        var cropTypeCatalogId = await Fixture.EnsureFarmSystemCropCatalogAsync("Corn", cancellationToken);
+
         var createPlotCommand = new CreatePlotCommand(
             PropertyId: createdProperty!.Id,
             Name: $"Plot Alerts {token}",
@@ -179,7 +181,8 @@ public sealed class SensorIngestToCrossServiceAnalyticsAlertFlowTests : BaseInte
             PlantingDate: DateTimeOffset.UtcNow.AddDays(-5),
             ExpectedHarvestDate: DateTimeOffset.UtcNow.AddDays(100),
             IrrigationType: "Center Pivot",
-            AdditionalNotes: "Provisioned for alert integration tests");
+            AdditionalNotes: "Provisioned for alert integration tests",
+            CropTypeCatalogId: cropTypeCatalogId);
 
         using var createPlotResponse = await SendAuthorizedJsonAsync(
             Fixture.FarmClient,

@@ -137,23 +137,29 @@ test.describe('Plots form enhancements', () => {
     await expect(editSensorLink).toHaveAttribute('href', /sensors-form\.html\?id=sensor-001/);
   });
 
-  test('search mode allows selecting crop and pre-fills defaults', async ({ page }) => {
+  test('search mode uses backend property crops and pre-fills suggestion metadata', async ({
+    page
+  }) => {
     await page.goto('plots-form.html');
+
+    await page.locator('#propertyId').selectOption('property-001');
 
     await page.locator('#openCropPickerBtn').click();
     await expect(page.locator('#cropPickerModal')).toHaveClass(/open/);
 
-    await page.locator('#cropPickerSearch').fill('mango');
-    await page.locator('#cropPickerResults [data-crop-type="Mango"]').click();
+    await page.locator('#cropPickerSearch').fill('sorghum');
+    await page.locator('#cropPickerResults [data-crop-type="Sorghum"]').click();
 
     await expect(page.locator('#cropPickerModal')).not.toHaveClass(/open/);
-    await expect(page.locator('#cropType')).toHaveValue('Mango');
-    await expect(page.locator('#irrigationType')).toHaveValue('Drip Irrigation');
-    await expect(page.locator('#minSoilMoisture')).toHaveValue('35');
-    await expect(page.locator('#maxTemperature')).toHaveValue('36');
-    await expect(page.locator('#minHumidity')).toHaveValue('55');
-    await expect(page.locator('#plantingDate')).not.toHaveValue('');
-    await expect(page.locator('#expectedHarvest')).not.toHaveValue('');
+    await expect(page.locator('#cropType')).toHaveValue('Sorghum');
+    await expect(page.locator('#irrigationType')).toHaveValue('Sprinkler');
+    await expect(page.locator('#minSoilMoisture')).toHaveValue('26');
+    await expect(page.locator('#maxTemperature')).toHaveValue('37');
+    await expect(page.locator('#minHumidity')).toHaveValue('38');
+
+    await page.locator('#openCropPickerBtn').click();
+    await page.locator('#cropPickerSearch').fill('mango');
+    await expect(page.locator('#cropPickerResults [data-crop-type="Mango"]')).toHaveCount(0);
   });
 
   test('property crop suggestions extend picker catalog and apply property defaults', async ({
@@ -235,6 +241,8 @@ test.describe('Plots form enhancements', () => {
   test('defaults table shows irrigation icon and allows selecting crop type', async ({ page }) => {
     await page.goto('plots-form.html');
 
+    await page.locator('#propertyId').selectOption('property-001');
+
     await page.locator('#openCropDefaultsTableBtn').click();
     await expect(page.locator('#cropPickerModal')).toHaveClass(/open/);
     await expect(page.locator('#cropDefaultsTablePanel')).toBeVisible();
@@ -265,18 +273,20 @@ test.describe('Plots form enhancements', () => {
   test('defaults table supports keyboard selection', async ({ page }) => {
     await page.goto('plots-form.html');
 
+    await page.locator('#propertyId').selectOption('property-001');
+
     await page.locator('#openCropDefaultsTableBtn').click();
     await expect(page.locator('#cropDefaultsTablePanel')).toBeVisible();
 
-    await page.locator('#cropDefaultsFilterInput').fill('rice');
-    const riceRow = page.locator('#cropDefaultsTableBody tr[data-crop-type="Rice"]');
-    await expect(riceRow).toBeVisible();
+    await page.locator('#cropDefaultsFilterInput').fill('sorghum');
+    const sorghumRow = page.locator('#cropDefaultsTableBody tr[data-crop-type="Sorghum"]');
+    await expect(sorghumRow).toBeVisible();
 
-    await riceRow.focus();
+    await sorghumRow.focus();
     await page.keyboard.press('Enter');
 
-    await expect(page.locator('#cropType')).toHaveValue('Rice');
-    await expect(page.locator('#irrigationType')).toHaveValue('Flood/Furrow');
+    await expect(page.locator('#cropType')).toHaveValue('Sorghum');
+    await expect(page.locator('#irrigationType')).toHaveValue('Sprinkler');
     await expect(page.locator('#cropPickerModal')).not.toHaveClass(/open/);
   });
 });

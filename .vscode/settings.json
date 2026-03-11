@@ -1,3 +1,4 @@
 {
-  "git.scanSubfolders": true
+  "git.scanSubfolders": true,
+  "dotnet.server.useOmnisharp": false
 }

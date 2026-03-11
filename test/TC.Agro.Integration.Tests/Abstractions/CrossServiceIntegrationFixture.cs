@@ -257,6 +257,60 @@ public sealed class CrossServiceIntegrationFixture : IAsyncLifetime
         return result is int intResult ? intResult : Convert.ToInt32(result);
     }
 
+    public async Task<Guid> EnsureFarmSystemCropCatalogAsync(
+        string cropTypeName,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(cropTypeName))
+        {
+            throw new ArgumentException("Crop type name must be provided.", nameof(cropTypeName));
+        }
+
+        var normalizedCropTypeName = cropTypeName.Trim();
+        var farmConnectionString = BuildPostgresConnectionString(FarmDatabase);
+
+        await using var connection = new NpgsqlConnection(farmConnectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var existsCommand = new NpgsqlCommand(
+            """
+            SELECT id
+            FROM public.crop_type_catalog
+            WHERE lower(name) = lower(@name)
+              AND owner_id IS NULL
+              AND is_active = true
+            ORDER BY created_at
+            LIMIT 1;
+            """,
+            connection);
+
+        existsCommand.Parameters.AddWithValue("name", normalizedCropTypeName);
+
+        var existingResult = await existsCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (existingResult is Guid existingId)
+        {
+            return existingId;
+        }
+
+        var catalogId = Guid.NewGuid();
+
+        await using var insertCommand = new NpgsqlCommand(
+            """
+            INSERT INTO public.crop_type_catalog
+                (id, name, is_system_defined, created_at, is_active)
+            VALUES
+                (@id, @name, true, CURRENT_TIMESTAMP, true);
+            """,
+            connection);
+
+        insertCommand.Parameters.AddWithValue("id", catalogId);
+        insertCommand.Parameters.AddWithValue("name", normalizedCropTypeName);
+
+        await insertCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        return catalogId;
+    }
+
     private static async Task<T?> WaitForRowAsync<T>(
         Func<CancellationToken, Task<T?>> queryAsync,
         TimeSpan timeout,

@@ -15,8 +15,93 @@
       "npx tsc": true,
       "npm run build": true,
       "npm run dev": true,
-      "npm run test": true
+      "npm run test": true,
+      "dotnet build": true,
+      "dotnet test": true,
+      "selectedCropTypeSuggestionId": true,
+      "crop": true
     },
-    "powershell.cwd": "tc-agro-solutions"
+    "powershell.cwd": "tc-agro-solutions",
+    "dotnet.server.useOmnisharp": false,
+    "eslint.workingDirectories": [
+      {
+        "directory": "poc/frontend",
+        "changeProcessCWD": true
+      }
+    ],
+    "eslint.validate": [
+      "javascript",
+      "javascriptreact",
+      "typescript",
+      "typescriptreact"
+    ],
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "yaml.validate": true,
+    "yaml.schemaStore.enable": true,
+    "yaml.schemas": {
+      "https://json.schemastore.org/kustomization.json": [
+        "infrastructure/kubernetes/**/kustomization.yaml",
+        "infrastructure/kubernetes/**/kustomization.yml"
+      ],
+      "https://raw.githubusercontent.com/argoproj/argo-schema-generator/main/schema/argo_all_k8s_kustomize_schema.json": [
+        "infrastructure/kubernetes/**/argocd/**/*.yaml",
+        "infrastructure/kubernetes/**/argocd/**/*.yml"
+      ],
+      "kubernetes": [
+        "infrastructure/kubernetes/**/*.yaml",
+        "infrastructure/kubernetes/**/*.yml"
+      ]
+    },
+    "terraform.languageServer": {
+      "enabled": true
+    },
+    "[csharp]": {
+      "editor.defaultFormatter": "ms-dotnettools.csharp"
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "[terraform]": {
+      "editor.defaultFormatter": "hashicorp.terraform"
+    },
+    "[terraform-vars]": {
+      "editor.defaultFormatter": "hashicorp.terraform"
+    },
+    "[powershell]": {
+      "editor.defaultFormatter": "ms-vscode.powershell"
+    },
+    "[dockerfile]": {
+      "editor.defaultFormatter": "ms-azuretools.vscode-containers"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-dotnettools.csdevkit",
+      "ms-dotnettools.csharp",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "redhat.vscode-yaml",
+      "ms-kubernetes-tools.vscode-kubernetes-tools",
+      "ms-azuretools.vscode-containers",
+      "hashicorp.terraform",
+      "ms-vscode.powershell"
+    ]
   }
 }

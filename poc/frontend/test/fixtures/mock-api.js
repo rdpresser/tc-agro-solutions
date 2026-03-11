@@ -706,6 +706,135 @@ export async function installApiMocks(
         return;
       }
 
+      if (pathname === '/api/crop-types/options' && method === 'GET') {
+        const ownerId = searchParams.get('ownerId') || '';
+        const propertyId = searchParams.get('propertyId') || '';
+        const includeSuggestionOverlay =
+          String(searchParams.get('includeSuggestionOverlay') || 'false').toLowerCase() === 'true';
+
+        const relevantPropertyIds = new Set(
+          state.properties
+            .filter((property) => {
+              if (propertyId && String(property.id || '') !== propertyId) {
+                return false;
+              }
+
+              if (ownerId && String(property.ownerId || '') !== ownerId) {
+                return false;
+              }
+
+              return true;
+            })
+            .map((property) => property.id)
+        );
+
+        const optionMap = new Map();
+
+        state.plots
+          .filter((plot) => {
+            if (propertyId) {
+              return String(plot.propertyId || '') === propertyId;
+            }
+
+            return relevantPropertyIds.has(plot.propertyId);
+          })
+          .forEach((plot) => {
+            const cropType = String(plot.cropType || '').trim();
+            if (!cropType) {
+              return;
+            }
+
+            const key = cropType.toLowerCase();
+            if (optionMap.has(key)) {
+              return;
+            }
+
+            optionMap.set(key, {
+              catalogId: plot.cropTypeCatalogId || createId('crop-catalog'),
+              suggestionId: null,
+              cropType,
+              suggestedImage: null,
+              source: 'Catalog',
+              isSystemDefined: false,
+              plantingWindow: null,
+              harvestCycleMonths: null,
+              recommendedIrrigationType: null,
+              minSoilMoisture: null,
+              maxTemperature: null,
+              minHumidity: null,
+              createdAt: plot.createdAt || nowIso()
+            });
+          });
+
+        state.cropTypeSuggestions
+          .filter((suggestion) => {
+            if (suggestion.isActive === false || suggestion.isStale) {
+              return false;
+            }
+
+            if (propertyId && String(suggestion.propertyId || '') !== propertyId) {
+              return false;
+            }
+
+            if (ownerId && String(suggestion.ownerId || '') !== ownerId) {
+              return false;
+            }
+
+            if (!propertyId && !ownerId) {
+              return true;
+            }
+
+            return true;
+          })
+          .forEach((suggestion) => {
+            const cropType = String(suggestion.cropType || '').trim();
+            if (!cropType) {
+              return;
+            }
+
+            const key = cropType.toLowerCase();
+            const existing = optionMap.get(key) || {
+              catalogId: suggestion.cropTypeCatalogId || createId('crop-catalog'),
+              suggestionId: null,
+              cropType,
+              suggestedImage: null,
+              source: 'Catalog',
+              isSystemDefined: false,
+              plantingWindow: null,
+              harvestCycleMonths: null,
+              recommendedIrrigationType: null,
+              minSoilMoisture: null,
+              maxTemperature: null,
+              minHumidity: null,
+              createdAt: suggestion.createdAt || nowIso()
+            };
+
+            const merged = {
+              ...existing,
+              catalogId: suggestion.cropTypeCatalogId || existing.catalogId,
+              cropType,
+              source: suggestion.source || existing.source || 'Catalog',
+              createdAt: suggestion.createdAt || existing.createdAt || nowIso()
+            };
+
+            if (includeSuggestionOverlay) {
+              merged.suggestionId =
+                suggestion.selectedCropTypeSuggestionId || suggestion.id || null;
+              merged.plantingWindow = suggestion.plantingWindow || null;
+              merged.harvestCycleMonths = suggestion.harvestCycleMonths ?? null;
+              merged.recommendedIrrigationType = suggestion.suggestedIrrigationType || null;
+              merged.minSoilMoisture = suggestion.minSoilMoisture ?? null;
+              merged.maxTemperature = suggestion.maxTemperature ?? null;
+              merged.minHumidity = suggestion.minHumidity ?? null;
+            }
+
+            optionMap.set(key, merged);
+          });
+
+        await fulfillJson(route, Array.from(optionMap.values()));
+        return;
+      }
+
       if (pathname === '/api/crop-types' && method === 'GET') {
         const { pageNumber, pageSize } = toPageParams(searchParams, { pageSize: 25 });
         const ownerId = searchParams.get('ownerId') || '';
@@ -728,9 +857,24 @@ export async function installApiMocks(
         }
 
         if (source) {
-          items = items.filter(
-            (item) => String(item.source || '').toLowerCase() === String(source).toLowerCase()
-          );
+          const normalizedSource = String(source).toLowerCase();
+          items = items.filter((item) => {
+            const itemSource = String(item.source || '').toLowerCase();
+
+            if (normalizedSource === 'catalog') {
+              return itemSource.includes('catalog');
+            }
+
+            if (normalizedSource === 'suggestion') {
+              return (
+                itemSource.includes('suggestion') ||
+                itemSource.includes('ai') ||
+                itemSource.includes('manual')
+              );
+            }
+
+            return itemSource === normalizedSource;
+          });
         }
 
         if (!includeStale) {
@@ -749,6 +893,136 @@ export async function installApiMocks(
         ]);
 
         await fulfillJson(route, buildPaginated(items, pageNumber, pageSize));
+        return;
+      }
+
+      if (pathname === '/api/crop-types' && method === 'POST') {
+        const body = parseRequestBody(request);
+        const propertyId = String(body.propertyId || '').trim();
+        const cropType = String(body.cropType || '').trim();
+
+        if (!propertyId || !cropType) {
+          await fulfillJson(route, { message: 'Property and crop type are required' }, 400);
+          return;
+        }
+
+        const property = state.properties.find((item) => item.id === propertyId) || null;
+        if (!property) {
+          await fulfillJson(route, { message: 'Property not found' }, 404);
+          return;
+        }
+
+        const catalogId = createId('crop-catalog');
+
+        const createdEntry = {
+          id: catalogId,
+          cropTypeCatalogId: catalogId,
+          selectedCropTypeSuggestionId: null,
+          propertyId,
+          propertyName: property.name || 'Unknown Property',
+          ownerId: property.ownerId || DEFAULT_OWNER_ID_ALPHA,
+          ownerName: property.ownerName || 'Unknown Owner',
+          cropType,
+          source: 'Catalog',
+          isOverride: false,
+          isStale: false,
+          confidenceScore: null,
+          plantingWindow: body.plantingWindow ?? null,
+          harvestCycleMonths: body.harvestCycleMonths ?? null,
+          suggestedIrrigationType:
+            body.recommendedIrrigationType ?? body.suggestedIrrigationType ?? null,
+          minSoilMoisture: body.minSoilMoisture ?? null,
+          maxTemperature: body.maxTemperature ?? null,
+          minHumidity: body.minHumidity ?? null,
+          notes: body.notes ?? null,
+          model: null,
+          generatedAt: null,
+          isActive: true,
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        };
+
+        state.cropTypeSuggestions.push(createdEntry);
+        await fulfillJson(route, createdEntry, 201);
+        return;
+      }
+
+      if (pathname.startsWith('/api/crop-types/') && method === 'GET') {
+        const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
+        const item = state.cropTypeSuggestions.find(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (!item) {
+          await fulfillJson(route, { message: 'Crop type not found' }, 404);
+          return;
+        }
+
+        await fulfillJson(route, item);
+        return;
+      }
+
+      if (pathname.startsWith('/api/crop-types/') && method === 'PUT') {
+        const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
+        const body = parseRequestBody(request);
+        const index = state.cropTypeSuggestions.findIndex(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (index === -1) {
+          await fulfillJson(route, { message: 'Crop type not found' }, 404);
+          return;
+        }
+
+        const current = state.cropTypeSuggestions[index];
+        state.cropTypeSuggestions[index] = {
+          ...current,
+          plantingWindow: body.plantingWindow ?? current.plantingWindow ?? null,
+          harvestCycleMonths: body.harvestCycleMonths ?? current.harvestCycleMonths ?? null,
+          suggestedIrrigationType:
+            body.recommendedIrrigationType ??
+            body.suggestedIrrigationType ??
+            current.suggestedIrrigationType ??
+            null,
+          minSoilMoisture: body.minSoilMoisture ?? current.minSoilMoisture ?? null,
+          maxTemperature: body.maxTemperature ?? current.maxTemperature ?? null,
+          minHumidity: body.minHumidity ?? current.minHumidity ?? null,
+          notes: body.notes ?? current.notes ?? null,
+          updatedAt: nowIso()
+        };
+
+        await fulfillJson(route, state.cropTypeSuggestions[index]);
+        return;
+      }
+
+      if (pathname.startsWith('/api/crop-types/') && method === 'DELETE') {
+        const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
+        const index = state.cropTypeSuggestions.findIndex(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (index === -1) {
+          await fulfillJson(route, { message: 'Crop type not found' }, 404);
+          return;
+        }
+
+        state.cropTypeSuggestions[index] = {
+          ...state.cropTypeSuggestions[index],
+          isActive: false,
+          updatedAt: nowIso()
+        };
+
+        await fulfillJson(route, {
+          success: true,
+          id: catalogId,
+          isActive: false
+        });
         return;
       }
 

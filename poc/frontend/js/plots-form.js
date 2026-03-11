@@ -12,9 +12,9 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import {
   createPlot,
   fetchFarmSwagger,
+  getCropTypeOptions,
   getPlot,
   getPlotSensorsPaginated,
-  getPropertyCropTypes,
   getProperties,
   getPropertiesByOwner,
   normalizeError,
@@ -24,17 +24,7 @@ import {
 } from './api.js';
 import { requireAuth } from './auth.js';
 import { initProtectedPage } from './common.js';
-import {
-  CROP_TYPE_DEFAULTS_TABLE,
-  COMMON_CROP_TYPES,
-  CROP_TYPE_ICONS,
-  getCropAlertThresholds,
-  getCropPlantingWindow,
-  getSuggestedIrrigationType,
-  getSuggestedExpectedHarvestDate,
-  getSuggestedFuturePlantingDate,
-  normalizeCropType
-} from './crop-types.js';
+import { CROP_TYPE_ICONS, normalizeCropType } from './crop-types.js';
 import { reverseGeocodeDetails, searchAddressWithMeta } from './geocoding.js';
 import { toast, t } from './i18n.js';
 import {
@@ -1043,21 +1033,32 @@ async function refreshCropTypeOptionsForSelectedProperty({ preserveSelection = t
   }
 
   try {
-    const suggestions = await getPropertyCropTypes(propertyId, {
-      includeStale: false,
-      includeInactive: false,
-      pageSize: 50
-    });
+    // Single source: backend options endpoint that combines catalog + suggestion overlay.
+    const options = await getCropTypeOptions({ propertyId, includeSuggestionOverlay: true });
+    const mapped = Array.isArray(options)
+      ? options.map((o) => ({
+          id: o.suggestionId || o.catalogId,
+          cropType: o.cropType,
+          source: o.source,
+          isStale: false,
+          isActive: true,
+          plantingWindow: o.plantingWindow,
+          harvestCycleMonths: o.harvestCycleMonths,
+          suggestedIrrigationType: o.recommendedIrrigationType,
+          minSoilMoisture: o.minSoilMoisture,
+          maxTemperature: o.maxTemperature,
+          minHumidity: o.minHumidity,
+          cropTypeCatalogId: o.catalogId,
+          selectedCropTypeSuggestionId: o.suggestionId
+        }))
+      : [];
 
-    setPropertyCropSuggestions(suggestions);
+    setPropertyCropSuggestions(mapped);
   } catch (error) {
-    console.warn(
-      '[Plots Form] Failed to load property crop suggestions. Falling back to defaults.',
-      {
-        propertyId,
-        error
-      }
-    );
+    console.warn('[Plots Form] Failed to load backend crop options for selected property.', {
+      propertyId,
+      error
+    });
     setPropertyCropSuggestions([]);
   }
 
@@ -1099,7 +1100,7 @@ function updateSelectedCropReferences(cropType) {
   const propertySuggestion = getCropSuggestionForType(normalizedCropType);
   const propertyCatalogId = normalizeReferenceId(propertySuggestion?.cropTypeCatalogId);
   const propertySuggestionId = normalizeReferenceId(
-    propertySuggestion?.selectedCropTypeSuggestionId || propertySuggestion?.id
+    propertySuggestion?.selectedCropTypeSuggestionId
   );
 
   if (propertyCatalogId) {
@@ -1165,7 +1166,6 @@ function getMergedCropTypeList(currentValue = '') {
   };
 
   propertyCropSuggestions.forEach((suggestion) => addCropType(suggestion?.cropType));
-  COMMON_CROP_TYPES.forEach((cropType) => addCropType(cropType));
   addCropType(currentValue);
 
   return merged;
@@ -1214,30 +1214,21 @@ function buildCropDefaultsDataset() {
     }
 
     seen.add(mapKey);
+
+    const harvestCycleMonths = toFiniteInteger(row?.harvestCycleMonths);
+    const minSoilMoisture = toFiniteNumber(row?.minSoilMoisture);
+    const maxTemperature = toFiniteNumber(row?.maxTemperature);
+    const minHumidity = toFiniteNumber(row?.minHumidity);
+
     dataset.push({
       cropType: cropTypeName,
-      plantingWindow:
-        String(row?.plantingWindow || '').trim() || getCropPlantingWindow(cropTypeName),
+      plantingWindow: String(row?.plantingWindow || '').trim(),
       plantingMonths: Array.isArray(row?.plantingMonths) ? row.plantingMonths : [],
-      harvestCycleMonths:
-        toFiniteInteger(row?.harvestCycleMonths) ??
-        toFiniteInteger(getStaticCropDefaults(cropTypeName)?.harvestCycleMonths) ??
-        6,
-      suggestedIrrigationType:
-        String(row?.suggestedIrrigationType || '').trim() ||
-        getSuggestedIrrigationType(cropTypeName),
-      minSoilMoisture:
-        toFiniteNumber(row?.minSoilMoisture) ??
-        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.minSoilMoisture) ??
-        30,
-      maxTemperature:
-        toFiniteNumber(row?.maxTemperature) ??
-        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.maxTemperature) ??
-        35,
-      minHumidity:
-        toFiniteNumber(row?.minHumidity) ??
-        toFiniteNumber(getStaticCropDefaults(cropTypeName)?.minHumidity) ??
-        40
+      harvestCycleMonths,
+      suggestedIrrigationType: String(row?.suggestedIrrigationType || '').trim(),
+      minSoilMoisture,
+      maxTemperature,
+      minHumidity
     });
   };
 
@@ -1254,25 +1245,7 @@ function buildCropDefaultsDataset() {
     });
   });
 
-  CROP_TYPE_DEFAULTS_TABLE.forEach((row) => pushRow(row));
-
   return dataset;
-}
-
-function getStaticCropDefaults(cropType) {
-  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
-  if (!normalizedCropType) {
-    return null;
-  }
-
-  return (
-    CROP_TYPE_DEFAULTS_TABLE.find(
-      (item) =>
-        String(item?.cropType || '')
-          .trim()
-          .toLowerCase() === normalizedCropType.toLowerCase()
-    ) || null
-  );
 }
 
 function toFiniteNumber(value) {
@@ -1438,24 +1411,43 @@ function setupCropTypePicker() {
     });
 
     if (filteredDefaults.length === 0) {
-      tableBody.innerHTML =
-        '<tr><td colspan="7" class="empty-text">No defaults found for this filter.</td></tr>';
+      const hasPropertySelection = String($id('propertyId')?.value || '').trim().length > 0;
+      tableBody.innerHTML = hasPropertySelection
+        ? '<tr><td colspan="7" class="empty-text">No backend defaults found for this filter.</td></tr>'
+        : '<tr><td colspan="7" class="empty-text">Select a property to load backend crop defaults.</td></tr>';
       return;
     }
 
     tableBody.innerHTML = filteredDefaults
       .map((item) => {
         const icon = CROP_TYPE_ICONS[item.cropType] || '🌿';
-        const suggestedIrrigationDisplay = getIrrigationTypeDisplay(item.suggestedIrrigationType);
-        const soilMoistureDisplay = `🌱 ${String(item.minSoilMoisture)}%`;
-        const temperatureDisplay = `🌡️ ${String(item.maxTemperature)}°C`;
-        const humidityDisplay = `💧 ${String(item.minHumidity)}%`;
+        const suggestedIrrigationDisplay = item.suggestedIrrigationType
+          ? getIrrigationTypeDisplay(item.suggestedIrrigationType)
+          : 'Not provided';
+        const soilMoistureDisplay = Number.isFinite(item.minSoilMoisture)
+          ? `🌱 ${String(item.minSoilMoisture)}%`
+          : '🌱 Not provided';
+        const temperatureDisplay = Number.isFinite(item.maxTemperature)
+          ? `🌡️ ${String(item.maxTemperature)}°C`
+          : '🌡️ Not provided';
+        const humidityDisplay = Number.isFinite(item.minHumidity)
+          ? `💧 ${String(item.minHumidity)}%`
+          : '💧 Not provided';
         const monthsLabel =
           Array.isArray(item.plantingMonths) && item.plantingMonths.length > 0
             ? item.plantingMonths
                 .map((month) => monthNames[Number(month) - 1] || String(month))
                 .join(', ')
-            : 'Year-round / custom';
+            : 'Not provided';
+
+        const plantingWindowDisplay =
+          item.plantingWindow && item.plantingWindow.trim().length > 0
+            ? item.plantingWindow
+            : 'Not provided';
+
+        const harvestCycleDisplay = Number.isFinite(item.harvestCycleMonths)
+          ? String(item.harvestCycleMonths)
+          : 'Not provided';
 
         return `
         <tr
@@ -1467,10 +1459,10 @@ function setupCropTypePicker() {
         >
           <td>${icon} ${escapeHtml(item.cropType)}</td>
           <td>
-            <div>${escapeHtml(item.plantingWindow)}</div>
+            <div>${escapeHtml(plantingWindowDisplay)}</div>
             <div class="text-muted" style="font-size: 0.8rem">${escapeHtml(monthsLabel)}</div>
           </td>
-          <td>${escapeHtml(String(item.harvestCycleMonths))}</td>
+          <td>${escapeHtml(harvestCycleDisplay)}</td>
           <td>${escapeHtml(suggestedIrrigationDisplay)}</td>
           <td>${escapeHtml(soilMoistureDisplay)}</td>
           <td>${escapeHtml(temperatureDisplay)}</td>
@@ -1509,8 +1501,10 @@ function setupCropTypePicker() {
     );
 
     if (filtered.length === 0) {
-      resultsContainer.innerHTML =
-        '<div class="empty-text">No crop found for this search. Try another term.</div>';
+      const hasPropertySelection = String($id('propertyId')?.value || '').trim().length > 0;
+      resultsContainer.innerHTML = hasPropertySelection
+        ? '<div class="empty-text">No backend crop found for this search. Try another term.</div>'
+        : '<div class="empty-text">Select a property to load backend crop suggestions.</div>';
       return;
     }
 
@@ -1518,7 +1512,7 @@ function setupCropTypePicker() {
       .map((cropType) => {
         const icon = CROP_TYPE_ICONS[cropType] || '🌿';
         const defaults = resolveCropDefaultsForSelection(cropType);
-        const plantingWindow = defaults.plantingWindow || getCropPlantingWindow(cropType);
+        const plantingWindow = defaults.plantingWindow || 'No planting window metadata';
 
         return `
           <button
@@ -1601,44 +1595,27 @@ function updateCropPlantingHint(cropType) {
   }
 
   const defaults = resolveCropDefaultsForSelection(normalizedCropType);
-  const plantingWindow = defaults.plantingWindow || getCropPlantingWindow(normalizedCropType);
-  const suggestedDate = getSuggestedFuturePlantingDate(normalizedCropType);
+  const plantingWindow = defaults.plantingWindow;
 
   if (defaults.isPropertySuggestion && plantingWindow) {
     hint.textContent = `Property-specific suggestion: ${plantingWindow}`;
     return;
   }
 
-  if (!suggestedDate) {
+  if (plantingWindow) {
     hint.textContent = `Suggested planting window: ${plantingWindow}`;
     return;
   }
 
-  hint.textContent = `Suggested planting window: ${plantingWindow} · Next suggested date: ${formatDateFromInputValue(suggestedDate)}`;
+  hint.textContent = 'No planting window metadata available for this property crop.';
 }
 
 function isElementNode(value) {
   return Boolean(value && typeof value === 'object' && value.nodeType === 1);
 }
 
-function applySuggestedPlantingDateForCrop(cropType) {
-  if (isEditMode) {
-    return '';
-  }
-
-  const plantingDateInput = $id('plantingDate');
-  if (!plantingDateInput) {
-    return '';
-  }
-
-  const suggestedDate = getSuggestedFuturePlantingDate(cropType);
-  if (!suggestedDate) {
-    return '';
-  }
-
-  plantingDateInput.value = suggestedDate;
-
-  return suggestedDate;
+function applySuggestedPlantingDateForCrop(_cropType) {
+  return '';
 }
 
 function applySuggestedExpectedHarvestForCrop(cropType, plantingDateInputValue = '') {
@@ -1655,15 +1632,11 @@ function applySuggestedExpectedHarvestForCrop(cropType, plantingDateInputValue =
   const defaults = resolveCropDefaultsForSelection(cropType);
 
   let suggestedExpectedHarvestDate = '';
-  if (defaults.harvestCycleMonths) {
+  if (Number.isInteger(defaults.harvestCycleMonths) && defaults.harvestCycleMonths > 0) {
     suggestedExpectedHarvestDate = buildDateByAddingMonths(
       resolvedPlantingDate,
       defaults.harvestCycleMonths
     );
-  }
-
-  if (!suggestedExpectedHarvestDate) {
-    suggestedExpectedHarvestDate = getSuggestedExpectedHarvestDate(cropType, resolvedPlantingDate);
   }
 
   if (!suggestedExpectedHarvestDate) {
@@ -1689,15 +1662,15 @@ function applySuggestedAlertThresholdsForCrop(cropType) {
   const maxTemperatureInput = $id('maxTemperature');
   const minHumidityInput = $id('minHumidity');
 
-  if (minSoilMoistureInput) {
+  if (minSoilMoistureInput && Number.isFinite(thresholds.minSoilMoisture)) {
     minSoilMoistureInput.value = String(thresholds.minSoilMoisture);
   }
 
-  if (maxTemperatureInput) {
+  if (maxTemperatureInput && Number.isFinite(thresholds.maxTemperature)) {
     maxTemperatureInput.value = String(thresholds.maxTemperature);
   }
 
-  if (minHumidityInput) {
+  if (minHumidityInput && Number.isFinite(thresholds.minHumidity)) {
     minHumidityInput.value = String(thresholds.minHumidity);
   }
 }
@@ -1713,6 +1686,10 @@ function applySuggestedIrrigationTypeForCrop(cropType) {
   }
 
   const defaults = resolveCropDefaultsForSelection(cropType);
+  if (!defaults.suggestedIrrigationType) {
+    return;
+  }
+
   const suggestedIrrigationType = normalizeIrrigationType(defaults.suggestedIrrigationType);
   if (!suggestedIrrigationType) {
     return;
@@ -1731,36 +1708,21 @@ function applySuggestedFieldDefaultsForCrop(cropType) {
 function resolveCropDefaultsForSelection(cropType) {
   const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
   const propertySuggestion = getCropSuggestionForType(normalizedCropType);
-  const staticThresholds = getCropAlertThresholds(normalizedCropType);
-  const staticDefaults = getStaticCropDefaults(normalizedCropType);
+  const hasSuggestion = Boolean(propertySuggestion);
 
   return {
     cropType: normalizedCropType,
-    isPropertySuggestion: Boolean(propertySuggestion),
-    plantingWindow:
-      String(propertySuggestion?.plantingWindow || '').trim() ||
-      String(staticDefaults?.plantingWindow || '').trim() ||
-      getCropPlantingWindow(normalizedCropType),
-    harvestCycleMonths:
-      toFiniteInteger(propertySuggestion?.harvestCycleMonths) ||
-      toFiniteInteger(staticDefaults?.harvestCycleMonths) ||
-      null,
-    suggestedIrrigationType:
-      String(propertySuggestion?.suggestedIrrigationType || '').trim() ||
-      String(staticDefaults?.suggestedIrrigationType || '').trim() ||
-      getSuggestedIrrigationType(normalizedCropType),
-    minSoilMoisture:
-      toFiniteNumber(propertySuggestion?.minSoilMoisture) ??
-      toFiniteNumber(staticDefaults?.minSoilMoisture) ??
-      staticThresholds.minSoilMoisture,
-    maxTemperature:
-      toFiniteNumber(propertySuggestion?.maxTemperature) ??
-      toFiniteNumber(staticDefaults?.maxTemperature) ??
-      staticThresholds.maxTemperature,
-    minHumidity:
-      toFiniteNumber(propertySuggestion?.minHumidity) ??
-      toFiniteNumber(staticDefaults?.minHumidity) ??
-      staticThresholds.minHumidity
+    isPropertySuggestion: hasSuggestion,
+    plantingWindow: hasSuggestion ? String(propertySuggestion?.plantingWindow || '').trim() : '',
+    harvestCycleMonths: hasSuggestion
+      ? toFiniteInteger(propertySuggestion?.harvestCycleMonths)
+      : null,
+    suggestedIrrigationType: hasSuggestion
+      ? String(propertySuggestion?.suggestedIrrigationType || '').trim()
+      : '',
+    minSoilMoisture: hasSuggestion ? toFiniteNumber(propertySuggestion?.minSoilMoisture) : null,
+    maxTemperature: hasSuggestion ? toFiniteNumber(propertySuggestion?.maxTemperature) : null,
+    minHumidity: hasSuggestion ? toFiniteNumber(propertySuggestion?.minHumidity) : null
   };
 }
 
@@ -1798,19 +1760,6 @@ function buildDateByAddingMonths(baseDateInputValue, monthsToAdd) {
   const month = String(projectedDate.getMonth() + 1).padStart(2, '0');
   const day = String(projectedDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function formatDateFromInputValue(dateInputValue) {
-  const date = new Date(`${dateInputValue}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return dateInputValue;
-  }
-
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit'
-  });
 }
 
 function loadIrrigationTypeOptions() {

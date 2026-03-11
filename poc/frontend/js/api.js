@@ -632,6 +632,82 @@ export async function regeneratePropertyCropTypes(propertyId) {
   return data;
 }
 
+/**
+ * Get crop type options for a dropdown selector.
+ * Calls GET /api/crop-types/options — returns slim catalog entries for owner/property scope.
+ * @param {{ ownerId?: string, propertyId?: string, includeSuggestionOverlay?: boolean }} options
+ * @returns {Promise<Array>} Normalized crop type option list
+ */
+export async function getCropTypeOptions({
+  ownerId = '',
+  propertyId = '',
+  includeSuggestionOverlay = false
+} = {}) {
+  const params = {};
+  if (ownerId) params.ownerId = ownerId;
+  if (propertyId) params.propertyId = propertyId;
+  if (includeSuggestionOverlay) params.includeSuggestionOverlay = true;
+
+  const { data } = await farmApi.get('/api/crop-types/options', { params });
+  const items = Array.isArray(data) ? data : data?.data || data?.items || [];
+  return items.map(normalizeCropTypeOption);
+}
+
+function normalizeCropTypeOption(item) {
+  return {
+    catalogId: item?.catalogId || item?.CatalogId || '',
+    suggestionId: item?.suggestionId || item?.SuggestionId || null,
+    cropType: String(item?.cropType || item?.CropType || '').trim(),
+    suggestedImage: item?.suggestedImage || item?.SuggestedImage || null,
+    source: item?.source || item?.Source || 'Catalog',
+    isSystemDefined: Boolean(item?.isSystemDefined ?? item?.IsSystemDefined),
+    plantingWindow: item?.plantingWindow || item?.PlantingWindow || null,
+    harvestCycleMonths: toNullableInteger(item?.harvestCycleMonths ?? item?.HarvestCycleMonths),
+    recommendedIrrigationType:
+      item?.recommendedIrrigationType || item?.RecommendedIrrigationType || null,
+    minSoilMoisture: toNullableNumber(item?.minSoilMoisture ?? item?.MinSoilMoisture),
+    maxTemperature: toNullableNumber(item?.maxTemperature ?? item?.MaxTemperature),
+    minHumidity: toNullableNumber(item?.minHumidity ?? item?.MinHumidity),
+    createdAt: item?.createdAt || item?.CreatedAt || null
+  };
+}
+
+/**
+ * Create a new crop type catalog entry (tenant-scoped).
+ * POST /api/crop-types
+ */
+export async function createCatalogCropType(payload) {
+  const { data } = await farmApi.post('/api/crop-types', payload);
+  return data;
+}
+
+/**
+ * Get a crop type catalog entry by id.
+ * GET /api/crop-types/:id
+ */
+export async function getCatalogCropType(catalogId) {
+  const { data } = await farmApi.get(`/api/crop-types/${encodeURIComponent(catalogId)}`);
+  return data;
+}
+
+/**
+ * Update an existing crop type catalog entry.
+ * PUT /api/crop-types/:id
+ */
+export async function updateCatalogCropType(catalogId, payload) {
+  const { data } = await farmApi.put(`/api/crop-types/${encodeURIComponent(catalogId)}`, payload);
+  return data;
+}
+
+/**
+ * Deactivate (soft-delete) a crop type catalog entry.
+ * DELETE /api/crop-types/:id
+ */
+export async function deactivateCatalogCropType(catalogId) {
+  const { data } = await farmApi.delete(`/api/crop-types/${encodeURIComponent(catalogId)}`);
+  return data;
+}
+
 function normalizeCropTypeSuggestion(item) {
   const cropType = String(item?.cropType || item?.CropType || '').trim();
   if (!cropType) {
