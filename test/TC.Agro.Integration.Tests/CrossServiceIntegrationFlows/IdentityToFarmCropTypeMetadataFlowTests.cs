@@ -28,7 +28,6 @@ public sealed class IdentityToFarmCropTypeMetadataFlowTests : BaseIntegrationTes
         var cropTypeName = $"IntegrationSoy{producer.Token}";
 
         var createCropTypeCommand = new CreateCropTypeCommand(
-            PropertyId: property.Id,
             CropType: cropTypeName,
             PlantingWindow: "September to November",
             HarvestCycleMonths: 5,
@@ -60,15 +59,17 @@ public sealed class IdentityToFarmCropTypeMetadataFlowTests : BaseIntegrationTes
 
         using var listRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            $"/api/crop-types?propertyId={property.Id}&pageNumber=1&pageSize=50&includeStale=false&includeInactive=false");
+            "/api/crop-types?pageNumber=1&pageSize=50&includeStale=false&includeInactive=false");
         listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", producer.JwtToken);
 
         using var listResponse = await Fixture.FarmClient.SendAsync(listRequest, cancellationToken);
+        var listResponseBody = await listResponse.Content.ReadAsStringAsync(cancellationToken);
 
-        listResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        listResponse.StatusCode.ShouldBe(HttpStatusCode.OK, listResponseBody);
 
-        var listResult = await listResponse.Content
-            .ReadFromJsonAsync<PaginatedResponse<ListCropTypesResponse>>(cancellationToken: cancellationToken);
+        var listResult = System.Text.Json.JsonSerializer.Deserialize<PaginatedResponse<ListCropTypesResponse>>(
+            listResponseBody,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
 
         listResult.ShouldNotBeNull();
 
@@ -76,7 +77,7 @@ public sealed class IdentityToFarmCropTypeMetadataFlowTests : BaseIntegrationTes
             item.CropTypeCatalogId == createdSuggestion.CropTypeCatalogId &&
             string.Equals(item.CropType, cropTypeName, StringComparison.OrdinalIgnoreCase));
 
-        listedCropType.ShouldNotBeNull();
+        listedCropType.ShouldNotBeNull(listResponseBody);
         listedCropType!.Id.ShouldBe(createdSuggestion.CropTypeCatalogId);
         listedCropType.PropertyId.ShouldBe(property.Id);
         listedCropType.Source.ShouldBe("Catalog");
@@ -88,15 +89,17 @@ public sealed class IdentityToFarmCropTypeMetadataFlowTests : BaseIntegrationTes
         detailsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", producer.JwtToken);
 
         using var detailsResponse = await Fixture.FarmClient.SendAsync(detailsRequest, cancellationToken);
+        var detailsResponseBody = await detailsResponse.Content.ReadAsStringAsync(cancellationToken);
 
-        detailsResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        detailsResponse.StatusCode.ShouldBe(HttpStatusCode.OK, detailsResponseBody);
 
-        var details = await detailsResponse.Content
-            .ReadFromJsonAsync<GetCropTypeByIdResponse>(cancellationToken: cancellationToken);
+        var details = System.Text.Json.JsonSerializer.Deserialize<GetCropTypeByIdResponse>(
+            detailsResponseBody,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
 
         details.ShouldNotBeNull();
         details!.Id.ShouldBe(createdSuggestion.CropTypeCatalogId);
-        details.PropertyId.ShouldBe(Guid.Empty);
+        details.PropertyId.ShouldBe(property.Id);
         details.Source.ShouldBe("Catalog");
         details.SuggestedImage.ShouldBe("soy-icon");
         details.CropType.ShouldBe(cropTypeName);

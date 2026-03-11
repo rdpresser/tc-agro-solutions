@@ -117,26 +117,8 @@
                   />
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label" for="propertyFilter">Property</label>
-                  <select id="propertyFilter" class="form-control form-select">
-                    <option value="">All Properties</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0">
-                  <label class="form-label" for="sourceFilter">Source</label>
-                  <select id="sourceFilter" class="form-control form-select">
-                    <option value="">All Sources</option>
-                    <option value="Catalog">Catalog</option>
-                    <option value="Suggestion">Suggestion</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0">
                   <label class="form-label">Flags</label>
                   <div class="d-flex" style="gap: 12px; flex-wrap: wrap; align-items: center; min-height: 44px">
-                    <label class="d-flex align-center" style="gap: 6px">
-                      <input type="checkbox" id="includeStaleFilter" />
-                      <span>Include stale</span>
-                    </label>
                     <label class="d-flex align-center" style="gap: 6px">
                       <input type="checkbox" id="includeInactiveFilter" />
                       <span>Include inactive</span>
@@ -156,8 +138,7 @@
               <thead>
                 <tr>
                   <th>Crop Type</th>
-                  <th>Property</th>
-                  <th>Source</th>
+                  <th>Suggested Image</th>
                   <th>Planting Window</th>
                   <th>Harvest (months)</th>
                   <th>Irrigation</th>
@@ -169,7 +150,7 @@
               </thead>
               <tbody id="catalogTableBody">
                 <tr>
-                  <td colspan="10" class="text-center">Loading...</td>
+                  <td colspan="9" class="text-center">Loading...</td>
                 </tr>
               </tbody>
             </table>

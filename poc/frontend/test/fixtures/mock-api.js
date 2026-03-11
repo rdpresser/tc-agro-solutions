@@ -103,6 +103,7 @@ function createInitialState({
   properties,
   plots,
   sensors,
+  cropTypeCatalogs,
   cropTypeSuggestions
 } = {}) {
   const ownersState = owners || [...DEFAULT_OWNERS];
@@ -247,12 +248,68 @@ function createInitialState({
     }
   ];
 
+  const cropTypeCatalogsState = cropTypeCatalogs || [
+    {
+      id: '77777777-7777-4777-8777-777777777777',
+      cropTypeCatalogId: '77777777-7777-4777-8777-777777777777',
+      propertyId: '',
+      propertyName: '',
+      ownerId: DEFAULT_OWNER_ID_ALPHA,
+      ownerName: 'Alpha Farms',
+      cropType: 'Sorghum',
+      suggestedImage: '🌾',
+      source: 'Catalog',
+      isOverride: false,
+      isStale: false,
+      confidenceScore: null,
+      plantingWindow: 'Sep to Nov',
+      harvestCycleMonths: 4,
+      suggestedIrrigationType: 'Sprinkler',
+      minSoilMoisture: 26,
+      maxTemperature: 37,
+      minHumidity: 38,
+      notes: 'Warm-season grain catalog entry',
+      model: null,
+      generatedAt: null,
+      isActive: true,
+      createdAt: nowIso(),
+      updatedAt: nowIso()
+    },
+    {
+      id: '55555555-5555-4555-8555-555555555555',
+      cropTypeCatalogId: '55555555-5555-4555-8555-555555555555',
+      propertyId: '',
+      propertyName: '',
+      ownerId: DEFAULT_OWNER_ID_ALPHA,
+      ownerName: 'Alpha Farms',
+      cropType: 'Coffee',
+      suggestedImage: '☕',
+      source: 'Catalog',
+      isOverride: false,
+      isStale: false,
+      confidenceScore: null,
+      plantingWindow: 'Mar to May',
+      harvestCycleMonths: 8,
+      suggestedIrrigationType: 'Drip Irrigation',
+      minSoilMoisture: 40,
+      maxTemperature: 30,
+      minHumidity: 60,
+      notes: 'Perennial crop catalog entry',
+      model: null,
+      generatedAt: null,
+      isActive: true,
+      createdAt: nowIso(),
+      updatedAt: nowIso()
+    }
+  ];
+
   return {
     owners: ownersState,
     users: usersState,
     properties: propertiesState,
     plots: plotsState,
     sensors: sensorsState,
+    cropTypeCatalogs: cropTypeCatalogsState,
     cropTypeSuggestions: cropTypeSuggestionsState
   };
 }
@@ -846,39 +903,64 @@ export async function installApiMocks(
         const includeInactive =
           String(searchParams.get('includeInactive') || 'false').toLowerCase() === 'true';
 
-        let items = [...state.cropTypeSuggestions];
+        if (propertyId) {
+          let items = [...state.cropTypeSuggestions];
+
+          if (ownerId) {
+            items = items.filter((item) => String(item.ownerId || '') === ownerId);
+          }
+
+          items = items.filter((item) => String(item.propertyId || '') === propertyId);
+
+          if (source) {
+            const normalizedSource = String(source).toLowerCase();
+            items = items.filter((item) => {
+              const itemSource = String(item.source || '').toLowerCase();
+
+              if (normalizedSource === 'catalog') {
+                return itemSource.includes('catalog');
+              }
+
+              if (normalizedSource === 'suggestion') {
+                return (
+                  itemSource.includes('suggestion') ||
+                  itemSource.includes('ai') ||
+                  itemSource.includes('manual')
+                );
+              }
+
+              return itemSource === normalizedSource;
+            });
+          }
+
+          if (!includeStale) {
+            items = items.filter((item) => !item.isStale);
+          }
+
+          if (!includeInactive) {
+            items = items.filter((item) => item.isActive !== false);
+          }
+
+          items = applyTextFilter(items, filter, [
+            'cropType',
+            'propertyName',
+            'ownerName',
+            'suggestedIrrigationType'
+          ]);
+
+          await fulfillJson(route, buildPaginated(items, pageNumber, pageSize));
+          return;
+        }
+
+        let items = [...state.cropTypeCatalogs];
 
         if (ownerId) {
           items = items.filter((item) => String(item.ownerId || '') === ownerId);
         }
 
-        if (propertyId) {
-          items = items.filter((item) => String(item.propertyId || '') === propertyId);
-        }
-
-        if (source) {
-          const normalizedSource = String(source).toLowerCase();
-          items = items.filter((item) => {
-            const itemSource = String(item.source || '').toLowerCase();
-
-            if (normalizedSource === 'catalog') {
-              return itemSource.includes('catalog');
-            }
-
-            if (normalizedSource === 'suggestion') {
-              return (
-                itemSource.includes('suggestion') ||
-                itemSource.includes('ai') ||
-                itemSource.includes('manual')
-              );
-            }
-
-            return itemSource === normalizedSource;
-          });
-        }
-
-        if (!includeStale) {
-          items = items.filter((item) => !item.isStale);
+        if (source && String(source).trim().toLowerCase() !== 'catalog') {
+          await fulfillJson(route, buildPaginated([], pageNumber, pageSize));
+          return;
         }
 
         if (!includeInactive) {
@@ -887,8 +969,8 @@ export async function installApiMocks(
 
         items = applyTextFilter(items, filter, [
           'cropType',
-          'propertyName',
           'ownerName',
+          'notes',
           'suggestedIrrigationType'
         ]);
 
@@ -923,6 +1005,7 @@ export async function installApiMocks(
           ownerId: property.ownerId || DEFAULT_OWNER_ID_ALPHA,
           ownerName: property.ownerName || 'Unknown Owner',
           cropType,
+          suggestedImage: body.suggestedImage ?? null,
           source: 'Catalog',
           isOverride: false,
           isStale: false,
@@ -930,7 +1013,7 @@ export async function installApiMocks(
           plantingWindow: body.plantingWindow ?? null,
           harvestCycleMonths: body.harvestCycleMonths ?? null,
           suggestedIrrigationType:
-            body.recommendedIrrigationType ?? body.suggestedIrrigationType ?? null,
+            body.suggestedIrrigationType ?? body.recommendedIrrigationType ?? null,
           minSoilMoisture: body.minSoilMoisture ?? null,
           maxTemperature: body.maxTemperature ?? null,
           minHumidity: body.minHumidity ?? null,
@@ -942,13 +1025,25 @@ export async function installApiMocks(
           updatedAt: nowIso()
         };
 
-        state.cropTypeSuggestions.push(createdEntry);
+        state.cropTypeCatalogs.unshift(createdEntry);
         await fulfillJson(route, createdEntry, 201);
         return;
       }
 
       if (pathname.startsWith('/api/crop-types/') && method === 'GET') {
         const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
+
+        const catalogItem = state.cropTypeCatalogs.find(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (catalogItem) {
+          await fulfillJson(route, catalogItem);
+          return;
+        }
+
         const item = state.cropTypeSuggestions.find(
           (entry) =>
             String(entry.cropTypeCatalogId || '').trim() === catalogId ||
@@ -967,6 +1062,37 @@ export async function installApiMocks(
       if (pathname.startsWith('/api/crop-types/') && method === 'PUT') {
         const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
         const body = parseRequestBody(request);
+        const catalogIndex = state.cropTypeCatalogs.findIndex(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (catalogIndex !== -1) {
+          const currentCatalog = state.cropTypeCatalogs[catalogIndex];
+          state.cropTypeCatalogs[catalogIndex] = {
+            ...currentCatalog,
+            cropType: body.cropType ?? currentCatalog.cropType,
+            suggestedImage: body.suggestedImage ?? currentCatalog.suggestedImage ?? null,
+            plantingWindow: body.plantingWindow ?? currentCatalog.plantingWindow ?? null,
+            harvestCycleMonths:
+              body.harvestCycleMonths ?? currentCatalog.harvestCycleMonths ?? null,
+            suggestedIrrigationType:
+              body.suggestedIrrigationType ??
+              body.recommendedIrrigationType ??
+              currentCatalog.suggestedIrrigationType ??
+              null,
+            minSoilMoisture: body.minSoilMoisture ?? currentCatalog.minSoilMoisture ?? null,
+            maxTemperature: body.maxTemperature ?? currentCatalog.maxTemperature ?? null,
+            minHumidity: body.minHumidity ?? currentCatalog.minHumidity ?? null,
+            notes: body.notes ?? currentCatalog.notes ?? null,
+            updatedAt: nowIso()
+          };
+
+          await fulfillJson(route, state.cropTypeCatalogs[catalogIndex]);
+          return;
+        }
+
         const index = state.cropTypeSuggestions.findIndex(
           (entry) =>
             String(entry.cropTypeCatalogId || '').trim() === catalogId ||
@@ -984,14 +1110,15 @@ export async function installApiMocks(
           plantingWindow: body.plantingWindow ?? current.plantingWindow ?? null,
           harvestCycleMonths: body.harvestCycleMonths ?? current.harvestCycleMonths ?? null,
           suggestedIrrigationType:
-            body.recommendedIrrigationType ??
             body.suggestedIrrigationType ??
+            body.recommendedIrrigationType ??
             current.suggestedIrrigationType ??
             null,
           minSoilMoisture: body.minSoilMoisture ?? current.minSoilMoisture ?? null,
           maxTemperature: body.maxTemperature ?? current.maxTemperature ?? null,
           minHumidity: body.minHumidity ?? current.minHumidity ?? null,
           notes: body.notes ?? current.notes ?? null,
+          suggestedImage: body.suggestedImage ?? current.suggestedImage ?? null,
           updatedAt: nowIso()
         };
 
@@ -1001,6 +1128,27 @@ export async function installApiMocks(
 
       if (pathname.startsWith('/api/crop-types/') && method === 'DELETE') {
         const catalogId = decodeURIComponent(pathname.split('/api/crop-types/')[1] || '').trim();
+        const catalogIndex = state.cropTypeCatalogs.findIndex(
+          (entry) =>
+            String(entry.cropTypeCatalogId || '').trim() === catalogId ||
+            String(entry.id || '').trim() === catalogId
+        );
+
+        if (catalogIndex !== -1) {
+          state.cropTypeCatalogs[catalogIndex] = {
+            ...state.cropTypeCatalogs[catalogIndex],
+            isActive: false,
+            updatedAt: nowIso()
+          };
+
+          await fulfillJson(route, {
+            success: true,
+            id: catalogId,
+            isActive: false
+          });
+          return;
+        }
+
         const index = state.cropTypeSuggestions.findIndex(
           (entry) =>
             String(entry.cropTypeCatalogId || '').trim() === catalogId ||

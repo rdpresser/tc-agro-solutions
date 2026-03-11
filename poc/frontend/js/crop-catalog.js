@@ -1,4 +1,4 @@
-import { deactivateCatalogCropType, getCropTypesPaginated, getProperties } from './api.js';
+import { deactivateCatalogCropType, getCropTypesPaginated } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { getIrrigationTypeDisplay } from './irrigation-types.js';
@@ -9,7 +9,6 @@ let pageSize = 10;
 let totalPages = 1;
 let totalItems = 0;
 let currentCatalogItems = [];
-let propertiesCache = [];
 
 const ui = {};
 
@@ -89,18 +88,6 @@ function resolvePagination(payload, fallbackCount = 0) {
   };
 }
 
-function normalizeProperty(item) {
-  const id = String(item?.id || item?.Id || '').trim();
-  if (!id) {
-    return null;
-  }
-
-  return {
-    id,
-    name: String(item?.name || item?.Name || 'Unnamed Property').trim()
-  };
-}
-
 function normalizeCatalogItem(item) {
   const catalogId = String(
     item?.catalogId ||
@@ -122,8 +109,7 @@ function normalizeCatalogItem(item) {
   return {
     catalogId,
     cropType,
-    propertyId: String(item?.propertyId || item?.PropertyId || '').trim(),
-    propertyName: String(item?.propertyName || item?.PropertyName || '').trim(),
+    suggestedImage: toNullableTrimmedString(item?.suggestedImage ?? item?.SuggestedImage),
     source,
     isActive: item?.isActive ?? item?.IsActive ?? true,
     isStale: Boolean(item?.isStale ?? item?.IsStale),
@@ -146,10 +132,7 @@ function normalizeCatalogItem(item) {
 function cacheElements() {
   ui.addCropTypeBtn = document.getElementById('addCropTypeBtn');
   ui.catalogFilterForm = document.getElementById('catalogFilterForm');
-  ui.propertyFilter = document.getElementById('propertyFilter');
   ui.filterInput = document.getElementById('filterInput');
-  ui.sourceFilter = document.getElementById('sourceFilter');
-  ui.includeStaleFilter = document.getElementById('includeStaleFilter');
   ui.includeInactiveFilter = document.getElementById('includeInactiveFilter');
   ui.clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
@@ -159,38 +142,6 @@ function cacheElements() {
   ui.pageInfo = document.getElementById('pageInfo');
   ui.pageSizeSelect = document.getElementById('pageSizeSelect');
   ui.catalogSummary = document.getElementById('catalogSummary');
-}
-
-function populatePropertyFilter() {
-  if (!ui.propertyFilter) {
-    return;
-  }
-
-  const options = ['<option value="">All Properties</option>']
-    .concat(
-      propertiesCache.map((property) => {
-        return `<option value="${escapeHtml(property.id)}">${escapeHtml(property.name)}</option>`;
-      })
-    )
-    .join('');
-
-  ui.propertyFilter.innerHTML = options;
-}
-
-function resolveSourceBadge(source) {
-  const normalized = String(source || '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized.includes('suggestion') || normalized.includes('ai')) {
-    return '<span class="badge badge-info">Suggestion</span>';
-  }
-
-  if (normalized.includes('catalog')) {
-    return '<span class="badge badge-success">Catalog</span>';
-  }
-
-  return `<span class="badge badge-warning">${escapeHtml(source || 'Unknown')}</span>`;
 }
 
 function resolveStatusBadges(item) {
@@ -219,7 +170,7 @@ function renderCatalogTable() {
   if (!Array.isArray(currentCatalogItems) || currentCatalogItems.length === 0) {
     ui.catalogTableBody.innerHTML = `
       <tr>
-        <td colspan="10" class="text-center text-muted">No crop types found for the selected filters.</td>
+        <td colspan="9" class="text-center text-muted">No crop types found for the selected filters.</td>
       </tr>
     `;
     return;
@@ -229,6 +180,9 @@ function renderCatalogTable() {
     .map((item) => {
       const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
       const irrigationDisplay = getIrrigationTypeDisplay(item.recommendedIrrigationType);
+      const suggestedImageDisplay = item.suggestedImage
+        ? `<span>${escapeHtml(item.suggestedImage)}</span>`
+        : '<span class="text-muted">-</span>';
       const thresholds = [
         item.minSoilMoisture !== null ? `${item.minSoilMoisture}%` : null,
         item.maxTemperature !== null ? `${item.maxTemperature}°C` : null,
@@ -250,8 +204,7 @@ function renderCatalogTable() {
             <strong>${escapeHtml(item.cropType)}</strong>
             <div class="text-muted" style="font-size: 12px">${escapeHtml(item.notes || '')}</div>
           </td>
-          <td>${escapeHtml(item.propertyName || '-')}</td>
-          <td>${resolveSourceBadge(item.source)}</td>
+          <td>${suggestedImageDisplay}</td>
           <td>${escapeHtml(item.plantingWindow || '-')}</td>
           <td>${item.harvestCycleMonths ?? '-'}</td>
           <td>${escapeHtml(irrigationDisplay)}</td>
@@ -287,23 +240,6 @@ function updatePaginationUi(meta) {
   }
 }
 
-async function loadProperties() {
-  try {
-    const response = await getProperties({
-      pageNumber: 1,
-      pageSize: 500,
-      sortBy: 'name',
-      sortDirection: 'asc'
-    });
-
-    propertiesCache = extractItems(response).map(normalizeProperty).filter(Boolean);
-    populatePropertyFilter();
-  } catch (error) {
-    console.error('Failed to load property filter options.', error);
-    toast('Failed to load properties', 'error');
-  }
-}
-
 async function loadCatalog() {
   try {
     const response = await getCropTypesPaginated({
@@ -312,9 +248,7 @@ async function loadCatalog() {
       sortBy: 'createdAt',
       sortDirection: 'desc',
       filter: String(ui.filterInput?.value || '').trim(),
-      propertyId: String(ui.propertyFilter?.value || '').trim(),
-      source: String(ui.sourceFilter?.value || '').trim(),
-      includeStale: Boolean(ui.includeStaleFilter?.checked),
+      source: 'Catalog',
       includeInactive: Boolean(ui.includeInactiveFilter?.checked)
     });
 
@@ -406,9 +340,6 @@ function bindEvents() {
 
   ui.clearFiltersBtn?.addEventListener('click', async () => {
     if (ui.filterInput) ui.filterInput.value = '';
-    if (ui.propertyFilter) ui.propertyFilter.value = '';
-    if (ui.sourceFilter) ui.sourceFilter.value = '';
-    if (ui.includeStaleFilter) ui.includeStaleFilter.checked = false;
     if (ui.includeInactiveFilter) ui.includeInactiveFilter.checked = false;
 
     currentPage = 1;
@@ -452,7 +383,6 @@ async function initializePage() {
 
   pageSize = Number(ui.pageSizeSelect?.value || 10);
 
-  await loadProperties();
   await loadCatalog();
 }
 

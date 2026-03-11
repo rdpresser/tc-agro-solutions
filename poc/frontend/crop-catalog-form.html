@@ -111,9 +111,12 @@
             <input type="hidden" id="catalogIdField" />
 
             <div id="cropCatalogFormErrors" class="alert alert-danger" style="display: none"></div>
+            <div class="alert alert-info" style="margin-bottom: 24px">
+              Crop catalog entries are tenant-scoped domain data. They are later referenced by crop cycles and plot flows.
+            </div>
 
             <div class="form-section">
-              <h3 class="form-section-title">🌿 Crop Definition</h3>
+              <h3 class="form-section-title">🌿 Catalog Identity</h3>
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label required" for="cropTypeNameField">🌿 Crop Type Name</label>
@@ -125,30 +128,50 @@
                     maxlength="100"
                     required
                   />
-                  <span class="form-helper">Name shown in crop selectors and catalog listings</span>
+                  <span class="form-helper">Catalog name referenced later by crop cycles</span>
                 </div>
                 <div class="form-group">
-                  <label class="form-label required" for="propertyIdField">🏘️ Property</label>
-                  <select id="propertyIdField" class="form-control form-select" required>
-                    <option value="">Select property...</option>
-                  </select>
-                  <span class="form-helper">Owner scope reference for this catalog entry</span>
+                  <label class="form-label" for="suggestedImageField">🖼️ Suggested Image</label>
+                  <input
+                    type="text"
+                    id="suggestedImageField"
+                    class="form-control"
+                    placeholder="e.g. 🌾"
+                    maxlength="10"
+                  />
+                  <span class="form-helper">Optional short label or emoji used by the UI</span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="descriptionField">📋 Description</label>
+                  <textarea
+                    id="descriptionField"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Optional agronomic description"
+                    maxlength="500"
+                  ></textarea>
+                  <span class="form-helper">Catalog-level description mapped to the domain aggregate description</span>
                 </div>
               </div>
             </div>
 
             <div class="form-section">
-              <h3 class="form-section-title">🗓️ Planting Window</h3>
+              <h3 class="form-section-title">🗓️ Seasonal Profile</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="plantingWindowField">🗓️ Planting Window</label>
-                  <input
-                    type="text"
-                    id="plantingWindowField"
-                    class="form-control"
-                    placeholder="e.g. Sep-Dec or Sep (Week 2) to Dec (Week 1)"
-                  />
-                  <span class="form-helper">You can type manually or generate using the builder below</span>
+                  <label class="form-label" for="plantingStartMonthField">Typical Start Month</label>
+                  <select id="plantingStartMonthField" class="form-control form-select">
+                    <option value="">Select...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="plantingEndMonthField">Typical End Month</label>
+                  <select id="plantingEndMonthField" class="form-control form-select">
+                    <option value="">Select...</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="harvestCycleField">⏳ Harvest Cycle (months)</label>
@@ -160,72 +183,35 @@
                     max="36"
                     placeholder="e.g. 4"
                   />
-                  <span class="form-helper">Expected harvest cycle length for planning</span>
+                  <span class="form-helper">Expected lifecycle duration used as a catalog default</span>
                 </div>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="plantingStartMonthField">Start Month</label>
-                  <select id="plantingStartMonthField" class="form-control form-select">
-                    <option value="">Select...</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="plantingStartWeekField">Start Week</label>
-                  <select id="plantingStartWeekField" class="form-control form-select">
-                    <option value="">Any week</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="plantingEndMonthField">End Month</label>
-                  <select id="plantingEndMonthField" class="form-control form-select">
-                    <option value="">Select...</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="plantingEndWeekField">End Week</label>
-                  <select id="plantingEndWeekField" class="form-control form-select">
-                    <option value="">Any week</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="plantingWindowPreview">Generated Window Preview</label>
+                  <label class="form-label" for="plantingWindowPreview">Resolved Planting Window</label>
                   <input
                     type="text"
                     id="plantingWindowPreview"
                     class="form-control"
-                    value="Select months/weeks to generate a planting window"
+                    value="Select months to define the typical planting window"
                     readonly
                     disabled
                   />
-                  <span class="form-helper">Simulate period by month and week range</span>
-                </div>
-                <div class="form-group" style="display: flex; align-items: end">
-                  <button
-                    id="applyPlantingWindowPresetBtn"
-                    type="button"
-                    class="btn btn-secondary"
-                    style="width: 100%"
-                  >
-                    ✨ Apply Generated Window
-                  </button>
+                  <span class="form-helper">The current API stores this seasonal range as a normalized planting window string</span>
                 </div>
               </div>
             </div>
 
             <div class="form-section">
-              <h3 class="form-section-title">💦 Irrigation & Thresholds</h3>
+              <h3 class="form-section-title">💦 Monitoring Defaults</h3>
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="irrigationTypeField">💧 Recommended Irrigation Type</label>
                   <select id="irrigationTypeField" class="form-control form-select">
                     <option value="">Select...</option>
                   </select>
-                  <span class="form-helper">Uses the same irrigation list and icons from plot form</span>
+                  <span class="form-helper">Default irrigation profile suggested by the catalog</span>
                 </div>
               </div>
 
@@ -241,7 +227,6 @@
                     step="0.1"
                     placeholder="e.g. 30"
                   />
-                  <span class="form-helper">Alert baseline for dry-soil risk</span>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="maxTemperatureField">🌡️ Max Temperature (°C)</label>
@@ -249,12 +234,11 @@
                     type="number"
                     id="maxTemperatureField"
                     class="form-control"
-                    min="-50"
-                    max="70"
+                    min="-30"
+                    max="80"
                     step="0.1"
                     placeholder="e.g. 35"
                   />
-                  <span class="form-helper">Alert baseline for heat stress</span>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="minHumidityField">💧 Min Humidity (%)</label>
@@ -267,24 +251,6 @@
                     step="0.1"
                     placeholder="e.g. 40"
                   />
-                  <span class="form-helper">Alert baseline for low air humidity</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h3 class="form-section-title">📋 Notes</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="notesField">📋 Notes / Description</label>
-                  <textarea
-                    id="notesField"
-                    class="form-control"
-                    rows="2"
-                    placeholder="Optional agronomic notes"
-                    maxlength="500"
-                  ></textarea>
-                  <span class="form-helper">Optional context for decision and overrides</span>
                 </div>
               </div>
             </div>
