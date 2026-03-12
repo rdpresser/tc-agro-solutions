@@ -7,6 +7,7 @@ using TC.Agro.Farm.Application.UseCases.Sensors.Create;
 using TC.Agro.Identity.Application.UseCases.CreateUser;
 using TC.Agro.Identity.Application.UseCases.LoginUser;
 using TC.Agro.Integration.Tests.Abstractions;
+using TC.Agro.SensorIngest.Application.UseCases.CreateBatchReadings;
 using TC.Agro.SensorIngest.Application.UseCases.CreateReading;
 
 namespace TC.Agro.Integration.Tests.CrossServiceIntegrationFlows;
@@ -103,6 +104,78 @@ public sealed class SensorIngestToCrossServiceAnalyticsAlertFlowTests : BaseInte
 
         var finalAlertCount = await Fixture.GetAnalyticsAlertCountAsync(context.SensorId, cancellationToken);
         finalAlertCount.ShouldBe(initialAlertCount);
+    }
+
+    [Fact]
+    public async Task GivenBatchWithOneUnknownSensor_WhenIngested_ThenOnlyValidReadingIsProcessedAndAlerted()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var context = await ProvisionSensorAsync(cancellationToken);
+        var unknownSensorId = Guid.NewGuid();
+
+        var initialValidSensorAlertCount = await Fixture.GetAnalyticsAlertCountAsync(context.SensorId, cancellationToken);
+        var initialUnknownSensorAlertCount = await Fixture.GetAnalyticsAlertCountAsync(unknownSensorId, cancellationToken);
+
+        var batchCommand = new CreateBatchReadingsCommand(
+        [
+            new SensorReadingInput(
+                SensorId: context.SensorId,
+                Timestamp: DateTime.UtcNow,
+                Temperature: 42.0,
+                Humidity: 60.0,
+                SoilMoisture: 55.0,
+                Rainfall: 0.0,
+                BatteryLevel: 90.0),
+            new SensorReadingInput(
+                SensorId: unknownSensorId,
+                Timestamp: DateTime.UtcNow,
+                Temperature: 42.0,
+                Humidity: 60.0,
+                SoilMoisture: 55.0,
+                Rainfall: 0.0,
+                BatteryLevel: 90.0)
+        ]);
+
+        using var createBatchResponse = await SendAuthorizedJsonAsync(
+            Fixture.SensorIngestClient,
+            HttpMethod.Post,
+            "/api/readings/batch",
+            batchCommand,
+            context.JwtToken,
+            cancellationToken);
+
+        createBatchResponse.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.Accepted);
+
+        var batchResult = await createBatchResponse.Content
+            .ReadFromJsonAsync<CreateBatchReadingsResponse>(cancellationToken: cancellationToken);
+
+        batchResult.ShouldNotBeNull();
+        batchResult!.ProcessedCount.ShouldBe(1);
+        batchResult.FailedCount.ShouldBe(1);
+
+        var successfulItem = batchResult.Results.Single(x => x.SensorId == context.SensorId);
+        successfulItem.Success.ShouldBeTrue();
+        successfulItem.SensorReadingId.ShouldNotBeNull();
+
+        var failedItem = batchResult.Results.Single(x => x.SensorId == unknownSensorId);
+        failedItem.Success.ShouldBeFalse();
+        failedItem.SensorReadingId.ShouldBeNull();
+        failedItem.ErrorMessage.ShouldNotBeNull();
+        failedItem.ErrorMessage.ShouldContain("not registered", Case.Insensitive);
+
+        var alert = await Fixture.WaitForAnalyticsAlertAsync(
+            context.SensorId,
+            TimeSpan.FromSeconds(45),
+            row => string.Equals(row.Type, "HighTemperature", StringComparison.Ordinal),
+            cancellationToken);
+
+        alert.ShouldNotBeNull();
+
+        var finalValidSensorAlertCount = await Fixture.GetAnalyticsAlertCountAsync(context.SensorId, cancellationToken);
+        var finalUnknownSensorAlertCount = await Fixture.GetAnalyticsAlertCountAsync(unknownSensorId, cancellationToken);
+
+        finalValidSensorAlertCount.ShouldBe(initialValidSensorAlertCount + 1);
+        finalUnknownSensorAlertCount.ShouldBe(initialUnknownSensorAlertCount);
     }
 
     private async Task<ProvisionedSensorContext> ProvisionSensorAsync(CancellationToken cancellationToken)

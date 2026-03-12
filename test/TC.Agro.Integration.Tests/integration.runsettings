@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  RunSettings for TC.Agro.Integration.Tests
+  ==========================================
+  These settings configure the VSTest runner for this integration test suite.
+  Integration tests use real containers (PostgreSQL, RabbitMQ, Redis) and spin up
+  4 in-process ASP.NET services, so they require much more time than unit tests.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <!-- 20 minutes total budget for the full integration suite across all collections -->
+    <TestSessionTimeout>1200000</TestSessionTimeout>
+
+    <!-- Per-test timeout: 5 minutes per individual test (health waits, async message delivery, etc.) -->
+    <TestCaseFilter></TestCaseFilter>
+  </RunConfiguration>
+
+  <xUnit>
+    <!-- 
+      Disable assembly-level parallelism so the two test collections 
+      (CrossServiceIntegrationTestCollection and SensorReadingsJobTestCollection)
+      run sequentially. Each collection starts 4 ASP.NET services + 3 Docker containers:
+      running both collections in parallel would consume ~8 service instances and
+      6 containers simultaneously, causing resource starvation on developer machines.
+    -->
+    <MaxParallelThreads>1</MaxParallelThreads>
+  </xUnit>
+</RunSettings>

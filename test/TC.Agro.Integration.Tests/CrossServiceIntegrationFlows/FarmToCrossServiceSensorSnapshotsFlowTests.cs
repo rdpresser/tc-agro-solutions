@@ -49,6 +49,7 @@ public sealed class FarmToCrossServiceSensorSnapshotsFlowTests : BaseIntegration
             .ReadFromJsonAsync<CreatePropertyResponse>(cancellationToken: cancellationToken);
 
         createdProperty.ShouldNotBeNull();
+        var cropTypeCatalogId = await Fixture.EnsureFarmSystemCropCatalogAsync("Soy", cancellationToken);
 
         var createPlotCommand = new CreatePlotCommand(
             PropertyId: createdProperty!.Id,
@@ -61,7 +62,8 @@ public sealed class FarmToCrossServiceSensorSnapshotsFlowTests : BaseIntegration
             PlantingDate: DateTimeOffset.UtcNow.AddDays(-3),
             ExpectedHarvestDate: DateTimeOffset.UtcNow.AddDays(90),
             IrrigationType: "Center Pivot",
-            AdditionalNotes: "Integration E2E test plot");
+            AdditionalNotes: "Integration E2E test plot",
+            CropTypeCatalogId: cropTypeCatalogId);
 
         using var createPlotResponse = await SendAuthorizedJsonAsync(
             Fixture.FarmClient,

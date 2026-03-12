@@ -9,6 +9,9 @@ This folder contains cross-service integration tests for the platform.
 - Identity -> Farm, Sensor Ingest, Analytics (owner snapshots)
 - Farm -> Sensor Ingest, Analytics (sensor snapshots)
 - Sensor Ingest -> Analytics (alert generation)
+- Sensor Ingest background job -> Sensor Ingest (simulated readings generation)
+- Sensor Ingest Wolverine outbox -> Analytics (durable delivery and outbox drain)
+- Full cross-service saga: Identity -> Farm -> Sensor Ingest -> Analytics (+ sensor lifecycle sync)
 
 Tests spin up dependencies with Testcontainers (PostgreSQL/TimescaleDB, RabbitMQ, Redis) and run 4 service hosts via `WebApplicationFactory`.
 
@@ -24,6 +27,9 @@ dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c R
 dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~IdentityToCrossServiceOwnerSnapshotsFlowTests"
 dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~FarmToCrossServiceSensorSnapshotsFlowTests"
 dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~SensorIngestToCrossServiceAnalyticsAlertFlowTests"
+dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~SensorIngestSimulatedReadingsJobFlowTests"
+dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~SensorIngestWolverineOutboxFlowTests"
+dotnet test test/TC.Agro.Integration.Tests/TC.Agro.Integration.Tests.csproj -c Release --filter "FullyQualifiedName~FullSystemSagaE2ETests"
 ```
 
 ```powershell

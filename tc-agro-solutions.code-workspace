@@ -6,7 +6,8 @@
     { "path": "services/identity-service" },
     { "path": "services/sensor-ingest-service" },
     { "path": "services/analytics-worker" },
-    { "path": "services/dashboard-service" }
+    { "path": "poc/frontend" },
+    { "path": "poc/mobile" }
   ],
   "settings": {
     "git.autoRepositoryDetection": "subFolders",
@@ -19,7 +20,9 @@
       "dotnet build": true,
       "dotnet test": true,
       "selectedCropTypeSuggestionId": true,
-      "crop": true
+      "crop": true,
+      "Get-Process": true,
+      "Get-CimInstance": true
     },
     "powershell.cwd": "tc-agro-solutions",
     "dotnet.server.useOmnisharp": false,
