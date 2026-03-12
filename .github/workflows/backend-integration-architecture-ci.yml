@@ -162,6 +162,8 @@ jobs:
     name: 🔗 Integration | Identity -> Farm
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      IntegrationTests__StrictTeardownTimeouts: "true"
     needs:
       - architecture-identity
       - architecture-farm

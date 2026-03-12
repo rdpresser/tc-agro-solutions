@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
+using Quartz;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
@@ -23,21 +26,49 @@ file class FixtureInstrumentation
     public void Start(string operation)
     {
         _watch.Restart();
-        Console.WriteLine($"[FIXTURE] ▶ START {operation}");
+        FixtureLog.WriteLine($"[FIXTURE] ▶ START {operation}");
     }
 
     public void Done(string operation, string? details = null)
     {
         _watch.Stop();
         var suffix = !string.IsNullOrEmpty(details) ? $" | {details}" : string.Empty;
-        Console.WriteLine($"[FIXTURE] ✓ DONE  {operation} ({_watch.ElapsedMilliseconds}ms){suffix}");
+        FixtureLog.WriteLine($"[FIXTURE] ✓ DONE  {operation} ({_watch.ElapsedMilliseconds}ms){suffix}");
     }
 
     public void Error(string operation, Exception ex)
     {
         _watch.Stop();
-        Console.WriteLine($"[FIXTURE] ✗ ERROR {operation} ({_watch.ElapsedMilliseconds}ms): {ex.GetType().Name}: {ex.Message}");
+        FixtureLog.WriteLine($"[FIXTURE] ✗ ERROR {operation} ({_watch.ElapsedMilliseconds}ms): {ex.GetType().Name}: {ex.Message}");
     }
+}
+
+file static class FixtureLog
+{
+    public static void WriteLine(string message)
+    {
+        Console.WriteLine(message);
+
+        if (!ShouldMirrorToDiagnostics(message))
+        {
+            return;
+        }
+
+        try
+        {
+            TestContext.Current.SendDiagnosticMessage("{0}", message);
+        }
+        catch
+        {
+            // Diagnostic sink is best-effort only.
+        }
+    }
+
+    private static bool ShouldMirrorToDiagnostics(string message)
+        => message.Contains("[FIXTURE.Dispose]", StringComparison.Ordinal)
+            || message.Contains("[FIXTURE] ✗", StringComparison.Ordinal)
+            || message.Contains("[FIXTURE] ⚠", StringComparison.Ordinal)
+            || message.Contains("[FIXTURE.Health] ⚠", StringComparison.Ordinal);
 }
 
 /// <summary>
@@ -57,10 +88,12 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     private const int SqlCommandTimeoutSeconds = 10;
 
     private static readonly TimeSpan FixtureInitializationTimeout = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan HostShutdownTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan InfrastructureStartupTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan PerDatabaseBootstrapTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PerFactoryDisposeTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan PerContainerDisposeTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan TeardownDiagnosticsTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly string[] ManagedDatabases =
     [
@@ -129,9 +162,14 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         "Telemetry__Grafana__Agent__Enabled"
     ];
 
+    private readonly List<string> _teardownTimeouts = [];
+
     protected virtual bool EnableSensorReadingsJob => false;
 
     protected virtual int SensorReadingsJobIntervalSeconds => 30;
+
+    protected virtual bool StrictTeardownTimeouts
+        => ReadBooleanEnvironmentVariable("IntegrationTests__StrictTeardownTimeouts", "TC_AGRO_INTEGRATION_STRICT_TEARDOWN_TIMEOUTS");
 
     public WebApplicationFactory<IdentityProgram> IdentityFactory { get; private set; } = default!;
     public WebApplicationFactory<FarmProgram> FarmFactory { get; private set; } = default!;
@@ -216,6 +254,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         var instrumentation = new FixtureInstrumentation();
+        _teardownTimeouts.Clear();
 
         try
         {
@@ -231,10 +270,10 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             // Use a timeout to prevent hangs during factory disposal
             instrumentation.Start("Dispose: Web Application Factories");
 
-            await TryDisposeFactoryAsync(IdentityFactory, "identity-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
-            await TryDisposeFactoryAsync(FarmFactory, "farm-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
-            await TryDisposeFactoryAsync(SensorIngestFactory, "sensor-ingest-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
             await TryDisposeFactoryAsync(AnalyticsFactory, "analytics-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
+            await TryDisposeFactoryAsync(SensorIngestFactory, "sensor-ingest-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
+            await TryDisposeFactoryAsync(FarmFactory, "farm-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
+            await TryDisposeFactoryAsync(IdentityFactory, "identity-service", PerFactoryDisposeTimeout).ConfigureAwait(false);
 
             instrumentation.Done("Dispose: Web Application Factories");
 
@@ -257,7 +296,8 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             }
             catch (TimeoutException)
             {
-                Console.WriteLine($"[FIXTURE.Dispose] ⚠ redis container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s. Continuing cleanup.");
+                RegisterTeardownTimeout(
+                    $"Redis container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s.");
             }
             instrumentation.Done("Dispose: Redis Container");
 
@@ -271,7 +311,8 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             }
             catch (TimeoutException)
             {
-                Console.WriteLine($"[FIXTURE.Dispose] ⚠ rabbitmq container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s. Continuing cleanup.");
+                RegisterTeardownTimeout(
+                    $"RabbitMQ container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s.");
             }
             instrumentation.Done("Dispose: RabbitMQ Container");
 
@@ -285,15 +326,27 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             }
             catch (TimeoutException)
             {
-                Console.WriteLine($"[FIXTURE.Dispose] ⚠ postgres container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s. Continuing cleanup.");
+                RegisterTeardownTimeout(
+                    $"PostgreSQL container disposal exceeded {PerContainerDisposeTimeout.TotalSeconds}s.");
             }
             instrumentation.Done("Dispose: PostgreSQL Container");
 
-            Console.WriteLine("[FIXTURE] ✓ All cleanup phases completed successfully");
+            if (_teardownTimeouts.Count == 0)
+            {
+                FixtureLog.WriteLine("[FIXTURE] ✓ All cleanup phases completed successfully");
+            }
+            else
+            {
+                FixtureLog.WriteLine($"[FIXTURE] ⚠ Cleanup completed with {_teardownTimeouts.Count} teardown timeout warning(s)");
+            }
+
+            // During fixture cleanup, only warn about timeouts (advisory locks in PostgreSQL are expected).
+            // Strict mode will have already failed tests if timeouts occurred during actual test execution.
+            ThrowIfStrictTeardownTimeouts(isFixtureCleanup: true);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FIXTURE] ✗ ERROR during disposal: {ex.GetType().Name}: {ex.Message}");
+            FixtureLog.WriteLine($"[FIXTURE] ✗ ERROR during disposal: {ex.GetType().Name}: {ex.Message}");
             throw;
         }
     }
@@ -596,7 +649,22 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     private static WebApplicationFactory<TEntryPoint> CreateFactory<TEntryPoint>()
         where TEntryPoint : class
         => new WebApplicationFactory<TEntryPoint>()
-            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Development");
+                builder.ConfigureServices(services =>
+                {
+                    services.PostConfigure<HostOptions>(options =>
+                    {
+                        options.ShutdownTimeout = HostShutdownTimeout;
+                    });
+
+                    services.PostConfigure<QuartzHostedServiceOptions>(options =>
+                    {
+                        options.WaitForJobsToComplete = false;
+                    });
+                });
+            });
 
     private static HttpClient CreateClient<TEntryPoint>(WebApplicationFactory<TEntryPoint> factory)
         where TEntryPoint : class
@@ -605,7 +673,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             AllowAutoRedirect = false
         });
 
-    private static async Task TryDisposeFactoryAsync<TEntryPoint>(
+    private async Task TryDisposeFactoryAsync<TEntryPoint>(
         WebApplicationFactory<TEntryPoint>? factory,
         string serviceName,
         TimeSpan timeout)
@@ -616,35 +684,184 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             return;
         }
 
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ▶ {serviceName} factory dispose started (timeout {timeout.TotalSeconds}s)");
             await factory.DisposeAsync()
                 .AsTask()
                 .WaitAsync(timeout)
                 .ConfigureAwait(false);
-            Console.WriteLine($"[FIXTURE.Dispose] ✓ {serviceName} factory disposed cleanly");
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ✓ {serviceName} factory disposed cleanly ({stopwatch.ElapsedMilliseconds}ms)");
         }
         catch (TimeoutException ex)
         {
-            Console.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} factory disposal exceeded {timeout.TotalSeconds}s and will be skipped");
-            Console.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} timeout details: {ex.Message}");
+            var diagnostics = await CollectServiceTeardownDiagnosticsAsync(serviceName).ConfigureAwait(false);
+            RegisterTeardownTimeout(
+                $"Factory disposal for {serviceName} exceeded {timeout.TotalSeconds}s after {stopwatch.ElapsedMilliseconds}ms. {diagnostics}");
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} timeout details: {ex.Message}");
             return;
         }
         catch (PostgresException postgresException) when (postgresException.SqlState is "57P01" or "57P02" or "57P03")
         {
             // Expected: Postgres closes connections during host disposal
-            Console.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} - benign Postgres shutdown ({postgresException.SqlState})");
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} - benign Postgres shutdown ({postgresException.SqlState})");
         }
         catch (Exception ex) when (IsBenignTeardownException(ex))
         {
             // Expected: Infrastructure shutdown races
-            Console.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} - benign infrastructure exception: {ex.GetType().Name}");
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ⚠ {serviceName} - benign infrastructure exception: {ex.GetType().Name}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FIXTURE.Dispose] ✗ {serviceName} factory disposal error: {ex.GetType().Name}: {ex.Message}");
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ✗ {serviceName} factory disposal error: {ex.GetType().Name}: {ex.Message}");
             throw;
         }
+    }
+
+    private void RegisterTeardownTimeout(string message)
+    {
+        _teardownTimeouts.Add(message);
+        FixtureLog.WriteLine($"[FIXTURE.Dispose] ⚠ {message}");
+    }
+
+    /// <summary>
+    /// Thrown at END of fixture cleanup if strict teardown mode is enabled and any timeouts were recorded.
+    /// During fixture cleanup, advisory locks in database are expected, so timeout messages are logged as warnings only.
+    /// During test execution, any timeout is an error that should be investigated.
+    /// </summary>
+    private void ThrowIfStrictTeardownTimeouts(bool isFixtureCleanup = false)
+    {
+        if (!StrictTeardownTimeouts || _teardownTimeouts.Count == 0)
+        {
+            return;
+        }
+
+        // During fixture cleanup, only log warnings (advisory locks are expected during PostgreSQL cleanup)
+        if (isFixtureCleanup)
+        {
+            return; // Already logged in DisposeAsync above
+        }
+
+        // During test execution, throw if any timeouts detected in strict mode
+        throw new InvalidOperationException(
+            "Strict teardown mode detected timeout(s) during test execution:" + Environment.NewLine +
+            string.Join(Environment.NewLine, _teardownTimeouts.Select(timeout => $" - {timeout}")));
+    }
+
+    private static bool ReadBooleanEnvironmentVariable(params string[] variableNames)
+    {
+        foreach (var variableName in variableNames)
+        {
+            var value = Environment.GetEnvironmentVariable(variableName);
+            if (bool.TryParse(value, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<string> CollectServiceTeardownDiagnosticsAsync(string serviceName)
+    {
+        var process = Process.GetCurrentProcess();
+        var processSummary =
+            $"HostProcess(pid={process.Id}, threads={process.Threads.Count}, handles={process.HandleCount}, workingSetMiB={Math.Round(process.WorkingSet64 / 1024d / 1024d, 1):0.0})";
+
+        var databaseName = GetDatabaseNameForService(serviceName);
+        if (databaseName is null)
+        {
+            return processSummary;
+        }
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TeardownDiagnosticsTimeout);
+            var databaseSnapshot = await GetDatabaseActivitySnapshotAsync(databaseName, cts.Token).ConfigureAwait(false);
+            return $"{processSummary}; Database={databaseName}; {databaseSnapshot}";
+        }
+        catch (Exception ex)
+        {
+            return $"{processSummary}; Database={databaseName}; diagnostics unavailable: {ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    private static string? GetDatabaseNameForService(string serviceName)
+        => serviceName switch
+        {
+            "identity-service" => IdentityDatabase,
+            "farm-service" => FarmDatabase,
+            "sensor-ingest-service" => SensorIngestDatabase,
+            "analytics-service" => AnalyticsDatabase,
+            _ => null
+        };
+
+    private async Task<string> GetDatabaseActivitySnapshotAsync(string databaseName, CancellationToken cancellationToken)
+    {
+        var maintenanceConnectionString = BuildPostgresConnectionString("postgres");
+
+        await using var connection = new NpgsqlConnection(maintenanceConnectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var countCommand = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = @databaseName AND pid <> pg_backend_pid();",
+            connection)
+        {
+            CommandTimeout = 5
+        };
+
+        countCommand.Parameters.AddWithValue("databaseName", databaseName);
+
+        var totalSessionsResult = await countCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var totalSessions = totalSessionsResult is long longCount ? (int)longCount : Convert.ToInt32(totalSessionsResult);
+
+        if (totalSessions == 0)
+        {
+            return "pg_stat_activity reports no remaining sessions";
+        }
+
+        await using var detailsCommand = new NpgsqlCommand(
+            """
+            SELECT
+                pid,
+                COALESCE(NULLIF(application_name, ''), '<empty>') AS application_name,
+                COALESCE(state, '<unknown>') AS state,
+                COALESCE(wait_event_type, '-') AS wait_event_type,
+                COALESCE(wait_event, '-') AS wait_event,
+                COALESCE(backend_type, '-') AS backend_type,
+                COALESCE(CAST(EXTRACT(EPOCH FROM (clock_timestamp() - xact_start)) AS integer)::text, '-') AS transaction_age_seconds,
+                LEFT(REGEXP_REPLACE(COALESCE(query, '<none>'), '\s+', ' ', 'g'), 160) AS query
+            FROM pg_stat_activity
+            WHERE datname = @databaseName
+              AND pid <> pg_backend_pid()
+            ORDER BY
+                CASE
+                    WHEN state = 'active' THEN 0
+                    WHEN state = 'idle in transaction' THEN 1
+                    ELSE 2
+                END,
+                pid
+            LIMIT 5;
+            """,
+            connection)
+        {
+            CommandTimeout = 5
+        };
+
+        detailsCommand.Parameters.AddWithValue("databaseName", databaseName);
+
+        var sessions = new List<string>();
+
+        await using var reader = await detailsCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            sessions.Add(
+                $"pid={reader.GetInt32(0)}, app={reader.GetString(1)}, state={reader.GetString(2)}, wait={reader.GetString(3)}/{reader.GetString(4)}, backend={reader.GetString(5)}, txAgeSec={reader.GetString(6)}, query={reader.GetString(7)}");
+        }
+
+        return $"pg_stat_activity sessions={totalSessions}; topSessions=[{string.Join(" || ", sessions)}]";
     }
 
     private static bool IsBenignTeardownException(Exception exception)
@@ -763,7 +980,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             };
 
             await createCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
-            Console.WriteLine($"[FIXTURE] ✓ Created database: {databaseName}");
+            FixtureLog.WriteLine($"[FIXTURE] ✓ Created database: {databaseName}");
         }
         catch (NpgsqlException ex)
         {
@@ -886,19 +1103,19 @@ public class BreakGlassE2EFixture : IAsyncLifetime
                 var response = await client.GetAsync("/health", HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"[FIXTURE.Health] ✓ {serviceName} ready (attempt {attempt}, {(int)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds}ms)");
+                    FixtureLog.WriteLine($"[FIXTURE.Health] ✓ {serviceName} ready (attempt {attempt}, {(int)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds}ms)");
                     return;
                 }
 
-                Console.WriteLine($"[FIXTURE.Health] ⚠ {serviceName} returned {response.StatusCode} (attempt {attempt})");
+                FixtureLog.WriteLine($"[FIXTURE.Health] ⚠ {serviceName} returned {response.StatusCode} (attempt {attempt})");
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[FIXTURE.Health] ⏱ {serviceName} request timeout 5s (attempt {attempt})");
+                FixtureLog.WriteLine($"[FIXTURE.Health] ⏱ {serviceName} request timeout 5s (attempt {attempt})");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[FIXTURE.Health] ⚠ {serviceName} error: {ex.GetType().Name}: {ex.Message} (attempt {attempt})");
+                FixtureLog.WriteLine($"[FIXTURE.Health] ⚠ {serviceName} error: {ex.GetType().Name}: {ex.Message} (attempt {attempt})");
             }
 
             await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(false);
