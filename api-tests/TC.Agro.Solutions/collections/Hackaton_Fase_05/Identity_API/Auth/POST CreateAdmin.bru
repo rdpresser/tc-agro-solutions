@@ -1,0 +1,55 @@
+meta {
+  name: Create Admin
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{identity_service_url}}/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+body:json {
+  {
+    "name": "{{admin_name}}",
+    "email": "{{admin_email}}",
+    "username": "{{admin_username}}",
+    "password": "{{admin_password}}",
+    "role": "Admin"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreateAdmin failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const id = body?.id || body?.userId || body?.data?.id || body?.value?.id;
+
+  if (typeof id === "string" && id.length > 0) {
+    bru.setEnvVar("id", id);
+    console.log("id updated from CreateAdmin:", id);
+  }
+
+  if (typeof bru.getEnvVar === "function") {
+    const adminEmail = bru.getEnvVar("admin_email");
+    if (adminEmail) {
+      bru.setEnvVar("user_email", adminEmail);
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

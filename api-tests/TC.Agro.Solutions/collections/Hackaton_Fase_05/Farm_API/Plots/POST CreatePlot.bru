@@ -1,0 +1,61 @@
+meta {
+  name: POST CreatePlot
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{farm_service_url}}/api/plots
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "propertyId": "{{property_id}}",
+    "name": "North Plot",
+    "cropType": "Soy",
+    "areaHectares": 50.0,
+    "latitude": -21.1775,
+    "longitude": -47.8103,
+    "boundaryGeoJson": "{\"type\":\"Polygon\",\"coordinates\":[[[-47.811,-21.178],[-47.809,-21.178],[-47.809,-21.176],[-47.811,-21.176],[-47.811,-21.178]]]}",
+    "plantingDate": "2026-04-12T12:00:00Z",
+    "expectedHarvestDate": "2026-09-12T12:00:00Z",
+    "irrigationType": "Center Pivot",
+    "additionalNotes": "Optional notes about soil or irrigation.",
+    "ownerId": "{{owner_id}}",
+    "cropTypeCatalogId": "{{crop_type_id}}",
+    "selectedCropTypeSuggestionId": "Generic"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreatePlot failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const plotId = body?.plotId || body?.id || body?.data?.plotId || body?.data?.id || body?.value?.plotId || body?.value?.id;
+
+  if (typeof plotId === "string" && plotId.length > 0) {
+    bru.setEnvVar("plot_id", plotId);
+    console.log("plot_id updated:", plotId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,40 @@
+meta {
+  name: PUT UpdateCropType
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{farm_service_url}}/api/crop-types/{{crop_type_id}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "cropType": "Corn",
+    "plantingWindow": "October to December",
+    "harvestCycleMonths": 5,
+    "suggestedIrrigationType": "Center Pivot",
+    "minSoilMoisture": 28.0,
+    "maxTemperature": 36.0,
+    "minHumidity": 42.0,
+    "notes": "Adjusted thresholds after field inspection.",
+    "suggestedImage": "sample"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

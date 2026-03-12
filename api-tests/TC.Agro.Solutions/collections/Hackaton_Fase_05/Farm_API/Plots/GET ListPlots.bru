@@ -1,0 +1,37 @@
+meta {
+  name: GET ListPlots
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{farm_service_url}}/api/plots?ownerId={{owner_id}}&propertyId={{property_id}}&pageNumber=1&pageSize=20&sortBy=createdAt&sortDirection=desc&filter=&cropType=sample&cropTypeCatalogId={{crop_type_id}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  propertyId: {{property_id}}
+  pageNumber: 1
+  pageSize: 20
+  sortBy: createdAt
+  sortDirection: desc
+  filter: 
+  cropType: sample
+  cropTypeCatalogId: {{crop_type_id}}
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

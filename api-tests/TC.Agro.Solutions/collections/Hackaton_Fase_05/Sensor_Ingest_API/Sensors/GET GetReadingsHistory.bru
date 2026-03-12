@@ -1,0 +1,31 @@
+meta {
+  name: GET GetReadingsHistory
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{sensor_service_url}}/api/sensors/{{sensor_id}}/readings?days=7&pageNumber=1&pageSize=20
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  days: 7
+  pageNumber: 1
+  pageSize: 20
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

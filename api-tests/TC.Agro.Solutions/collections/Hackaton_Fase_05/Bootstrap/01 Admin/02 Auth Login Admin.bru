@@ -1,0 +1,57 @@
+meta {
+  name: 02 Auth Login Admin
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{identity_service_url}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+body:json {
+  {
+    "email": "{{admin_email}}",
+    "password": "{{admin_password}}"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Auth Login Admin failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const token = body?.jwtToken || body?.accessToken || body?.token;
+
+  if (!token || typeof token !== "string") {
+    console.log("Auth Login Admin did not return token");
+    return;
+  }
+
+  bru.setEnvVar("jwt_token", token);
+  bru.setEnvVar("admin_token", token);
+
+  if (typeof bru.getEnvVar === "function") {
+    const adminEmail = bru.getEnvVar("admin_email");
+    if (adminEmail) {
+      bru.setEnvVar("user_email", adminEmail);
+    }
+  }
+
+  console.log("jwt_token and admin_token updated");
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,25 @@
+meta {
+  name: GET GetSensorStatus
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{analytics_service_url}}/api/sensors/{{sensor_id}}/status
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

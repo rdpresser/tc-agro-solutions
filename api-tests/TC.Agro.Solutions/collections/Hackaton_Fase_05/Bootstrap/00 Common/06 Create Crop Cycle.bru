@@ -1,0 +1,55 @@
+meta {
+  name: 06 Create Crop Cycle
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{farm_service_url}}/api/crop-cycles
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "plotId": "{{plot_id}}",
+    "cropTypeCatalogId": "{{crop_type_id}}",
+    "startedAt": "2026-03-12T12:00:00Z",
+    "expectedHarvestDate": "2026-09-12T12:00:00Z",
+    "status": "Planned",
+    "selectedCropTypeSuggestionId": "Generic",
+    "ownerId": "{{owner_id}}",
+    "notes": "Bootstrap crop cycle start."
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Create Crop Cycle failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const cropCycleId = body?.cropCycleId || body?.id || body?.data?.cropCycleId || body?.data?.id || body?.value?.cropCycleId || body?.value?.id;
+
+  if (typeof cropCycleId === "string" && cropCycleId.length > 0) {
+    bru.setEnvVar("crop_cycle_id", cropCycleId);
+    console.log("crop_cycle_id updated:", cropCycleId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

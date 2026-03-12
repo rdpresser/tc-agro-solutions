@@ -1,0 +1,25 @@
+meta {
+  name: POST RegeneratePropertyCropTypes
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{farm_service_url}}/api/properties/{{property_id}}/crop-types/regenerate
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

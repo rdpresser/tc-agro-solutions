@@ -1,9 +1,30 @@
 vars {
+  admin_email: admin@admin.com
   identity_service_url: http://localhost/identity
   farm_service_url: http://localhost/farm
-  sensor_service_url: http://localhost/sensor-ingest
+  sensor_service_url: http://localhost:sensor-ingest
   analytics_service_url: http://localhost/analytics-worker
+  producer_email: producer@producer.com
+  user_email: admin@admin.com
+  admin_name: System Admin
+  admin_username: admin
+  producer_name: Producer Test
+  producer_username: producer
+  id: 00000000-0000-0000-0000-000000000001
+  owner_id: 00000000-0000-0000-0000-000000000002
+  property_id: 00000000-0000-0000-0000-000000000003
+  plot_id: 00000000-0000-0000-0000-000000000004
+  sensor_id: sensor-001
+  reading_id: 00000000-0000-0000-0000-000000000008
+  crop_type_id: 00000000-0000-0000-0000-000000000005
+  crop_cycle_id: 00000000-0000-0000-0000-000000000006
+  alert_id: 00000000-0000-0000-0000-000000000007
 }
 vars:secret [
-  admin_token
+  admin_password,
+  producer_password,
+  new_password,
+  jwt_token,
+  admin_token,
+  producer_token
 ]

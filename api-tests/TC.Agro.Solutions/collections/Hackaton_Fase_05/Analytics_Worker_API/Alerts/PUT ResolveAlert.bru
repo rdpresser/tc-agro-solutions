@@ -1,0 +1,32 @@
+meta {
+  name: PUT ResolveAlert
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{analytics_service_url}}/api/alerts/{{alert_id}}/resolve
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "resolutionNotes": "Activated irrigation system. Soil moisture normalized after 2 hours."
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

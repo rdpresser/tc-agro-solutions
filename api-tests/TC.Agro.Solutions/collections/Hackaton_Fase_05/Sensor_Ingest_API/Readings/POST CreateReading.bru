@@ -1,0 +1,53 @@
+meta {
+  name: POST CreateReading
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{sensor_service_url}}/api/readings
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "sensorId": "{{sensor_id}}",
+    "timestamp": "2026-03-12T12:00:00Z",
+    "temperature": 28.5,
+    "humidity": 65.2,
+    "soilMoisture": 42.1,
+    "rainfall": 0.0,
+    "batteryLevel": 85.0
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreateReading failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const sensorId = body?.sensorId || body?.data?.sensorId || body?.value?.sensorId;
+
+  if (typeof sensorId === "string" && sensorId.length > 0) {
+    bru.setEnvVar("sensor_id", sensorId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

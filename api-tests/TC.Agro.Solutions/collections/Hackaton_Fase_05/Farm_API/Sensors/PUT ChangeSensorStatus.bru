@@ -1,0 +1,33 @@
+meta {
+  name: PUT ChangeSensorStatus
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{farm_service_url}}/api/sensors/{{sensor_id}}/status-change
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "newStatus": "Maintenance",
+    "reason": "Preventive maintenance scheduled"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

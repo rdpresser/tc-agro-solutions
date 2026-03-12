@@ -1,0 +1,58 @@
+meta {
+  name: POST CreateBatchReadings
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{sensor_service_url}}/api/readings/batch
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "readings": [
+      {
+        "sensorId": "{{sensor_id}}",
+        "timestamp": "2026-03-12T12:00:00Z",
+        "temperature": 1.0,
+        "humidity": 1.0,
+        "soilMoisture": 1.0,
+        "rainfall": 1.0,
+        "batteryLevel": 1.0
+      }
+    ]
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreateBatchReadings failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const first = body?.data?.[0] || body?.readings?.[0] || body?.value?.[0];
+  const sensorId = first?.sensorId || body?.sensorId;
+
+  if (typeof sensorId === "string" && sensorId.length > 0) {
+    bru.setEnvVar("sensor_id", sensorId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

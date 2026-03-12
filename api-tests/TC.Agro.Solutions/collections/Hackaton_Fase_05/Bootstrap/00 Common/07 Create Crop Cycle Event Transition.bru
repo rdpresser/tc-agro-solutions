@@ -1,0 +1,44 @@
+meta {
+  name: 07 Create Crop Cycle Event Transition
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{farm_service_url}}/api/crop-cycles/{{crop_cycle_id}}/transition
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "newStatus": "Growing",
+    "occurredAt": "2026-04-20T12:00:00Z",
+    "notes": "Bootstrap transition event to growing stage."
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Crop Cycle Transition failed with status:", status);
+    return;
+  }
+
+  console.log("Crop cycle transition event processed");
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

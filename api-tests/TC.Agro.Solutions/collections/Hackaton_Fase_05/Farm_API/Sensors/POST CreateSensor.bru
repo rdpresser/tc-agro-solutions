@@ -1,0 +1,51 @@
+meta {
+  name: POST CreateSensor
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{farm_service_url}}/api/sensors
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "plotId": "{{plot_id}}",
+    "type": "SoilMoisture",
+    "label": "Sensor Norte 1",
+    "ownerId": "{{owner_id}}"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreateSensor failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const sensorId = body?.sensorId || body?.id || body?.data?.sensorId || body?.data?.id || body?.value?.sensorId || body?.value?.id;
+
+  if (typeof sensorId === "string" && sensorId.length > 0) {
+    bru.setEnvVar("sensor_id", sensorId);
+    console.log("sensor_id updated:", sensorId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

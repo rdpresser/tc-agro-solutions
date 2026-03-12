@@ -1,0 +1,38 @@
+meta {
+  name: GET ListSensors
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{farm_service_url}}/api/sensors?ownerId={{owner_id}}&propertyId={{property_id}}&plotId={{plot_id}}&pageNumber=1&pageSize=20&sortBy=createdAt&sortDirection=desc&filter=&type=Generic&status=Pending
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  propertyId: {{property_id}}
+  plotId: {{plot_id}}
+  pageNumber: 1
+  pageSize: 20
+  sortBy: createdAt
+  sortDirection: desc
+  filter: 
+  type: Generic
+  status: Pending
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

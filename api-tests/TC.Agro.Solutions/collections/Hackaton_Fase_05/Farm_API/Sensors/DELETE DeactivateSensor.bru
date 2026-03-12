@@ -1,0 +1,32 @@
+meta {
+  name: DELETE DeactivateSensor
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{farm_service_url}}/api/sensors/{{sensor_id}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "reason": "End of lifecycle"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

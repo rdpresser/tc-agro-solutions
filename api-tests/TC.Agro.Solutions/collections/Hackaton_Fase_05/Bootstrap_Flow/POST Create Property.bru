@@ -1,0 +1,62 @@
+meta {
+  name: 04 Create Property
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{farm_service_url}}/api/properties
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "name": "Bootstrap Farm",
+    "address": "Estrada Rural Km 15",
+    "city": "Ribeirao Preto",
+    "state": "SP",
+    "country": "Brazil",
+    "areaHectares": 250.5,
+    "latitude": -21.1767,
+    "longitude": -47.8208,
+    "ownerId": "{{owner_id}}"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Bootstrap Create Property failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const propertyId = body?.propertyId || body?.id || body?.data?.propertyId || body?.data?.id || body?.value?.propertyId || body?.value?.id;
+  const ownerId = body?.ownerId || body?.data?.ownerId || body?.value?.ownerId;
+
+  if (typeof propertyId === "string" && propertyId.length > 0) {
+    bru.setEnvVar("property_id", propertyId);
+    console.log("property_id updated:", propertyId);
+  }
+
+  if (typeof ownerId === "string" && ownerId.length > 0) {
+    bru.setEnvVar("owner_id", ownerId);
+    console.log("owner_id updated:", ownerId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

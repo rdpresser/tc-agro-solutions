@@ -1,0 +1,35 @@
+meta {
+  name: GET ListCropTypeOptions
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{farm_service_url}}/api/crop-types/options?ownerId={{owner_id}}&propertyId={{property_id}}&source=Manual&includeStale=false&includeInactive=false&filter=&limit=20
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  propertyId: {{property_id}}
+  source: Manual
+  includeStale: false
+  includeInactive: false
+  filter: 
+  limit: 20
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

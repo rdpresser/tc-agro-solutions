@@ -1,0 +1,25 @@
+meta {
+  name: DELETE DeleteUser
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{identity_service_url}}/api/user/{{id}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

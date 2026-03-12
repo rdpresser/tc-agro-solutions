@@ -1,0 +1,25 @@
+meta {
+  name: DELETE DeleteCropType
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{farm_service_url}}/api/crop-types/{{crop_type_id}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

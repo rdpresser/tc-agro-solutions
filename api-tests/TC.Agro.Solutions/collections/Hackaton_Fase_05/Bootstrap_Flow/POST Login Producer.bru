@@ -1,0 +1,48 @@
+meta {
+  name: 02 Login - Producer
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{identity_service_url}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+body:json {
+  {
+    "email": "{{producer_email}}",
+    "password": "{{producer_password}}"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Bootstrap Login Producer failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const token = body?.jwtToken || body?.accessToken || body?.token;
+
+  if (!token || typeof token !== "string") {
+    console.log("Bootstrap Login Producer did not return token");
+    return;
+  }
+
+  bru.setEnvVar("producer_token", token);
+  console.log("producer_token updated");
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

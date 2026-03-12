@@ -1,0 +1,51 @@
+meta {
+  name: 08 Pending Alerts (Capture alert_id)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{analytics_service_url}}/api/alerts/pending?ownerId={{owner_id}}&search=&severity=Medium&status=Pending&pageNumber=1&pageSize=20
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  search:
+  severity: Medium
+  status: Pending
+  pageNumber: 1
+  pageSize: 20
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("Bootstrap Pending Alerts failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const first = body?.items?.[0] || body?.data?.[0] || body?.alerts?.[0] || (Array.isArray(body) ? body[0] : null);
+  const alertId = first?.alertId || first?.id || body?.alertId || body?.id;
+
+  if (typeof alertId === "string" && alertId.length > 0) {
+    bru.setEnvVar("alert_id", alertId);
+    console.log("alert_id updated:", alertId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

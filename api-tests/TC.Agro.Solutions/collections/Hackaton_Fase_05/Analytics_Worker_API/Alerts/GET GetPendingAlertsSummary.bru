@@ -1,0 +1,30 @@
+meta {
+  name: GET GetPendingAlertsSummary
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{analytics_service_url}}/api/alerts/pending/summary?ownerId={{owner_id}}&windowHours=24
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  windowHours: 24
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

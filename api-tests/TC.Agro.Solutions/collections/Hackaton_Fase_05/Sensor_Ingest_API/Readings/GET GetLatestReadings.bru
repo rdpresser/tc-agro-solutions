@@ -1,0 +1,33 @@
+meta {
+  name: GET GetLatestReadings
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{sensor_service_url}}/api/readings/latest?ownerId={{owner_id}}&sensorId={{sensor_id}}&plotId={{plot_id}}&pageNumber=1&pageSize=20
+  body: none
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+}
+
+params:query {
+  ownerId: {{owner_id}}
+  sensorId: {{sensor_id}}
+  plotId: {{plot_id}}
+  pageNumber: 1
+  pageSize: 20
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

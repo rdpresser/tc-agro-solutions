@@ -1,0 +1,56 @@
+meta {
+  name: POST CreateCropType
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{farm_service_url}}/api/crop-types
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "cropType": "Soy",
+    "plantingWindow": "September to November",
+    "harvestCycleMonths": 5,
+    "suggestedIrrigationType": "Center Pivot",
+    "minSoilMoisture": 30.0,
+    "maxTemperature": 35.0,
+    "minHumidity": 45.0,
+    "notes": "Catalog metadata based on local agronomist recommendation.",
+    "suggestedImage": "sample"
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+
+  if (status < 200 || status >= 300) {
+    console.log("CreateCropType failed with status:", status);
+    return;
+  }
+
+  const body = res.getBody();
+  const cropTypeId = body?.cropTypeId || body?.id || body?.data?.cropTypeId || body?.data?.id || body?.value?.cropTypeId || body?.value?.id;
+
+  if (typeof cropTypeId === "string" && cropTypeId.length > 0) {
+    bru.setEnvVar("crop_type_id", cropTypeId);
+    console.log("crop_type_id updated:", cropTypeId);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

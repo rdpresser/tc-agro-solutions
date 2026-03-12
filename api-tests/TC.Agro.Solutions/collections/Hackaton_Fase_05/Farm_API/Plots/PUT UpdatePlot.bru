@@ -1,0 +1,43 @@
+meta {
+  name: PUT UpdatePlot
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{farm_service_url}}/api/plots/{{plot_id}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  accept: application/json
+  content-type: application/json
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+body:json {
+  {
+    "name": "North Plot Updated",
+    "cropType": "Soy",
+    "areaHectares": 60.0,
+    "latitude": -21.1775,
+    "longitude": -47.8103,
+    "boundaryGeoJson": "{\"type\":\"Polygon\",\"coordinates\":[[[-47.811,-21.178],[-47.808,-21.178],[-47.808,-21.175],[-47.811,-21.175],[-47.811,-21.178]]]}",
+    "plantingDate": "2026-02-12T14:57:37.5681599-03:00",
+    "expectedHarvestDate": "2026-08-12T14:57:37.5681614-03:00",
+    "irrigationType": "Center Pivot",
+    "additionalNotes": "Updated notes about crop stage.",
+    "cropTypeCatalogId": "9deea8a2-10eb-4423-8ac3-8062ec940b4a",
+    "selectedCropTypeSuggestionId": "Generic"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
