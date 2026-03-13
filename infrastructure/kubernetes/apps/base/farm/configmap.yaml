@@ -62,7 +62,7 @@ data:
   OpenAI__Model: "gpt-4o-mini"
   OpenAI__Temperature: "0.3"
   OpenAI__MaxSuggestions: "15"
-  OpenAI__TimeoutSeconds: "30"
+  OpenAI__TimeoutSeconds: "60"
 
   # Telemetry (OTEL SDK)
   Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"

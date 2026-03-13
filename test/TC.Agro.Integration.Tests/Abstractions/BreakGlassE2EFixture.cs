@@ -1047,7 +1047,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
                 SetManagedEnvironmentVariable("OpenAI__Model", "gpt-4o-mini");
                 SetManagedEnvironmentVariable("OpenAI__Temperature", "0.3");
                 SetManagedEnvironmentVariable("OpenAI__MaxSuggestions", "15");
-                SetManagedEnvironmentVariable("OpenAI__TimeoutSeconds", "30");
+                SetManagedEnvironmentVariable("OpenAI__TimeoutSeconds", "60");
                 break;
 
             case ServiceEnvironmentProfile.SensorIngest:
