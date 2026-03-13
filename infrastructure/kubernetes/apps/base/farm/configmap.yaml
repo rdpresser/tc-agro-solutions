@@ -56,6 +56,14 @@ data:
   Auth__Jwt__Audience__0: "tc-agro-farm-service"
   Auth__Jwt__ExpirationInMinutes: "480"
 
+  # OpenAI (non-sensitive)
+  OpenAI__Enabled: "true"
+  OpenAI__BaseUrl: "https://api.openai.com/"
+  OpenAI__Model: "gpt-4o-mini"
+  OpenAI__Temperature: "0.3"
+  OpenAI__MaxSuggestions: "15"
+  OpenAI__TimeoutSeconds: "30"
+
   # Telemetry (OTEL SDK)
   Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
   Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"

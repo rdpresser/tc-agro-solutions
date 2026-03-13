@@ -358,8 +358,8 @@ services:
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
       # .NET Configuration - Jobs (Jobs.SensorReadings.*)
-      - Jobs__SensorReadings__Enabled=true
-      - Jobs__SensorReadings__IntervalSeconds=15
+      - Jobs__SensorReadings__Enabled=${Jobs__SensorReadings__Enabled}
+      - Jobs__SensorReadings__IntervalSeconds=${Jobs__SensorReadings__IntervalSeconds}
 
       # .NET Configuration - Telemetry (Grafana Agent)
       - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
@@ -528,7 +528,13 @@ services:
       - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
 
       # .NET Configuration - External Providers (OpenAI.*)
+      - OpenAI__Enabled=${OpenAI__Enabled}
+      - OpenAI__BaseUrl=${OpenAI__BaseUrl}
       - OpenAI__ApiKey=${OpenAI__ApiKey}
+      - OpenAI__Model=${OpenAI__Model}
+      - OpenAI__Temperature=${OpenAI__Temperature}
+      - OpenAI__MaxSuggestions=${OpenAI__MaxSuggestions}
+      - OpenAI__TimeoutSeconds=${OpenAI__TimeoutSeconds}
 
       # .NET Configuration - Logging (Logging.LogLevel.*)
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}
@@ -637,10 +643,14 @@ services:
       - Services__Dashboard__HttpPort=${Services__Dashboard__HttpPort}
 
       # .NET Configuration - Weather Provider (WeatherProvider.*)
-      - WeatherProvider__BaseUrl=https://api.open-meteo.com
-      - WeatherProvider__Latitude=-22.7256
-      - WeatherProvider__Longitude=-47.6492
-      - WeatherProvider__MaxCoordinatesPerRequest=50
+      - WeatherProvider__BaseUrl=${WeatherProvider__BaseUrl}
+      - WeatherProvider__Latitude=${WeatherProvider__Latitude}
+      - WeatherProvider__Longitude=${WeatherProvider__Longitude}
+      - WeatherProvider__MaxCoordinatesPerRequest=${WeatherProvider__MaxCoordinatesPerRequest}
+
+      # .NET Configuration - Jobs (Jobs.SensorReadings.*)
+      - Jobs__SensorReadings__Enabled=${Jobs__SensorReadings__Enabled}
+      - Jobs__SensorReadings__IntervalSeconds=${Jobs__SensorReadings__IntervalSeconds}
 
       # .NET Configuration - JWT / Authentication (Auth.Jwt.*)
       - Auth__Jwt__Issuer=${Auth__Jwt__Issuer}
@@ -757,6 +767,11 @@ services:
       - Auth__Jwt__Audience__0=${Auth__Jwt__Audience__3}
       - Auth__Jwt__SecretKey=${Auth__Jwt__SecretKey}
       - Auth__Jwt__ExpirationInMinutes=${Auth__Jwt__ExpirationInMinutes}
+
+      # .NET Configuration - Alerts (Alerts.Thresholds.*)
+      - Alerts__Thresholds__MaxTemperature=${Alerts__Thresholds__MaxTemperature}
+      - Alerts__Thresholds__MinSoilMoisture=${Alerts__Thresholds__MinSoilMoisture}
+      - Alerts__Thresholds__MinBatteryLevel=${Alerts__Thresholds__MinBatteryLevel}
 
       # .NET Configuration - Logging (Logging.LogLevel.*)
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}

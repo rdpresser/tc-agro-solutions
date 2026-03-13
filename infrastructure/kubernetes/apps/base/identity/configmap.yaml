@@ -54,6 +54,10 @@ data:
   # JWT (non-sensitive)
   Auth__Jwt__Issuer: "tc-agro-identity-service"
   Auth__Jwt__Audience__0: "tc-agro-identity-service"
+  Auth__Jwt__Audience__1: "tc-agro-farm-service"
+  Auth__Jwt__Audience__2: "tc-agro-sensor-ingest-service"
+  Auth__Jwt__Audience__3: "tc-agro-analytics-worker"
+  Auth__Jwt__Audience__4: "tc-agro-dashboard-service"
   Auth__Jwt__ExpirationInMinutes: "480"
 
   # Telemetry (OTEL SDK)

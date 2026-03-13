@@ -56,6 +56,11 @@ data:
   Auth__Jwt__Audience__0: "tc-agro-analytics-worker"
   Auth__Jwt__ExpirationInMinutes: "480"
 
+  # Alerts (service-specific)
+  Alerts__Thresholds__MaxTemperature: "35"
+  Alerts__Thresholds__MinSoilMoisture: "30"
+  Alerts__Thresholds__MinBatteryLevel: "20"
+
   # Telemetry (OTEL SDK)
   Telemetry__Grafana__Agent__Host: "otel-collector-agent.observability.svc.cluster.local"
   Telemetry__Grafana__Agent__OtlpGrpcPort: "4317"

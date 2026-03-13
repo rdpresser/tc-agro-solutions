@@ -115,6 +115,33 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         "public"
     ];
 
+    private static readonly string[] ServiceScopedEnvironmentVariables =
+    [
+        "Database__Postgres__Database",
+        "Messaging__RabbitMQ__Exchange",
+        "Auth__Jwt__Audience__0",
+        "Auth__Jwt__Audience__1",
+        "Auth__Jwt__Audience__2",
+        "Auth__Jwt__Audience__3",
+        "Auth__Jwt__Audience__4",
+        "OpenAI__Enabled",
+        "OpenAI__BaseUrl",
+        "OpenAI__ApiKey",
+        "OpenAI__Model",
+        "OpenAI__Temperature",
+        "OpenAI__MaxSuggestions",
+        "OpenAI__TimeoutSeconds",
+        "WeatherProvider__BaseUrl",
+        "WeatherProvider__Latitude",
+        "WeatherProvider__Longitude",
+        "WeatherProvider__MaxCoordinatesPerRequest",
+        "Jobs__SensorReadings__Enabled",
+        "Jobs__SensorReadings__IntervalSeconds",
+        "Alerts__Thresholds__MaxTemperature",
+        "Alerts__Thresholds__MinSoilMoisture",
+        "Alerts__Thresholds__MinBatteryLevel"
+    ];
+
     private readonly PostgreSqlContainer _postgresContainer = new PostgreSqlBuilder("timescale/timescaledb:latest-pg17")
         .WithDatabase("postgres")
         .WithUsername(PostgresUserName)
@@ -133,36 +160,18 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         .WithPortBinding(6379, true)
         .Build();
 
-    private readonly List<string> _managedEnvironmentVariables =
-    [
-        "ASPNETCORE_ENVIRONMENT",
-        "Database__Postgres__Host",
-        "Database__Postgres__Port",
-        "Database__Postgres__UserName",
-        "Database__Postgres__Password",
-        "Database__Postgres__Schema",
-        "Database__Postgres__ConnectionTimeout",
-        "Database__Postgres__MinPoolSize",
-        "Database__Postgres__MaxPoolSize",
-        "Cache__Redis__Host",
-        "Cache__Redis__Port",
-        "Cache__Redis__Password",
-        "Cache__Redis__InstanceName",
-        "Messaging__RabbitMQ__Host",
-        "Messaging__RabbitMQ__Port",
-        "Messaging__RabbitMQ__ManagementPort",
-        "Messaging__RabbitMQ__VirtualHost",
-        "Messaging__RabbitMQ__UserName",
-        "Messaging__RabbitMQ__Password",
-        "Messaging__RabbitMQ__AutoProvision",
-        "Messaging__RabbitMQ__AutoPurgeOnStartup",
-        "Messaging__RabbitMQ__UseQuorumQueues",
-        "Jobs__SensorReadings__Enabled",
-        "Jobs__SensorReadings__IntervalSeconds",
-        "Telemetry__Grafana__Agent__Enabled"
-    ];
+    private readonly HashSet<string> _managedEnvironmentVariables = [];
+    private readonly Dictionary<string, string?> _originalEnvironmentVariables = new(StringComparer.Ordinal);
 
     private readonly List<string> _teardownTimeouts = [];
+
+    private enum ServiceEnvironmentProfile
+    {
+        Identity,
+        Farm,
+        SensorIngest,
+        Analytics
+    }
 
     protected virtual bool EnableSensorReadingsJob => false;
 
@@ -205,23 +214,23 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             }
             instrumentation.Done("Initialize: Managed Databases");
 
-            instrumentation.Start("Initialize: Environment Configuration");
-            ConfigureEnvironment();
-            instrumentation.Done("Initialize: Environment Configuration");
+            instrumentation.Start("Initialize: Base Environment Configuration");
+            ConfigureCommonEnvironment();
+            instrumentation.Done("Initialize: Base Environment Configuration");
 
-            instrumentation.Start("Initialize: Service Factories");
-            IdentityFactory = CreateFactory<IdentityProgram>();
-            FarmFactory = CreateFactory<FarmProgram>();
-            SensorIngestFactory = CreateFactory<SensorIngestEntryPoint>();
-            AnalyticsFactory = CreateFactory<AnalyticsProgram>();
-            instrumentation.Done("Initialize: Service Factories");
-
-            instrumentation.Start("Initialize: HTTP Clients");
+            instrumentation.Start("Initialize: Service Factories + HTTP Clients");
+            IdentityFactory = CreateFactoryForService<IdentityProgram>(ServiceEnvironmentProfile.Identity);
             IdentityClient = CreateClient(IdentityFactory);
+
+            FarmFactory = CreateFactoryForService<FarmProgram>(ServiceEnvironmentProfile.Farm);
             FarmClient = CreateClient(FarmFactory);
+
+            SensorIngestFactory = CreateFactoryForService<SensorIngestEntryPoint>(ServiceEnvironmentProfile.SensorIngest);
             SensorIngestClient = CreateClient(SensorIngestFactory);
+
+            AnalyticsFactory = CreateFactoryForService<AnalyticsProgram>(ServiceEnvironmentProfile.Analytics);
             AnalyticsClient = CreateClient(AnalyticsFactory);
-            instrumentation.Done("Initialize: HTTP Clients");
+            instrumentation.Done("Initialize: Service Factories + HTTP Clients");
 
             instrumentation.Start("Initialize: Health Checks (4 services × 30s timeout, overall 3m)");
             using var healthChecksCts = new CancellationTokenSource(FixtureInitializationTimeout);
@@ -281,7 +290,8 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             instrumentation.Start("Dispose: Environment Variables");
             foreach (var variableName in _managedEnvironmentVariables)
             {
-                Environment.SetEnvironmentVariable(variableName, null);
+                _originalEnvironmentVariables.TryGetValue(variableName, out var originalValue);
+                Environment.SetEnvironmentVariable(variableName, originalValue);
             }
             instrumentation.Done("Dispose: Environment Variables");
 
@@ -666,6 +676,22 @@ public class BreakGlassE2EFixture : IAsyncLifetime
                 });
             });
 
+    private WebApplicationFactory<TEntryPoint> CreateFactoryForService<TEntryPoint>(ServiceEnvironmentProfile profile)
+        where TEntryPoint : class
+    {
+        ClearServiceScopedEnvironmentVariables();
+        ConfigureServiceSpecificEnvironment(profile);
+        return CreateFactory<TEntryPoint>();
+    }
+
+    private void ClearServiceScopedEnvironmentVariables()
+    {
+        foreach (var variableName in ServiceScopedEnvironmentVariables)
+        {
+            SetManagedEnvironmentVariable(variableName, null);
+        }
+    }
+
     private static HttpClient CreateClient<TEntryPoint>(WebApplicationFactory<TEntryPoint> factory)
         where TEntryPoint : class
         => factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -904,38 +930,127 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         return null;
     }
 
-    private void ConfigureEnvironment()
+    private void ConfigureCommonEnvironment()
     {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        SetManagedEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 
-        Environment.SetEnvironmentVariable("Database__Postgres__Host", _postgresContainer.Hostname);
-        Environment.SetEnvironmentVariable("Database__Postgres__Port", _postgresContainer.GetMappedPublicPort(5432).ToString());
-        Environment.SetEnvironmentVariable("Database__Postgres__UserName", PostgresUserName);
-        Environment.SetEnvironmentVariable("Database__Postgres__Password", PostgresPassword);
-        Environment.SetEnvironmentVariable("Database__Postgres__Schema", "public");
-        Environment.SetEnvironmentVariable("Database__Postgres__ConnectionTimeout", "30");
-        Environment.SetEnvironmentVariable("Database__Postgres__MinPoolSize", "2");
-        Environment.SetEnvironmentVariable("Database__Postgres__MaxPoolSize", "20");
+        SetManagedEnvironmentVariable("Database__Postgres__Host", _postgresContainer.Hostname);
+        SetManagedEnvironmentVariable("Database__Postgres__Port", _postgresContainer.GetMappedPublicPort(5432).ToString());
+        SetManagedEnvironmentVariable("Database__Postgres__UserName", PostgresUserName);
+        SetManagedEnvironmentVariable("Database__Postgres__Password", PostgresPassword);
+        SetManagedEnvironmentVariable("Database__Postgres__Schema", "public");
+        SetManagedEnvironmentVariable("Database__Postgres__MaintenanceDatabase", "postgres");
+        SetManagedEnvironmentVariable("Database__Postgres__ConnectionTimeout", "30");
+        SetManagedEnvironmentVariable("Database__Postgres__MinPoolSize", "2");
+        SetManagedEnvironmentVariable("Database__Postgres__MaxPoolSize", "20");
 
-        Environment.SetEnvironmentVariable("Cache__Redis__Host", _redisContainer.Hostname);
-        Environment.SetEnvironmentVariable("Cache__Redis__Port", _redisContainer.GetMappedPublicPort(6379).ToString());
-        Environment.SetEnvironmentVariable("Cache__Redis__Password", string.Empty);
-        Environment.SetEnvironmentVariable("Cache__Redis__InstanceName", "tc-agro-integration-tests");
+        SetManagedEnvironmentVariable("Cache__Redis__Host", _redisContainer.Hostname);
+        SetManagedEnvironmentVariable("Cache__Redis__Port", _redisContainer.GetMappedPublicPort(6379).ToString());
+        SetManagedEnvironmentVariable("Cache__Redis__Password", string.Empty);
+        SetManagedEnvironmentVariable("Cache__Redis__DefaultTTL", "300");
+        SetManagedEnvironmentVariable("Cache__Redis__InstanceName", "tc-agro-integration-tests");
 
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__Host", _rabbitMqContainer.Hostname);
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__Port", _rabbitMqContainer.GetMappedPublicPort(5672).ToString());
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__ManagementPort", _rabbitMqContainer.GetMappedPublicPort(15672).ToString());
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__VirtualHost", "/");
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__UserName", "guest");
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__Password", "guest");
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__AutoProvision", "true");
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__AutoPurgeOnStartup", "true");
-        Environment.SetEnvironmentVariable("Messaging__RabbitMQ__UseQuorumQueues", "false");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__Host", _rabbitMqContainer.Hostname);
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__Port", _rabbitMqContainer.GetMappedPublicPort(5672).ToString());
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__ManagementPort", _rabbitMqContainer.GetMappedPublicPort(15672).ToString());
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__VirtualHost", "/");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__UserName", "guest");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__Password", "guest");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__AutoProvision", "true");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__Durable", "true");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__AutoPurgeOnStartup", "true");
+        SetManagedEnvironmentVariable("Messaging__RabbitMQ__UseQuorumQueues", "false");
 
-        Environment.SetEnvironmentVariable("Jobs__SensorReadings__Enabled", EnableSensorReadingsJob ? "true" : "false");
-        Environment.SetEnvironmentVariable("Jobs__SensorReadings__IntervalSeconds", SensorReadingsJobIntervalSeconds.ToString());
+        SetManagedEnvironmentVariable("Services__Identity__HttpPort", "5001");
+        SetManagedEnvironmentVariable("Services__Farm__HttpPort", "5002");
+        SetManagedEnvironmentVariable("Services__SensorIngest__HttpPort", "5003");
+        SetManagedEnvironmentVariable("Services__AnalyticsWorker__HttpPort", "5004");
+        SetManagedEnvironmentVariable("Services__Dashboard__HttpPort", "5005");
 
-        Environment.SetEnvironmentVariable("Telemetry__Grafana__Agent__Enabled", "false");
+        SetManagedEnvironmentVariable("Auth__Jwt__Issuer", "tc-agro-identity-service");
+        SetManagedEnvironmentVariable("Auth__Jwt__SecretKey", "your-256-bit-secret-key-change-in-production-12345678901234567890");
+        SetManagedEnvironmentVariable("Auth__Jwt__ExpirationInMinutes", "480");
+
+        SetManagedEnvironmentVariable("Logging__LogLevel__Default", "Information");
+        SetManagedEnvironmentVariable("Logging__LogLevel__Microsoft_AspNetCore", "Warning");
+        SetManagedEnvironmentVariable("Logging__LogLevel__System", "Warning");
+
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Agent__Host", "localhost");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Agent__OtlpGrpcPort", "4317");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Agent__OtlpHttpPort", "4318");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Agent__MetricsPort", "8889");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Agent__Enabled", "false");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Otlp__Endpoint", "http://localhost:4318");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Otlp__Protocol", "http/protobuf");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Otlp__TimeoutSeconds", "10");
+        SetManagedEnvironmentVariable("Telemetry__Grafana__Otlp__Insecure", "true");
+    }
+
+    private void ConfigureServiceSpecificEnvironment(ServiceEnvironmentProfile profile)
+    {
+        switch (profile)
+        {
+            case ServiceEnvironmentProfile.Identity:
+                SetManagedEnvironmentVariable("Database__Postgres__Database", IdentityDatabase);
+                SetManagedEnvironmentVariable("Messaging__RabbitMQ__Exchange", "identity.events");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__0", "tc-agro-identity-service");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__1", "tc-agro-farm-service");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__2", "tc-agro-sensor-ingest-service");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__3", "tc-agro-analytics-worker");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__4", "tc-agro-dashboard-service");
+                break;
+
+            case ServiceEnvironmentProfile.Farm:
+                SetManagedEnvironmentVariable("Database__Postgres__Database", FarmDatabase);
+                SetManagedEnvironmentVariable("Messaging__RabbitMQ__Exchange", "farm.events");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__0", "tc-agro-farm-service");
+                SetManagedEnvironmentVariable("OpenAI__Enabled", "true");
+                SetManagedEnvironmentVariable("OpenAI__BaseUrl", "https://api.openai.com/");
+                SetManagedEnvironmentVariable("OpenAI__ApiKey", ResolveEnvironmentVariable("OpenAI__ApiKey", "test-openai-api-key"));
+                SetManagedEnvironmentVariable("OpenAI__Model", "gpt-4o-mini");
+                SetManagedEnvironmentVariable("OpenAI__Temperature", "0.3");
+                SetManagedEnvironmentVariable("OpenAI__MaxSuggestions", "15");
+                SetManagedEnvironmentVariable("OpenAI__TimeoutSeconds", "30");
+                break;
+
+            case ServiceEnvironmentProfile.SensorIngest:
+                SetManagedEnvironmentVariable("Database__Postgres__Database", SensorIngestDatabase);
+                SetManagedEnvironmentVariable("Messaging__RabbitMQ__Exchange", "sensor-ingest.events");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__0", "tc-agro-sensor-ingest-service");
+                SetManagedEnvironmentVariable("WeatherProvider__BaseUrl", "https://api.open-meteo.com");
+                SetManagedEnvironmentVariable("WeatherProvider__Latitude", "-22.7256");
+                SetManagedEnvironmentVariable("WeatherProvider__Longitude", "-47.6492");
+                SetManagedEnvironmentVariable("WeatherProvider__MaxCoordinatesPerRequest", "50");
+                SetManagedEnvironmentVariable("Jobs__SensorReadings__Enabled", EnableSensorReadingsJob ? "true" : "false");
+                SetManagedEnvironmentVariable("Jobs__SensorReadings__IntervalSeconds", SensorReadingsJobIntervalSeconds.ToString());
+                break;
+
+            case ServiceEnvironmentProfile.Analytics:
+                SetManagedEnvironmentVariable("Database__Postgres__Database", AnalyticsDatabase);
+                SetManagedEnvironmentVariable("Messaging__RabbitMQ__Exchange", "analytics.events");
+                SetManagedEnvironmentVariable("Auth__Jwt__Audience__0", "tc-agro-analytics-worker");
+                SetManagedEnvironmentVariable("Alerts__Thresholds__MaxTemperature", "35");
+                SetManagedEnvironmentVariable("Alerts__Thresholds__MinSoilMoisture", "30");
+                SetManagedEnvironmentVariable("Alerts__Thresholds__MinBatteryLevel", "20");
+                break;
+        }
+    }
+
+    private void SetManagedEnvironmentVariable(string variableName, string? value)
+    {
+        if (!_originalEnvironmentVariables.ContainsKey(variableName))
+        {
+            _originalEnvironmentVariables[variableName] = Environment.GetEnvironmentVariable(variableName);
+        }
+
+        _managedEnvironmentVariables.Add(variableName);
+        Environment.SetEnvironmentVariable(variableName, value);
+    }
+
+    private static string ResolveEnvironmentVariable(string variableName, string fallbackValue)
+    {
+        var value = Environment.GetEnvironmentVariable(variableName);
+        return string.IsNullOrWhiteSpace(value) ? fallbackValue : value;
     }
 
     private async Task EnsureDatabaseExistsAsync(string databaseName)
