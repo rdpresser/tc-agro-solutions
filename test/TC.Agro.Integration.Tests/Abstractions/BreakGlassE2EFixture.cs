@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Quartz;
+using SharedKernelServiceCollectionExtensions = TC.Agro.SharedKernel.Extensions.ServiceCollectionExtensions;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
@@ -85,7 +86,9 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     private const string PostgresUserName = "postgres";
     private const string PostgresPassword = "postgres";
     private const int PostgresConnectionTimeoutSeconds = 15;
-    private const int SqlCommandTimeoutSeconds = 10;
+    private const int SqlCommandTimeoutSeconds = 15;
+    private const int ResetMaxTruncateAttempts = 4;
+    private const int ResetRedisFlushMaxAttempts = 3;
 
     private static readonly TimeSpan FixtureInitializationTimeout = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan HostShutdownTimeout = TimeSpan.FromSeconds(15);
@@ -213,6 +216,10 @@ public class BreakGlassE2EFixture : IAsyncLifetime
                     .ConfigureAwait(false);
             }
             instrumentation.Done("Initialize: Managed Databases");
+
+            instrumentation.Start("Initialize: Compose .env Configuration");
+            LoadComposeEnvironmentFiles();
+            instrumentation.Done("Initialize: Compose .env Configuration");
 
             instrumentation.Start("Initialize: Base Environment Configuration");
             ConfigureCommonEnvironment();
@@ -365,7 +372,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     {
         var instrumentation = new FixtureInstrumentation();
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(30)); // Per-test reset must complete within 30s
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(60)); // Per-test reset must complete within 60s
 
         try
         {
@@ -382,9 +389,9 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         }
         catch (OperationCanceledException ex)
         {
-            instrumentation.Error("ResetState: TIMEOUT - reset exceeded 30 seconds", ex);
+            instrumentation.Error("ResetState: TIMEOUT - reset exceeded 60 seconds", ex);
             throw new InvalidOperationException(
-                "Per-test state reset timed out after 30 seconds. " +
+                "Per-test state reset timed out after 60 seconds. " +
                 "Check database lock status and Redis connectivity.",
                 ex);
         }
@@ -699,6 +706,36 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             AllowAutoRedirect = false
         });
 
+    private static void LoadComposeEnvironmentFiles()
+    {
+        var composeEnvironmentDirectory = FindComposeEnvironmentDirectory()
+            ?? throw new InvalidOperationException(
+                "Could not locate orchestration/apphost-compose directory to load .env for integration tests.");
+
+        SharedKernelServiceCollectionExtensions.LoadEnvironmentFiles(
+            environmentName: "Development",
+            environmentFilesDirectory: composeEnvironmentDirectory,
+            loadEnvironmentSpecificFile: false);
+    }
+
+    private static string? FindComposeEnvironmentDirectory()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+        while (directory is not null)
+        {
+            var composeDirectory = Path.Combine(directory.FullName, "orchestration", "apphost-compose");
+            if (Directory.Exists(composeDirectory))
+            {
+                return composeDirectory;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return null;
+    }
+
     private async Task TryDisposeFactoryAsync<TEntryPoint>(
         WebApplicationFactory<TEntryPoint>? factory,
         string serviceName,
@@ -1006,7 +1043,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
                 SetManagedEnvironmentVariable("Auth__Jwt__Audience__0", "tc-agro-farm-service");
                 SetManagedEnvironmentVariable("OpenAI__Enabled", "true");
                 SetManagedEnvironmentVariable("OpenAI__BaseUrl", "https://api.openai.com/");
-                SetManagedEnvironmentVariable("OpenAI__ApiKey", ResolveEnvironmentVariable("OpenAI__ApiKey", "test-openai-api-key"));
+                SetManagedEnvironmentVariable("OpenAI__ApiKey", ResolveManagedEnvironmentVariable("OpenAI__ApiKey", "test-openai-api-key"));
                 SetManagedEnvironmentVariable("OpenAI__Model", "gpt-4o-mini");
                 SetManagedEnvironmentVariable("OpenAI__Temperature", "0.3");
                 SetManagedEnvironmentVariable("OpenAI__MaxSuggestions", "15");
@@ -1045,6 +1082,23 @@ public class BreakGlassE2EFixture : IAsyncLifetime
 
         _managedEnvironmentVariables.Add(variableName);
         Environment.SetEnvironmentVariable(variableName, value);
+    }
+
+    private string ResolveManagedEnvironmentVariable(string variableName, string fallbackValue)
+    {
+        var currentValue = Environment.GetEnvironmentVariable(variableName);
+        if (!string.IsNullOrWhiteSpace(currentValue))
+        {
+            return currentValue;
+        }
+
+        if (_originalEnvironmentVariables.TryGetValue(variableName, out var originalValue) &&
+            !string.IsNullOrWhiteSpace(originalValue))
+        {
+            return originalValue;
+        }
+
+        return fallbackValue;
     }
 
     private static string ResolveEnvironmentVariable(string variableName, string fallbackValue)
@@ -1107,6 +1161,72 @@ public class BreakGlassE2EFixture : IAsyncLifetime
 
     private async Task TruncateSchemasAsync(string databaseName, IReadOnlyList<string> schemas, CancellationToken cancellationToken)
     {
+        for (var attempt = 1; attempt <= ResetMaxTruncateAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                await TruncateSchemasCoreAsync(databaseName, schemas, cancellationToken).ConfigureAwait(false);
+
+                if (attempt > 1)
+                {
+                    FixtureLog.WriteLine($"[FIXTURE.Reset] ✓ Truncate for {databaseName} succeeded on attempt {attempt}/{ResetMaxTruncateAttempts}");
+                }
+
+                return;
+            }
+            catch (NpgsqlException ex) when (IsTransientTruncateFailure(ex) && attempt < ResetMaxTruncateAttempts)
+            {
+                if (attempt == ResetMaxTruncateAttempts - 1 && RequiresAggressiveRecovery(ex))
+                {
+                    await TerminateClientSessionsAsync(databaseName, cancellationToken).ConfigureAwait(false);
+                }
+
+                NpgsqlConnection.ClearAllPools();
+
+                FixtureLog.WriteLine(
+                    $"[FIXTURE.Reset] ⚠ Truncate for {databaseName} failed on attempt {attempt}/{ResetMaxTruncateAttempts}: {ex.Message}. Retrying...");
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+                when (!cancellationToken.IsCancellationRequested && IsTransientTruncateCancellation(ex) && attempt < ResetMaxTruncateAttempts)
+            {
+                if (attempt == ResetMaxTruncateAttempts - 1 && RequiresAggressiveRecovery(ex))
+                {
+                    await TerminateClientSessionsAsync(databaseName, cancellationToken).ConfigureAwait(false);
+                }
+
+                NpgsqlConnection.ClearAllPools();
+
+                FixtureLog.WriteLine(
+                    $"[FIXTURE.Reset] ⚠ Truncate for {databaseName} was transiently cancelled on attempt {attempt}/{ResetMaxTruncateAttempts}: {ex.Message}. Retrying...");
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw new InvalidOperationException($"Schema truncation for {databaseName} was canceled", ex);
+            }
+            catch (NpgsqlException ex) when (ex.SqlState == "40P01") // Deadlock
+            {
+                throw new InvalidOperationException(
+                    $"Deadlock detected while truncating {databaseName}. " +
+                    "This may indicate concurrent access. Ensure tests are not running in parallel.",
+                    ex);
+            }
+            catch (NpgsqlException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Database error while truncating {databaseName} schemas: {ex.Message}",
+                    ex);
+            }
+        }
+    }
+
+    private async Task TruncateSchemasCoreAsync(string databaseName, IReadOnlyList<string> schemas, CancellationToken cancellationToken)
+    {
         var connectionString = BuildPostgresConnectionString(databaseName);
 
         await using var connection = new NpgsqlConnection(connectionString);
@@ -1124,79 +1244,175 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             throw new InvalidOperationException($"Failed to open connection to {databaseName}: {ex.Message}", ex);
         }
 
+        await using var listTablesCommand = new NpgsqlCommand(
+            """
+            SELECT format('%I.%I', schemaname, tablename)
+            FROM pg_tables
+            WHERE schemaname = ANY(@schemas)
+            ORDER BY schemaname, tablename;
+            """,
+            connection)
+        {
+            CommandTimeout = SqlCommandTimeoutSeconds
+        };
+
+        listTablesCommand.Parameters.AddWithValue("schemas", schemas.ToArray());
+
+        var tableNames = new List<string>();
+        await using (var reader = await listTablesCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                tableNames.Add(reader.GetString(0));
+            }
+        }
+
+        if (tableNames.Count == 0)
+        {
+            return;
+        }
+
+        var truncateSql = $"TRUNCATE TABLE {string.Join(", ", tableNames)} RESTART IDENTITY CASCADE;";
+
+        await using var truncateCommand = new NpgsqlCommand(truncateSql, connection)
+        {
+            CommandTimeout = SqlCommandTimeoutSeconds
+        };
+
+        await truncateCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool IsTransientTruncateFailure(NpgsqlException exception)
+    {
+        if (exception.SqlState is "40P01" or "55P03" or "57P01")
+        {
+            return true;
+        }
+
+        if (exception.InnerException is TimeoutException)
+        {
+            return true;
+        }
+
+        return exception.InnerException is NpgsqlException nested && IsTransientTruncateFailure(nested);
+    }
+
+    private static bool IsTransientTruncateCancellation(OperationCanceledException exception)
+    {
+        if (exception.InnerException is PostgresException postgresException && postgresException.SqlState == "57014")
+        {
+            return true;
+        }
+
+        return exception.InnerException is OperationCanceledException nested && IsTransientTruncateCancellation(nested);
+    }
+
+    private static bool RequiresAggressiveRecovery(NpgsqlException exception)
+    {
+        if (exception.SqlState is "40P01" or "55P03")
+        {
+            return true;
+        }
+
+        if (exception.InnerException is TimeoutException)
+        {
+            return true;
+        }
+
+        return exception.InnerException is NpgsqlException nested && RequiresAggressiveRecovery(nested);
+    }
+
+    private static bool RequiresAggressiveRecovery(OperationCanceledException exception)
+        => exception.InnerException is PostgresException postgresException && postgresException.SqlState == "57014";
+
+    private async Task TerminateClientSessionsAsync(string databaseName, CancellationToken cancellationToken)
+    {
         try
         {
-            await using var listTablesCommand = new NpgsqlCommand(
+            var maintenanceConnectionString = BuildPostgresConnectionString("postgres");
+
+            await using var maintenanceConnection = new NpgsqlConnection(maintenanceConnectionString);
+            await maintenanceConnection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+            await using var countCommand = new NpgsqlCommand(
                 """
-                SELECT format('%I.%I', schemaname, tablename)
-                FROM pg_tables
-                WHERE schemaname = ANY(@schemas)
-                ORDER BY schemaname, tablename;
+                SELECT COUNT(*)
+                FROM pg_stat_activity
+                WHERE datname = @databaseName
+                  AND pid <> pg_backend_pid()
+                  AND backend_type = 'client backend';
                 """,
-                connection)
+                maintenanceConnection)
             {
-                CommandTimeout = 10
+                CommandTimeout = SqlCommandTimeoutSeconds
             };
 
-            listTablesCommand.Parameters.AddWithValue("schemas", schemas.ToArray());
+            countCommand.Parameters.AddWithValue("databaseName", databaseName);
 
-            var tableNames = new List<string>();
-            await using (var reader = await listTablesCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    tableNames.Add(reader.GetString(0));
-                }
-            }
+            var countResult = await countCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            var activeSessions = countResult is long sessionCount ? (int)sessionCount : Convert.ToInt32(countResult);
 
-            if (tableNames.Count == 0)
+            if (activeSessions == 0)
             {
                 return;
             }
 
-            var truncateSql = $"TRUNCATE TABLE {string.Join(", ", tableNames)} RESTART IDENTITY CASCADE;";
-            await using var truncateCommand = new NpgsqlCommand(truncateSql, connection)
+            await using var terminateCommand = new NpgsqlCommand(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = @databaseName
+                  AND pid <> pg_backend_pid()
+                  AND backend_type = 'client backend';
+                """,
+                maintenanceConnection)
             {
-                CommandTimeout = 10
+                CommandTimeout = SqlCommandTimeoutSeconds
             };
 
-            await truncateCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            terminateCommand.Parameters.AddWithValue("databaseName", databaseName);
+            await terminateCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+            FixtureLog.WriteLine(
+                $"[FIXTURE.Reset] ⚠ Applied aggressive recovery and terminated {activeSessions} session(s) on {databaseName}");
         }
-        catch (OperationCanceledException ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException($"Schema truncation for {databaseName} was canceled", ex);
-        }
-        catch (NpgsqlException ex) when (ex.SqlState == "40P01") // Deadlock
-        {
-            throw new InvalidOperationException(
-                $"Deadlock detected while truncating {databaseName}. " +
-                "This may indicate concurrent access. Ensure tests are not running in parallel.",
-                ex);
-        }
-        catch (NpgsqlException ex)
-        {
-            throw new InvalidOperationException(
-                $"Database error while truncating {databaseName} schemas: {ex.Message}",
-                ex);
+            FixtureLog.WriteLine(
+                $"[FIXTURE.Reset] ⚠ Aggressive recovery failed for {databaseName}: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
     private async Task FlushRedisAsync(CancellationToken cancellationToken)
     {
-        try
+        for (var attempt = 1; attempt <= ResetRedisFlushMaxAttempts; attempt++)
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(10)); // 10-second timeout for Redis flush
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-            await _redisContainer.ExecAsync(["redis-cli", "FLUSHALL"], cts.Token).ConfigureAwait(false);
+                await _redisContainer.ExecAsync(["redis-cli", "FLUSHALL"], cts.Token).ConfigureAwait(false);
+                return;
+            }
+            catch (OperationCanceledException ex)
+                when (!cancellationToken.IsCancellationRequested && attempt < ResetRedisFlushMaxAttempts)
+            {
+                FixtureLog.WriteLine(
+                    $"[FIXTURE.Reset] ⚠ Redis FLUSHALL timed out on attempt {attempt}/{ResetRedisFlushMaxAttempts}: {ex.Message}. Retrying...");
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < ResetRedisFlushMaxAttempts)
+            {
+                FixtureLog.WriteLine(
+                    $"[FIXTURE.Reset] ⚠ Redis FLUSHALL failed on attempt {attempt}/{ResetRedisFlushMaxAttempts}: {ex.Message}. Retrying...");
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken).ConfigureAwait(false);
+            }
         }
-        catch (OperationCanceledException ex)
-        {
-            throw new InvalidOperationException(
-                "Redis FLUSHALL operation timed out after 10 seconds. " +
-                "Redis container may be unhealthy or under heavy load.",
-                ex);
-        }
+
+        throw new InvalidOperationException(
+            $"Redis FLUSHALL operation failed after {ResetRedisFlushMaxAttempts} attempts. " +
+            "Redis container may be unhealthy or under heavy load.");
     }
 
     private static async Task WaitForHealthAsync(HttpClient client, string serviceName, CancellationToken cancellationToken)
