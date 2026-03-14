@@ -51,6 +51,9 @@ data:
   Logging__LogLevel__Microsoft_AspNetCore: "Warning"
   Logging__LogLevel__System: "Warning"
 
+  # Integration tests (fixture diagnostics)
+  IntegrationTests__VerboseFixtureDiagnostics: "false"
+
   # JWT (non-sensitive)
   Auth__Jwt__Issuer: "tc-agro-identity-service"
   Auth__Jwt__Audience__0: "tc-agro-analytics-worker"

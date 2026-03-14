@@ -357,6 +357,9 @@ services:
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
+      # .NET Configuration - Integration Tests (fixture diagnostics)
+      - IntegrationTests__VerboseFixtureDiagnostics=${IntegrationTests__VerboseFixtureDiagnostics}
+
       # .NET Configuration - Jobs (Jobs.SensorReadings.*)
       - Jobs__SensorReadings__Enabled=${Jobs__SensorReadings__Enabled}
       - Jobs__SensorReadings__IntervalSeconds=${Jobs__SensorReadings__IntervalSeconds}
@@ -541,6 +544,9 @@ services:
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
+      # .NET Configuration - Integration Tests (fixture diagnostics)
+      - IntegrationTests__VerboseFixtureDiagnostics=${IntegrationTests__VerboseFixtureDiagnostics}
+
       # .NET Configuration - Telemetry (Grafana Agent)
       - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
       - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
@@ -663,6 +669,9 @@ services:
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
 
+      # .NET Configuration - Integration Tests (fixture diagnostics)
+      - IntegrationTests__VerboseFixtureDiagnostics=${IntegrationTests__VerboseFixtureDiagnostics}
+
       # .NET Configuration - Telemetry (Grafana Agent)
       - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}
       - Telemetry__Grafana__Agent__OtlpGrpcPort=${Telemetry__Grafana__Agent__OtlpGrpcPort}
@@ -777,6 +786,9 @@ services:
       - Logging__LogLevel__Default=${Logging__LogLevel__Default}
       - Logging__LogLevel__Microsoft_AspNetCore=${Logging__LogLevel__Microsoft_AspNetCore}
       - Logging__LogLevel__System=${Logging__LogLevel__System}
+
+      # .NET Configuration - Integration Tests (fixture diagnostics)
+      - IntegrationTests__VerboseFixtureDiagnostics=${IntegrationTests__VerboseFixtureDiagnostics}
 
       # .NET Configuration - Telemetry (Grafana Agent)
       - Telemetry__Grafana__Agent__Host=${Telemetry__Grafana__Agent__Host}

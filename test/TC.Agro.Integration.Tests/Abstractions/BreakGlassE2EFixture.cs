@@ -46,6 +46,10 @@ file class FixtureInstrumentation
 
 file static class FixtureLog
 {
+    private static readonly bool VerboseFixtureDisposeDiagnostics = ReadBooleanEnvironmentVariable(
+        "IntegrationTests__VerboseFixtureDiagnostics",
+        "TC_AGRO_INTEGRATION_VERBOSE_FIXTURE_DIAGNOSTICS");
+
     public static void WriteLine(string message)
     {
         Console.WriteLine(message);
@@ -66,10 +70,26 @@ file static class FixtureLog
     }
 
     private static bool ShouldMirrorToDiagnostics(string message)
-        => message.Contains("[FIXTURE.Dispose]", StringComparison.Ordinal)
+        => message.Contains("[FIXTURE.Dispose] ⚠", StringComparison.Ordinal)
+            || message.Contains("[FIXTURE.Dispose] ✗", StringComparison.Ordinal)
+            || (VerboseFixtureDisposeDiagnostics && message.Contains("[FIXTURE.Dispose]", StringComparison.Ordinal))
             || message.Contains("[FIXTURE] ✗", StringComparison.Ordinal)
             || message.Contains("[FIXTURE] ⚠", StringComparison.Ordinal)
             || message.Contains("[FIXTURE.Health] ⚠", StringComparison.Ordinal);
+
+    private static bool ReadBooleanEnvironmentVariable(params string[] variableNames)
+    {
+        foreach (var variableName in variableNames)
+        {
+            var value = Environment.GetEnvironmentVariable(variableName);
+            if (bool.TryParse(value, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return false;
+    }
 }
 
 /// <summary>
@@ -95,6 +115,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     private static readonly TimeSpan InfrastructureStartupTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan PerDatabaseBootstrapTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PerFactoryDisposeTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan PerFactoryDisposeRecoveryTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan PerContainerDisposeTimeout = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan TeardownDiagnosticsTimeout = TimeSpan.FromSeconds(5);
 
@@ -282,6 +303,11 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             AnalyticsClient?.Dispose();
             instrumentation.Done("Dispose: HTTP Clients");
 
+            // Clear pooled database connections opened by tests before host shutdown begins.
+            instrumentation.Start("Dispose: Npgsql Pools");
+            NpgsqlConnection.ClearAllPools();
+            instrumentation.Done("Dispose: Npgsql Pools");
+
             // Phase 2: Dispose factories (may take time as they shut down the ASP.NET apps)
             // Use a timeout to prevent hangs during factory disposal
             instrumentation.Start("Dispose: Web Application Factories");
@@ -376,6 +402,10 @@ public class BreakGlassE2EFixture : IAsyncLifetime
 
         try
         {
+            instrumentation.Start("ResetState: Npgsql Pools");
+            NpgsqlConnection.ClearAllPools();
+            instrumentation.Done("ResetState: Npgsql Pools");
+
             instrumentation.Start("ResetState: Schema Truncation");
             foreach (var database in ManagedDatabases)
             {
@@ -748,18 +778,30 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         }
 
         var stopwatch = Stopwatch.StartNew();
+        Task? disposeTask = null;
 
         try
         {
             FixtureLog.WriteLine($"[FIXTURE.Dispose] ▶ {serviceName} factory dispose started (timeout {timeout.TotalSeconds}s)");
-            await factory.DisposeAsync()
-                .AsTask()
-                .WaitAsync(timeout)
-                .ConfigureAwait(false);
+            disposeTask = factory.DisposeAsync().AsTask();
+            await disposeTask.WaitAsync(timeout).ConfigureAwait(false);
             FixtureLog.WriteLine($"[FIXTURE.Dispose] ✓ {serviceName} factory disposed cleanly ({stopwatch.ElapsedMilliseconds}ms)");
         }
         catch (TimeoutException ex)
         {
+            if (disposeTask is not null)
+            {
+                var recovered = await TryRecoverTimedOutFactoryDisposeAsync(
+                    serviceName,
+                    disposeTask,
+                    stopwatch).ConfigureAwait(false);
+
+                if (recovered)
+                {
+                    return;
+                }
+            }
+
             var diagnostics = await CollectServiceTeardownDiagnosticsAsync(serviceName).ConfigureAwait(false);
             RegisterTeardownTimeout(
                 $"Factory disposal for {serviceName} exceeded {timeout.TotalSeconds}s after {stopwatch.ElapsedMilliseconds}ms. {diagnostics}");
@@ -780,6 +822,61 @@ public class BreakGlassE2EFixture : IAsyncLifetime
         {
             FixtureLog.WriteLine($"[FIXTURE.Dispose] ✗ {serviceName} factory disposal error: {ex.GetType().Name}: {ex.Message}");
             throw;
+        }
+    }
+
+    private async Task<bool> TryRecoverTimedOutFactoryDisposeAsync(
+        string serviceName,
+        Task disposeTask,
+        Stopwatch stopwatch)
+    {
+        FixtureLog.WriteLine(
+            $"[FIXTURE.Dispose] {serviceName} exceeded initial shutdown timeout. Starting recovery before final wait.");
+
+        await RelieveFactoryShutdownPressureAsync(serviceName).ConfigureAwait(false);
+
+        try
+        {
+            await disposeTask.WaitAsync(PerFactoryDisposeRecoveryTimeout).ConfigureAwait(false);
+            FixtureLog.WriteLine(
+                $"[FIXTURE.Dispose] ✓ {serviceName} factory disposed after recovery ({stopwatch.ElapsedMilliseconds}ms)");
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+        catch (PostgresException postgresException) when (postgresException.SqlState is "57P01" or "57P02" or "57P03")
+        {
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ✓ {serviceName} recovery completed with benign Postgres shutdown ({postgresException.SqlState})");
+            return true;
+        }
+        catch (Exception ex) when (IsBenignTeardownException(ex))
+        {
+            FixtureLog.WriteLine($"[FIXTURE.Dispose] ✓ {serviceName} recovery completed with benign infrastructure exception: {ex.GetType().Name}");
+            return true;
+        }
+    }
+
+    private async Task RelieveFactoryShutdownPressureAsync(string serviceName)
+    {
+        try
+        {
+            NpgsqlConnection.ClearAllPools();
+
+            var databaseName = GetDatabaseNameForService(serviceName);
+            if (databaseName is null)
+            {
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await TerminateClientSessionsAsync(databaseName, cts.Token, logPrefix: "[FIXTURE.Dispose]", warnOnSuccess: false).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            FixtureLog.WriteLine(
+                $"[FIXTURE.Dispose] ⚠ Failed to relieve shutdown pressure for {serviceName}: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
@@ -1178,7 +1275,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             }
             catch (NpgsqlException ex) when (IsTransientTruncateFailure(ex) && attempt < ResetMaxTruncateAttempts)
             {
-                if (attempt == ResetMaxTruncateAttempts - 1 && RequiresAggressiveRecovery(ex))
+                if (attempt >= 2 && RequiresAggressiveRecovery(ex))
                 {
                     await TerminateClientSessionsAsync(databaseName, cancellationToken).ConfigureAwait(false);
                 }
@@ -1193,7 +1290,7 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             catch (OperationCanceledException ex)
                 when (!cancellationToken.IsCancellationRequested && IsTransientTruncateCancellation(ex) && attempt < ResetMaxTruncateAttempts)
             {
-                if (attempt == ResetMaxTruncateAttempts - 1 && RequiresAggressiveRecovery(ex))
+                if (attempt >= 2 && RequiresAggressiveRecovery(ex))
                 {
                     await TerminateClientSessionsAsync(databaseName, cancellationToken).ConfigureAwait(false);
                 }
@@ -1325,7 +1422,11 @@ public class BreakGlassE2EFixture : IAsyncLifetime
     private static bool RequiresAggressiveRecovery(OperationCanceledException exception)
         => exception.InnerException is PostgresException postgresException && postgresException.SqlState == "57014";
 
-    private async Task TerminateClientSessionsAsync(string databaseName, CancellationToken cancellationToken)
+    private async Task TerminateClientSessionsAsync(
+        string databaseName,
+        CancellationToken cancellationToken,
+        string logPrefix = "[FIXTURE.Reset]",
+        bool warnOnSuccess = true)
     {
         try
         {
@@ -1373,13 +1474,15 @@ public class BreakGlassE2EFixture : IAsyncLifetime
             terminateCommand.Parameters.AddWithValue("databaseName", databaseName);
             await terminateCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
+            var successMarker = warnOnSuccess ? "⚠" : "✓";
+
             FixtureLog.WriteLine(
-                $"[FIXTURE.Reset] ⚠ Applied aggressive recovery and terminated {activeSessions} session(s) on {databaseName}");
+                $"{logPrefix} {successMarker} Applied aggressive recovery and terminated {activeSessions} session(s) on {databaseName}");
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             FixtureLog.WriteLine(
-                $"[FIXTURE.Reset] ⚠ Aggressive recovery failed for {databaseName}: {ex.GetType().Name}: {ex.Message}");
+                $"{logPrefix} ⚠ Aggressive recovery failed for {databaseName}: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
