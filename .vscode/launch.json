@@ -78,6 +78,20 @@
       "stopAtEntry": false,
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Docker Compose: VS2026 Debug (Run)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "docker-compose-infra-and-services-up-with-vs-debug",
+      "program": "dotnet",
+      "args": [
+        "--info"
+      ],
+      "cwd": "${workspaceFolder}/orchestration/apphost-compose",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     }
   ],
   "compounds": [
@@ -85,6 +99,13 @@
       "name": "K8s Infra Only",
       "configurations": [
         "K8s: Infra Only (Run)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Docker Compose VS2026 Debug",
+      "configurations": [
+        "Docker Compose: VS2026 Debug (Run)"
       ],
       "stopAll": true
     },

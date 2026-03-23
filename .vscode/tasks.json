@@ -7,6 +7,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"up",
@@ -21,7 +23,10 @@
 				"grafana"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -43,6 +48,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -53,7 +60,62 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-with-vs-debug",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--project-name",
+				"tc-agro-local",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.vs.debug.yml",
+				"build"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"windows": {
+				"options": {
+					"env": {
+						"COMPOSE_PARALLEL_LIMIT": "1",
+						"APPDATA": "${env:APPDATA}"
+					}
+				}
+			},
+			"linux": {
+				"options": {
+					"env": {
+						"COMPOSE_PARALLEL_LIMIT": "1",
+						"APPDATA": "${env:HOME}/.config"
+					}
+				}
+			},
+			"osx": {
+				"options": {
+					"env": {
+						"COMPOSE_PARALLEL_LIMIT": "1",
+						"APPDATA": "${env:HOME}/.config"
+					}
 				}
 			},
 			"problemMatcher": [],
@@ -72,6 +134,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -83,7 +147,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -102,6 +167,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -113,7 +180,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -132,6 +200,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -143,7 +213,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -162,6 +233,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -173,7 +246,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -192,6 +266,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -203,7 +279,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -222,6 +299,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
@@ -233,7 +312,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -252,12 +332,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build 2>&1"
+				"timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build 2>&1"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -276,12 +357,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service 2>&1 | tee build-sensor-ingest.log"
+				"timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service 2>&1 | tee build-sensor-ingest.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -300,12 +382,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker 2>&1 | tee build-analytics.log"
+				"timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker 2>&1 | tee build-analytics.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -324,12 +407,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service 2>&1 | tee build-identity.log"
+				"timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service 2>&1 | tee build-identity.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -348,12 +432,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service 2>&1 | tee build-farm.log"
+				"timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service 2>&1 | tee build-farm.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -372,12 +457,13 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"echo '===== BUILD DIAGNOSTIC: Testing each service individually =====' && echo '' && echo 'Testing tc-agro-frontend-service...' && timeout 300 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-frontend-service && echo '' && echo 'Testing tc-agro-identity-service...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service && echo '' && echo 'Testing tc-agro-farm-service...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service && echo '' && echo 'Testing tc-agro-analytics-worker...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker && echo '' && echo 'Testing tc-agro-sensor-ingest-service... (SUSPECT)' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service && echo '' && echo '===== ALL BUILDS COMPLETED =====' || echo '===== BUILD FAILED (timeout or error)'"
+				"echo '===== BUILD DIAGNOSTIC: Testing each service individually =====' && echo '' && echo 'Testing tc-agro-frontend-service...' && timeout 300 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-frontend-service && echo '' && echo 'Testing tc-agro-identity-service...' && timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service && echo '' && echo 'Testing tc-agro-farm-service...' && timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service && echo '' && echo 'Testing tc-agro-analytics-worker...' && timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker && echo '' && echo 'Testing tc-agro-sensor-ingest-service... (SUSPECT)' && timeout 1800 docker compose --project-name tc-agro-local --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service && echo '' && echo '===== ALL BUILDS COMPLETED =====' || echo '===== BUILD FAILED (timeout or error)'"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
 				"env": {
-					"COMPOSE_PARALLEL_LIMIT": "1"
+					"COMPOSE_PARALLEL_LIMIT": "1",
+					"APPDATA": "${env:HOME}/.config"
 				}
 			},
 			"problemMatcher": [],
@@ -400,6 +486,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"-f",
@@ -418,7 +506,10 @@
 				"pgadmin"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -436,6 +527,8 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"-f",
@@ -450,7 +543,67 @@
 				"tc-agro-frontend-service"
 			],
 			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-app-services-up-with-vs-debug",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--project-name",
+				"tc-agro-local",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.vs.debug.yml",
+				"up",
+				"-d",
+				"tc-agro-identity-service",
+				"tc-agro-farm-service",
+				"tc-agro-sensor-ingest-service",
+				"tc-agro-analytics-worker",
+				"tc-agro-frontend-builder",
+				"tc-agro-frontend-service"
+			],
+			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"windows": {
+				"options": {
+					"env": {
+						"APPDATA": "${env:APPDATA}"
+					}
+				}
+			},
+			"linux": {
+				"options": {
+					"env": {
+						"APPDATA": "${env:HOME}/.config"
+					}
+				}
+			},
+			"osx": {
+				"options": {
+					"env": {
+						"APPDATA": "${env:HOME}/.config"
+					}
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -477,11 +630,27 @@
 			}
 		},
 		{
+			"label": "docker-compose-infra-and-services-up-with-vs-debug",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-build-with-vs-debug",
+				"docker-compose-infra-only-up-with-wait",
+				"docker-compose-app-services-up-with-vs-debug"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
 			"label": "docker-compose-clean-all",
 			"type": "shell",
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"-f",
@@ -491,7 +660,10 @@
 				"--remove-orphans"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -531,7 +703,7 @@
 			"problemMatcher": "$msCompile",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"docker-compose-infra-and-services-up-with-override"
+				"docker-compose-infra-only-up-with-wait"
 			],
 			"presentation": {
 				"echo": true,
@@ -559,7 +731,7 @@
 			"problemMatcher": "$msCompile",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"docker-compose-infra-and-services-up-with-override"
+				"docker-compose-infra-only-up-with-wait"
 			],
 			"presentation": {
 				"echo": true,
@@ -583,7 +755,7 @@
 			"problemMatcher": "$msCompile",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"docker-compose-infra-and-services-up-with-override"
+				"docker-compose-infra-only-up-with-wait"
 			],
 			"presentation": {
 				"echo": true,
@@ -607,7 +779,7 @@
 			"problemMatcher": "$msCompile",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"docker-compose-infra-and-services-up-with-override"
+				"docker-compose-infra-only-up-with-wait"
 			],
 			"presentation": {
 				"echo": true,
@@ -720,12 +892,17 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"down"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -743,13 +920,18 @@
 			"command": "docker",
 			"args": [
 				"compose",
+				"--project-name",
+				"tc-agro-local",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"logs",
 				"-f"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"APPDATA": "${env:HOME}/.config"
+				}
 			},
 			"isBackground": true,
 			"problemMatcher": [],
