@@ -26,6 +26,7 @@
     },
     "powershell.cwd": "tc-agro-solutions",
     "dotnet.server.useOmnisharp": false,
+    "dotnet.defaultSolution": "disable",
     "eslint.workingDirectories": [
       {
         "directory": "poc/frontend",

@@ -56,7 +56,7 @@ function isCurrentUserAdminForRealtime() {
 function createApiClient(baseURL) {
   return axios.create({
     baseURL,
-    timeout: 30000,
+    timeout: 300000,
     headers: {
       'Content-Type': 'application/json'
     }

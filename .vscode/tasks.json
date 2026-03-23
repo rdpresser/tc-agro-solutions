@@ -38,30 +38,23 @@
 			}
 		},
 		{
-			"label": "docker-compose-fullstack-up",
+			"label": "docker-compose-build-with-override",
 			"type": "shell",
 			"command": "docker",
 			"args": [
 				"compose",
+				"--progress=plain",
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.aspire.yml",
-				"up",
-				"-d",
-				"--no-build",
-				"postgres",
-				"redis",
-				"rabbitmq",
-				"loki",
-				"tempo",
-				"prometheus",
-				"otel-collector",
-				"grafana"
-				//"aspire-dashboard-ui"
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
 			},
 			"problemMatcher": [],
 			"presentation": {
@@ -69,6 +62,330 @@
 				"reveal": "always",
 				"focus": false,
 				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-no-cache-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"--no-cache"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-identity-image-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"tc-agro-identity-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-farm-image-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"tc-agro-farm-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-sensor-ingest-image-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"tc-agro-sensor-ingest-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-analytics-image-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"tc-agro-analytics-worker"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-frontend-image-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"--progress=plain",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"build",
+				"tc-agro-frontend-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-verbose-with-timeout",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build 2>&1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-sensor-ingest-verbose",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service 2>&1 | tee build-sensor-ingest.log"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-analytics-verbose",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker 2>&1 | tee build-analytics.log"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-identity-verbose",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service 2>&1 | tee build-identity.log"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-build-farm-verbose",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service 2>&1 | tee build-farm.log"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-investigate-build-timeout",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"echo '===== BUILD DIAGNOSTIC: Testing each service individually =====' && echo '' && echo 'Testing tc-agro-frontend-service...' && timeout 300 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-frontend-service && echo '' && echo 'Testing tc-agro-identity-service...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-identity-service && echo '' && echo 'Testing tc-agro-farm-service...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-farm-service && echo '' && echo 'Testing tc-agro-analytics-worker...' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-analytics-worker && echo '' && echo 'Testing tc-agro-sensor-ingest-service... (SUSPECT)' && timeout 1800 docker compose --progress=plain -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml\" -f \"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml\" build tc-agro-sensor-ingest-service && echo '' && echo '===== ALL BUILDS COMPLETED =====' || echo '===== BUILD FAILED (timeout or error)'"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose",
+				"env": {
+					"COMPOSE_PARALLEL_LIMIT": "1"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
 				"showReuseMessage": true,
 				"clear": false
 			},
@@ -78,103 +395,7 @@
 			}
 		},
 		{
-			"label": "stop-identity-container",
-			"type": "shell",
-			"command": "docker",
-			"args": [
-				"compose",
-				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
-				"stop",
-				"tc-agro-identity-service"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
-			},
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "silent",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": false,
-				"clear": false
-			}
-		},
-		{
-			"label": "stop-farm-container",
-			"type": "shell",
-			"command": "docker",
-			"args": [
-				"compose",
-				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
-				"stop",
-				"tc-agro-farm-service"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
-			},
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "silent",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": false,
-				"clear": false
-			}
-		},
-		{
-			"label": "stop-sensor-ingest-container",
-			"type": "shell",
-			"command": "docker",
-			"args": [
-				"compose",
-				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
-				"stop",
-				"tc-agro-sensor-ingest-service"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
-			},
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "silent",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": false,
-				"clear": false
-			}
-		},
-		{
-			"label": "stop-analytics-worker-container",
-			"type": "shell",
-			"command": "docker",
-			"args": [
-				"compose",
-				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
-				"stop",
-				"tc-agro-analytics-worker"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
-			},
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "silent",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": false,
-				"clear": false
-			}
-		},
-		{
-			"label": "docker-compose-aspire-up",
+			"label": "docker-compose-infra-only-up-with-wait",
 			"type": "shell",
 			"command": "docker",
 			"args": [
@@ -182,10 +403,19 @@
 				"-f",
 				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
 				"-f",
-				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.aspire.yml",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
 				"up",
 				"-d",
-				"--no-build"
+				"--wait",
+				"postgres",
+				"redis",
+				"rabbitmq",
+				"loki",
+				"tempo",
+				"prometheus",
+				"otel-collector",
+				"grafana",
+				"pgadmin"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
@@ -198,7 +428,91 @@
 				"panel": "shared",
 				"showReuseMessage": true,
 				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-app-services-up-with-override",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"up",
+				"-d",
+				"tc-agro-identity-service",
+				"tc-agro-farm-service",
+				"tc-agro-sensor-ingest-service",
+				"tc-agro-analytics-worker",
+				"tc-agro-frontend-builder",
+				"tc-agro-frontend-service"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
 			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-infra-and-services-up-with-override",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-build-with-override",
+				"docker-compose-infra-only-up-with-wait",
+				"docker-compose-app-services-up-with-override"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"label": "docker-compose-clean-all",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"compose",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.yml",
+				"-f",
+				"${workspaceFolder}/orchestration/apphost-compose/docker-compose.override.yml",
+				"down",
+				"-v",
+				"--remove-orphans"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-compose"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "docker-compose-rebuild-from-scratch-with-override",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-clean-all",
+				"docker-compose-build-no-cache-with-override",
+				"docker-compose-infra-only-up-with-wait",
+				"docker-compose-app-services-up-with-override"
+			],
+			"problemMatcher": [],
 			"group": {
 				"kind": "build",
 				"isDefault": false
@@ -215,6 +529,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"problemMatcher": "$msCompile",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-infra-and-services-up-with-override"
+			],
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -225,7 +543,7 @@
 			},
 			"group": {
 				"kind": "build",
-				"isDefault": true
+				"isDefault": false
 			}
 		},
 		{
@@ -239,6 +557,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"problemMatcher": "$msCompile",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-infra-and-services-up-with-override"
+			],
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -259,6 +581,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"problemMatcher": "$msCompile",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-infra-and-services-up-with-override"
+			],
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -279,6 +605,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"problemMatcher": "$msCompile",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"docker-compose-infra-and-services-up-with-override"
+			],
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -287,16 +617,6 @@
 				"showReuseMessage": true,
 				"clear": false
 			}
-		},
-		{
-			"label": "prepare-fullstack",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"stop-identity-container",
-				"docker-compose-fullstack-up",
-				"build-identity-service"
-			],
-			"problemMatcher": []
 		},
 		{
 			"label": "k3d-ensure-compose-infrastructure",
@@ -381,30 +701,18 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "prepare-k8s-debug-identity",
+			"label": "prepare-k8s-infra-only",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"prepare-k8s-run",
-				"stop-identity-container",
-				"build-identity-service"
+				"docker-compose-infra-up",
+				"k3d-start-cluster",
+				"k3d-cluster-status"
 			],
-			"problemMatcher": []
-		},
-		{
-			"label": "prepare-k8s-debug-services",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"prepare-k8s-run",
-				"stop-identity-container",
-				"stop-farm-container",
-				"stop-sensor-ingest-container",
-				"stop-analytics-worker-container",
-				"build-identity-service",
-				"build-farm-service",
-				"build-sensor-ingest-service",
-				"build-analytics-worker-service"
-			],
-			"problemMatcher": []
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		},
 		{
 			"label": "docker-compose-down",

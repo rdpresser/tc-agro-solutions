@@ -25,22 +25,29 @@ body:json {
   }
 }
 
+vars:pre-request {
+  producer_name: Rodrigo Producer
+  producer_email: producer@producer.com
+  producer_username: producer
+  producer_password: Producer@123
+}
+
 script:post-response {
   const status = res.getStatus();
-
+  
   if (status < 200 || status >= 300) {
     console.log("CreateProducer failed with status:", status);
     return;
   }
-
+  
   const body = res.getBody();
   const id = body?.id || body?.userId || body?.data?.id || body?.value?.id;
-
+  
   if (typeof id === "string" && id.length > 0) {
     bru.setEnvVar("id", id);
     console.log("id updated from CreateProducer:", id);
   }
-
+  
   if (typeof bru.getEnvVar === "function") {
     const producerEmail = bru.getEnvVar("producer_email");
     if (producerEmail) {
