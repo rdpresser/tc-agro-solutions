@@ -13,7 +13,12 @@ services:
 
   tc-agro-identity-service:
     build:
-      target: base
+      target: final
+    # SYS_PTRACE: required for vsdbg to attach to the dotnet process inside the container
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
     labels:
       com.microsoft.visualstudio.debuggee.program: "dotnet"
       com.microsoft.visualstudio.debuggee.arguments: ' --additionalProbingPath /.nuget/packages "/app/bin/Debug/net10.0/TC.Agro.Identity.Service.dll"'
@@ -23,6 +28,35 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_EnableDiagnostics=1
+      - COMPlus_EnableDiagnostics=1
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  tc-agro-farm-service:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - DOTNET_EnableDiagnostics=1
+      - COMPlus_EnableDiagnostics=1
+
+  tc-agro-sensor-ingest-service:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - DOTNET_EnableDiagnostics=1
+      - COMPlus_EnableDiagnostics=1
+
+  tc-agro-analytics-worker:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - DOTNET_EnableDiagnostics=1
+      - COMPlus_EnableDiagnostics=1
