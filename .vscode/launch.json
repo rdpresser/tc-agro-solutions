@@ -2,120 +2,109 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": ".NET: Identity Service (Debug)",
-      "type": "coreclr",
+      "name": "Docker: Up Stack",
+      "type": "node-terminal",
       "request": "launch",
-      "preLaunchTask": "build-identity-service",
-      "program": "${workspaceFolder}/services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service/bin/Debug/net10.0/TC.Agro.Identity.Service.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/services/identity-service/src/Adapters/Inbound/TC.Agro.Identity.Service",
-      "stopAtEntry": false,
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5001"
+      "preLaunchTask": "docker-compose-up-with-vs-debug-equivalent",
+      "command": "echo Docker Compose stack is up. Use Docker Attach profiles for breakpoints.",
+      "cwd": "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose"
+    },
+    {
+      "name": "Docker: Attach Identity Service",
+      "type": "coreclr",
+      "request": "attach",
+      "preLaunchTask": "kill-vsdbg-identity",
+      "processName": "dotnet",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["compose", "--project-name", "tc-agro-vscode-debug", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.override.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.vs.debug.yml", "exec", "-T", "-u", "root", "tc-agro-identity-service"],
+        "pipeCwd": "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose",
+        "debuggerPath": "/vsdbg/vsdbg",
+        "quoteArgs": false
       },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
-    },
-    {
-      "name": ".NET: Farm Service (Debug)",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build-farm-service",
-      "program": "${workspaceFolder}/services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service/bin/Debug/net10.0/TC.Agro.Farm.Service.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/services/farm-service/src/Adapters/Inbound/TC.Agro.Farm.Service",
-      "stopAtEntry": false,
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5002"
+      "sourceFileMap": {
+        "/src/services/identity-service": "${workspaceFolder:tc-agro-solutions}/services/identity-service",
+        "/src/common": "${workspaceFolder:tc-agro-solutions}/common"
       },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "justMyCode": false,
+      "requireExactSource": false
     },
     {
-      "name": ".NET: Sensor Ingest Service (Debug)",
+      "name": "Docker: Attach Farm Service",
       "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build-sensor-ingest-service",
-      "program": "${workspaceFolder}/services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service/bin/Debug/net10.0/TC.Agro.SensorIngest.Service.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/services/sensor-ingest-service/src/Adapters/Inbound/TC.Agro.SensorIngest.Service",
-      "stopAtEntry": false,
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5003"
+      "request": "attach",
+      "preLaunchTask": "kill-vsdbg-farm",
+      "processName": "dotnet",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["compose", "--project-name", "tc-agro-vscode-debug", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.override.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.vs.debug.yml", "exec", "-T", "-u", "root", "tc-agro-farm-service"],
+        "pipeCwd": "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose",
+        "debuggerPath": "/vsdbg/vsdbg",
+        "quoteArgs": false
       },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
-    },
-    {
-      "name": ".NET: Analytics Worker (Debug)",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build-analytics-worker-service",
-      "program": "${workspaceFolder}/services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service/bin/Debug/net10.0/TC.Agro.Analytics.Service.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/services/analytics-worker/src/Adapters/Inbound/TC.Agro.Analytics.Service",
-      "stopAtEntry": false,
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5004"
+      "sourceFileMap": {
+        "/src/services/farm-service": "${workspaceFolder:tc-agro-solutions}/services/farm-service",
+        "/src/common": "${workspaceFolder:tc-agro-solutions}/common"
       },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "justMyCode": false,
+      "requireExactSource": false
     },
     {
-      "name": "K8s: Infra Only (Run)",
+      "name": "Docker: Attach Sensor Ingest Service",
       "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "prepare-k8s-infra-only",
-      "program": "dotnet",
-      "args": [
-        "--info"
-      ],
-      "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "request": "attach",
+      "preLaunchTask": "kill-vsdbg-sensor",
+      "processName": "dotnet",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["compose", "--project-name", "tc-agro-vscode-debug", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.override.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.vs.debug.yml", "exec", "-T", "-u", "root", "tc-agro-sensor-ingest-service"],
+        "pipeCwd": "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose",
+        "debuggerPath": "/vsdbg/vsdbg",
+        "quoteArgs": false
+      },
+      "sourceFileMap": {
+        "/src/services/sensor-ingest-service": "${workspaceFolder:tc-agro-solutions}/services/sensor-ingest-service",
+        "/src/common": "${workspaceFolder:tc-agro-solutions}/common"
+      },
+      "justMyCode": false,
+      "requireExactSource": false
     },
     {
-      "name": "Docker Compose: VS2026 Debug (Run)",
+      "name": "Docker: Attach Analytics Worker",
       "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "docker-compose-infra-and-services-up-with-vs-debug",
-      "program": "dotnet",
-      "args": [
-        "--info"
-      ],
-      "cwd": "${workspaceFolder}/orchestration/apphost-compose",
-      "stopAtEntry": false,
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "request": "attach",
+      "preLaunchTask": "kill-vsdbg-analytics",
+      "processName": "dotnet",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["compose", "--project-name", "tc-agro-vscode-debug", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.override.yml", "-f", "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose/docker-compose.vs.debug.yml", "exec", "-T", "-u", "root", "tc-agro-analytics-worker"],
+        "pipeCwd": "${workspaceFolder:tc-agro-solutions}/orchestration/apphost-compose",
+        "debuggerPath": "/vsdbg/vsdbg",
+        "quoteArgs": false
+      },
+      "sourceFileMap": {
+        "/src/services/analytics-worker": "${workspaceFolder:tc-agro-solutions}/services/analytics-worker",
+        "/src/common": "${workspaceFolder:tc-agro-solutions}/common"
+      },
+      "justMyCode": false,
+      "requireExactSource": false
     }
   ],
   "compounds": [
     {
-      "name": "K8s Infra Only",
+      "name": "Docker: Up Stack",
       "configurations": [
-        "K8s: Infra Only (Run)"
+        "Docker: Up Stack"
       ],
       "stopAll": true
     },
     {
-      "name": "Docker Compose VS2026 Debug",
+      "name": "Docker: Attach All Services",
       "configurations": [
-        "Docker Compose: VS2026 Debug (Run)"
-      ],
-      "stopAll": true
-    },
-    {
-      "name": "Full Stack Services (Debug)",
-      "configurations": [
-        ".NET: Identity Service (Debug)",
-        ".NET: Farm Service (Debug)",
-        ".NET: Sensor Ingest Service (Debug)",
-        ".NET: Analytics Worker (Debug)"
+        "Docker: Attach Identity Service",
+        "Docker: Attach Farm Service",
+        "Docker: Attach Sensor Ingest Service",
+        "Docker: Attach Analytics Worker"
       ],
       "stopAll": true
     }
