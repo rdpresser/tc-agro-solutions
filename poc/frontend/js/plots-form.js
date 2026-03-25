@@ -58,6 +58,8 @@ let boundaryDrawControl = null;
 let boundarySearchMarker = null;
 let isBoundaryMapExpanded = false;
 let isEditModeReady = !isEditMode;
+let propertyCatalogCropOptions = [];
+let propertyCatalogCropOptionMap = new Map();
 let propertyCropSuggestions = [];
 let propertyCropSuggestionMap = new Map();
 let cropTypeChangeHandlerAttached = false;
@@ -1027,38 +1029,34 @@ async function refreshCropTypeOptionsForSelectedProperty({ preserveSelection = t
   const currentValue = preserveSelection ? cropTypeSelect.value : '';
 
   if (!propertyId) {
+    setPropertyCatalogCropOptions([]);
     setPropertyCropSuggestions([]);
     renderCropTypeSelectOptions(currentValue);
     return;
   }
 
   try {
-    // Single source: backend options endpoint that combines catalog + suggestion overlay.
-    const options = await getCropTypeOptions({ propertyId, includeSuggestionOverlay: true });
-    const mapped = Array.isArray(options)
-      ? options.map((o) => ({
-          id: o.suggestionId || o.catalogId,
-          cropType: o.cropType,
-          source: o.source,
-          isStale: false,
-          isActive: true,
-          plantingWindow: o.plantingWindow,
-          harvestCycleMonths: o.harvestCycleMonths,
-          suggestedIrrigationType: o.recommendedIrrigationType,
-          minSoilMoisture: o.minSoilMoisture,
-          maxTemperature: o.maxTemperature,
-          minHumidity: o.minHumidity,
-          cropTypeCatalogId: o.catalogId,
-          selectedCropTypeSuggestionId: o.suggestionId
-        }))
+    const [catalogOptions, mixedOptions] = await Promise.all([
+      getCropTypeOptions({ propertyId }),
+      getCropTypeOptions({ propertyId, includeSuggestionOverlay: true })
+    ]);
+
+    const mappedCatalogOptions = Array.isArray(catalogOptions)
+      ? catalogOptions.filter((option) => isCatalogCropSource(option?.source))
       : [];
 
-    setPropertyCropSuggestions(mapped);
+    const mappedMixed = Array.isArray(mixedOptions)
+      ? mixedOptions.map((option) => mapCropTypeOptionToPickerEntry(option)).filter(Boolean)
+      : [];
+
+    setPropertyCatalogCropOptions(mappedCatalogOptions);
+    setPropertyCropSuggestions(mappedMixed);
   } catch (error) {
     console.warn('[Plots Form] Failed to load backend crop options for selected property.', {
       propertyId,
       error
     });
+    setPropertyCatalogCropOptions([]);
     setPropertyCropSuggestions([]);
   }
 
@@ -1137,6 +1135,24 @@ function setPropertyCropSuggestions(suggestions) {
   });
 }
 
+function setPropertyCatalogCropOptions(options) {
+  propertyCatalogCropOptions = Array.isArray(options) ? options : [];
+  propertyCatalogCropOptionMap = new Map();
+
+  propertyCatalogCropOptions.forEach((option) => {
+    const cropTypeName =
+      normalizeCropType(option?.cropType) || String(option?.cropType || '').trim();
+    if (!cropTypeName) {
+      return;
+    }
+
+    const mapKey = cropTypeName.toLowerCase();
+    if (!propertyCatalogCropOptionMap.has(mapKey)) {
+      propertyCatalogCropOptionMap.set(mapKey, option);
+    }
+  });
+}
+
 function getCropSuggestionForType(cropType) {
   const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
   if (!normalizedCropType) {
@@ -1144,6 +1160,40 @@ function getCropSuggestionForType(cropType) {
   }
 
   return propertyCropSuggestionMap.get(normalizedCropType.toLowerCase()) || null;
+}
+
+function getCatalogOptionForType(cropType) {
+  const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
+  if (!normalizedCropType) {
+    return null;
+  }
+
+  return propertyCatalogCropOptionMap.get(normalizedCropType.toLowerCase()) || null;
+}
+
+function getCatalogCropTypeList(currentValue = '') {
+  const merged = [];
+  const seen = new Set();
+
+  const addCropType = (value) => {
+    const normalizedValue = normalizeCropType(value) || String(value || '').trim();
+    if (!normalizedValue) {
+      return;
+    }
+
+    const key = normalizedValue.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    merged.push(normalizedValue);
+  };
+
+  propertyCatalogCropOptions.forEach((option) => addCropType(option?.cropType));
+  addCropType(currentValue);
+
+  return merged;
 }
 
 function getMergedCropTypeList(currentValue = '') {
@@ -1177,8 +1227,13 @@ function renderCropTypeSelectOptions(currentValue = '') {
     return;
   }
 
-  const options = getMergedCropTypeList(currentValue);
-  select.innerHTML = [`<option value="">Select crop type...</option>`]
+  const options = getCatalogCropTypeList(currentValue);
+  const hasCatalogOptions = options.length > 0;
+  const placeholderLabel = hasCatalogOptions
+    ? 'Select crop type...'
+    : 'No catalog crops - use suggestions button below';
+
+  select.innerHTML = [`<option value="">${placeholderLabel}</option>`]
     .concat(
       options.map((cropType) => {
         const icon = CROP_TYPE_ICONS[cropType] || '🌿';
@@ -1192,6 +1247,8 @@ function renderCropTypeSelectOptions(currentValue = '') {
   if (normalizedCurrent) {
     select.value = normalizedCurrent;
   }
+
+  updateEmptyCatalogCta(hasCatalogOptions);
 }
 
 function getCropPickerCatalog() {
@@ -1222,6 +1279,7 @@ function buildCropDefaultsDataset() {
 
     dataset.push({
       cropType: cropTypeName,
+      source: String(row?.source || '').trim(),
       plantingWindow: String(row?.plantingWindow || '').trim(),
       plantingMonths: Array.isArray(row?.plantingMonths) ? row.plantingMonths : [],
       harvestCycleMonths,
@@ -1235,6 +1293,7 @@ function buildCropDefaultsDataset() {
   propertyCropSuggestions.forEach((suggestion) => {
     pushRow({
       cropType: suggestion?.cropType,
+      source: suggestion?.source,
       plantingWindow: suggestion?.plantingWindow,
       harvestCycleMonths: suggestion?.harvestCycleMonths,
       suggestedIrrigationType: suggestion?.suggestedIrrigationType,
@@ -1263,6 +1322,7 @@ function setupCropTypePicker() {
   const TABLE_MODAL_MAX_WIDTH = 'min(1280px, 96vw)';
 
   const openButton = $id('openCropPickerBtn');
+  const openFromEmptyCatalogButton = $id('openCropPickerFromEmptyCatalogBtn');
   const openDefaultsButton = $id('openCropDefaultsTableBtn');
   const modal = $id('cropPickerModal');
   const modalContent = $id('cropPickerModalContent');
@@ -1364,6 +1424,9 @@ function setupCropTypePicker() {
       return;
     }
 
+    // Keep the selected value available in the select, even when it comes from
+    // suggestion overlay data and is not in the current catalog-only list.
+    renderCropTypeSelectOptions(selectedCropType);
     cropTypeSelect.value = selectedCropType;
     cropTypeSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
     closeModal();
@@ -1397,6 +1460,7 @@ function setupCropTypePicker() {
 
       const searchable = [
         item.cropType,
+        formatCropSourceLabel(item.source),
         item.plantingWindow,
         item.suggestedIrrigationType,
         String(item.harvestCycleMonths),
@@ -1433,6 +1497,7 @@ function setupCropTypePicker() {
         const humidityDisplay = Number.isFinite(item.minHumidity)
           ? `💧 ${String(item.minHumidity)}%`
           : '💧 Not provided';
+        const sourceDisplay = formatCropSourceLabel(item.source);
         const monthsLabel =
           Array.isArray(item.plantingMonths) && item.plantingMonths.length > 0
             ? item.plantingMonths
@@ -1457,7 +1522,10 @@ function setupCropTypePicker() {
           role="button"
           aria-label="Select crop type ${escapeHtml(item.cropType)}"
         >
-          <td>${icon} ${escapeHtml(item.cropType)}</td>
+          <td>
+            <div>${icon} ${escapeHtml(item.cropType)}</div>
+            <div class="text-muted" style="font-size: 0.8rem">Source: ${escapeHtml(sourceDisplay)}</div>
+          </td>
           <td>
             <div>${escapeHtml(plantingWindowDisplay)}</div>
             <div class="text-muted" style="font-size: 0.8rem">${escapeHtml(monthsLabel)}</div>
@@ -1513,6 +1581,7 @@ function setupCropTypePicker() {
         const icon = CROP_TYPE_ICONS[cropType] || '🌿';
         const defaults = resolveCropDefaultsForSelection(cropType);
         const plantingWindow = defaults.plantingWindow || 'No planting window metadata';
+        const sourceLabel = defaults.sourceLabel || 'Catalog';
 
         return `
           <button
@@ -1522,6 +1591,7 @@ function setupCropTypePicker() {
             style="width: 100%; text-align: left; background: transparent; border-left: none; border-right: none; border-top: none"
           >
             <div class="result-title">${icon} ${escapeHtml(cropType)}</div>
+            <div class="result-coords">🏷️ Source: ${escapeHtml(sourceLabel)}</div>
             <div class="result-coords">🗓️ Planting window: ${escapeHtml(plantingWindow)}</div>
           </button>
         `;
@@ -1539,6 +1609,12 @@ function setupCropTypePicker() {
   openButton.addEventListener('click', () => {
     openModal();
   });
+
+  if (openFromEmptyCatalogButton) {
+    openFromEmptyCatalogButton.addEventListener('click', () => {
+      openModal();
+    });
+  }
 
   openDefaultsButton.addEventListener('click', () => {
     openDefaultsTableModal();
@@ -1596,9 +1672,10 @@ function updateCropPlantingHint(cropType) {
 
   const defaults = resolveCropDefaultsForSelection(normalizedCropType);
   const plantingWindow = defaults.plantingWindow;
+  const sourceLabel = defaults.sourceLabel;
 
-  if (defaults.isPropertySuggestion && plantingWindow) {
-    hint.textContent = `Property-specific suggestion: ${plantingWindow}`;
+  if (plantingWindow && sourceLabel) {
+    hint.textContent = `Suggested planting window (${sourceLabel}): ${plantingWindow}`;
     return;
   }
 
@@ -1708,22 +1785,102 @@ function applySuggestedFieldDefaultsForCrop(cropType) {
 function resolveCropDefaultsForSelection(cropType) {
   const normalizedCropType = normalizeCropType(cropType) || String(cropType || '').trim();
   const propertySuggestion = getCropSuggestionForType(normalizedCropType);
-  const hasSuggestion = Boolean(propertySuggestion);
+  const catalogOption = getCatalogOptionForType(normalizedCropType);
+  const defaultsSource = propertySuggestion || catalogOption;
 
   return {
     cropType: normalizedCropType,
-    isPropertySuggestion: hasSuggestion,
-    plantingWindow: hasSuggestion ? String(propertySuggestion?.plantingWindow || '').trim() : '',
-    harvestCycleMonths: hasSuggestion
-      ? toFiniteInteger(propertySuggestion?.harvestCycleMonths)
-      : null,
-    suggestedIrrigationType: hasSuggestion
-      ? String(propertySuggestion?.suggestedIrrigationType || '').trim()
+    sourceLabel: defaultsSource ? formatCropSourceLabel(defaultsSource?.source) : '',
+    plantingWindow: defaultsSource ? String(defaultsSource?.plantingWindow || '').trim() : '',
+    harvestCycleMonths: defaultsSource ? toFiniteInteger(defaultsSource?.harvestCycleMonths) : null,
+    suggestedIrrigationType: defaultsSource
+      ? String(
+          defaultsSource?.suggestedIrrigationType || defaultsSource?.recommendedIrrigationType || ''
+        ).trim()
       : '',
-    minSoilMoisture: hasSuggestion ? toFiniteNumber(propertySuggestion?.minSoilMoisture) : null,
-    maxTemperature: hasSuggestion ? toFiniteNumber(propertySuggestion?.maxTemperature) : null,
-    minHumidity: hasSuggestion ? toFiniteNumber(propertySuggestion?.minHumidity) : null
+    minSoilMoisture: defaultsSource ? toFiniteNumber(defaultsSource?.minSoilMoisture) : null,
+    maxTemperature: defaultsSource ? toFiniteNumber(defaultsSource?.maxTemperature) : null,
+    minHumidity: defaultsSource ? toFiniteNumber(defaultsSource?.minHumidity) : null
   };
+}
+
+function mapCropTypeOptionToPickerEntry(option) {
+  const cropType = normalizeCropType(option?.cropType) || String(option?.cropType || '').trim();
+  if (!cropType) {
+    return null;
+  }
+
+  return {
+    id: option?.suggestionId || option?.catalogId || cropType,
+    cropType,
+    source: option?.source,
+    isStale: false,
+    isActive: true,
+    plantingWindow: option?.plantingWindow,
+    harvestCycleMonths: option?.harvestCycleMonths,
+    suggestedIrrigationType: option?.recommendedIrrigationType,
+    minSoilMoisture: option?.minSoilMoisture,
+    maxTemperature: option?.maxTemperature,
+    minHumidity: option?.minHumidity,
+    cropTypeCatalogId: option?.catalogId,
+    selectedCropTypeSuggestionId: option?.suggestionId
+  };
+}
+
+function isCatalogCropSource(source) {
+  const normalized = String(source || '')
+    .trim()
+    .toLowerCase();
+
+  return normalized === 'catalog' || normalized.includes('catalog');
+}
+
+function formatCropSourceLabel(source) {
+  const normalized = String(source || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return 'Catalog';
+  }
+
+  if (normalized === 'ai') {
+    return 'AI Suggestion';
+  }
+
+  if (normalized === 'manual') {
+    return 'Manual Suggestion';
+  }
+
+  if (normalized.includes('catalog')) {
+    return 'Catalog';
+  }
+
+  return String(source).trim();
+}
+
+function updateEmptyCatalogCta(hasCatalogOptions) {
+  const cropTypeSelect = $id('cropType');
+  const emptyCatalogHint = $id('cropTypeEmptyCatalogHint');
+  const openFromEmptyCatalogButton = $id('openCropPickerFromEmptyCatalogBtn');
+  const propertyId = String($id('propertyId')?.value || '').trim();
+  const shouldShowCta = Boolean(propertyId) && !hasCatalogOptions;
+
+  if (emptyCatalogHint) {
+    emptyCatalogHint.style.display = shouldShowCta ? 'inline' : 'none';
+  }
+
+  if (openFromEmptyCatalogButton) {
+    openFromEmptyCatalogButton.style.display = shouldShowCta ? 'inline-flex' : 'none';
+  }
+
+  if (cropTypeSelect) {
+    if (shouldShowCta) {
+      cropTypeSelect.setAttribute('aria-describedby', 'cropTypeEmptyCatalogHint');
+    } else {
+      cropTypeSelect.removeAttribute('aria-describedby');
+    }
+  }
 }
 
 function buildDateByAddingMonths(baseDateInputValue, monthsToAdd) {

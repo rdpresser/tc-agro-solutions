@@ -148,6 +148,9 @@ test.describe('Plots form enhancements', () => {
     await expect(page.locator('#cropPickerModal')).toHaveClass(/open/);
 
     await page.locator('#cropPickerSearch').fill('sorghum');
+    await expect(page.locator('#cropPickerResults [data-crop-type="Sorghum"]')).toContainText(
+      'AI Suggestion'
+    );
     await page.locator('#cropPickerResults [data-crop-type="Sorghum"]').click();
 
     await expect(page.locator('#cropPickerModal')).not.toHaveClass(/open/);
@@ -173,13 +176,14 @@ test.describe('Plots form enhancements', () => {
     await expect(page.locator('#cropPickerModal')).toHaveClass(/open/);
 
     await page.locator('#cropPickerSearch').fill('sorghum');
+    await expect(page.locator('#cropPickerResults [data-crop-type="Sorghum"]')).toContainText(
+      'AI Suggestion'
+    );
     await expect(page.locator('#cropPickerResults [data-crop-type="Sorghum"]')).toBeVisible();
     await page.locator('#cropPickerResults [data-crop-type="Sorghum"]').click();
 
     await expect(page.locator('#cropType')).toHaveValue('Sorghum');
-    await expect(page.locator('#cropTypePlantingHint')).toContainText(
-      'Property-specific suggestion'
-    );
+    await expect(page.locator('#cropTypePlantingHint')).toContainText('AI Suggestion');
     await expect(page.locator('#irrigationType')).toHaveValue('Sprinkler');
     await expect(page.locator('#minSoilMoisture')).toHaveValue('26');
     await expect(page.locator('#maxTemperature')).toHaveValue('37');
@@ -192,7 +196,7 @@ test.describe('Plots form enhancements', () => {
   }) => {
     let capturedPayload = null;
 
-    await page.route('**/api/plots', async (route) => {
+    await page.route('**/api/plots/submit', async (route) => {
       if (route.request().method().toUpperCase() !== 'POST') {
         await route.fallback();
         return;
@@ -201,7 +205,7 @@ test.describe('Plots form enhancements', () => {
       capturedPayload = route.request().postDataJSON();
 
       await route.fulfill({
-        status: 201,
+        status: 202,
         headers: {
           'content-type': 'application/json'
         },
@@ -236,6 +240,65 @@ test.describe('Plots form enhancements', () => {
     expect(capturedPayload.cropType).toBe('Sorghum');
     expect(capturedPayload.cropTypeCatalogId).toBe('77777777-7777-4777-8777-777777777777');
     expect(capturedPayload.selectedCropTypeSuggestionId).toBe('crop-suggestion-001');
+  });
+
+  test('shows empty catalog CTA and still allows selecting suggestions from picker', async ({ page }) => {
+    await page.route('**/api/crop-types/options**', async (route) => {
+      const requestUrl = new URL(route.request().url());
+      const includeSuggestionOverlay =
+        String(requestUrl.searchParams.get('includeSuggestionOverlay') || 'false').toLowerCase() ===
+        'true';
+
+      if (!includeSuggestionOverlay) {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify([])
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify([
+          {
+            catalogId: '77777777-7777-4777-8777-777777777777',
+            suggestionId: 'crop-suggestion-001',
+            cropType: 'Sorghum',
+            source: 'ai',
+            plantingWindow: 'Late spring to early summer',
+            harvestCycleMonths: 4,
+            recommendedIrrigationType: 'Sprinkler',
+            minSoilMoisture: 26,
+            maxTemperature: 37,
+            minHumidity: 38
+          }
+        ])
+      });
+    });
+
+    await page.goto('plots-form.html');
+
+    await page.locator('#propertyId').selectOption('property-001');
+
+    await expect(page.locator('#cropTypeEmptyCatalogHint')).toBeVisible();
+    await expect(page.locator('#openCropPickerFromEmptyCatalogBtn')).toBeVisible();
+
+    await page.locator('#openCropPickerFromEmptyCatalogBtn').click();
+    await expect(page.locator('#cropPickerModal')).toHaveClass(/open/);
+
+    await page.locator('#cropPickerSearch').fill('sorghum');
+    await expect(page.locator('#cropPickerResults [data-crop-type="Sorghum"]')).toContainText(
+      'AI Suggestion'
+    );
+    await page.locator('#cropPickerResults [data-crop-type="Sorghum"]').click();
+
+    await expect(page.locator('#cropType')).toHaveValue('Sorghum');
   });
 
   test('defaults table shows irrigation icon and allows selecting crop type', async ({ page }) => {

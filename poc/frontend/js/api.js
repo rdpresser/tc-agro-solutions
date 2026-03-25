@@ -708,6 +708,17 @@ export async function deactivateCatalogCropType(catalogId) {
   return data;
 }
 
+/**
+ * Promote a crop suggestion to official catalog entry (idempotent).
+ * POST /api/crop-types/suggestions/:id/promote
+ */
+export async function promoteCropTypeSuggestion(suggestionId) {
+  const { data } = await farmApi.post(
+    `/api/crop-types/suggestions/${encodeURIComponent(suggestionId)}/promote`
+  );
+  return data;
+}
+
 function normalizeCropTypeSuggestion(item) {
   const cropType = String(item?.cropType || item?.CropType || '').trim();
   if (!cropType) {
@@ -784,7 +795,7 @@ function toNullableInteger(value) {
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
 export async function createPlot(plotData) {
-  const { data } = await farmApi.post('/api/plots', plotData);
+  const { data } = await farmApi.post('/api/plots/submit', plotData);
   return data;
 }
 
@@ -796,7 +807,7 @@ export async function createPlot(plotData) {
  * NOTE: When integrating real API, add 'async' back and uncomment REAL API section
  */
 export async function updatePlot(id, plotData) {
-  const { data } = await farmApi.put(`/api/plots/${encodeURIComponent(id)}`, plotData);
+  const { data } = await farmApi.put(`/api/plots/${encodeURIComponent(id)}/submit`, plotData);
   return data;
 }
 

@@ -80,7 +80,7 @@ test.describe('Producer CRUD coverage', () => {
     await page.locator('#irrigationType').selectOption({ index: 1 });
 
     const createRequestPromise = page.waitForRequest(
-      (request) => request.method() === 'POST' && request.url().includes('/api/plots')
+      (request) => request.method() === 'POST' && request.url().includes('/api/plots/submit')
     );
 
     await Promise.all([
@@ -97,7 +97,7 @@ test.describe('Producer CRUD coverage', () => {
     await page.locator('#name').fill('Producer Updated Plot');
 
     const updateRequestPromise = page.waitForRequest(
-      (request) => request.method() === 'PUT' && request.url().includes('/api/plots/plot-001')
+      (request) => request.method() === 'PUT' && request.url().includes('/api/plots/plot-001/submit')
     );
 
     await Promise.all([

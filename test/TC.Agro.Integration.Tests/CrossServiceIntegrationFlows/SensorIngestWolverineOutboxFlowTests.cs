@@ -279,7 +279,8 @@ public sealed class SensorIngestWolverineOutboxFlowTests : BaseIntegrationTest
             loginResult.JwtToken,
             cancellationToken);
 
-        createSensorResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var createSensorBody = await createSensorResponse.Content.ReadAsStringAsync(cancellationToken);
+        createSensorResponse.StatusCode.ShouldBe(HttpStatusCode.Created, createSensorBody);
 
         var createdSensor = await createSensorResponse.Content
             .ReadFromJsonAsync<CreateSensorResponse>(cancellationToken: cancellationToken);

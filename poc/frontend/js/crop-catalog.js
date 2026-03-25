@@ -1,4 +1,8 @@
-import { deactivateCatalogCropType, getCropTypesPaginated } from './api.js';
+import {
+  deactivateCatalogCropType,
+  getCropTypesPaginated,
+  promoteCropTypeSuggestion
+} from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
 import { getIrrigationTypeDisplay } from './irrigation-types.js';
@@ -89,28 +93,39 @@ function resolvePagination(payload, fallbackCount = 0) {
 }
 
 function normalizeCatalogItem(item) {
-  const catalogId = String(
-    item?.catalogId ||
-      item?.CatalogId ||
-      item?.cropTypeCatalogId ||
-      item?.CropTypeCatalogId ||
-      item?.id ||
-      item?.Id ||
-      ''
-  ).trim();
-
   const cropType = String(item?.cropType || item?.CropType || '').trim();
   if (!cropType) {
     return null;
   }
 
-  const source = String(item?.source || item?.Source || 'Catalog').trim() || 'Catalog';
+  const rawSource = String(item?.source || item?.Source || 'Catalog').trim() || 'Catalog';
+  const isSuggestionSource = rawSource.toLowerCase() !== 'catalog';
+
+  const resolvedCatalogId = String(
+    item?.catalogId ||
+      item?.CatalogId ||
+      item?.cropTypeCatalogId ||
+      item?.CropTypeCatalogId ||
+      (!isSuggestionSource ? item?.id || item?.Id : '') ||
+      ''
+  ).trim();
+
+  const suggestionId =
+    String(
+      item?.suggestionId ||
+        item?.SuggestionId ||
+        item?.selectedCropTypeSuggestionId ||
+        item?.SelectedCropTypeSuggestionId ||
+        (isSuggestionSource ? item?.id || item?.Id : '') ||
+        ''
+    ).trim() || null;
 
   return {
-    catalogId,
+    catalogId: resolvedCatalogId,
+    suggestionId,
     cropType,
     suggestedImage: toNullableTrimmedString(item?.suggestedImage ?? item?.SuggestedImage),
-    source,
+    source: rawSource,
     isActive: item?.isActive ?? item?.IsActive ?? true,
     isStale: Boolean(item?.isStale ?? item?.IsStale),
     plantingWindow: toNullableTrimmedString(item?.plantingWindow ?? item?.PlantingWindow),
@@ -134,6 +149,7 @@ function cacheElements() {
   ui.catalogFilterForm = document.getElementById('catalogFilterForm');
   ui.filterInput = document.getElementById('filterInput');
   ui.includeInactiveFilter = document.getElementById('includeInactiveFilter');
+  ui.includeSuggestionsFilter = document.getElementById('includeSuggestionsFilter');
   ui.clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
   ui.catalogTableBody = document.getElementById('catalogTableBody');
@@ -162,6 +178,15 @@ function resolveStatusBadges(item) {
   return badges.join(' ');
 }
 
+function resolveSourceBadge(item) {
+  const src = String(item.source || 'Catalog').trim();
+  if (src === 'Catalog') {
+    return '<span class="badge badge-info" data-source="Catalog">Catalog</span>';
+  }
+
+  return '<span class="badge badge-secondary" data-source="Suggestion">Suggestion</span>';
+}
+
 function renderCatalogTable() {
   if (!ui.catalogTableBody) {
     return;
@@ -170,7 +195,7 @@ function renderCatalogTable() {
   if (!Array.isArray(currentCatalogItems) || currentCatalogItems.length === 0) {
     ui.catalogTableBody.innerHTML = `
       <tr>
-        <td colspan="9" class="text-center text-muted">No crop types found for the selected filters.</td>
+        <td colspan="10" class="text-center text-muted">No crop types found for the selected filters.</td>
       </tr>
     `;
     return;
@@ -196,7 +221,9 @@ function renderCatalogTable() {
           <button class="btn btn-sm btn-outline" data-action="edit" data-id="${escapeHtml(item.catalogId)}">Edit</button>
           <button class="btn btn-sm btn-danger" data-action="deactivate" data-id="${escapeHtml(item.catalogId)}">Deactivate</button>
         `
-        : '<span class="text-muted">Unavailable</span>';
+        : item.suggestionId
+          ? `<button class="btn btn-sm btn-primary" data-action="promote" data-id="${escapeHtml(item.suggestionId)}">Promote</button>`
+          : '<span class="text-muted">Unavailable</span>';
 
       return `
         <tr>
@@ -204,6 +231,7 @@ function renderCatalogTable() {
             <strong>${escapeHtml(item.cropType)}</strong>
             <div class="text-muted" style="font-size: 12px">${escapeHtml(item.notes || '')}</div>
           </td>
+          <td>${resolveSourceBadge(item)}</td>
           <td>${suggestedImageDisplay}</td>
           <td>${escapeHtml(item.plantingWindow || '-')}</td>
           <td>${item.harvestCycleMonths ?? '-'}</td>
@@ -242,13 +270,14 @@ function updatePaginationUi(meta) {
 
 async function loadCatalog() {
   try {
+    const includeSuggestions = Boolean(ui.includeSuggestionsFilter?.checked);
     const response = await getCropTypesPaginated({
       pageNumber: currentPage,
       pageSize,
       sortBy: 'createdAt',
       sortDirection: 'desc',
       filter: String(ui.filterInput?.value || '').trim(),
-      source: 'Catalog',
+      source: includeSuggestions ? undefined : 'Catalog',
       includeInactive: Boolean(ui.includeInactiveFilter?.checked)
     });
 
@@ -293,6 +322,29 @@ async function handleDeactivate(catalogId) {
   }
 }
 
+async function handlePromote(suggestionId) {
+  if (!suggestionId) {
+    return;
+  }
+
+  const selected = currentCatalogItems.find((item) => item.suggestionId === suggestionId);
+  const cropLabel = selected?.cropType || 'this suggestion';
+
+  const confirmed = window.confirm(`Promote "${cropLabel}" to official catalog?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await promoteCropTypeSuggestion(suggestionId);
+    toast('Suggestion promoted to catalog successfully', 'success');
+    await loadCatalog();
+  } catch (error) {
+    console.error('Failed to promote suggestion.', error);
+    toast('Failed to promote suggestion', 'error');
+  }
+}
+
 function bindCatalogTableActions() {
   if (!ui.catalogTableBody) {
     return;
@@ -323,6 +375,10 @@ function bindCatalogTableActions() {
 
     if (action === 'deactivate') {
       handleDeactivate(catalogId);
+    }
+
+    if (action === 'promote') {
+      handlePromote(catalogId);
     }
   });
 }

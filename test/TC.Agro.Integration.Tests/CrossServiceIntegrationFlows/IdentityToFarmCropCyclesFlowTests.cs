@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Npgsql;
 using TC.Agro.Farm.Application.UseCases.CropCycles.Complete;
 using TC.Agro.Farm.Application.UseCases.CropCycles.Start;
 using TC.Agro.Farm.Application.UseCases.CropCycles.Transition;
@@ -15,13 +16,15 @@ namespace TC.Agro.Integration.Tests.CrossServiceIntegrationFlows;
 
 public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
 {
+    private const string FarmDatabase = "tc-agro-farm-db";
+
     public IdentityToFarmCropCyclesFlowTests(CrossServiceIntegrationFixture fixture)
         : base(fixture)
     {
     }
 
     [Fact]
-    public async Task GivenProducerOwnedPlot_WhenStartingSecondCycleOnSamePlot_ThenFarmReturnsConflict()
+    public async Task GivenProducerOwnedPlot_WhenStartingAnotherCycleOnSamePlot_ThenFarmReturnsConflict()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var producer = await CreateProducerContextAsync(cancellationToken);
@@ -29,43 +32,22 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         var cropTypeCatalogId = await Fixture.EnsureFarmSystemCropCatalogAsync("Soy", cancellationToken);
         var plot = await CreatePlotAsync(producer, property.Id, cropTypeCatalogId, cancellationToken);
 
-        var firstCommand = new StartCropCycleCommand(
+        var command = new StartCropCycleCommand(
             PlotId: plot.Id,
             CropTypeCatalogId: plot.CropTypeCatalogId,
             StartedAt: DateTimeOffset.UtcNow.AddDays(-2),
+            IrrigationType: "Center Pivot",
             ExpectedHarvestDate: DateTimeOffset.UtcNow.AddMonths(4),
             Status: "Planted",
             SelectedCropTypeSuggestionId: plot.SelectedCropTypeSuggestionId,
-            Notes: "First crop cycle");
-
-        using var firstResponse = await SendAuthorizedJsonAsync(
-            Fixture.FarmClient,
-            HttpMethod.Post,
-            "/api/crop-cycles",
-            firstCommand,
-            producer.JwtToken,
-            cancellationToken);
-
-        firstResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
-
-        var firstResult = await firstResponse.Content
-            .ReadFromJsonAsync<StartCropCycleResponse>(cancellationToken: cancellationToken);
-
-        firstResult.ShouldNotBeNull();
-        firstResult!.PlotId.ShouldBe(plot.Id);
-
-        var secondCommand = firstCommand with
-        {
-            StartedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            ExpectedHarvestDate = DateTimeOffset.UtcNow.AddMonths(5),
-            Notes = "Second crop cycle should fail"
-        };
+            Notes: "Second crop cycle should fail"
+        );
 
         using var secondResponse = await SendAuthorizedJsonAsync(
             Fixture.FarmClient,
             HttpMethod.Post,
             "/api/crop-cycles",
-            secondCommand,
+            command,
             producer.JwtToken,
             cancellationToken);
 
@@ -81,29 +63,8 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         var cropTypeCatalogId = await Fixture.EnsureFarmSystemCropCatalogAsync("Soy", cancellationToken);
         var plot = await CreatePlotAsync(producer, property.Id, cropTypeCatalogId, cancellationToken);
 
-        var startCommand = new StartCropCycleCommand(
-            PlotId: plot.Id,
-            CropTypeCatalogId: plot.CropTypeCatalogId,
-            StartedAt: DateTimeOffset.UtcNow.AddDays(-3),
-            ExpectedHarvestDate: DateTimeOffset.UtcNow.AddMonths(4),
-            Status: "Planted",
-            SelectedCropTypeSuggestionId: plot.SelectedCropTypeSuggestionId,
-            Notes: "Crop cycle under active monitoring");
-
-        using var startResponse = await SendAuthorizedJsonAsync(
-            Fixture.FarmClient,
-            HttpMethod.Post,
-            "/api/crop-cycles",
-            startCommand,
-            producer.JwtToken,
-            cancellationToken);
-
-        startResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
-
-        var startedCycle = await startResponse.Content
-            .ReadFromJsonAsync<StartCropCycleResponse>(cancellationToken: cancellationToken);
-
-        startedCycle.ShouldNotBeNull();
+        var activeCycleId = await GetActiveCropCycleIdByPlotAsync(plot.Id, cancellationToken);
+        activeCycleId.ShouldNotBeNull();
 
         var blockedUpdateCommand = new UpdatePropertyCommand(
             Id: property.Id,
@@ -127,7 +88,7 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         blockedUpdateResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
         var transitionCommand = new TransitionCropCycleCommand(
-            CropCycleId: startedCycle!.Id,
+            CropCycleId: activeCycleId!.Value,
             NewStatus: "Growing",
             OccurredAt: DateTimeOffset.UtcNow,
             Notes: "Plants reached growing phase");
@@ -135,7 +96,7 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         using var transitionResponse = await SendAuthorizedJsonAsync(
             Fixture.FarmClient,
             HttpMethod.Put,
-            $"/api/crop-cycles/{startedCycle.Id}/transition",
+            $"/api/crop-cycles/{activeCycleId.Value}/transition",
             transitionCommand,
             producer.JwtToken,
             cancellationToken);
@@ -149,7 +110,7 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         transitionedCycle!.Status.ShouldBe("Growing");
 
         var completeCommand = new CompleteCropCycleCommand(
-            CropCycleId: startedCycle.Id,
+            CropCycleId: activeCycleId.Value,
             EndedAt: DateTimeOffset.UtcNow.AddDays(1),
             FinalStatus: "Harvested",
             Notes: "Harvest completed");
@@ -157,7 +118,7 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         using var completeResponse = await SendAuthorizedJsonAsync(
             Fixture.FarmClient,
             HttpMethod.Post,
-            $"/api/crop-cycles/{startedCycle.Id}/complete",
+            $"/api/crop-cycles/{activeCycleId.Value}/complete",
             completeCommand,
             producer.JwtToken,
             cancellationToken);
@@ -310,6 +271,73 @@ public sealed class IdentityToFarmCropCyclesFlowTests : BaseIntegrationTest
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
         return await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<Guid?> GetActiveCropCycleIdByPlotAsync(Guid plotId, CancellationToken cancellationToken)
+    {
+        var connectionString = BuildFarmConnectionString();
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT id
+            FROM public.crop_cycles
+            WHERE plot_id = @plotId
+              AND ended_at IS NULL
+            ORDER BY started_at DESC
+            LIMIT 1;
+            """,
+            connection);
+
+        command.Parameters.AddWithValue("plotId", plotId);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (result is Guid id)
+        {
+            return id;
+        }
+
+        return null;
+    }
+
+    private static string BuildFarmConnectionString()
+    {
+        var host = GetRequiredEnvironmentVariable("Database__Postgres__Host");
+        var userName = GetRequiredEnvironmentVariable("Database__Postgres__UserName");
+        var password = GetRequiredEnvironmentVariable("Database__Postgres__Password");
+        var portValue = GetRequiredEnvironmentVariable("Database__Postgres__Port");
+
+        if (!int.TryParse(portValue, out var port))
+        {
+            port = 5432;
+        }
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = host,
+            Port = port,
+            Database = FarmDatabase,
+            Username = userName,
+            Password = password,
+            SearchPath = "public",
+            Timeout = 30,
+            IncludeErrorDetail = true
+        };
+
+        return builder.ConnectionString;
+    }
+
+    private static string GetRequiredEnvironmentVariable(string variableName)
+    {
+        var value = Environment.GetEnvironmentVariable(variableName);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"Environment variable '{variableName}' is not configured.");
+        }
+
+        return value;
     }
 
     private sealed record ProducerContext(Guid UserId, string JwtToken, string Token);

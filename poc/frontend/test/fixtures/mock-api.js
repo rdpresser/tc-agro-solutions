@@ -245,6 +245,31 @@ function createInitialState({
       generatedAt: null,
       isActive: true,
       createdAt: nowIso()
+    },
+    {
+      id: 'crop-suggestion-global-001',
+      propertyId: '',
+      ownerId: '',
+      ownerName: '',
+      propertyName: '',
+      cropType: 'Wheat',
+      cropTypeCatalogId: '',
+      selectedCropTypeSuggestionId: 'crop-suggestion-global-001',
+      source: 'ai',
+      isOverride: false,
+      isStale: false,
+      confidenceScore: 75,
+      plantingWindow: 'Oct to Dec',
+      harvestCycleMonths: 4,
+      suggestedIrrigationType: 'Sprinkler',
+      minSoilMoisture: 28,
+      maxTemperature: 35,
+      minHumidity: 40,
+      notes: 'Global AI suggestion — no property scope',
+      model: 'mock-openai',
+      generatedAt: nowIso(),
+      isActive: true,
+      createdAt: nowIso()
     }
   ];
 
@@ -675,7 +700,7 @@ export async function installApiMocks(
         return;
       }
 
-      if (pathname === '/api/plots' && method === 'POST') {
+      if ((pathname === '/api/plots' || pathname === '/api/plots/submit') && method === 'POST') {
         const body = parseRequestBody(request);
         const owner = findOwner(state.owners, body.ownerId || DEFAULT_OWNER_ID_ALPHA);
         const property = state.properties.find((item) => item.id === body.propertyId) || null;
@@ -711,12 +736,15 @@ export async function installApiMocks(
             Number(state.properties[propertyIndex].plotCount || 0) + 1;
         }
 
-        await fulfillJson(route, newPlot, 201);
+        await fulfillJson(route, newPlot, pathname.endsWith('/submit') ? 202 : 201);
         return;
       }
 
       if (pathname.startsWith('/api/plots/') && method === 'PUT') {
-        const plotId = decodeURIComponent(pathname.split('/api/plots/')[1] || '');
+        const plotPathSegment = decodeURIComponent(pathname.split('/api/plots/')[1] || '');
+        const plotId = plotPathSegment.endsWith('/submit')
+          ? plotPathSegment.slice(0, -'/submit'.length)
+          : plotPathSegment;
         const body = parseRequestBody(request);
         const index = state.plots.findIndex((item) => item.id === plotId);
 
@@ -736,7 +764,11 @@ export async function installApiMocks(
           updatedAt: nowIso()
         };
 
-        await fulfillJson(route, withResolvedPlotCoordinates(state.plots[index], state.properties));
+        await fulfillJson(
+          route,
+          withResolvedPlotCoordinates(state.plots[index], state.properties),
+          pathname.endsWith('/submit') ? 202 : 200
+        );
         return;
       }
 
@@ -963,6 +995,44 @@ export async function installApiMocks(
           return;
         }
 
+        if (!source || String(source).trim() === '') {
+          // Mixed mode: merge catalog items with global suggestions (no propertyId)
+          const globalSuggestions = state.cropTypeSuggestions
+            .filter((s) => !String(s.propertyId || '').trim())
+            .filter((s) => includeInactive || s.isActive !== false)
+            .map((s) => ({
+              catalogId: null,
+              cropTypeCatalogId: null,
+              suggestionId: s.selectedCropTypeSuggestionId || s.id,
+              id: null,
+              cropType: s.cropType,
+              suggestedImage: null,
+              source: s.source || 'ai',
+              isActive: s.isActive !== false,
+              isStale: Boolean(s.isStale),
+              plantingWindow: s.plantingWindow || null,
+              harvestCycleMonths: s.harvestCycleMonths ?? null,
+              recommendedIrrigationType: s.suggestedIrrigationType || null,
+              minSoilMoisture: s.minSoilMoisture ?? null,
+              maxTemperature: s.maxTemperature ?? null,
+              minHumidity: s.minHumidity ?? null,
+              notes: s.notes || null,
+              createdAt: s.createdAt || null
+            }));
+
+          const allItems = [
+            ...items.map((c) => ({
+              ...c,
+              catalogId: c.cropTypeCatalogId || c.id,
+              suggestionId: null
+            })),
+            ...globalSuggestions
+          ];
+          const filteredMixed = applyTextFilter(allItems, filter, ['cropType', 'notes']);
+          await fulfillJson(route, buildPaginated(filteredMixed, pageNumber, pageSize));
+          return;
+        }
+
         if (!includeInactive) {
           items = items.filter((item) => item.isActive !== false);
         }
@@ -1170,6 +1240,77 @@ export async function installApiMocks(
           success: true,
           id: catalogId,
           isActive: false
+        });
+        return;
+      }
+
+      if (
+        pathname.startsWith('/api/crop-types/suggestions/') &&
+        pathname.endsWith('/promote') &&
+        method === 'POST'
+      ) {
+        const suggestionId = decodeURIComponent(
+          pathname.split('/api/crop-types/suggestions/')[1].split('/promote')[0] || ''
+        ).trim();
+
+        const suggIndex = state.cropTypeSuggestions.findIndex(
+          (s) =>
+            String(s.selectedCropTypeSuggestionId || '').trim() === suggestionId ||
+            String(s.id || '').trim() === suggestionId
+        );
+
+        if (suggIndex === -1) {
+          await fulfillJson(route, { message: 'Suggestion not found' }, 404);
+          return;
+        }
+
+        const suggestion = state.cropTypeSuggestions[suggIndex];
+        const existingCatalogId = String(suggestion.cropTypeCatalogId || '').trim();
+
+        if (existingCatalogId) {
+          // Already promoted — idempotent: return existing catalog entry
+          await fulfillJson(route, {
+            cropTypeCatalogId: existingCatalogId,
+            cropType: suggestion.cropType,
+            promoted: false,
+            alreadyExisted: true
+          });
+          return;
+        }
+
+        // Promote: create new catalog entry + mark suggestion as stale
+        const newCatalogId = createId('promoted-catalog');
+        state.cropTypeCatalogs.push({
+          id: newCatalogId,
+          cropTypeCatalogId: newCatalogId,
+          cropType: suggestion.cropType,
+          suggestedImage: null,
+          source: 'Catalog',
+          isActive: true,
+          isStale: false,
+          plantingWindow: suggestion.plantingWindow || null,
+          harvestCycleMonths: suggestion.harvestCycleMonths ?? null,
+          suggestedIrrigationType: suggestion.suggestedIrrigationType || null,
+          minSoilMoisture: suggestion.minSoilMoisture ?? null,
+          maxTemperature: suggestion.maxTemperature ?? null,
+          minHumidity: suggestion.minHumidity ?? null,
+          notes: suggestion.notes || null,
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        });
+
+        state.cropTypeSuggestions[suggIndex] = {
+          ...suggestion,
+          cropTypeCatalogId: newCatalogId,
+          isStale: true,
+          updatedAt: nowIso()
+        };
+
+        await fulfillJson(route, {
+          cropTypeCatalogId: newCatalogId,
+          cropType: suggestion.cropType,
+          promoted: true,
+          alreadyExisted: false
         });
         return;
       }

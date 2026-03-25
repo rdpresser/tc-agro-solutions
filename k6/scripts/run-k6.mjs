@@ -120,6 +120,22 @@ const result = spawnSync("k6", commandArgs, {
   env,
 });
 
+if (result.error) {
+  if (result.error.code === "ENOENT") {
+    console.error(
+      "k6 CLI was not found in PATH. Install k6 and ensure the `k6` command is available before running smoke/load scripts.",
+    );
+  } else if (result.error.code === "EACCES") {
+    console.error(
+      "k6 CLI was found but is not executable (permission denied). Fix execute permissions or reinstall k6.",
+    );
+  } else {
+    console.error(`Failed to start k6: ${result.error.message}`);
+  }
+
+  process.exit(1);
+}
+
 if (typeof result.status === "number") {
   process.exit(result.status);
 }

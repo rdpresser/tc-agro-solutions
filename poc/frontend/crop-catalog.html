@@ -118,14 +118,24 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 0">
                   <label class="form-label">Flags</label>
-                  <div class="d-flex" style="gap: 12px; flex-wrap: wrap; align-items: center; min-height: 44px">
+                  <div
+                    class="d-flex"
+                    style="gap: 12px; flex-wrap: wrap; align-items: center; min-height: 44px"
+                  >
                     <label class="d-flex align-center" style="gap: 6px">
                       <input type="checkbox" id="includeInactiveFilter" />
                       <span>Include inactive</span>
                     </label>
+                    <label class="d-flex align-center" style="gap: 6px">
+                      <input type="checkbox" id="includeSuggestionsFilter" />
+                      <span>Include suggestions</span>
+                    </label>
                   </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0; align-self: flex-end; display: flex; gap: 8px">
+                <div
+                  class="form-group"
+                  style="margin-bottom: 0; align-self: flex-end; display: flex; gap: 8px"
+                >
                   <button type="button" id="clearFiltersBtn" class="btn btn-outline">Clear</button>
                   <button type="submit" class="btn btn-primary">Apply</button>
                 </div>
@@ -138,6 +148,7 @@
               <thead>
                 <tr>
                   <th>Crop Type</th>
+                  <th>Source</th>
                   <th>Suggested Image</th>
                   <th>Planting Window</th>
                   <th>Harvest (months)</th>
@@ -150,7 +161,7 @@
               </thead>
               <tbody id="catalogTableBody">
                 <tr>
-                  <td colspan="9" class="text-center">Loading...</td>
+                  <td colspan="10" class="text-center">Loading...</td>
                 </tr>
               </tbody>
             </table>
@@ -159,13 +170,19 @@
           <div class="card pagination-sticky-card" style="margin-top: 24px">
             <div class="d-flex justify-between align-center" style="flex-wrap: wrap; gap: 16px">
               <div class="d-flex align-center" style="gap: 8px">
-                <button type="button" id="prevPageBtn" class="btn btn-outline btn-sm">← Previous</button>
-                <button type="button" id="nextPageBtn" class="btn btn-outline btn-sm">Next →</button>
+                <button type="button" id="prevPageBtn" class="btn btn-outline btn-sm">
+                  ← Previous
+                </button>
+                <button type="button" id="nextPageBtn" class="btn btn-outline btn-sm">
+                  Next →
+                </button>
               </div>
               <span id="catalogSummary" class="text-muted">0 item(s) found</span>
               <span id="pageInfo" class="text-muted">Page 1 of 1</span>
               <div class="d-flex align-center" style="gap: 8px">
-                <label for="pageSizeSelect" class="text-muted" style="font-size: 0.9em">Page size</label>
+                <label for="pageSizeSelect" class="text-muted" style="font-size: 0.9em"
+                  >Page size</label
+                >
                 <select id="pageSizeSelect" class="form-control form-select" style="width: 140px">
                   <option value="10" selected>10 / page</option>
                   <option value="20">20 / page</option>
