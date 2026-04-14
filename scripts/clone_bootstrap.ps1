@@ -134,7 +134,9 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
 }
 
 function Ensure-DotEnv($rootPath) {
-    $envPath = Join-Path $rootPath "orchestration\apphost-compose\.env"
+    $composePath = Join-Path $rootPath "orchestration"
+    $composePath = Join-Path $composePath "apphost-compose"
+    $envPath = Join-Path $composePath ".env"
     
     
     if (-not (Test-Path $envPath)) {
@@ -348,9 +350,21 @@ Logging__LogLevel__System=Warning
     else {
         Write-Warning ".env already exists at $envPath - skipping generation"
     }
+}
 
+# ===========================
+# Pre-flight Checks
+# ===========================
+Write-Header "TC Agro Solutions - Bootstrap"
 
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPath = (Resolve-Path (Join-Path $scriptDir "..")).Path
 
+Write-Info "Detected root path: $rootPath"
+
+Ensure-Command "git"
+
+try {
     $testUrl = "https://github.com"
     $null = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     Write-Success "Internet connectivity verified"
