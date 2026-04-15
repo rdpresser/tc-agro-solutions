@@ -1,4 +1,8 @@
 {
   "git.scanSubfolders": true,
-  "dotnet.server.useOmnisharp": false
+  "dotnet.server.useOmnisharp": false,
+  "terminal.integrated.env.linux": {
+    "DOTNET_EnableDiagnostics": "0",
+    "COMPlus_EnableDiagnostics": "0"
+  }
 }

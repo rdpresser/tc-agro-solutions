@@ -125,6 +125,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - DOTNET_EnableDiagnostics=0
+      - COMPlus_EnableDiagnostics=0
 
       # Verbose logging for development
       - Serilog__MinimumLevel__Default=Debug
@@ -202,6 +204,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - DOTNET_EnableDiagnostics=0
+      - COMPlus_EnableDiagnostics=0
       - Serilog__MinimumLevel__Default=Debug
       - Serilog__MinimumLevel__Override__Microsoft=Information
       - Serilog__MinimumLevel__Override__System=Information
@@ -238,6 +242,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - DOTNET_EnableDiagnostics=0
+      - COMPlus_EnableDiagnostics=0
       - Serilog__MinimumLevel__Default=Debug
       - Serilog__MinimumLevel__Override__Microsoft=Information
       - Serilog__MinimumLevel__Override__System=Information
@@ -271,6 +277,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
+      - DOTNET_EnableDiagnostics=0
+      - COMPlus_EnableDiagnostics=0
       - Serilog__MinimumLevel__Default=Debug
       - Serilog__MinimumLevel__Override__Microsoft=Information
       - Serilog__MinimumLevel__Override__System=Information

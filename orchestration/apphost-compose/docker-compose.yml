@@ -66,8 +66,8 @@ services:
       - "15432:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-      - ./docker_pgadmin_servers.json:/pgadmin4/servers.json:ro
-      - ./scripts/init-pgadmin.sh:/scripts/init-pgadmin.sh:ro
+      - ./docker_pgadmin_servers.json:/pgadmin4/servers.json:ro,z
+      - ./scripts/init-pgadmin.sh:/scripts/init-pgadmin.sh:ro,z
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,7 +148,7 @@ services:
     ports:
       - "${LOKI_PORT}:3100"
     volumes:
-      - ./observability/loki/config.yml:/etc/loki/config.yml:ro
+      - ./observability/loki/config.yml:/etc/loki/config.yml:ro,z
       - loki_data:/loki
     # NOTE: Healthcheck intentionally omitted because Loki image doesn't include wget/curl
     # Service_started condition in depends_on is sufficient for service orchestration
@@ -170,7 +170,7 @@ services:
       - "${TEMPO_PORT}:3200" # HTTP API + metrics_generator (/metrics endpoint)
       # OTLP ports exposed via OTEL Collector (not directly from Tempo)
     volumes:
-      - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro
+      - ./observability/tempo/config.yml:/etc/tempo/config.yml:ro,z
       - tempo_data:/var/tempo
     # NOTE: Healthcheck intentionally omitted because Tempo image doesn't include wget/curl
     # Service_started condition in depends_on is sufficient for service orchestration
@@ -190,7 +190,7 @@ services:
     ports:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
-      - ./observability/prometheus/${PROMETHEUS_CONFIG_FILE}:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/${PROMETHEUS_CONFIG_FILE}:/etc/prometheus/prometheus.yml:ro,z
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -230,7 +230,7 @@ services:
       - "8889:8889" # Prometheus metrics exporter
       - "13133:13133" # Health check
     volumes:
-      - ./observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml:ro
+      - ./observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml:ro,z
     command: ["--config=/etc/otelcol-contrib/config.yml"]
     # No depends_on or healthcheck needed for local development
     networks:
@@ -257,7 +257,7 @@ services:
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_UID: "tc-metrics"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro,z
     depends_on:
       prometheus:
         condition: service_healthy

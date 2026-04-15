@@ -239,7 +239,7 @@ jobs:
       - name: 🔒 Trivy Scan
         if: github.event.inputs.skip-security-scan != 'true'
         continue-on-error: true  # Don't fail CI on vulnerabilities (dev/hackathon mode)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
           format: sarif
