@@ -1,8 +1,11 @@
+#!/usr/bin/env pwsh
+
 param(
     [switch]$NoPull = $false
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 # ===========================
 # HELPER FUNCTIONS
@@ -134,13 +137,15 @@ function Clone-Or-Pull-Repo($repoUrl, $targetPath, $repoName) {
 }
 
 function Ensure-DotEnv($rootPath) {
-    $envPath = Join-Path $rootPath "orchestration\apphost-compose\.env"
+    $composePath = Join-Path $rootPath "orchestration"
+    $composePath = Join-Path $composePath "apphost-compose"
+    $envPath = Join-Path $composePath ".env"
     
     
     if (-not (Test-Path $envPath)) {
         Write-Step "Creating .env file (apphost-compose)"
         
-        $envContent = @"
+        $envContent = @'
 # =====================================================
 # TC Agro Solutions - Unified Environment Configuration
 # =====================================================
@@ -335,7 +340,7 @@ Logging__LogLevel__System=Warning
 # =====================================================
 # See section above for Telemetry__Grafana__* variables
 # (defined above in "TELEMETRY (Telemetry.Grafana.*)" section)
-"@
+'@
         
         $envDir = Split-Path -Parent $envPath
         if (-not (Test-Path $envDir)) {
@@ -348,24 +353,28 @@ Logging__LogLevel__System=Warning
     else {
         Write-Warning ".env already exists at $envPath - skipping generation"
     }
-
-
-
-    try {
-        $testUrl = "https://github.com"
-        $null = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-        Write-Success "Internet connectivity verified"
-    }
-    catch {
-        Write-Warning "Could not verify internet connectivity. Make sure you have a working internet connection."
-    }
 }
 
 # ===========================
-# INITIALIZATION
+# Pre-flight Checks
 # ===========================
-$rootPath = Split-Path -Parent $PSScriptRoot
-Write-Host "Root path: $rootPath" -ForegroundColor DarkGray
+Write-Header "TC Agro Solutions - Bootstrap"
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPath = (Resolve-Path (Join-Path $scriptDir "..")).Path
+
+Write-Info "Detected root path: $rootPath"
+
+Ensure-Command "git"
+
+try {
+    $testUrl = "https://github.com"
+    $null = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+    Write-Success "Internet connectivity verified"
+}
+catch {
+    Write-Warning "Could not verify internet connectivity. Make sure you have a working internet connection."
+}
 
 # ===========================
 # Create Directories
