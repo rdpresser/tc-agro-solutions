@@ -1018,7 +1018,7 @@
 				"-Mode",
 				"External",
 				"-EnvFile",
-				"${workspaceFolder}/orchestration/apphost-aspire/.env.external"
+				"${workspaceFolder}/orchestration/apphost-aspire/.env"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-aspire"
@@ -1080,7 +1080,7 @@
 				"-File",
 				"${workspaceFolder}/orchestration/apphost-aspire/scripts/smoke-external.ps1",
 				"-EnvFile",
-				"../.env.external"
+				"../.env"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/orchestration/apphost-aspire/scripts"

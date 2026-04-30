@@ -20,8 +20,7 @@ if (-not (Test-Path -LiteralPath $appHostProject)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($EnvFile)) {
-    $defaultEnvFile = if ($Mode -eq "External") { ".env.external" } else { ".env" }
-    $EnvFile = Join-Path $appHostRoot $defaultEnvFile
+    $EnvFile = Join-Path $appHostRoot ".env"
 }
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {

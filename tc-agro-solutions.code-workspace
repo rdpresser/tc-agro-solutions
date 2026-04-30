@@ -109,7 +109,21 @@
     },
     "[dockerfile]": {
       "editor.defaultFormatter": "ms-azuretools.vscode-containers"
-    }
+    },
+    "sqltools.connections": [
+      {
+        "ssh": "Disabled",
+        "previewLimit": 50,
+        "server": "192.168.0.210",
+        "port": 5432,
+        "driver": "PostgreSQL",
+        "name": "PostgreSQl",
+        "group": "Proxmox",
+        "database": "postgres",
+        "username": "devuser",
+        "password": "devuser"
+      }
+    ]
   },
   "extensions": {
     "recommendations": [

@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 param(
-    [string]$EnvFile = "../.env.external",
+    [string]$EnvFile = "../.env",
     [int]$StartupTimeoutSeconds = 180,
     [int]$HealthTimeoutSeconds = 240,
     [switch]$SkipConnectivityChecks,
