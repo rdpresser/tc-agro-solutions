@@ -23,9 +23,6 @@
     },
     {
       "path": "poc/mobile"
-    },
-    {
-      "path": "../mt-saga-order-processing"
     }
   ],
   "settings": {
