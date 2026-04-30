@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/AppHostAspire/">
+    <Project Path="src/TC.Agro.AppHost.Aspire/TC.Agro.AppHost.Aspire.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="test/TC.Agro.AppHost.Aspire.Tests/TC.Agro.AppHost.Aspire.Tests.csproj" />
+  </Folder>
+</Solution>

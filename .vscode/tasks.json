@@ -980,6 +980,149 @@
 				"showReuseMessage": false,
 				"clear": false
 			}
+		},
+		{
+			"label": "apphost-aspire-build",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/orchestration/apphost-aspire/src/TC.Agro.AppHost.Aspire/TC.Agro.AppHost.Aspire.csproj",
+				"--nologo",
+				"-v",
+				"q"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-aspire"
+			},
+			"problemMatcher": "$msCompile",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "apphost-aspire-run-external",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/orchestration/apphost-aspire/scripts/run-apphost.ps1",
+				"-Mode",
+				"External",
+				"-EnvFile",
+				"${workspaceFolder}/orchestration/apphost-aspire/.env.external"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-aspire"
+			},
+			"dependsOn": [
+				"apphost-aspire-build"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "apphost-aspire-run-internal",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/orchestration/apphost-aspire/scripts/run-apphost.ps1",
+				"-Mode",
+				"Internal",
+				"-EnvFile",
+				"${workspaceFolder}/orchestration/apphost-aspire/.env"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-aspire"
+			},
+			"dependsOn": [
+				"apphost-aspire-build"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "apphost-aspire-smoke-external",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/orchestration/apphost-aspire/scripts/smoke-external.ps1",
+				"-EnvFile",
+				"../.env.external"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-aspire/scripts"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": "test"
+		},
+		{
+			"label": "apphost-aspire-smoke-failfast",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/orchestration/apphost-aspire/scripts/smoke-failfast-external.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/orchestration/apphost-aspire"
+			},
+			"dependsOn": [
+				"apphost-aspire-build"
+			],
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": "test"
 		}
 	]
 }

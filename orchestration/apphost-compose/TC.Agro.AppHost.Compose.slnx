@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/AppHost_Compose/">
+    <Project Path="../apphost-aspire/src/TC.Agro.AppHost.Aspire/TC.Agro.AppHost.Aspire.csproj" />
     <Project Path="docker-compose.dcproj">
       <Build />
     </Project>
