@@ -1038,7 +1038,7 @@ async function refreshCropTypeOptionsForSelectedProperty({ preserveSelection = t
   try {
     const [catalogOptions, mixedOptions] = await Promise.all([
       getCropTypeOptions({ propertyId }),
-      getCropTypeOptions({ propertyId, includeSuggestionOverlay: true })
+      getCropTypeOptions({ propertyId, includeSuggestions: true })
     ]);
 
     const mappedCatalogOptions = Array.isArray(catalogOptions)

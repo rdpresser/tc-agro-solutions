@@ -541,7 +541,8 @@ export async function getCropTypesPaginated({
   propertyId = '',
   source = '',
   includeStale = false,
-  includeInactive = false
+  includeInactive = false,
+  includeSuggestions = false
 } = {}) {
   const params = {
     pageNumber,
@@ -553,7 +554,8 @@ export async function getCropTypesPaginated({
     propertyId,
     source,
     includeStale,
-    includeInactive
+    includeInactive,
+    includeSuggestions
   };
 
   Object.keys(params).forEach((key) => {
@@ -635,18 +637,18 @@ export async function regeneratePropertyCropTypes(propertyId) {
 /**
  * Get crop type options for a dropdown selector.
  * Calls GET /api/crop-types/options — returns slim catalog entries for owner/property scope.
- * @param {{ ownerId?: string, propertyId?: string, includeSuggestionOverlay?: boolean }} options
+ * @param {{ ownerId?: string, propertyId?: string, includeSuggestions?: boolean }} options
  * @returns {Promise<Array>} Normalized crop type option list
  */
 export async function getCropTypeOptions({
   ownerId = '',
   propertyId = '',
-  includeSuggestionOverlay = false
+  includeSuggestions = false
 } = {}) {
   const params = {};
   if (ownerId) params.ownerId = ownerId;
   if (propertyId) params.propertyId = propertyId;
-  if (includeSuggestionOverlay) params.includeSuggestionOverlay = true;
+  if (includeSuggestions) params.includeSuggestions = true;
 
   const { data } = await farmApi.get('/api/crop-types/options', { params });
   const items = Array.isArray(data) ? data : data?.data || data?.items || [];

@@ -1,7 +1,9 @@
 import {
   deactivateCatalogCropType,
   getCropTypesPaginated,
-  promoteCropTypeSuggestion
+  getProperties,
+  promoteCropTypeSuggestion,
+  regeneratePropertyCropTypes
 } from './api.js';
 import { initProtectedPage } from './common.js';
 import { toast } from './i18n.js';
@@ -146,6 +148,8 @@ function normalizeCatalogItem(item) {
 
 function cacheElements() {
   ui.addCropTypeBtn = document.getElementById('addCropTypeBtn');
+  ui.regenPropertySelect = document.getElementById('regenPropertySelect');
+  ui.regenSuggestionsBtn = document.getElementById('regenSuggestionsBtn');
   ui.catalogFilterForm = document.getElementById('catalogFilterForm');
   ui.filterInput = document.getElementById('filterInput');
   ui.includeInactiveFilter = document.getElementById('includeInactiveFilter');
@@ -278,6 +282,7 @@ async function loadCatalog() {
       sortDirection: 'desc',
       filter: String(ui.filterInput?.value || '').trim(),
       source: includeSuggestions ? undefined : 'Catalog',
+      includeSuggestions,
       includeInactive: Boolean(ui.includeInactiveFilter?.checked)
     });
 
@@ -319,6 +324,84 @@ async function handleDeactivate(catalogId) {
   } catch (error) {
     console.error('Failed to deactivate crop type.', error);
     toast('Failed to deactivate crop type', 'error');
+  }
+}
+
+async function loadPropertyOptions() {
+  if (!ui.regenPropertySelect) {
+    return;
+  }
+
+  try {
+    const response = await getProperties({
+      pageNumber: 1,
+      pageSize: 200,
+      sortBy: 'name',
+      sortDirection: 'asc'
+    });
+
+    const items = Array.isArray(response)
+      ? response
+      : response?.data || response?.items || response?.results || [];
+
+    ui.regenPropertySelect.innerHTML =
+      ['<option value="">Select property...</option>']
+        .concat(
+          items.map((p) => {
+            const id = String(p?.id || p?.Id || '').trim();
+            const name = escapeHtml(String(p?.name || p?.Name || id).trim());
+            return `<option value="${escapeHtml(id)}">${name}</option>`;
+          })
+        )
+        .join('');
+  } catch (error) {
+    console.error('Failed to load properties for regeneration selector.', error);
+  }
+}
+
+async function handleRegenerate() {
+  const propertyId = String(ui.regenPropertySelect?.value || '').trim();
+  if (!propertyId) {
+    return;
+  }
+
+  const selectedOption = ui.regenPropertySelect?.options[ui.regenPropertySelect.selectedIndex];
+  const propertyLabel = selectedOption?.text || 'this property';
+
+  const confirmed = window.confirm(
+    `Queue AI crop suggestion regeneration for "${propertyLabel}"?\n\nSuggestions are generated asynchronously. Refresh the catalog in a few seconds to see new results.`
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  if (ui.regenSuggestionsBtn) {
+    ui.regenSuggestionsBtn.disabled = true;
+    ui.regenSuggestionsBtn.textContent = '⏳ Queuing...';
+  }
+
+  try {
+    await regeneratePropertyCropTypes(propertyId);
+    toast('AI suggestion regeneration queued. Check back in a few seconds.', 'success');
+
+    if (ui.includeSuggestionsFilter) {
+      ui.includeSuggestionsFilter.checked = true;
+    }
+
+    setTimeout(() => loadCatalog(), 3000);
+  } catch (error) {
+    console.error('Failed to queue crop suggestion regeneration.', error);
+    const backendError =
+      error?.response?.data?.title ||
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      'Failed to queue regeneration.';
+    toast(backendError, 'error');
+  } finally {
+    if (ui.regenSuggestionsBtn) {
+      ui.regenSuggestionsBtn.disabled = !ui.regenPropertySelect?.value;
+      ui.regenSuggestionsBtn.textContent = '🤖 Regenerate AI Suggestions';
+    }
   }
 }
 
@@ -388,6 +471,16 @@ function bindEvents() {
     navigateTo('crop-catalog-form.html');
   });
 
+  ui.regenPropertySelect?.addEventListener('change', () => {
+    if (ui.regenSuggestionsBtn) {
+      ui.regenSuggestionsBtn.disabled = !ui.regenPropertySelect.value;
+    }
+  });
+
+  ui.regenSuggestionsBtn?.addEventListener('click', () => {
+    handleRegenerate();
+  });
+
   ui.catalogFilterForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     currentPage = 1;
@@ -439,7 +532,7 @@ async function initializePage() {
 
   pageSize = Number(ui.pageSizeSelect?.value || 10);
 
-  await loadCatalog();
+  await Promise.all([loadPropertyOptions(), loadCatalog()]);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -100,7 +100,13 @@
                 <h2 style="margin: 0">Crop Type Catalog</h2>
               </div>
             </div>
-            <div class="page-header-actions">
+            <div class="page-header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+              <select id="regenPropertySelect" class="form-control form-select" style="width: 220px; min-width: 160px">
+                <option value="">Select property...</option>
+              </select>
+              <button id="regenSuggestionsBtn" class="btn btn-outline" disabled title="Select a property to regenerate AI crop suggestions">
+                🤖 Regenerate AI Suggestions
+              </button>
               <button id="addCropTypeBtn" class="btn btn-primary">➕ Add Crop Type</button>
             </div>
           </div>
