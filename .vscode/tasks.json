@@ -1123,6 +1123,57 @@
 				"clear": false
 			},
 			"group": "test"
+		},
+		{
+			"label": "diagnose-local-swagger-conflicts",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/diagnose-local-swagger-conflicts.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": "test"
+		},
+		{
+			"label": "diagnose-local-swagger-fix-dcp",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/diagnose-local-swagger-conflicts.ps1",
+				"-KillDcpConflicts"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"group": "test"
 		}
 	]
 }
